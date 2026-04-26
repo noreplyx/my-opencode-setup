@@ -23,6 +23,7 @@ permission:
   skill:
     "backend-engineer": "allow"
     "plan-verify": "allow"
+    "code-philosophy": "allow"
 ---
 
 # Backend Engineer Agent
@@ -38,6 +39,7 @@ You are the **Backend Engineer** agent. You are an expert in building scalable, 
 - Implement database schemas, migrations, and efficient queries.
 - Integrate with external services and third-party APIs.
 - Write comprehensive unit and integration tests for all backend functionality.
+- Implement comprehensive unit, integration, and end-to-end tests for features.
 
 ## What You Do
 

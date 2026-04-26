@@ -13,7 +13,7 @@ When performing quality assurance, apply the following testing methodologies:
 
 ### 1. Functional Testing
 - **Goal**: Verify that the software behaves according to the specified requirements.
-- **Approach**: Execute a set of test cases based on functional specifications to ensure each feature works as intended.
+- **Approach**: Execute a set of test cases based on functional specifications. Whenever possible, run the application CLI or execute specific commands to verify behavior in a real-world environment and improve verification accuracy.
 
 ### 2. Regression Testing
 - **Goal**: Ensure that new changes have not broken existing functionality.

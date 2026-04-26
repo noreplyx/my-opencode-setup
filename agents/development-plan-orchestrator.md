@@ -20,6 +20,8 @@ permission:
   task:
     "subagent/planner/backend-engineer-planner": "allow"
     "subagent/planner/frontend-engineer-planner": "allow"
+reasoningEffort: "high"
+textVerbosity: "high"
 ---
 
 

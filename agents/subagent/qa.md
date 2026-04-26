@@ -10,7 +10,7 @@ tools:
   grep: true
   skill: true
   task: false
-  lsp: false
+  lsp: true
   question: false
   webfetch: false
   websearch: false
@@ -18,6 +18,8 @@ tools:
 permission:
   skill:
     "quality-assurance": "allow"
+reasoningEffort: "high"
+textVerbosity: "high"
 ---
 
 # Quality Assurance Agent

@@ -1,6 +1,6 @@
 ---
 name: plan-protocol
-description: A skill for establishing a structured planning protocol before implementing complex changes.
+description: Use this skill when planning.
 ---
 
 # Plan Protocol Skill
