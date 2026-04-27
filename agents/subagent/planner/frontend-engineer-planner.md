@@ -18,6 +18,7 @@ tools:
   external_directory: false
 permission:
    task:
+    "*": "deny"
     "subagent/finder": "allow"
   skill:
     "plan-protocol": "allow"

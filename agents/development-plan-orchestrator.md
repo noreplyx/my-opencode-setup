@@ -18,8 +18,10 @@ tools:
   external_directory: false
 permission:
   task:
+    "*": "deny"
     "subagent/planner/backend-engineer-planner": "allow"
     "subagent/planner/frontend-engineer-planner": "allow"
+    "development-implement-orchestrator": "allow"
 reasoningEffort: "high"
 textVerbosity: "high"
 ---

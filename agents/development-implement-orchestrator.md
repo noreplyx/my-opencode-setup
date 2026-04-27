@@ -18,6 +18,7 @@ tools:
   external_directory: false
 permission:
   task:
+    "*": "deny"
     "subagent/finder": "allow"
     "subagent/qa": "allow"
     "subagent/implementor/backend-engineer-implementor": "allow"
