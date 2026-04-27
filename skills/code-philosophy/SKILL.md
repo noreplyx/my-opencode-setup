@@ -1,6 +1,6 @@
 ---
 name: code-philosophy
-description: Use this skill when planning or implementing code to ensure adherence to SOLID principles, clean code, clean architecture, security, performance, and readability.
+description: alway use this skill when planning or implementing code both frontend and backend to ensure adherence to clean code, clean architecture, SOLID principles, best practices, security, performance, logging (telemetry), and readability.
 ---
 
 # Code Philosophy Skill
@@ -45,6 +45,12 @@ an expert in software craftmanship with a deep commitment to creating maintainab
 - **Avoid Premature Optimization**: Focus on clean code first, then optimize based on measured bottlenecks.
 - **Resource Management**: Properly handle connections, file handles, and memory to avoid leaks.
 - **Lazy Loading**: Load resources only when they are needed.
+
+### 7. Logging & Telemetry
+- **Structured Logging**: Use structured logs (JSON) for easier querying and analysis.
+- **Appropriate Levels**: Distinguish between Trace, Debug, Info, Warn, Error, and Fatal.
+- **Contextual Information**: Include relevant IDs (Correlation IDs, User IDs) to trace requests across services.
+- **Observability**: Implement metrics and health checks to monitor system health in real-time.
 
 ## Workflow
 When applying the Code Philosophy skill:
