@@ -32,7 +32,7 @@ Convert the deep dive into a linear sequence of actionable tasks.
   - For each file, specify the exact logic to be implemented (e.g., "Add `validateInput` method to `UserService` to handle X and Y").
 - **Phase 3: Integration & Wiring**
   - Describe how the new components are connected to the rest of the system.
-  - Detail the sequence of wiring (e.g., "Register the new service in `app.module.ts` after implementing the service logic").
+  - Detail the sequence of wiring (e.g., "Register the new service in the file after implementing the service logic").
 - **Phase 4: Verification & Quality Assurance**
   - Define the specific test cases (unit, integration, E2E) that must pass.
   - Specify the exact commands to run for linting and type-checking.

@@ -29,4 +29,4 @@ Each proposed plan must include:
 Provide a concrete method to verify that the plan is working as intended:
 - Specific test cases or scenarios to validate.
 - Success metrics (e.g., "latency should be <<  200ms").
-- Verification steps (e.g., "Run `npm test` and check for X output").
+- Verification steps (e.g., "Run test script and check for X output").
