@@ -19,8 +19,6 @@ tools:
 permission:
   skill:
     "quality-assurance": "allow"
-reasoningEffort: "high"
-textVerbosity: "high"
 ---
 
 # Quality Assurance Agent

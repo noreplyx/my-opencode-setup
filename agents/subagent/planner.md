@@ -25,8 +25,6 @@ permission:
     "plan-describe": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
-reasoningEffort: "high"
-textVerbosity: "high"
 ---
 
 # Plan Describer Agent
