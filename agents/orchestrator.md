@@ -24,6 +24,8 @@ permission:
     "subagent/brainstormer": "allow"
     "subagent/planner": "allow"
     "subagent/qa": "allow"
+  skill:
+    "orchestration": "allow"
 ---
 
 
