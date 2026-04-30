@@ -9,7 +9,7 @@ tools:
   read: true
   glob: true
   grep: true
-  skill: true
+  skill: false
   task: false
   lsp: true
   question: false

@@ -18,6 +18,7 @@ tools:
   external_directory: false
 permission:
   skill:
+    "*": "deny"
     "quality-assurance": "allow"
 ---
 

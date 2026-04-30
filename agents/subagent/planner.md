@@ -21,6 +21,7 @@ permission:
     "*": "deny"
     "subagent/finder": "allow"
   skill:
+    "*": "deny"
     "backend-code-philosophy": "allow"
     "plan-describe": "allow"
     "code-philosophy": "allow"

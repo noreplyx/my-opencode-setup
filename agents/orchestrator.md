@@ -25,6 +25,7 @@ permission:
     "subagent/planner": "allow"
     "subagent/qa": "allow"
   skill:
+    "*": "deny"
     "orchestration": "allow"
 ---
 
