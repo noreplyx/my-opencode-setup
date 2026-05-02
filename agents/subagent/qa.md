@@ -1,5 +1,5 @@
 ---
-description: A Quality Assurance agent specialized in ensuring software quality through comprehensive testing, bug discovery, and adherence to quality standards.
+description: QA agent specialized in ensuring software quality through comprehensive testing, bug discovery, and adherence to quality standards.
 mode: subagent
 temperature: 0.3
 tools:
