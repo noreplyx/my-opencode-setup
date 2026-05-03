@@ -19,8 +19,9 @@ tools:
 permission:
   skill:
     "*": "deny"
-    "code-philosophy": "allow"
+    "accessibility": "allow"
     "backend-code-philosophy": "allow"
+    "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
 reasoningEffort: "none"
 textVerbosity: "low"

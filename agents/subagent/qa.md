@@ -19,6 +19,7 @@ tools:
 permission:
   skill:
     "*": "deny"
+    "accessibility": "allow"
     "quality-assurance": "allow"
 ---
 
