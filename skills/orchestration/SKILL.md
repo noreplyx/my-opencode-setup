@@ -28,21 +28,54 @@ The default orchestration workflow follows this sequence:
           │
 2. ORCHESTRATOR ──► Brainstorm with user interactively, explore ideas, converge on direction
           │
-3. BRAINSTORMER (optional) ──► Deep-dive analysis on specific approaches (invoked by Orchestrator if needed)
+3. PLAN DESCRIBER ──► Create detailed, step-by-step implementation roadmap
           │
-4. PLANNER ──► Create detailed, step-by-step implementation roadmap
+4. IMPLEMENTOR ──► Write code strictly following the plan
           │
-5. IMPLEMENTOR ──► Write code strictly following the plan
+   ┌──────┴──────┐
+   ▼ BUILD CHECK ▼ (MANDATORY)
+   │  Implementor MUST run build │
+   │  and return full build output│
+   └──────┬──────┘
+          │ (build fails → Implementor fixes, rebuilds)
+          ▼
+5. QA ──► Test, validate, report results
           │
-6. QA ──► Test, validate, report results
+   ┌──────┴──────┐
+   ▼ SMOKE TEST  ▼
+   │ QA runs smoke test to │
+   │ confirm app is runnable│
+   └──────┬──────┘
           │
-7. ORCHESTRATOR ──► Review results, report to user
+6. ORCHESTRATOR ──► Review results, report to user
 ```
 
 ### When to Skip Steps
-- **Simple/familiar tasks**: Skip Finder and Brainstormer, go directly to Planner → Implementor → QA.
+- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
-- **Bug fixes (known root cause)**: Skip Planner, go directly to Implementor for the fix, then QA.
+- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor for the fix, then QA.
+
+### Build Gate & Smoke Test Requirements
+
+Every implementation MUST pass through two mandatory validation gates:
+
+| Gate          | Who Runs It  | What It Checks                                          | Failure Action                            |
+|---------------|--------------|---------------------------------------------------------|-------------------------------------------|
+| **Build Gate**   | Implementor  | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
+| **Smoke Test**   | QA           | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; Orchestrator cycles back to Implementor for fixes |
+
+**Build Gate Protocol:**
+- The Implementor MUST run the build command after writing code
+- The Implementor MUST return the full build output (stdout + stderr) to the Orchestrator
+- If the build fails, the Implementor MUST fix the issue and rebuild before reporting completion
+- The Orchestrator MUST inspect the build output to confirm success before proceeding to QA
+
+**Smoke Test Protocol:**
+- QA MUST run a simple smoke test (build is already verified by Implementor's Build Gate)
+- The smoke test should be fast (< 10 seconds) and provide high confidence the application is runnable
+- If the smoke test fails, QA reports it as a Critical severity bug
+- The Orchestrator reviews the report and cycles back to Implementor for fixes
+- After fixes, QA re-runs the smoke test (build is re-verified by Implementor)
 
 ## Agent Hand-off Protocol
 
@@ -57,7 +90,7 @@ When passing work from one agent to the next, the Orchestrator MUST include:
 
 ### Example Hand-off
 ```
-Orchestrator to Planner:
+Orchestrator to PlanDescriber:
 "After brainstorming with the user, we've agreed on Option B (modular monolith approach).
 Finder has analyzed the codebase (see files: src/services/user.ts, src/models/user.ts).
 Please create a detailed implementation roadmap for adding user profile management,
@@ -82,7 +115,7 @@ QA reports bugs ──► Orchestrator reviews ──► Implementor applies fix
 6. **Loop Repeats**: Continue until QA passes or escalation threshold reached
 
 ### Escalation Criteria
-If the same bug resurfaces after 3 fix attempts, escalate back to Planner for roadmap revision.
+If the same bug resurfaces after 3 fix attempts, escalate back to PlanDescriber for roadmap revision.
 
 ### Context Preservation
 When cycling back to Implementor, use `task_id` (ses_xxx) to preserve conversation context with the prior subagent session so the agent retains memory of the code it wrote.
@@ -100,15 +133,9 @@ The Orchestrator serves as the **primary brainstorming partner** for the user. T
 - **Real-time interaction**: The Orchestrator can have a live back-and-forth conversation with the user
 - **Immediate iteration**: Ideas can be explored, rejected, or refined on the fly
 - **Context retention**: The Orchestrator holds all project context and can connect brainstorming to execution seamlessly
-- **Efficiency**: Avoids slow round-trips of User → Orchestrator → Brainstormer → Orchestrator → User
 
 ### Workflow
 1. Orchestrator brainstorms **interactively** with the user
-2. Once direction is agreed upon, Orchestrator may optionally invoke the **Brainstormer subagent** for deep-dive analysis
-3. Orchestrator formalizes the plan and proceeds to delegation
+2. Orchestrator formalizes the plan and proceeds to delegation
 
-### When to use the Brainstormer subagent
-- Comparing multiple architectural approaches in detail
-- Generating comprehensive pro/con lists
-- Exploring edge cases or niche scenarios
-- Producing structured analysis documents
+

@@ -52,12 +52,17 @@ The Quality Assurance (QA) agent is dedicated to ensuring the highest level of s
 1. **Requirements Analysis**: Review the approved plan and quality standards for the specific task.
 2. **Test Planning**: Determine the necessary testing types (Functional, Integration, etc.) and define test cases.
 3. **Implementation Review**: Inspect the code for obvious quality issues, security flaws, and adherence to the plan.
-4. **Execution & Verification**: 
+4. **Smoke Test**: Run a quick "does the app start?" smoke test. For example:
+   - Start the application in the background (if applicable) and verify it boots without crashing
+   - Run `node -e "require('./dist/index')"` for libraries/modules
+   - Check that the process exits cleanly or serves requests on the expected port
+   - If no sensible smoke test exists, at minimum verify the module loads without import errors
+5. **Execution & Verification**:
    - Perform functional and integration checks.
    - Run regression suites.
    - Evaluate performance and security vectors.
-5. **Bug Reporting**: Document all identified issues with clear steps to reproduce and expected vs. actual results.
-6. **Final Validation**: Once fixes are applied, re-verify the affected areas to ensure the issues are resolved.
+6. **Bug Reporting**: Document all identified issues with clear steps to reproduce and expected vs. actual results.
+7. **Final Validation**: Once fixes are applied, re-verify the affected areas to ensure the issues are resolved.
 
 ## Output Format
 
@@ -67,3 +72,18 @@ When reporting quality assessments, include:
 - **Defect Log**: A detailed list of bugs found, categorized by severity (Critical, High, Medium, Low).
 - **Quality Metrics**: Observations on performance, security, and code maintainability.
 - **Final Verdict**: Overall assessment (Pass / Fail / Needs Revision).
+
+## Smoke Test Guidelines
+
+When performing a smoke test, choose the most appropriate approach for the project:
+
+| Project Type        | Smoke Test Command / Approach                    |
+|---------------------|--------------------------------------------------|
+| Node.js library     | `node -e "require('./dist/index')"`              |
+| Web app (frontend)  | `npm run build` and verify dist/ is produced     |
+| Web app (backend)   | Start server, verify it binds to the port        |
+| CLI tool            | Run `node dist/cli.js --help` and check exit code |
+| React/Vue app       | Verify build completes and bundle is generated   |
+| Monorepo package    | Run the package-specific build + import check    |
+
+The smoke test should be simple, fast (under 10 seconds), and give high confidence the code is runnable.

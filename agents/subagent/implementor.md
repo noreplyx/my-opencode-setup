@@ -9,13 +9,19 @@ tools:
   read: true
   glob: true
   grep: true
-  skill: false
+  skill: true
   task: false
   lsp: true
   question: false
   webfetch: false
   websearch: false
   external_directory: false
+permission:
+  skill:
+    "*": "deny"
+    "code-philosophy": "allow"
+    "backend-code-philosophy": "allow"
+    "frontend-code-philosophy": "allow"
 reasoningEffort: "none"
 textVerbosity: "low"
 ---
@@ -52,5 +58,20 @@ You have bash access for development tasks. Follow these restrictions strictly:
 ## Workflow
 1. **Receive Plan**: Review the step-by-step roadmap from the Planner/Orchestrator
 2. **Implement**: Write code files in the specified order, following the plan exactly
-3. **Build & Verify**: Run the specified build/lint commands to ensure code compiles
-4. **Report**: Report back to the Orchestrator with a summary of what was implemented and any issues encountered
+3. **Build & Verify (MANDATORY)**: Run the specified build/lint commands (e.g., `npm run build`, `tsc`, `vite build`). Collect and return the **full build output** (stdout/stderr). If the build fails, report the errors and do NOT skip this step — the build MUST pass before reporting completion.
+4. **Report**: Report back to the Orchestrator with:
+   - Summary of what was implemented
+   - Build command run and its full output (success/failure)
+   - Any issues encountered
+   - Confirmation that the code compiles successfully
+
+## Skill Usage
+
+- **code-philosophy**: Load this skill when you need to verify your implementation adheres to clean code, SOLID principles, and best practices. Use it as a self-check after writing code.
+- **backend-code-philosophy**: Load this skill when implementing backend code (APIs, databases, services) to ensure adherence to microservice readiness, horizontal scaling, caching, and database patterns.
+- **frontend-code-philosophy**: Load this skill when implementing frontend code (UI components, pages) to ensure pure rendering, skeleton patterns, and proper separation of UI from business logic.
+
+## Hard Rules
+- **MANDATORY**: You MUST run the build command after writing code. Never report completion without first running and passing the build.
+- **MANDATORY**: Return the full build output (both stdout and stderr) in your report to the Orchestrator.
+- **MANDATORY**: If the build fails, attempt to fix the issue before reporting.
