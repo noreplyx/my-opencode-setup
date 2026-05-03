@@ -155,8 +155,8 @@ Orchestrator brainstorms with user
         │  ──► Gets user approval and skill name
         ▼
 SkillScribe distills conversation
-        │  ──► Creates skills/<name>/SKILL.md
-        │  ──► Registers in skills-registry.json
+        │  ──► Creates .agents/skills/<name>/SKILL.md
+        │  ──► Registers in .agents/skills/skills-registry.json
         ▼
 Implementor updates agent permissions
         │  ──► Edits implementor.md permission whitelist

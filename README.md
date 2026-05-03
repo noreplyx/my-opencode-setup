@@ -13,7 +13,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 
 ## Skills
 
-Skills are stored under `skills/<skill-name>/SKILL.md` and registered in `skills/skills-registry.json`.
+Skills are stored under `.agents/skills/<skill-name>/SKILL.md` (for learned skills) or `skills/<skill-name>/SKILL.md` (for built-in skills) and registered in `skills/skills-registry.json`.
 
 Available skills:
 - `accessibility` — Accessibility guidelines for UI development
