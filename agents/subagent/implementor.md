@@ -76,3 +76,73 @@ You have bash access for development tasks. Follow these restrictions strictly:
 - **MANDATORY**: You MUST run the build command after writing code. Never report completion without first running and passing the build.
 - **MANDATORY**: Return the full build output (both stdout and stderr) in your report to the Orchestrator.
 - **MANDATORY**: If the build fails, attempt to fix the issue before reporting.
+
+## Permission Update Tasks
+
+In addition to code implementation, you may receive tasks to update agent permission whitelists for newly created skills.
+
+### Permission Update Workflow
+
+1. **Receive Request** — Orchestrator sends the skill name and which agents to update
+2. **Read Config** — Read the target agent config file (e.g., `agents/subagent/implementor.md`)
+3. **Parse Frontmatter** — Identify the `permission.skill` block in the YAML frontmatter
+4. **Add Entry** — Add `"<skill-name>": "allow"` to the `permission.skill` block (alphabetically sorted)
+5. **Preserve Format** — Maintain the exact same YAML formatting style
+6. **Verify** — Ensure the frontmatter is still valid YAML
+
+### Example
+
+If the permission block is:
+```yaml
+  skill:
+    "*": "deny"
+    "accessibility": "allow"
+    "backend-code-philosophy": "allow"
+    "code-philosophy": "allow"
+    "frontend-code-philosophy": "allow"
+```
+
+And the new skill is `"payment-reconciliation"`, update to:
+```yaml
+  skill:
+    "*": "deny"
+    "accessibility": "allow"
+    "backend-code-philosophy": "allow"
+    "code-philosophy": "allow"
+    "frontend-code-philosophy": "allow"
+    "payment-reconciliation": "allow"
+```
+
+### After Permission Update
+- Report back which files were modified and what was added
+- No build step is needed (config files don't need compilation)
+
+## Audit Logging
+
+After completing any task (code implementation, build, or permission update), you MUST append an audit log entry to `logs/agent-audit.log`.
+
+### Log Format
+
+Use this exact format for each log entry:
+
+```
+[TIMESTAMP] AGENT=<agent-name> | TASK=<task-description> | FILES=<file1,file2,...> | STATUS=<success|failure> | DURATION=<seconds>s
+```
+
+### Examples
+
+```
+[2026-05-03 14:30:00] AGENT=implementor | TASK=created user service | FILES=src/services/user.ts | STATUS=success | DURATION=45s
+[2026-05-03 14:35:00] AGENT=implementor | TASK=updated permission whitelist | FILES=agents/subagent/implementor.md | STATUS=success | DURATION=5s
+```
+
+### When to Log
+- After writing/editing code files
+- After running a build (success or failure)
+- After updating agent permissions
+- After any file creation or modification
+
+### Hard Rule
+- NEVER overwrite or delete existing log entries
+- ALWAYS append to the end of the file
+- If `logs/agent-audit.log` doesn't exist, create it

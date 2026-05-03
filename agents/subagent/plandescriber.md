@@ -17,7 +17,7 @@ tools:
   websearch: false
   external_directory: false
 permission:
-   task:
+  task:
     "*": "deny"
     "subagent/finder": "allow"
   skill:

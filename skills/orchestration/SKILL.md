@@ -138,4 +138,104 @@ The Orchestrator serves as the **primary brainstorming partner** for the user. T
 1. Orchestrator brainstorms **interactively** with the user
 2. Orchestrator formalizes the plan and proceeds to delegation
 
+## Dynamic Skill Learning
+
+The system can learn new skills from user conversations. When the user discusses a pattern, principle, or methodology, the Orchestrator can save it as a reusable skill.
+
+### Learn Skill Workflow
+
+When the user wants to save a discussion topic as a skill, use this pipeline:
+
+```
+User discusses a pattern/principle
+        │
+        ▼
+Orchestrator brainstorms with user
+        │  ──► Confirms: "Would you like to save this as a skill?"
+        │  ──► Gets user approval and skill name
+        ▼
+SkillScribe distills conversation
+        │  ──► Creates skills/<name>/SKILL.md
+        │  ──► Registers in skills-registry.json
+        ▼
+Implementor updates agent permissions
+        │  ──► Edits implementor.md permission whitelist
+        │  ──► Edits plandescriber.md permission whitelist (if applicable)
+        │  ──► Edits qa.md permission whitelist (if applicable)
+        ▼
+QA validates
+        │  ──► SKILL.md follows correct format
+        │  ──► Registry is valid JSON
+        │  ──► Agent configs valid YAML frontmatter
+        ▼
+Orchestrator reports to user
+        ──► "Skill '<name>' is now available to all agents"
+```
+
+### Hand-off to SkillScribe
+
+When delegating to SkillScribe, include:
+
+1. **Conversation Summary**: What was discussed (principles, patterns, rules)
+2. **Skill Name**: The desired skill name (kebab-case)
+3. **Skill Description**: A one-line description
+4. **Expected Output**: SKILL.md file and registry update
+
+Example:
+```
+Orchestrator to SkillScribe:
+"We discussed idempotency patterns for payment processing. Key points:
+- Use Idempotency-Key headers on all mutating endpoints
+- Store processed keys with status + response in Redis with TTL
+- Return cached response for duplicate keys
+- Never reprocess a duplicate request
+
+Please save this as skill 'idempotency-patterns'."
+```
+
+### Permission Update Protocol
+
+After SkillScribe creates the skill, the Orchestrator delegates to Implementor to:
+
+1. Read the current agent config file (e.g., `agents/subagent/implementor.md`)
+2. Add `"<new-skill-name>": "allow"` to the `permission.skill` block
+3. Repeat for other agents if the skill applies (plandescriber, qa, etc.)
+4. Verify the YAML frontmatter is still valid
+
+### Registry Maintenance
+
+- `skills/skills-registry.json` is the source of truth for all skills
+- The Orchestrator can read this file to discover available skills
+- Skills with `builtIn: true` are system-provided and should not be modified
+- Skills with `builtIn: false` are learned from conversations and can be updated or removed
+
+## Audit Logging
+
+All agents MUST log their actions to `logs/agent-audit.log` for traceability.
+
+### Audit Log Location
+- **File**: `logs/agent-audit.log` (in the workspace root)
+- **Format**: Plain text, one entry per line
+- **Log Rotation**: Not configured — file grows indefinitely (manual cleanup)
+
+### Standard Log Entry Format
+
+```
+[TIMESTAMP] AGENT=<agent-name> | TASK=<task-description> | FILES=<affected-files> | STATUS=<success|failure> | DURATION=<seconds>s
+```
+
+### Fields
+| Field       | Description                                         |
+|-------------|-----------------------------------------------------|
+| TIMESTAMP   | Date and time in ISO-like format (YYYY-MM-DD HH:MM:SS) |
+| AGENT       | Name of the agent (implementor, skillscribe, qa, etc.) |
+| TASK        | Short description of what was done                  |
+| FILES       | Comma-separated list of affected file paths         |
+| STATUS      | `success` or `failure`                              |
+| DURATION    | Approximate time taken in seconds                   |
+
+### Enforcement
+- The Orchestrator MAY read the audit log to review agent activity
+- Missing audit entries are not a blocker — but agents SHOULD log whenever practical
+- Log entries are append-only — never modify or delete existing entries
 

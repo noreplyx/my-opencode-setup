@@ -17,6 +17,8 @@ tools:
   websearch: false
   external_directory: false
 permission:
+  task:
+    "*": "deny"
   skill:
     "*": "deny"
     "accessibility": "allow"
@@ -88,3 +90,31 @@ When performing a smoke test, choose the most appropriate approach for the proje
 | Monorepo package    | Run the package-specific build + import check    |
 
 The smoke test should be simple, fast (under 10 seconds), and give high confidence the code is runnable.
+
+## Audit Logging
+
+After completing any QA task (testing, smoke test, validation), you MUST append an audit log entry to `logs/agent-audit.log`.
+
+### Log Format
+
+```
+[TIMESTAMP] AGENT=qa | TASK=<task-description> | RESULTS=<pass/fail/critical> | STATUS=<success|failure> | DURATION=<duration>
+```
+
+### Examples
+
+```
+[2026-05-03 14:30:00] AGENT=qa | TASK=smoke test after implementor build | RESULTS=pass | STATUS=success | DURATION=8s
+[2026-05-03 14:35:00] AGENT=qa | TASK=validated skill idempotency-patterns | RESULTS=pass | STATUS=success | DURATION=12s
+```
+
+### When to Log
+- After smoke test completion
+- After functional/integration testing
+- After validation of skill files or configs
+- After any bug report
+
+### Hard Rule
+- NEVER overwrite or delete existing log entries
+- ALWAYS append to end of file
+- If file doesn't exist, create it
