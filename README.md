@@ -73,15 +73,6 @@ PlanDescriber produces a machine-readable `plan-manifest.json` alongside every r
 - **Checkpoint types**: structural (files, exports, types, routes) and behavioral (error handling, validation, logging, middleware)
 - **Compliance score**: `(Passed / (Total - Skipped)) × 100`
 
-## Audit Logging
-
-Agent actions are logged to `logs/agent-audit.log` for traceability.
-
-Standard format:
-```
-[TIMESTAMP] AGENT=<agent-name> | TASK=<task-description> | FILES=<affected-files> | STATUS=<success|failure> | DURATION=<seconds>s
-```
-
 ## Configuration
 
 - `opencode.jsonc` — Main platform config (server port, plugins)

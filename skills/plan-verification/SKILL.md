@@ -172,16 +172,6 @@ After verification, output a report in this format:
 
 ---
 
-## Audit Logging
-
-After completing verification, append a log entry to `logs/agent-audit.log`:
-
-```
-[TIMESTAMP] AGENT=verifier | TASK=verified plan <planSummary> | MANIFEST=<path> | SCORE=<XX%> | PASSED=<N> | FAILED=<N> | SKIPPED=<N> | STATUS=<pass|partial|fail> | DURATION=<seconds>s
-```
-
----
-
 ## Hard Rules
 
 - ❌ NEVER modify implementation code

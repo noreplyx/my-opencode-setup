@@ -64,7 +64,6 @@ You MUST load the `plan-verification` skill at the start of every task to apply 
 6. **Pass 2 — Behavioral Checks**: For each behavioral checkpoint whose dependencies passed, verify the behavioral patterns
 7. **Score Calculation**: Compute the compliance percentage
 8. **Report**: Produce the standard verification report and return it to the Orchestrator
-9. **Audit Log**: Append an entry to `logs/agent-audit.log`
 
 ## Hard Rules
 
