@@ -6,18 +6,20 @@
     "outDir": "./dist",
     "rootDir": ".",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["bun-types"]
   },
   "include": [
     "src/**/*.ts",
     "scripts/**/*.ts",
-    "index.ts",
-    "drizzle.config.ts"
+    "index.ts"
   ],
   "exclude": [
     "node_modules",

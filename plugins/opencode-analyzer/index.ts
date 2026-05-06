@@ -1,5 +1,5 @@
 // OpenCode Analyzer Plugin - AI Agent System Analytic Tool
-import { initDatabase, getSessionCount } from './src/database.js';
+import { initDatabase } from './src/database.js';
 import { startServer } from './src/routes.js';
 import { handleSessionEvent, handleMessageEvent, handleMessagePartEvent, importAuditLog } from './src/collector.js';
 import { log, clearLog } from './src/logger.js';
@@ -17,41 +17,17 @@ const lastEvents: Array<{ type: string; time: number; hasInfo: boolean }> = [];
 // We'll store the client for the routes to use
 let opencodeClient: any = null;
 
+// Tool duration tracking
+const toolStartTimes = new Map<string, number>();
+
 // ----- Type definitions for OpenCode plugin context -----
 
-interface EventPayload {
-  type?: string;
-  properties?: {
-    info?: Record<string, unknown>;
-    part?: Record<string, unknown>;
-  };
-}
-
-interface OpenCodeEvent {
-  event?: EventPayload;
-}
-
-interface ToolExecuteInput {
-  sessionID?: string;
-  tool?: string;
-  args?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-interface ToolExecuteOutput {
-  output?: string;
-  [key: string]: unknown;
-}
-
-interface ChatMessageInput {
-  sessionID?: string;
-  agent?: string;
-  [key: string]: unknown;
-}
+import type { OpenCodeEvent, ToolExecuteInput, ToolExecuteOutput, ChatMessageInput } from './src/types.js';
 
 interface PluginHooks {
   event(input: OpenCodeEvent): Promise<void>;
   'chat.message'(input: ChatMessageInput): Promise<void>;
+  'tool.execute.before'(input: ToolExecuteInput): Promise<void>;
   'tool.execute.after'(input: ToolExecuteInput, output: ToolExecuteOutput): Promise<void>;
 }
 
@@ -139,6 +115,19 @@ const plugin = {
       log('INFO', `chat.message hook fired: sessionID=${input?.sessionID?.substring(0, 16)} agent=${input?.agent}`);
     },
     
+    'tool.execute.before': async (input: ToolExecuteInput) => {
+      const sessionId = input.sessionID || '';
+      const toolName = input.tool || '';
+      if (sessionId && toolName) {
+        toolStartTimes.set(`${sessionId}:${toolName}`, Date.now());
+        // Keep map bounded
+        if (toolStartTimes.size > 1000) {
+          const firstKey = toolStartTimes.keys().next().value;
+          if (firstKey) toolStartTimes.delete(firstKey);
+        }
+      }
+    },
+    
     'tool.execute.after': async (input: ToolExecuteInput, output: ToolExecuteOutput) => {
       try {
         const { insertToolCall, insertSubagentCall, insertSkillLoad } = await import('./src/database.js');
@@ -146,6 +135,12 @@ const plugin = {
         const sessionId = input.sessionID || '';
         const toolName = input.tool || '';
         const args = input.args || {};
+        
+        // Calculate actual duration from stored start time
+        const toolKey = `${sessionId}:${toolName}`;
+        const startTime = toolStartTimes.get(toolKey);
+        const durationMs = startTime ? Date.now() - startTime : 0;
+        if (startTime) toolStartTimes.delete(toolKey);
         
         // Detect subagent delegation via 'task' tool
         if (toolName === 'task') {
@@ -161,7 +156,7 @@ const plugin = {
             reason: description.substring(0, 200),
             prompt_preview: promptPreview.substring(0, 500),
             status: 'completed',
-            duration_ms: 0
+            duration_ms: durationMs
           });
           log('INFO', `Captured subagent call: ${subagentType} in session ${sessionId.substring(0, 16)}`);
         }
@@ -187,7 +182,7 @@ const plugin = {
           tool_name: toolName,
           called_at: Date.now(),
           status: 'completed',
-          duration_ms: 0,
+          duration_ms: durationMs,
           input_summary: JSON.stringify(args).substring(0, 500),
           output_summary: (output?.output || '').substring(0, 500)
         });

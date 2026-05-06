@@ -1,9 +1,10 @@
 import fs from 'fs';
 import { 
-  upsertSession, insertSubagentCall, insertSkillLoad, insertToolCall, 
+  upsertSession, insertSubagentCall, insertToolCall, 
   upsertMessage, upsertAnalysis, getSubagentCalls, getSkillLoads,
-  getToolCalls, getMessages, getSessionById, saveDatabase
+  getToolCalls, getMessages, getSessionById
 } from './database.js';
+import type { EventPayload } from './types.js';
 
 function truncate(str: string, maxLen: number): string {
   if (!str || str.length <= maxLen) return str || '';
@@ -74,18 +75,6 @@ interface ToolPart {
 
 type MessagePart = AgentPart | SubtaskPart | ToolPart;
 
-interface EventPayload {
-  type?: string;
-  properties?: {
-    info?: EventInfo | MessageInfo;
-    part?: MessagePart;
-  };
-}
-
-interface OpenCodeEvent {
-  event?: EventPayload;
-}
-
 interface ParsedAuditLine {
   timestamp: string;
   agent: string;
@@ -136,7 +125,7 @@ export async function handleSessionEvent(event: EventPayload): Promise<void> {
  */
 export async function handleMessageEvent(event: EventPayload, client: unknown): Promise<void> {
   if (!event.properties?.info) return;
-  const msg = event.properties.info as MessageInfo;
+  const msg = event.properties.info as unknown as MessageInfo;
   
   // Only process assistant messages with agent data
   if (msg.role !== 'assistant') return;
@@ -169,7 +158,7 @@ export async function handleMessageEvent(event: EventPayload, client: unknown): 
   await fetchMessageParts(sessionId, msg.id, client).catch(() => {});
 }
 
-async function fetchMessageParts(sessionId: string, messageId: string, client: unknown): Promise<void> {
+async function fetchMessageParts(_sessionId: string, _messageId: string, client: unknown): Promise<void> {
   if (!client) return;
   try {
     // OpenCode SDK client can be used to fetch messages
@@ -186,7 +175,7 @@ async function fetchMessageParts(sessionId: string, messageId: string, client: u
  */
 export async function handleMessagePartEvent(event: EventPayload): Promise<void> {
   if (!event.properties?.part) return;
-  const part = event.properties.part;
+  const part = event.properties.part as unknown as MessagePart;
   const sessionId = part.sessionID || '';
   if (!sessionId) return; // Can't store without a session
   
@@ -386,13 +375,9 @@ export async function analyzeSession(sessionId: string): Promise<AnalysisResult 
     if (t.outputSummary) toolOutputSummaries.push(t.outputSummary);
   });
   
-  const skillNames = [...new Set(skillLoads.map(s => s.skillName))] as string[];
-  const skillReasons: string[] = skillLoads.map(s => s.reason).filter(Boolean);
-  
   const totalTokens = (Number(session.totalInputTokens) || 0) + (Number(session.totalOutputTokens) || 0);
   const totalCost = Number(session.totalCost) || 0;
   const totalDurationMs = subagentCalls.reduce((sum, c) => sum + (c.durationMs || 0), 0);
-  const totalToolDurationMs = toolCalls.reduce((sum, t) => sum + (t.durationMs || 0), 0);
   const totalToolFailures = Object.values(toolFailures).reduce((a, b) => a + b, 0);
   const filesChanged = session.filesChanged || 0;
   const msgCount = messages.length;
@@ -719,28 +704,4 @@ export async function analyzeSession(sessionId: string): Promise<AnalysisResult 
   return analysis;
 }
 
-function getAgentRecommendationReason(agent: string, session: unknown, calls: unknown, tools: unknown): string {
-  const reasons: Record<string, string> = {
-    'finder': 'Could help research codebase structure and find relevant files before implementation',
-    'implementor': 'Could handle code writing tasks more efficiently',
-    'qa': 'Could verify changes with testing and validation',
-    'plandescriber': 'Could create detailed implementation roadmaps for complex tasks',
-    'orchestrator': 'Could coordinate multiple agents for complex multi-step goals',
-    'skillscribe': 'Could distill patterns into reusable skills'
-  };
-  return reasons[agent] || `Consider using ${agent} for specialized tasks`;
-}
 
-function getSkillRecommendationReason(skill: string, session: unknown): string {
-  const reasons: Record<string, string> = {
-    'code-philosophy': 'Would provide clean code and SOLID principles for implementation quality',
-    'backend-code-philosophy': 'Would help if this session involves backend development',
-    'frontend-code-philosophy': 'Would help if this session involves frontend development',
-    'quality-assurance': 'Would improve testing and quality verification',
-    'api-documentation': 'Would help document any APIs created or modified',
-    'accessibility': 'Would ensure UI changes meet accessibility standards',
-    'devops-cicd': 'Would help with deployment and CI/CD configuration',
-    'plan-brainstorm': 'Would help in planning phases with collaborative brainstorming'
-  };
-  return reasons[skill] || `Consider loading ${skill} for better context`;
-}

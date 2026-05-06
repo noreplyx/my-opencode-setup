@@ -6,3 +6,6 @@ analyzer.port
 drizzle/
 *.db
 dist/
+tests/node_modules/
+tests/*.log
+plan-manifests/

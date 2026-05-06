@@ -1,12 +1,8 @@
-import pg from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { eq, sql, count, desc, asc, isNull, like } from 'drizzle-orm';
-import { getConnectionString } from './db/config.js';
+import { getDbPath } from './db/config.js';
 import * as schema from './db/schema.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ----- Type definitions for insert shapes -----
 
@@ -86,30 +82,122 @@ interface AnalysisInput {
 
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
-let pool: pg.Pool | null = null;
+let sqliteDb: Database | null = null;
 let db: DrizzleDb | null = null;
 
 /**
- * Initialize the database with PostgreSQL via Drizzle ORM.
+ * Initialize the database with SQLite via Bun's built-in sqlite + Drizzle ORM.
  */
 export async function initDatabase(): Promise<DrizzleDb> {
-  const connectionString = getConnectionString();
-  pool = new pg.Pool({ connectionString, max: 10 });
-  // Test connection
-  const client = await pool.connect();
-  client.release();
-  db = drizzle(pool, { schema });
-  // Auto-run migrations
-  const { migrate } = await import('drizzle-orm/node-postgres/migrator');
-  await migrate(db, { migrationsFolder: path.join(__dirname, '..', '..', 'drizzle') });
+  const dbPath = getDbPath();
+  sqliteDb = new Database(dbPath);
+
+  // Enable WAL mode for better concurrent read performance
+  sqliteDb.exec('PRAGMA journal_mode = WAL');
+  // Enable foreign key enforcement
+  sqliteDb.exec('PRAGMA foreign_keys = ON');
+
+  db = drizzle(sqliteDb, { schema });
+
+  // Create all 6 tables and indexes inline
+  sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      directory TEXT NOT NULL DEFAULT '',
+      parent_id TEXT,
+      created_at INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      added INTEGER NOT NULL DEFAULT 0,
+      deleted INTEGER NOT NULL DEFAULT 0,
+      files_changed INTEGER NOT NULL DEFAULT 0,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      total_cost REAL NOT NULL DEFAULT 0,
+      total_input_tokens INTEGER NOT NULL DEFAULT 0,
+      total_output_tokens INTEGER NOT NULL DEFAULT 0,
+      total_reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+      model_used TEXT NOT NULL DEFAULT '',
+      provider_used TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS subagent_calls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      message_id TEXT NOT NULL DEFAULT '',
+      agent_name TEXT NOT NULL,
+      called_at INTEGER NOT NULL DEFAULT 0,
+      reason TEXT NOT NULL DEFAULT '',
+      prompt_preview TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'completed',
+      duration_ms INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS skill_loads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      skill_name TEXT NOT NULL,
+      loaded_at INTEGER NOT NULL DEFAULT 0,
+      reason TEXT NOT NULL DEFAULT '',
+      context TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS tool_calls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      message_id TEXT NOT NULL DEFAULT '',
+      tool_name TEXT NOT NULL,
+      called_at INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'completed',
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      input_summary TEXT NOT NULL DEFAULT '',
+      output_summary TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'user',
+      agent_name TEXT NOT NULL DEFAULT '',
+      model_id TEXT NOT NULL DEFAULT '',
+      provider_id TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL DEFAULT 0,
+      completed_at INTEGER,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_read INTEGER NOT NULL DEFAULT 0,
+      cache_write INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      finish_reason TEXT NOT NULL DEFAULT '',
+      summary TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS analysis_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL UNIQUE REFERENCES sessions(id) ON DELETE CASCADE,
+      analyzed_at INTEGER NOT NULL DEFAULT 0,
+      pros TEXT NOT NULL DEFAULT '[]',
+      cons TEXT NOT NULL DEFAULT '[]',
+      recommendations TEXT NOT NULL DEFAULT '[]',
+      alternative_agents TEXT NOT NULL DEFAULT '[]',
+      alternative_skills TEXT NOT NULL DEFAULT '[]',
+      efficiency_score REAL NOT NULL DEFAULT 0,
+      prompt TEXT NOT NULL DEFAULT '',
+      ai_generated TEXT NOT NULL DEFAULT 'false'
+    );
+    CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_subagent_calls_session ON subagent_calls(session_id);
+    CREATE INDEX IF NOT EXISTS idx_skill_loads_session ON skill_loads(session_id);
+    CREATE INDEX IF NOT EXISTS idx_tool_calls_session ON tool_calls(session_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
+  `);
+
   return db;
 }
 
 /**
- * No-op: PostgreSQL persists automatically.
+ * SQLite persists automatically — no-op kept for API compatibility.
  */
 export function saveDatabase(): void {
-  // No-op: PostgreSQL persists automatically
+  // No-op: SQLite persists automatically
 }
 
 /**
@@ -117,6 +205,17 @@ export function saveDatabase(): void {
  */
 export function getDatabase(): DrizzleDb | null {
   return db;
+}
+
+/**
+ * Close the SQLite database connection.
+ */
+export function closeDatabase(): void {
+  if (sqliteDb) {
+    sqliteDb.close();
+    sqliteDb = null;
+    db = null;
+  }
 }
 
 /**
@@ -147,18 +246,18 @@ export async function upsertSession(session: SessionInput): Promise<void> {
     .onConflictDoUpdate({
       target: schema.sessions.id,
       set: {
-        title: sql`COALESCE(NULLIF(EXCLUDED.title, ''), sessions.title)`,
-        updatedAt: sql`EXCLUDED.updated_at`,
-        added: sql`EXCLUDED.added`,
-        deleted: sql`EXCLUDED.deleted`,
-        filesChanged: sql`EXCLUDED.files_changed`,
+        title: sql`COALESCE(NULLIF(excluded.title, ''), sessions.title)`,
+        updatedAt: sql`excluded.updated_at`,
+        added: sql`excluded.added`,
+        deleted: sql`excluded.deleted`,
+        filesChanged: sql`excluded.files_changed`,
       },
     });
 }
 
-export async function getSessions(limit = 50, offset = 0) {
+export async function getSessions(limit = 50, offset = 0, excludeParent = true) {
   const d = getDb();
-  return await d.select({
+  const query = d.select({
     id: schema.sessions.id,
     projectId: schema.sessions.projectId,
     title: schema.sessions.title,
@@ -182,41 +281,15 @@ export async function getSessions(limit = 50, offset = 0) {
     skill_count: sql<number>`(SELECT COUNT(*) FROM skill_loads sl WHERE sl.session_id = sessions.id)`.as('skill_count'),
   })
     .from(schema.sessions)
-    .where(isNull(schema.sessions.parentId))
     .orderBy(desc(schema.sessions.updatedAt))
     .limit(limit)
     .offset(offset);
-}
 
-export async function getAllSessions(limit = 50, offset = 0) {
-  const d = getDb();
-  return await d.select({
-    id: schema.sessions.id,
-    projectId: schema.sessions.projectId,
-    title: schema.sessions.title,
-    directory: schema.sessions.directory,
-    parentId: schema.sessions.parentId,
-    createdAt: schema.sessions.createdAt,
-    updatedAt: schema.sessions.updatedAt,
-    added: schema.sessions.added,
-    deleted: schema.sessions.deleted,
-    filesChanged: schema.sessions.filesChanged,
-    messageCount: schema.sessions.messageCount,
-    totalCost: schema.sessions.totalCost,
-    totalInputTokens: schema.sessions.totalInputTokens,
-    totalOutputTokens: schema.sessions.totalOutputTokens,
-    totalReasoningTokens: schema.sessions.totalReasoningTokens,
-    cacheReadTokens: schema.sessions.cacheReadTokens,
-    cacheWriteTokens: schema.sessions.cacheWriteTokens,
-    modelUsed: schema.sessions.modelUsed,
-    providerUsed: schema.sessions.providerUsed,
-    subagent_count: sql<number>`(SELECT COUNT(*) FROM subagent_calls sc WHERE sc.session_id = sessions.id)`.as('subagent_count'),
-    skill_count: sql<number>`(SELECT COUNT(*) FROM skill_loads sl WHERE sl.session_id = sessions.id)`.as('skill_count'),
-  })
-    .from(schema.sessions)
-    .orderBy(desc(schema.sessions.updatedAt))
-    .limit(limit)
-    .offset(offset);
+  if (excludeParent) {
+    query.where(isNull(schema.sessions.parentId));
+  }
+
+  return await query;
 }
 
 export async function searchSessions(query: string, limit = 50) {
@@ -365,13 +438,13 @@ export async function upsertMessage(msg: MessageInput): Promise<void> {
     .onConflictDoUpdate({
       target: schema.messages.id,
       set: {
-        completedAt: sql`COALESCE(EXCLUDED.completed_at, messages.completed_at)`,
-        outputTokens: sql`COALESCE(EXCLUDED.output_tokens, messages.output_tokens)`,
-        reasoningTokens: sql`COALESCE(EXCLUDED.reasoning_tokens, messages.reasoning_tokens)`,
-        cacheRead: sql`COALESCE(EXCLUDED.cache_read, messages.cache_read)`,
-        cacheWrite: sql`COALESCE(EXCLUDED.cache_write, messages.cache_write)`,
-        cost: sql`COALESCE(EXCLUDED.cost, messages.cost)`,
-        finishReason: sql`COALESCE(EXCLUDED.finish_reason, messages.finish_reason)`,
+        completedAt: sql`COALESCE(excluded.completed_at, messages.completed_at)`,
+        outputTokens: sql`COALESCE(excluded.output_tokens, messages.output_tokens)`,
+        reasoningTokens: sql`COALESCE(excluded.reasoning_tokens, messages.reasoning_tokens)`,
+        cacheRead: sql`COALESCE(excluded.cache_read, messages.cache_read)`,
+        cacheWrite: sql`COALESCE(excluded.cache_write, messages.cache_write)`,
+        cost: sql`COALESCE(excluded.cost, messages.cost)`,
+        finishReason: sql`COALESCE(excluded.finish_reason, messages.finish_reason)`,
       },
     });
 }
@@ -403,15 +476,15 @@ export async function upsertAnalysis(analysis: AnalysisInput): Promise<void> {
     .onConflictDoUpdate({
       target: schema.analysisResults.sessionId,
       set: {
-        analyzedAt: sql`EXCLUDED.analyzed_at`,
-        pros: sql`EXCLUDED.pros`,
-        cons: sql`EXCLUDED.cons`,
-        recommendations: sql`EXCLUDED.recommendations`,
-        alternativeAgents: sql`EXCLUDED.alternative_agents`,
-        alternativeSkills: sql`EXCLUDED.alternative_skills`,
-        efficiencyScore: sql`EXCLUDED.efficiency_score`,
-        prompt: sql`COALESCE(NULLIF(EXCLUDED.prompt, ''), analysis_results.prompt)`,
-        aiGenerated: sql`EXCLUDED.ai_generated`,
+        analyzedAt: sql`excluded.analyzed_at`,
+        pros: sql`excluded.pros`,
+        cons: sql`excluded.cons`,
+        recommendations: sql`excluded.recommendations`,
+        alternativeAgents: sql`excluded.alternative_agents`,
+        alternativeSkills: sql`excluded.alternative_skills`,
+        efficiencyScore: sql`excluded.efficiency_score`,
+        prompt: sql`COALESCE(NULLIF(excluded.prompt, ''), analysis_results.prompt)`,
+        aiGenerated: sql`excluded.ai_generated`,
       },
     });
 }
@@ -423,7 +496,7 @@ export async function getAnalysis(sessionId: string) {
     .where(eq(schema.analysisResults.sessionId, sessionId))
     .limit(1);
   if (rows.length === 0) return null;
-  // jsonb() columns are already JS arrays - NO JSON.parse needed
+  // text({mode:'json'}) columns are already parsed as JS arrays — no JSON.parse needed
   return rows[0];
 }
 
@@ -469,7 +542,7 @@ export async function getDailyStats(days = 30) {
   const d = getDb();
   const cutoff = Date.now() - (days * 86400000);
   return await d.select({
-    day: sql<string>`to_char(to_timestamp(${schema.sessions.createdAt} / 1000), 'YYYY-MM-DD')`.as('day'),
+    day: sql<string>`strftime('%Y-%m-%d', ${schema.sessions.createdAt} / 1000, 'unixepoch')`.as('day'),
     sessionCount: count().as('session_count'),
     totalTokens: sql<number>`COALESCE(SUM(COALESCE(${schema.sessions.totalInputTokens}, 0) + COALESCE(${schema.sessions.totalOutputTokens}, 0)), 0)`.as('total_tokens'),
     totalCost: sql<number>`COALESCE(SUM(COALESCE(${schema.sessions.totalCost}, 0)), 0)`.as('total_cost'),
