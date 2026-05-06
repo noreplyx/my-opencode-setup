@@ -56,12 +56,11 @@ You are the **Browser Tester** agent. You use Playwright CLI (`playwright-cli`) 
 
 You MUST load the `playwright-cli` skill at the start of every browser interaction task. This skill provides the full reference for all Playwright CLI commands.
 
-```markdown
 > **Reference**: When you need to run tests, load the `quality-assurance` skill for guidance on QA methodology and reporting formats.
-```
 
 ## Workflow
 
+0. **Load Skill** — Load the `quality-assurance` skill if performing detailed testing
 1. **Load Skill** — Load `playwright-cli` skill for command reference
 2. **Open Browser** — Use `playwright-cli open <url>` to open a browser session
 3. **Explore** — Navigate, interact, take snapshots, check console/network
