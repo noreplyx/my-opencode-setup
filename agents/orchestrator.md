@@ -23,7 +23,6 @@ permission:
     "subagent/finder": "allow"
     "subagent/plandescriber": "allow"
     "subagent/qa": "allow"
-    "subagent/skillscribe": "allow"
     "subagent/verifier": "allow"
   skill:
     "*": "deny"

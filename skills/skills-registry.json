@@ -22,7 +22,7 @@
     },
     "code-philosophy": {
       "description": "Universal clean code, SOLID principles, clean architecture, security, performance, and telemetry",
-      "permittedAgents": ["implementor", "plandescriber", "skillscribe"],
+      "permittedAgents": ["implementor", "plandescriber"],
       "created": "2026-01-01",
       "builtIn": true
     },
@@ -52,7 +52,7 @@
     },
     "plan-describe": {
       "description": "Detailed implementation roadmap creation from high-level plans",
-      "permittedAgents": ["plandescriber", "skillscribe"],
+      "permittedAgents": ["plandescriber"],
       "created": "2026-01-01",
       "builtIn": true
     },

@@ -21,7 +21,6 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 | **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate |
 | **QA** | `agents/subagent/qa.md` | Runs Smoke Test, code review, bug discovery, quality checks |
 | **Verifier** | `agents/subagent/verifier.md` | Compares implementation against plan manifest (structural + behavioral checks) |
-| **SkillScribe** | `agents/subagent/skillscribe.md` | Distills conversation knowledge into reusable skill files |
 
 ## Pipeline
 
@@ -47,18 +46,18 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 
 ## Skills
 
-Skills are stored under `.agents/skills/<skill-name>/SKILL.md` (for learned skills) or `skills/<skill-name>/SKILL.md` (for built-in skills) and registered in `skills/skills-registry.json`.
+Skills are stored under `skills/<skill-name>/SKILL.md` and registered in `skills/skills-registry.json`.
 
-### Built-in Skills (11 total)
+### Built-in Skills (10 total)
 
 | Skill | Used By | Description |
 |---|---|---|
 | `orchestration` | Orchestrator | Multi-agent orchestration, task management, pipeline workflows |
 | `plan-brainstorm` | Orchestrator | Collaborative brainstorming with trade-off analysis |
-| `plan-describe` | PlanDescriber, SkillScribe | Detailed implementation roadmap creation |
+| `plan-describe` | PlanDescriber | Detailed implementation roadmap creation |
 | `plan-verification` | Verifier | Plan-to-implementation verification, compliance scoring |
 | `quality-assurance` | QA | Software testing, bug discovery, quality standards |
-| `code-philosophy` | Implementor, PlanDescriber, SkillScribe | SOLID, clean code, clean architecture, security |
+| `code-philosophy` | Implementor, PlanDescriber | SOLID, clean code, clean architecture, security |
 | `backend-code-philosophy` | Implementor, PlanDescriber | Backend principles: scaling, caching, database patterns |
 | `frontend-code-philosophy` | Implementor, PlanDescriber | Frontend principles: rendering, state management, a11y |
 | `accessibility` | Implementor, QA | Accessibility guidelines for UI development |
