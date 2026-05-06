@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCode AI Agent Analyzer</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Nav */
+    .nav { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+    .nav h1 { font-size: 18px; color: #58a6ff; cursor: pointer; }
+    .nav h1:hover { color: #79c0ff; }
+    .nav .subtitle { color: #8b949e; font-size: 13px; }
+    .nav .back-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .nav .back-btn:hover { background: #30363d; }
+    
+    .content { flex: 1; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    
+    /* Cards */
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .card h2 { font-size: 16px; color: #e6edf3; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
+    .card h3 { font-size: 14px; color: #c9d1d9; margin-bottom: 8px; }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; text-align: center; }
+    .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #58a6ff; }
+    .stat-card .stat-label { font-size: 12px; color: #8b949e; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: #21262d; }
+    th { text-align: left; padding: 10px 12px; color: #8b949e; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid #30363d; }
+    td { padding: 10px 12px; border-bottom: 1px solid #21262d; }
+    tr:hover td { background: #1c2128; }
+    tr.clickable { cursor: pointer; }
+    
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-blue { background: #1f3a5f; color: #58a6ff; }
+    .badge-green { background: #1a3a2a; color: #3fb950; }
+    .badge-yellow { background: #3a2f1a; color: #d29922; }
+    .badge-red { background: #3a1a1a; color: #f85149; }
+    .badge-purple { background: #2a1a3a; color: #bc8cff; }
+    
+    /* Analysis */
+    .score-container { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .score-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; border: 4px solid; flex-shrink: 0; }
+    .score-high { border-color: #3fb950; color: #3fb950; }
+    .score-medium { border-color: #d29922; color: #d29922; }
+    .score-low { border-color: #f85149; color: #f85149; }
+    
+    .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 768px) { .pros-cons { grid-template-columns: 1fr; } }
+    
+    ul.pros-list, ul.cons-list { list-style: none; padding: 0; }
+    ul.pros-list li, ul.cons-list li { padding: 8px 12px; margin-bottom: 6px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+    ul.pros-list li { background: #1a3a2a; border-left: 3px solid #3fb950; }
+    ul.cons-list li { background: #3a1a1a; border-left: 3px solid #f85149; }
+    
+    .rec-list { list-style: none; padding: 0; }
+    .rec-list li { padding: 10px 12px; margin-bottom: 6px; background: #1c2128; border-radius: 6px; font-size: 13px; border-left: 3px solid #58a6ff; line-height: 1.5; }
+    
+    .alt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .alt-card { background: #1c2128; border: 1px solid #30363d; border-radius: 8px; padding: 14px; }
+    .alt-card .alt-name { font-weight: 600; color: #58a6ff; font-size: 13px; margin-bottom: 4px; }
+    .alt-card .alt-reason { font-size: 12px; color: #8b949e; line-height: 1.5; }
+    
+    /* Loading & Error */
+    .loading { text-align: center; padding: 40px; color: #8b949e; }
+    .loading::after { content: '...'; animation: dots 1.5s steps(4, end) infinite; }
+    @keyframes dots { 0%, 20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%, 100% { content: '...'; } }
+    .error { text-align: center; padding: 40px; color: #f85149; }
+    .error-detail { font-size: 13px; color: #8b949e; margin-top: 8px; }
+    
+    /* Detail Header */
+    .detail-header { margin-bottom: 24px; }
+    .detail-header h2 { font-size: 20px; color: #e6edf3; margin-bottom: 4px; border: none; padding: 0; }
+    .detail-header .meta { color: #8b949e; font-size: 13px; }
+    .detail-header .meta span { margin-right: 16px; }
+    
+    .empty-state { text-align: center; padding: 40px 20px; color: #8b949e; }
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; }
+    
+    /* Tooltip */
+    .reason-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; cursor: help; }
+    .reason-cell:hover { overflow: visible; white-space: normal; background: #1c2128; position: absolute; z-index: 10; max-width: 400px; padding: 8px; border: 1px solid #30363d; border-radius: 4px; }
+    
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+    
+    .import-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-bottom: 16px; }
+    .import-btn:hover { background: #30363d; }
+    .import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .nav-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .nav-status { font-size: 11px; color: #8b949e; }
+
+    /* Pagination */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 12px 0; flex-wrap: wrap; }
+    .pagination .page-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; min-width: 32px; text-align: center; }
+    .pagination .page-btn:hover:not(:disabled):not(.page-active) { background: #30363d; }
+    .pagination .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pagination .page-active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .pagination .page-info { color: #8b949e; font-size: 12px; margin: 0 8px; }
+    .pagination .page-ellipsis { color: #8b949e; padding: 4px 4px; font-size: 12px; }
+
+    /* Clickable agent */
+    .clickable-agent { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+    .clickable-agent:hover { color: #79c0ff; }
+
+    /* AI Analysis loading state */
+    .ai-loading { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1a2a3a; border: 1px solid #30363d; border-radius: 6px; margin-bottom: 12px; font-size: 13px; color: #58a6ff; }
+    .ai-loading .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
+
+    // API helper
+    const API = {
+      async get(path) {
+        const res = await fetch(`/api${path}`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      },
+      async post(path, body = {}) {
+        const res = await fetch(`/api${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        return res.json();
+      }
+    };
+
+    // Format date
+    function fmtDate(ts) {
+      if (!ts || ts === 0) return 'N/A';
+      const d = new Date(typeof ts === 'number' ? ts : parseInt(ts));
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+    }
+
+    function fmtDuration(ms) {
+      if (!ms || ms === 0) return '-';
+      ms = parseInt(ms);
+      if (ms < 1000) return ms + 'ms';
+      if (ms < 60000) return (ms/1000).toFixed(1) + 's';
+      return Math.floor(ms/60000) + 'm ' + Math.floor((ms%60000)/1000) + 's';
+    }
+
+    // ===== COMPONENTS =====
+
+    function ScoreRing({ score }) {
+      const s = parseInt(score) || 0;
+      const cls = s >= 70 ? 'score-high' : s >= 40 ? 'score-medium' : 'score-low';
+      return <div className={`score-ring ${cls}`}>{s}</div>;
+    }
+
+    function Loading() {
+      return <div className="loading">Loading</div>;
+    }
+
+    function ErrorMsg({ message }) {
+      return <div className="error"><div>⚠ Error</div><div className="error-detail">{message}</div></div>;
+    }
+
+    // ===== NAV =====
+    function Nav({ currentPage, onNavigate }) {
+      return (
+        <div className="nav">
+          <h1 onClick={() => onNavigate('home')}>🔍 AI Agent Analyzer</h1>
+          <span className="subtitle">OpenCode Agent System Analytics</span>
+          <div className="nav-actions">
+            {currentPage !== 'home' && (
+              <button className="back-btn" onClick={() => onNavigate('home')}>← Dashboard</button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ===== DASHBOARD =====
+    function Dashboard({ onNavigate }) {
+      const [stats, setStats] = useState(null);
+      const [sessions, setSessions] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [importing, setImporting] = useState(false);
+      const [importMsg, setImportMsg] = useState('');
+
+      useEffect(() => {
+        Promise.all([
+          API.get('/stats/overview'),
+          API.get('/sessions?limit=100')
+        ]).then(([statsData, sessionsData]) => {
+          setStats(statsData);
+          setSessions(sessionsData.sessions || []);
+          setLoading(false);
+        }).catch(err => {
+          setError(err.message);
+          setLoading(false);
+        });
+      }, []);
+
+      const handleImport = async () => {
+        setImporting(true);
+        setImportMsg('');
+        try {
+          const result = await API.post('/import-audit');
+          setImportMsg(`Imported ${result.imported} entries`);
+          // Refresh
+          const [statsData, sessionsData] = await Promise.all([
+            API.get('/stats/overview'),
+            API.get('/sessions?limit=100')
+          ]);
+          setStats(statsData);
+          setSessions(sessionsData.sessions || []);
+        } catch (err) {
+          setImportMsg(`Error: ${err.message}`);
+        }
+        setImporting(false);
+      };
+
+      if (loading) return <Loading />;
+      if (error) return <ErrorMsg message={error} />;
+
+      return (
+        <div>
+          {/* Stats */}
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-value">{stats?.total_sessions || 0}</div>
+              <div className="stat-label">Sessions</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.total_subagent_calls || 0}</div>
+              <div className="stat-label">Subagent Calls</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.total_skill_loads || 0}</div>
+              <div className="stat-label">Skill Loads</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.unique_agents || 0}</div>
+              <div className="stat-label">Unique Agents</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-value">{stats?.unique_skills || 0}</div>
+              <div className="stat-label">Unique Skills</div>
+            </div>
+          </div>
+
+          <div style={{display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap'}}>
+            <button className="import-btn" onClick={handleImport} disabled={importing}>
+              {importing ? 'Importing...' : '📥 Import Audit Log'}
+            </button>
+            {importMsg && <span className="nav-status">{importMsg}</span>}
+            <span className="nav-status" style={{marginLeft: 'auto'}}>
+              🔗 URL: {window.location.href}
+            </span>
+          </div>
+
+          {/* Sessions Table */}
+          <div className="card">
+            <h2>All Sessions ({sessions.length})</h2>
+            {sessions.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📭</div>
+                <p>No sessions recorded yet. Start a conversation with OpenCode or import audit logs.</p>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Created</th>
+                      <th>Updated</th>
+                      <th>Subagents</th>
+                      <th>Skills</th>
+                      <th>Files</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessions.map(s => (
+                      <tr key={s.id} className="clickable" onClick={() => onNavigate('session', s.id)}>
+                        <td><strong>{s.title || '(untitled)'}</strong></td>
+                        <td>{fmtDate(s.createdAt)}</td>
+                        <td>{fmtDate(s.updatedAt)}</td>
+                        <td><span className="badge badge-blue">{s.subagent_count || 0}</span></td>
+                        <td><span className="badge badge-purple">{s.skill_count || 0}</span></td>
+                        <td>{s.filesChanged || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ===== PAGINATION COMPONENT =====
+    function Pagination({ currentPage, totalPages, onPageChange }) {
+      if (totalPages <= 1) return null;
+      
+      const pages = [];
+      const maxVisible = 5; // show first, last, and ±2 around current
+      
+      let start = Math.max(1, currentPage - 2);
+      let end = Math.min(totalPages, currentPage + 2);
+      
+      // Adjust to always show maxVisible pages when possible
+      if (end - start + 1 < maxVisible) {
+        if (start === 1) {
+          end = Math.min(totalPages, start + maxVisible - 1);
+        } else {
+          start = Math.max(1, end - maxVisible + 1);
+        }
+      }
+      
+      if (start > 1) {
+        pages.push(
+          <button key="first" className="page-btn" onClick={() => onPageChange(1)}>1</button>
+        );
+        if (start > 2) {
+          pages.push(<span key="ellipsis-start" className="page-ellipsis">…</span>);
+        }
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(
+          <button
+            key={i}
+            className={`page-btn${i === currentPage ? ' page-active' : ''}`}
+            onClick={() => onPageChange(i)}
+          >
+            {i}
+          </button>
+        );
+      }
+      
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          pages.push(<span key="ellipsis-end" className="page-ellipsis">…</span>);
+        }
+        pages.push(
+          <button key="last" className="page-btn" onClick={() => onPageChange(totalPages)}>{totalPages}</button>
+        );
+      }
+      
+      return (
+        <div className="pagination">
+          <button className="page-btn" disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)}>
+            ← Prev
+          </button>
+          <span className="page-info">Page {currentPage} of {totalPages}</span>
+          {pages}
+          <button className="page-btn" disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)}>
+            Next →
+          </button>
+        </div>
+      );
+    }
+
+    // ===== SESSION DETAIL =====
+    function SessionDetail({ sessionId, onNavigate }) {
+      const [session, setSession] = useState(null);
+      const [subagents, setSubagents] = useState([]);
+      const [skills, setSkills] = useState([]);
+      const [tools, setTools] = useState([]);
+      const [analysis, setAnalysis] = useState(null);
+      const [aiLoading, setAiLoading] = useState(false);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [parentSessionId, setParentSessionId] = useState(null);
+      const [subagentPage, setSubagentPage] = useState(1);
+      const [skillPage, setSkillPage] = useState(1);
+      const [toolPage, setToolPage] = useState(1);
+      const pageSize = 20;
+
+      // Reset pages when data changes
+      useEffect(() => { setSubagentPage(1); }, [subagents.length]);
+      useEffect(() => { setSkillPage(1); }, [skills.length]);
+      useEffect(() => { setToolPage(1); }, [tools.length]);
+
+      useEffect(() => {
+        if (!sessionId) return;
+        setLoading(true);
+        setAiLoading(false);
+        setAnalysis(null);
+        
+        const fetchData = async () => {
+          try {
+            // First try to get existing data
+            const [s, sa, sk, t, a] = await Promise.all([
+              API.get(`/sessions/${sessionId}`),
+              API.get(`/sessions/${sessionId}/subagents`),
+              API.get(`/sessions/${sessionId}/skills`),
+              API.get(`/sessions/${sessionId}/tools`),
+              API.get(`/sessions/${sessionId}/analysis`)
+            ]);
+            
+            setSession(s);
+            setSubagents(sa || []);
+            setSkills(sk || []);
+            setTools(t || []);
+            
+            // If we have existing analysis, show it immediately
+            if (a && a.pros && a.pros.length > 0) {
+              setAnalysis(a);
+            }
+            
+            // If no subagent calls but session exists, try to backfill from OpenCode API
+            if ((!sa || sa.length === 0) && s) {
+              try {
+                await API.post(`/backfill/${sessionId}`);
+                // After backfill, re-fetch all data
+                const [sa2, sk2, t2] = await Promise.all([
+                  API.get(`/sessions/${sessionId}/subagents`),
+                  API.get(`/sessions/${sessionId}/skills`),
+                  API.get(`/sessions/${sessionId}/tools`),
+                ]);
+                setSubagents(sa2 || []);
+                setSkills(sk2 || []);
+                setTools(t2 || []);
+              } catch (bfErr) {
+                // Backfill silently fails - not critical
+              }
+            }
+            
+            setLoading(false);
+
+            // Auto-trigger AI analysis
+            setAiLoading(true);
+            try {
+              const aiResult = await API.post(`/sessions/${sessionId}/ai-analyze`);
+              if (aiResult && aiResult.pros) {
+                setAnalysis(aiResult);
+              }
+            } catch (aiErr) {
+              // AI analysis failed - fall back to rule-based
+              try {
+                const fallback = await API.get(`/sessions/${sessionId}/analysis`);
+                if (fallback && fallback.pros) {
+                  setAnalysis(fallback);
+                }
+              } catch (fallbackErr) {
+                // Silent fallback
+              }
+            }
+            setAiLoading(false);
+          } catch (err) {
+            setError(err.message);
+            setLoading(false);
+            setAiLoading(false);
+          }
+        };
+        
+        fetchData();
+      }, [sessionId]);
+
+      const handleReanalyze = async () => {
+        setAiLoading(true);
+        try {
+          const a = await API.post(`/sessions/${sessionId}/ai-analyze`);
+          if (a && a.pros) {
+            setAnalysis(a);
+          }
+        } catch (err) {
+          setError(err.message);
+        }
+        setAiLoading(false);
+      };
+
+      const handleAgentClick = async (agentName) => {
+        try {
+          const result = await API.get(`/sessions/search?q=${encodeURIComponent(agentName)}`);
+          if (result.sessions && result.sessions.length > 0) {
+            setParentSessionId(sessionId);
+            onNavigate('session', result.sessions[0].id);
+          } else {
+            alert(`No sessions found for agent: ${agentName}`);
+          }
+        } catch (err) {
+          alert(`Error searching for agent: ${err.message}`);
+        }
+      };
+
+      // Pagination helpers
+      function getPaginatedItems(items, page) {
+        const start = (page - 1) * pageSize;
+        return items.slice(start, start + pageSize);
+      }
+
+      if (loading) return <Loading />;
+      if (error) return <ErrorMsg message={error} />;
+      if (!session) return <ErrorMsg message="Session not found" />;
+
+      return (
+        <div>
+          {/* Session Header */}
+          <div className="detail-header">
+            <h2>{session.title || '(untitled session)'}</h2>
+            {parentSessionId && (
+              <button className="back-btn" onClick={() => {
+                const pid = parentSessionId;
+                setParentSessionId(null);
+                onNavigate('session', pid);
+              }} style={{marginBottom: 8}}>
+                ← Back to parent session
+              </button>
+            )}
+            <div className="meta">
+              <span>📅 Created: {fmtDate(session.createdAt)}</span>
+              <span>🔄 Updated: {fmtDate(session.updatedAt)}</span>
+              <span>📁 Files: {session.filesChanged || 0}</span>
+              <span>➕ {session.added || 0} / ➖ {session.deleted || 0}</span>
+              <span>🆔 {session.id?.substring(0, 16)}...</span>
+            </div>
+          </div>
+
+          {/* AI Analysis Loading State */}
+          {aiLoading && (
+            <div className="ai-loading">
+              <span className="spinner"></span>
+              <span>AI Analysis in progress...</span>
+            </div>
+          )}
+
+          {/* Analysis Section */}
+          <div className="card">
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <h2>📊 Session Analysis</h2>
+              <button className="import-btn" onClick={handleReanalyze}>🔄 Re-analyze</button>
+            </div>
+            
+            {analysis ? (
+              <>
+                {/* Score */}
+                <div className="score-container">
+                  <ScoreRing score={analysis.efficiencyScore} />
+                  <div>
+                    <div style={{fontSize: 14, fontWeight: 600, marginBottom: 4}}>
+                      Efficiency Score: {analysis.efficiencyScore}/100
+                    </div>
+                    <div style={{fontSize: 12, color: '#8b949e'}}>
+                      {analysis.efficiencyScore >= 70 ? '✅ Good agent utilization' :
+                       analysis.efficiencyScore >= 40 ? '⚠️ Room for improvement' :
+                       '❌ Needs significant optimization'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pros & Cons */}
+                <div className="pros-cons">
+                  <div>
+                    <h3>✅ Pros</h3>
+                    {analysis.pros?.length > 0 ? (
+                      <ul className="pros-list">
+                        {analysis.pros.map((p, i) => <li key={i}>{p}</li>)}
+                      </ul>
+                    ) : (
+                      <div className="empty-state" style={{padding: 20}}><p>No pros identified</p></div>
+                    )}
+                  </div>
+                  <div>
+                    <h3>❌ Cons</h3>
+                    {analysis.cons?.length > 0 ? (
+                      <ul className="cons-list">
+                        {analysis.cons.map((c, i) => <li key={i}>{c}</li>)}
+                      </ul>
+                    ) : (
+                      <div className="empty-state" style={{padding: 20}}><p>No cons identified</p></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recommendations */}
+                <h3>💡 Recommendations</h3>
+                {analysis.recommendations?.length > 0 ? (
+                  <ul className="rec-list">
+                    {analysis.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                ) : (
+                  <div className="empty-state" style={{padding: 20}}><p>No recommendations</p></div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state" style={{padding: 20}}>
+                <p>Analysis not yet available. Click "Re-analyze" to generate.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Alternative Agents */}
+          {analysis?.alternativeAgents?.length > 0 && (
+            <div className="card">
+              <h2>🤖 Alternative Agents to Consider</h2>
+              <div className="alt-grid">
+                {analysis.alternativeAgents.map((a, i) => (
+                  <div key={i} className="alt-card">
+                    <div className="alt-name">{a.name}</div>
+                    <div className="alt-reason">{a.reason}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Alternative Skills */}
+          {analysis?.alternativeSkills?.length > 0 && (
+            <div className="card">
+              <h2>📚 Alternative Skills to Load</h2>
+              <div className="alt-grid">
+                {analysis.alternativeSkills.map((s, i) => (
+                  <div key={i} className="alt-card">
+                    <div className="alt-name">{s.name}</div>
+                    <div className="alt-reason">{s.reason}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subagent Calls */}
+          <div className="card">
+            <h2>🤖 Subagent Calls ({subagents.length})</h2>
+            {subagents.length === 0 ? (
+              <div className="empty-state"><p>No subagent calls recorded</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Agent</th>
+                        <th>Reason Called</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getPaginatedItems(subagents, subagentPage).map((c, i) => (
+                        <tr key={c.id || i}>
+                          <td>
+                            <span className="badge badge-blue clickable-agent" onClick={() => handleAgentClick(c.agentName)}>
+                              {c.agentName}
+                            </span>
+                          </td>
+                          <td><div className="reason-cell">{c.reason || '-'}</div></td>
+                          <td><span className={`badge ${c.status === 'completed' ? 'badge-green' : 'badge-yellow'}`}>{c.status}</span></td>
+                          <td>{fmtDuration(c.durationMs)}</td>
+                          <td>{fmtDate(c.calledAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={subagentPage}
+                  totalPages={Math.ceil(subagents.length / pageSize)}
+                  onPageChange={setSubagentPage}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Skill Loads */}
+          <div className="card">
+            <h2>📚 Skill Loads ({skills.length})</h2>
+            {skills.length === 0 ? (
+              <div className="empty-state"><p>No skill loads recorded</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Skill</th>
+                        <th>Reason Loaded</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getPaginatedItems(skills, skillPage).map((s, i) => (
+                        <tr key={s.id || i}>
+                          <td><span className="badge badge-purple">{s.skillName}</span></td>
+                          <td><div className="reason-cell">{s.reason || 'Not specified'}</div></td>
+                          <td>{fmtDate(s.loadedAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={skillPage}
+                  totalPages={Math.ceil(skills.length / pageSize)}
+                  onPageChange={setSkillPage}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Tool Calls */}
+          <div className="card">
+            <h2>🔧 Tool Calls ({tools.length})</h2>
+            {tools.length === 0 ? (
+              <div className="empty-state"><p>No tool calls recorded</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tool</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getPaginatedItems(tools, toolPage).map((t, i) => (
+                        <tr key={t.id || i}>
+                          <td><span className="badge badge-yellow mono">{t.toolName}</span></td>
+                          <td><span className={`badge ${t.status === 'completed' ? 'badge-green' : 'badge-red'}`}>{t.status}</span></td>
+                          <td>{fmtDuration(t.durationMs)}</td>
+                          <td>{fmtDate(t.calledAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={toolPage}
+                  totalPages={Math.ceil(tools.length / pageSize)}
+                  onPageChange={setToolPage}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ===== APP =====
+    function App() {
+      const [page, setPage] = useState('home');
+      const [selectedSessionId, setSelectedSessionId] = useState(null);
+
+      const handleNavigate = useCallback((target, sessionId) => {
+        if (target === 'home') {
+          setPage('home');
+          setSelectedSessionId(null);
+        } else if (target === 'session') {
+          setPage('session');
+          setSelectedSessionId(sessionId);
+        }
+      }, []);
+
+      return (
+        <div className="app">
+          <Nav currentPage={page} onNavigate={handleNavigate} />
+          <div className="content">
+            {page === 'home' && <Dashboard onNavigate={handleNavigate} />}
+            {page === 'session' && <SessionDetail sessionId={selectedSessionId} onNavigate={handleNavigate} />}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

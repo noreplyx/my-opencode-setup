@@ -4,5 +4,8 @@
   "server": {
     "port": 4096
   },
-  "plugin": ["@franlol/opencode-md-table-formatter@latest"]
+  "plugin": [
+    "@franlol/opencode-md-table-formatter@latest", 
+    "./plugins/opencode-analyzer/dist/index.js"
+  ]
 }

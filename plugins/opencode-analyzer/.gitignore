@@ -1,0 +1,8 @@
+node_modules/
+.env
+analyzer.db
+analyzer.log
+analyzer.port
+drizzle/
+*.db
+dist/
