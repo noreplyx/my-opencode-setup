@@ -19,6 +19,7 @@ tools:
 permission:
   task:
     "*": "deny"
+    "subagent/browser-tester": "allow"
     "subagent/implementor": "allow"
     "subagent/finder": "allow"
     "subagent/plandescriber": "allow"

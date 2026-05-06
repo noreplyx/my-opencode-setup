@@ -23,6 +23,7 @@ permission:
     "backend-code-philosophy": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+    "playwright-cli": "allow"
 reasoningEffort: "none"
 textVerbosity: "low"
 ---
