@@ -44,9 +44,6 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 - **Exploratory/research tasks**: Use only Finder, report findings directly
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor → QA → Verifier
 
-## Skills
-
-Skills are stored under `skills/<skill-name>/SKILL.md` and registered in `skills/skills-registry.json`.
 
 ### Built-in Skills (10 total)
 
