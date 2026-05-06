@@ -56,6 +56,12 @@
       "created": "2026-01-01",
       "builtIn": true
     },
+    "plan-verification": {
+      "description": "Plan-to-implementation verification: structural checks, behavioral checks, compliance scoring",
+      "permittedAgents": ["verifier"],
+      "created": "2026-05-06",
+      "builtIn": true
+    },
     "quality-assurance": {
       "description": "Software quality assurance, testing, bug discovery, and quality standards",
       "permittedAgents": ["qa"],

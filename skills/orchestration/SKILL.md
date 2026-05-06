@@ -29,6 +29,7 @@ The default orchestration workflow follows this sequence:
 2. ORCHESTRATOR ──► Brainstorm with user interactively, explore ideas, converge on direction
           │
 3. PLAN DESCRIBER ──► Create detailed, step-by-step implementation roadmap
+          │              └── Also produces plan-manifest.json for verification
           │
 4. IMPLEMENTOR ──► Write code strictly following the plan
           │
@@ -47,13 +48,24 @@ The default orchestration workflow follows this sequence:
    │ confirm app is runnable│
    └──────┬──────┘
           │
-6. ORCHESTRATOR ──► Review results, report to user
+6. VERIFIER ──► Compare implementation against plan manifest
+          │        └── Structural checks (Pass 1)
+          │        └── Behavioral checks (Pass 2)
+          │        └── Produces compliance score + deviation report
+          │
+   ┌──────┴──────┐
+   ▼ FAILURE     ▼ (score < 80% → Orchestrator reviews, may cycle back to Implementor)
+   │ Escalate to │
+   │ Orchestrator│
+   └──────┬──────┘
+          │
+7. ORCHESTRATOR ──► Review all results, report to user
 ```
 
 ### When to Skip Steps
 - **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
-- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor for the fix, then QA.
+- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor for the fix, then QA, then Verifier.
 
 ### Build Gate & Smoke Test Requirements
 
@@ -63,6 +75,7 @@ Every implementation MUST pass through two mandatory validation gates:
 |---------------|--------------|---------------------------------------------------------|-------------------------------------------|
 | **Build Gate**   | Implementor  | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Smoke Test**   | QA           | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; Orchestrator cycles back to Implementor for fixes |
+| **Plan Verify**  | Verifier     | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% → Orchestrator reviews; may cycle back to Implementor or PlanDescriber |
 
 **Build Gate Protocol:**
 - The Implementor MUST run the build command after writing code
@@ -96,6 +109,23 @@ Finder has analyzed the codebase (see files: src/services/user.ts, src/models/us
 Please create a detailed implementation roadmap for adding user profile management,
 following the code-philosophy and backend-code-philosophy skills.
 Focus on: data models, service layer, and API endpoints."
+```
+
+### Verifier Hand-off
+When passing from QA to Verifier, include:
+1. **Plan Manifest Path**: Path to the `plan-manifest.json` file produced by PlanDescriber
+2. **Implementation Summary**: Brief summary of what was implemented
+3. **QA Results**: Summary of QA's smoke test and any bug reports
+4. **Clear Objective**: "Verify that the implementation matches all structural and behavioral checkpoints in the plan manifest"
+5. **Expected Output**: Compliance score, pass/fail/skipped breakdown, deviation report
+
+Example:
+```
+Orchestrator to Verifier:
+"The plan manifest is at plan-manifests/user-profile-manifest.json.
+Implementation added UserService with createUser and getUser methods.
+QA smoke test passed.
+Please verify all checkpoints in the manifest and report the compliance score."
 ```
 
 ## QA Feedback Loop
