@@ -80,6 +80,7 @@ The manifest must follow this JSON structure:
 | kind | When to Use | verify fields |
 |---|---|---|
 | `fileExists` | A new file must be created | No extra fields |
+| `fileNotExists` | A file or directory must be deleted/removed | No extra fields |
 | `exportExists` | A named export must be present | `exportName`: the exported name |
 | `classExists` | A class must be exported | `className`: the class name |
 | `functionExists` | A function must be exported | `functionName`: the function name |

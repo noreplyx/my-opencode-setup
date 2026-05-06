@@ -40,6 +40,14 @@ The default orchestration workflow follows this sequence:
    └──────┬──────┘
           │ (build fails → Implementor fixes, rebuilds)
           ▼
+   ┌──────┴──────┐
+   ▼ LINT GATE   ▼ (MANDATORY if linter configured)
+   │  Implementor MUST run linter │
+   │  (eslint, prettier --check,  │
+   │   tsc --noEmit, etc.)        │
+   └──────┬──────┘
+          │ (lint fails → Implementor fixes, re-lints)
+          ▼
 5. QA ──► Test, validate, report results
           │
    ┌──────┴──────┐
@@ -74,6 +82,7 @@ Every implementation MUST pass through two mandatory validation gates:
 | Gate          | Who Runs It  | What It Checks                                          | Failure Action                            |
 |---------------|--------------|---------------------------------------------------------|-------------------------------------------|
 | **Build Gate**   | Implementor  | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
+| **Lint Gate**    | Implementor  | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
 | **Smoke Test**   | QA           | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; Orchestrator cycles back to Implementor for fixes |
 | **Plan Verify**  | Verifier     | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% → Orchestrator reviews; may cycle back to Implementor or PlanDescriber |
 
@@ -89,6 +98,14 @@ Every implementation MUST pass through two mandatory validation gates:
 - If the smoke test fails, QA reports it as a Critical severity bug
 - The Orchestrator reviews the report and cycles back to Implementor for fixes
 - After fixes, QA re-runs the smoke test (build is re-verified by Implementor)
+
+**Lint Gate Protocol:**
+- The Implementor MUST run lint commands (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) after the build passes
+- The Implementor MUST return the full lint output (stdout + stderr) to the Orchestrator
+- If linting fails, the Implementor MUST fix the issues and re-lint before reporting completion
+- The Orchestrator MUST inspect the lint output to confirm no errors before proceeding to QA
+- If the project has no linter configured, the Implementor should report "No linter configured" and proceed
+- The Implementor's report MUST include lint output alongside build output so the Orchestrator can confirm both gates passed
 
 ## Agent Hand-off Protocol
 
@@ -167,4 +184,46 @@ The Orchestrator serves as the **primary brainstorming partner** for the user. T
 ### Workflow
 1. Orchestrator brainstorms **interactively** with the user
 2. Orchestrator formalizes the plan and proceeds to delegation
+
+## Agent Timeout & Circuit Breaker
+
+### Timeout Policy
+- Each agent task should complete within a reasonable timeframe
+- The Orchestrator monitors task duration and may abort tasks that exceed expected time
+- If a subagent times out, the Orchestrator restarts the task with a fresh agent session
+- Repeated timeouts (> 2) for the same task indicate a deeper issue — escalate to PlanDescriber
+
+### Circuit Breaker Pattern
+The system includes a circuit breaker to prevent infinite agent loops:
+
+| State | Meaning | Action |
+|---|---|---|
+| **Closed** | Normal operation | Agents execute as normal |
+| **Open** | Repeated failures detected | Orchestrator pauses cycling to the same agent for the same issue |
+| **Half-Open** | Probation period | Orchestrator allows one retry to test if the issue is resolved |
+
+### Escalation Limits
+- **Same bug reappears**: 3 fix attempts → escalate to PlanDescriber for roadmap revision
+- **Same agent fails consecutively**: 3 failures → Orchestrator pauses that agent path and reviews manually
+- **Verifier score < 80%**: 3 re-verification failures → escalate to PlanDescriber for roadmap revision
+- **Total pipeline retries**: If total retries across all gates exceed 5, Orchestrator pauses and reports to user
+
+### Circuit Breaker Workflow
+```
+1. Agent task fails (build, lint, smoke test, or verification)
+2. Orchestrator records the failure in a counter for that specific check
+3. If counter < threshold (3), Orchestrator cycles back for retry
+4. If counter >= threshold, Orchestrator opens the circuit:
+   a. Pauses further retries for that specific check
+   b. Escalates to PlanDescriber if the root cause is plan-related
+   c. Reports to user with failure summary and escalation decision
+5. After PlanDescriber revises the plan, Orchestrator resets the circuit (Half-Open)
+6. One retry is allowed — if it passes, circuit closes; if it fails, circuit opens again
+```
+
+### Counter Reset
+- Circuit breaker counters are reset when:
+  - The task passes the gate successfully
+  - PlanDescriber revises the roadmap
+  - The Orchestrator manually resets after user intervention
 

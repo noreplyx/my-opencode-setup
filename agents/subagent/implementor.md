@@ -59,12 +59,14 @@ You have bash access for development tasks. Follow these restrictions strictly:
 ## Workflow
 1. **Receive Plan**: Review the step-by-step roadmap from the Planner/Orchestrator
 2. **Implement**: Write code files in the specified order, following the plan exactly
-3. **Build & Verify (MANDATORY)**: Run the specified build/lint commands (e.g., `npm run build`, `tsc`, `vite build`). Collect and return the **full build output** (stdout/stderr). If the build fails, report the errors and do NOT skip this step — the build MUST pass before reporting completion.
-4. **Report**: Report back to the Orchestrator with:
+3. **Build & Verify (MANDATORY)**: Run the specified build command (e.g., `npm run build`, `tsc`, `vite build`). Collect and return the **full build output** (stdout/stderr). If the build fails, report the errors and do NOT skip this step — the build MUST pass before reporting completion.
+4. **Lint & Verify (MANDATORY)**: Run the linter (e.g., `eslint`, `prettier --check`, `tsc --noEmit`). Collect and return the **full lint output** (stdout/stderr). If linting fails, fix the issues and re-lint — lint MUST pass before reporting completion. If no linter is configured, report "No linter configured" and proceed.
+5. **Report**: Report back to the Orchestrator with:
    - Summary of what was implemented
    - Build command run and its full output (success/failure)
+   - Lint command run and its full output (success/failure or "No linter configured")
    - Any issues encountered
-   - Confirmation that the code compiles successfully
+   - Confirmation that the code compiles and passes lint checks successfully
 
 ## Skill Usage
 
@@ -76,6 +78,7 @@ You have bash access for development tasks. Follow these restrictions strictly:
 - **MANDATORY**: You MUST run the build command after writing code. Never report completion without first running and passing the build.
 - **MANDATORY**: Return the full build output (both stdout and stderr) in your report to the Orchestrator.
 - **MANDATORY**: If the build fails, attempt to fix the issue before reporting.
+- **MANDATORY**: You MUST run the linter after the build succeeds. Never report completion without first running and passing lint checks (or confirming no linter is configured).
 
 ## Permission Update Tasks
 

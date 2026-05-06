@@ -3,8 +3,8 @@ description: Expert plan describer responsible for transforming high-level techn
 mode: subagent
 temperature: 0.1
 tools:
-  write: false
-  edit: false
+  write: true
+  edit: true
   bash: true
   read: true
   glob: true

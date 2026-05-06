@@ -28,6 +28,8 @@ The standard orchestration workflow follows this sequence:
 
 ```
 Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA → Verifier → Orchestrator (report)
+                                                            ↑
+                                                     Lint Gate (after Build)
 ```
 
 ### Validation Gates
@@ -35,6 +37,7 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 | Gate | Owner | What It Checks | Failure Action |
 |---|---|---|---|
 | **Build Gate** | Implementor | Code compiles without errors | Fix and rebuild before proceeding |
+| **Lint Gate** | Implementor | Code passes linter/style checks (eslint, prettier, tsc --noEmit) | Fix lint errors before proceeding |
 | **Smoke Test** | QA | App boots/starts without crashing | Critical bug; cycle back to Implementor |
 | **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score ≥ 80%) | Score < 80% → cycle to Implementor or PlanDescriber |
 
@@ -44,8 +47,19 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 - **Exploratory/research tasks**: Use only Finder, report findings directly
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor → QA → Verifier
 
+### Circuit Breaker & Timeout System
 
-### Built-in Skills (10 total)
+The pipeline includes a circuit breaker to prevent infinite agent loops:
+
+| State | Meaning | Action |
+|---|---|---|
+| **Closed** | Normal operation | Agents execute as normal |
+| **Open** | Repeated failures detected | Orchestrator pauses cycling to the same agent |
+| **Half-Open** | Probation period | One retry allowed to test resolution |
+
+**Escalation limits**: 3 failed attempts for the same bug/agent → escalate to PlanDescriber. 5 total pipeline retries → pause and report to user.
+
+### Built-in Skills (11 total)
 
 | Skill | Used By | Description |
 |---|---|---|
@@ -66,8 +80,10 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 PlanDescriber produces a machine-readable `plan-manifest.json` alongside every roadmap. The manifest contains checkpoints that the Verifier agent uses to programmatically confirm the implementation matches the plan.
 
 - **Location**: `plan-manifests/<feature-name>-manifest.json`
-- **Checkpoint types**: structural (files, exports, types, routes) and behavioral (error handling, validation, logging, middleware)
+- **Checkpoint types**: structural (files, exports, types, routes, **file deletions**) and behavioral (error handling, validation, logging, middleware)
 - **Compliance score**: `(Passed / (Total - Skipped)) × 100`
+- **Schema validation**: Manifests are validated against `plan-manifests/plan-manifest-schema.json` (JSON Schema Draft-07)
+- **Deletion verification**: Use `fileNotExists` kind to verify files/directories have been successfully removed
 
 ## Configuration
 

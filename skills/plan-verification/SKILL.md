@@ -21,6 +21,7 @@ This skill enables a Verifier agent to systematically check that code produced b
 | Kind | What It Checks | How to Verify |
 |---|---|---|
 | `fileExists` | File exists at the specified path | `glob` or `read` the path — if it returns content, pass |
+| `fileNotExists` | File or directory does NOT exist (e.g., after deletion) | `glob` the path — if it returns nothing, pass; if path exists, fail |
 | `exportExists` | A named export exists in a module | `grep` for `export class <Name>`, `export function <Name>`, `export const <Name>`, `export interface <Name>` in the target file |
 | `classExists` | A class is exported from a module | `grep` for `export class <className>` in the target file |
 | `functionExists` | A function is exported from a module | `grep` for `export function <functionName>` or `export const <functionName>` in the target file |
@@ -90,6 +91,7 @@ For each structural checkpoint (in dependency order):
 
 **Structural pass fails if:**
 - A required file doesn't exist
+- A required file or directory exists when it should have been deleted
 - A required export/class/function/type is missing
 - A required route is not registered
 
