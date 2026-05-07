@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "@opencode-ai/plugin": "1.4.6"
+    "@opencode-ai/plugin": "1.14.35",
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@playwright/cli": "latest"
