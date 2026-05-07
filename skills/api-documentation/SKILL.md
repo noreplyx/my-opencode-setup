@@ -163,9 +163,384 @@ Use a consistent error response format across all endpoints:
   - Deprecation notices with removal timelines
 - Provide **migration guides** for major version upgrades with before/after examples.
 
+## Security Schemes
+
+Define security schemes in the `components/securitySchemes` section of your OpenAPI spec for consistency across all endpoints.
+
+### API Key Authentication
+```yaml
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key issued via developer portal
+```
+
+### JWT Bearer Token
+```yaml
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+```
+
+### OAuth2 (Authorization Code Flow)
+```yaml
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/authorize
+          tokenUrl: https://auth.example.com/token
+          scopes:
+            read:users: Read user profiles
+            write:users: Create and update users
+            admin: Full administrative access
+```
+
+Apply security globally or per-operation:
+```yaml
+# Global (applies to all endpoints)
+security:
+  - BearerAuth: []
+
+# Per-operation override
+paths:
+  /health:
+    get:
+      security: []  # Public endpoint — no auth required
+```
+
+## WebSocket Documentation Patterns
+
+For real-time APIs (WebSocket), document the protocol separately from REST endpoints. Use an external markdown reference linked from the OpenAPI spec.
+
+### WebSocket Document Template
+```markdown
+# WebSocket API — Real-Time Events
+
+**Endpoint:** `wss://api.example.com/v1/events`
+
+**Authentication:** Send JWT bearer token as the first message:
+```json
+{
+  "type": "auth",
+  "token": "<your-jwt-token>"
+}
+```
+
+**Event Types:**
+
+| Direction | Event | Payload | Description |
+|-----------|-------|---------|-------------|
+| Client → Server | `subscribe` | `{"type":"subscribe","channels":["orders"]}` | Subscribe to channels |
+| Server → Client | `order.created` | `{"type":"order.created","data":{...}}` | New order created |
+| Server → Client | `order.updated` | `{"type":"order.updated","data":{...}}` | Order status changed |
+| Server → Client | `error` | `{"type":"error","code":"AUTH_FAILED","message":"..."}` | Error notification |
+
+**Reconnection:** Exponential backoff starting at 1s, max 30s interval.
+```
+
+### GraphQL Documentation Notes
+- Document the **schema** (types, queries, mutations, subscriptions) using SDL (Schema Definition Language).
+- Maintain a **schema registry** and track changes with tools like Apollo Studio or GraphQL Inspector.
+- Document **rate limiting** per operation complexity (not per request) and authentication requirements.
+
+## SDK & Client Generation
+
+Structure your OpenAPI spec to optimize auto-generated client SDKs using tools like `openapi-generator` or `speakeasy`.
+
+### Best Practices for Client-Friendly Specs
+
+- **Use `$ref` consistently** — avoid inline schemas for reused types so generated clients create proper classes.
+- **Avoid `oneOf`/`anyOf` without discriminators** — use a `discriminator` property (e.g., `objectType`) so generated code can deserialize polymorphic responses.
+- **Provide `example` values** on every schema property so generated client docs show realistic data.
+- **Name operations explicitly** — use the `operationId` field with a clear verb-noun pattern (`getUserById`, `listOrders`).
+
+```yaml
+paths:
+  /users/{userId}:
+    get:
+      operationId: getUserById  # Generates: client.getUserById(id)
+      summary: Retrieve a user by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+```
+
+### Generating Clients
+
+```bash
+# Generate a JavaScript client
+npx @openapitools/openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g javascript \
+  -o ./generated-client
+
+# Generate a Python client
+npx @openapitools/openapi-generator-cli generate \
+  -i openapi.yaml \
+  -g python \
+  -o ./generated-client-python
+```
+
+- Commit generated clients to a dedicated `clients/` directory in your monorepo or publish to a package registry (npm, PyPI).
+- Add a `README.md` in each generated client directory with installation and quick-start instructions.
+
+## Linting & Validation
+
+Enforce API specification quality with **Spectral**, an OpenAPI linter.
+
+### Recommended Spectral Ruleset
+```yaml
+# .spectral.yaml
+extends: [[spectral:oas, all]]
+rules:
+  # Require operationId on every endpoint
+  my-api-operation-id:
+    message: "Every operation must have an operationId"
+    given: $.paths[*][*]
+    then:
+      field: operationId
+      function: truthy
+
+  # Require description on all operations
+  my-api-description:
+    message: "Every operation must have a description"
+    given: $.paths[*][*]
+    then:
+      field: description
+      function: truthy
+
+  # Require 4xx/5xx error responses
+  my-api-error-responses:
+    message: "Operation must document at least one error response (4xx or 5xx)"
+    given: $.paths[*][*].responses
+    then:
+      field: 4XX
+      function: truthy
+
+  # Enforce version format
+  my-api-version-format:
+    message: "API version must follow semver (e.g., 1.0.0)"
+    given: $.info.version
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(\\d+)\\.(\\d+)\\.(\\d+)$"
+
+  # Examples required on all request bodies
+  my-api-request-examples:
+    message: "Request body must include at least one example"
+    given: $.paths[*][*].requestBody.content[*]
+    then:
+      field: examples
+      function: truthy
+```
+
+### CI/CD Integration
+```yaml
+# Example GitHub Actions step
+- name: Lint OpenAPI spec
+  run: npx @stoplight/spectral lint openapi.yaml
+```
+
+Run Spectral in pre-commit hooks and CI pipelines to prevent non-compliant specs from being merged.
+
+## Common Request/Response Patterns
+
+### Pagination (Cursor-Based)
+Cursor-based pagination is preferred over offset-based for large datasets and real-time consistency.
+
+```yaml
+parameters:
+  - name: cursor
+    in: query
+    description: Opaque cursor from the previous response for fetching the next page
+    schema:
+      type: string
+    example: "eyJpZCI6IjEyMyJ9"
+  - name: limit
+    in: query
+    description: Maximum number of items to return (1–100)
+    schema:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 20
+```
+
+```json
+// Response
+{
+  "data": [...],
+  "pagination": {
+    "nextCursor": "eyJpZCI6IjQ1NiJ9",
+    "hasMore": true,
+    "total": 152
+  }
+}
+```
+
+### Filtering
+Use a consistent query parameter pattern for filtering collection endpoints.
+
+```yaml
+parameters:
+  - name: filter[status]
+    in: query
+    description: Filter by order status. Supports comma-separated OR logic.
+    schema:
+      type: string
+    example: "active,pending"
+  - name: filter[createdAfter]
+    in: query
+    description: Filter records created after this ISO 8601 timestamp
+    schema:
+      type: string
+      format: date-time
+    example: "2024-01-01T00:00:00Z"
+  - name: search
+    in: query
+    description: Full-text search across name and description fields
+    schema:
+      type: string
+    example: "widget"
+```
+
+```json
+// GET /orders?filter[status]=active,pending&filter[createdAfter]=2024-01-01T00:00:00Z&search=widget
+{
+  "data": [
+    {
+      "id": "ord_123",
+      "status": "active",
+      "createdAt": "2024-03-15T10:30:00Z",
+      "customerName": "Acme Corp"
+    }
+  ],
+  "pagination": { "nextCursor": null, "hasMore": false, "total": 1 }
+}
+```
+
+### Sorting
+```yaml
+parameters:
+  - name: sort
+    in: query
+    description: "Sort field and direction. Prefix with `-` for descending. Default: `-createdAt`"
+    schema:
+      type: string
+    example: "-createdAt"
+```
+Accepted values: `createdAt`, `-createdAt`, `name`, `-name`, `updatedAt`, `-updatedAt`.
+
+### Idempotent Create (POST with Idempotency-Key)
+```yaml
+parameters:
+  - name: Idempotency-Key
+    in: header
+    required: true
+    description: Unique key to ensure idempotent creation. The same key within 24 hours returns the original resource.
+    schema:
+      type: string
+      format: uuid
+    example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+```
+
+```json
+// Response (201 on first request, 200 on subsequent with same key)
+{
+  "id": "ord_456",
+  "status": "created",
+  "idempotencyKey": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+// Header: Idempotent-Replayed: true (if replayed)
+```
+
+## Breaking Changes Policy
+
+### What Constitutes a Breaking Change
+
+| Change | Breaking? | Notes |
+|--------|-----------|-------|
+| Removing an endpoint | ✅ Yes | New major version required |
+| Renaming a field | ✅ Yes | New major version required |
+| Changing a field type | ✅ Yes | New major version required |
+| Making an optional field required | ✅ Yes | New major version required |
+| Removing an enum value | ✅ Yes | New major version required |
+| Adding a new required field in request body | ✅ Yes | New major version required |
+| Changing the URL path structure | ✅ Yes | New major version required |
+| Changing authentication requirements | ✅ Yes | New major version required |
+| Adding a new optional field to response | ❌ No | Backward compatible |
+| Adding a new endpoint | ❌ No | Backward compatible |
+| Adding a new enum value | ❌ No | Backward compatible (clients should handle unknown values gracefully) |
+| Relaxing validation constraints | ❌ No | Backward compatible |
+| Extending max length on a field | ❌ No | Backward compatible |
+
+### Communication Protocol
+1. **Announcement**: Post deprecation notice in the API changelog and on the developer portal at least **90 days** before removal.
+2. **Sunset Header**: Return a `Sunset: Sat, 01 Nov 2025 00:00:00 GMT` HTTP header on deprecated endpoints.
+3. **Deprecation Header**: Return a `Deprecation: true` HTTP header and include a `Deprecation` link header to the migration guide.
+4. **Migration Period**: Maintain the old and new versions concurrently for at least **6 months** after the new major version is released.
+
+### OpenAPI Deprecation Annotation
+```yaml
+paths:
+  /v1/orders:
+    get:
+      deprecated: true
+      description: "**Deprecated.** Use `GET /v2/orders` instead. Migration guide: https://docs.example.com/migration-v2"
+```
+
+## Code-First vs Design-First
+
+| Aspect | Code-First | Design-First |
+|--------|-----------|--------------|
+| **Workflow** | Write code first; generate OpenAPI from annotations/decorators | Write OpenAPI spec first; generate server stubs and client code |
+| **Tools** | SpringDoc, NestJS Swagger, FastAPI, Django REST Framework | openapi-generator, speakeasy, Fern, Stoplight |
+| **Source of Truth** | Code (spec is derived) | OpenAPI spec (code is derived) |
+| **Speed of Initial Development** | Faster — no upfront spec design | Slower — spec must be written first |
+| **API Contract Consistency** | Lower — spec details depend on annotation coverage | Higher — spec drives all implementation |
+| **Client SDK Generation** | Possible but requires spec stability | Natural fit — spec is the input to codegen |
+| **Cross-Team Collaboration** | Harder — frontend/mobile teams must wait for backend | Easier — spec is available before any code is written |
+| **Breaking Change Detection** | Manual or done at integration test time | Automatic — CI can diff specs and flag breaking changes |
+| **Documentation Quality** | Varies — depends on annotation thoroughness | High — spec is written with documentation in mind |
+| **When to Use** | Prototypes, small teams, rapid iteration | Large teams, public APIs, multiple client platforms |
+
+**Recommendation**: Use **Design-First** for public-facing APIs and multi-platform products. Use **Code-First** for internal microservices where the backend is the only consumer and speed matters.
+
 ## Workflow
-When applying the API Documentation skill:
-1. **Audit**: Review the current API documentation for completeness and consistency.
-2. **Identify**: Point out missing documentation, inconsistent patterns, or broken specifications.
-3. **Propose**: Suggest improvements following the standards above.
-4. **Generate**: Create or update OpenAPI specifications with comprehensive documentation.
+
+When applying the API Documentation skill, follow these steps:
+
+1. **Audit**: Review the current API documentation for completeness and consistency. Check for missing endpoints, inadequate descriptions, inconsistent naming, and lack of error responses. Run Spectral linting against the spec.
+
+2. **Identify**: Point out missing documentation, inconsistent patterns, or broken specifications. Note security schemes that are undocumented, endpoints without examples, and missing error response schemas.
+
+3. **Propose**: Suggest improvements following the standards above. For each issue, provide a concrete fix — a code snippet showing the improved OpenAPI YAML or JSON. Prioritize fixes by impact:
+   - **P0**: Missing authentication/security definitions or broken specs that prevent code generation
+   - **P1**: Endpoints without request/response examples or error documentation
+   - **P2**: Inconsistent naming, missing descriptions, or incomplete pagination documentation
+
+4. **Generate**: Create or update OpenAPI specifications with comprehensive documentation. Include:
+   - Full security schemes in `components/securitySchemes`
+   - Pagination, filtering, and sorting parameters on list endpoints
+   - At least one example per request body and per response
+   - Deprecation annotations with migration links where applicable
+   - Error response schemas with all applicable status codes (400, 401, 403, 404, 409, 422, 429, 500)
+
+5. **Validate**: Run Spectral linting and fix all errors. Verify the spec renders correctly in Swagger UI or Redoc. Run contract tests to confirm the implementation matches the specification.
+
+6. **Communicate**: Publish the changelog entry, announce via developer portal or internal communication channels, and update the migration guide if this is a breaking change.
