@@ -12,7 +12,7 @@ tools:
   skill: true
   task: false
   lsp: true
-  question: false
+  question: true
   webfetch: false
   websearch: false
   external_directory: false

@@ -1,0 +1,60 @@
+{
+  "skill_name": "plan-verification",
+  "evals": [
+    {
+      "id": "full-pass-structural-behavioral",
+      "name": "full pass — all structural and behavioral checks",
+      "prompt": "I have a project and its plan manifest. The plan-manifest.json describes what was supposed to be implemented. Please verify that the implementation matches the plan.\n\nProject root: attached files (sample-project/)\nPlan manifest: evals/files/sample-project/plan-manifest.json\n\nPerform a full verification:\n1. Run all structural checks (file existence, exports, types, functions)\n2. Run all behavioral checks (error handling, input validation)\n3. Calculate the compliance score\n4. Produce a verification report with pass/fail/skipped breakdown\n\nIMPORTANT: Your report MUST include a Detailed Checkpoint Results table listing EVERY checkpoint by its ID (CP-001, CP-002, ..., CP-011) with its verdict (Pass/Fail/Skipped) and reason. Do NOT report only aggregate counts.\n\nReport the overall compliance score and whether it PASSES.",
+      "files": [
+        "evals/files/sample-project/plan-manifest.json",
+        "evals/files/sample-project/src/user-service.ts",
+        "evals/files/sample-project/src/order-service.ts"
+      ],
+      "expected_output": "The verifier produces a report showing 100% compliance — all 11 checkpoints pass (8 structural + 3 behavioral). The verdict should be PASS. The Detailed Checkpoint Results table lists each checkpoint by ID.",
+      "assertions": [
+        "The output reports a compliance score of 100%.",
+        "The output shows all 11 checkpoints as passed (or all structural and behavioral checks passed).",
+        "The verdict is PASS or ✅ PASS or Full Compliance.",
+        "The output includes a Detailed Checkpoint Results table listing individual checkpoint IDs with their verdicts.",
+        "The output mentions CP-001 (or CP-001 through CP-008) as structural checks that passed.",
+        "The output mentions CP-009 (or CP-009 through CP-011) as behavioral checks that passed.",
+        "The report format includes a Results Summary table with Category, Total, Passed, Failed, Skipped columns."
+      ]
+    },
+    {
+      "id": "partial-fail-inventory-payment",
+      "name": "partial fail — missing input validation in some services",
+      "prompt": "Verify the implementation against the plan manifest for the inventory and payment services project.\n\nProject root: attached files (sample-with-issues/)\nPlan manifest: evals/files/sample-with-issues/plan-manifest.json\n\nThe plan specifies that:\n- InventoryService.addStock should validate quantity > 0\n- PaymentService.processPayment should validate amount > 0\n- InventoryService.removeStock should handle insufficient stock errors\n- PaymentService.refundPayment should handle missing payment errors\n\nRun full structural and behavioral verification. Report compliance score and identify any failures.\n\nIMPORTANT: Your report MUST include a Detailed Checkpoint Results table listing EVERY checkpoint by its ID (CP-001 through CP-009) with its verdict (Pass/Fail/Skipped) and reason.",
+      "files": [
+        "evals/files/sample-with-issues/plan-manifest.json",
+        "evals/files/sample-with-issues/src/inventory-service.ts",
+        "evals/files/sample-with-issues/src/payment-service.ts"
+      ],
+      "expected_output": "The verifier identifies that CP-006 (addStock input validation) and CP-007 (processPayment input validation) FAIL because those methods do not validate their inputs. CP-008 (removeStock) and CP-009 (refundPayment) PASS because they use if-guard-throw patterns for error handling. The compliance score should be ~77.8% (7/9 = 77.8%).",
+      "assertions": [
+        "The output shows a compliance score less than 100% (partial or low compliance).",
+        "The output reports CP-006 (addStock validates input) as FAILED because the method has no input validation.",
+        "The output reports CP-007 (processPayment validates input) as FAILED because the method has no input validation.",
+        "The output reports CP-001 through CP-005 as PASSED (structural checks).",
+        "The output reports that CP-008 (removeStock handles error) or the error handling check for removeStock is PASSED.",
+        "The output reports that CP-009 (refundPayment handles error) or the error handling check for refundPayment is PASSED.",
+        "The verdict is PARTIAL or FAIL (not PASS since score < 100%).",
+        "The output includes a Detailed Checkpoint Results table listing all checkpoint IDs (CP-001 through CP-009)."
+      ]
+    },
+    {
+      "id": "missing-file-detection",
+      "name": "missing file — file referenced in manifest does not exist",
+      "prompt": "Verify this project against its plan manifest. The project is missing some files.\n\nPlan manifest: I'll describe it inline.\n\nThe plan manifest has these checkpoints:\n- CP-001: structural, fileExists, target: src/existing-service.ts ✓ (file exists)\n- CP-002: structural, fileExists, target: src/missing-service.ts ✗ (file does NOT exist)\n- CP-003: structural, exportExists (exportName: \"ExistingService\"), target: src/existing-service.ts, dependsOn: [CP-001]\n- CP-004: structural, exportExists (exportName: \"MissingService\"), target: src/missing-service.ts, dependsOn: [CP-002]\n\nThe project has only this file:\n\nsrc/existing-service.ts:\n```typescript\nexport class ExistingService {\n  doSomething(): string {\n    return \"done\";\n  }\n}\n```\n\nsrc/missing-service.ts does NOT exist.\n\nRun the verification. Report which checkpoints pass, fail, or are skipped due to dependency failures.",
+      "files": [],
+      "expected_output": "The verifier reports:\n- CP-001: PASS (file exists)\n- CP-002: FAIL (file not found)\n- CP-003: PASS (export exists, and CP-001 passed)\n- CP-004: SKIPPED (depends on CP-002 which failed)\nCompliance score: 2/3 = 66.7% (CP-004 is skipped, excluded from denominator)",
+      "assertions": [
+        "The output reports CP-002 as FAILED because the file src/missing-service.ts does not exist.",
+        "The output reports CP-004 as SKIPPED because it depends on CP-002 which failed.",
+        "The compliance score is calculated as Passed / (Total - Skipped), resulting in approximately 66.7%.",
+        "The output explains that CP-004 is skipped due to dependency failure (not counted as failed).",
+        "The verdict indicates LOW COMPLIANCE or PARTIAL."
+      ]
+    }
+  ]
+}

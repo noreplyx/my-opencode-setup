@@ -9,13 +9,19 @@ tools:
   read: true
   glob: true
   grep: true
-  skill: false
+  skill: true
   task: false
   lsp: true
   question: false
   webfetch: true
   websearch: true
   external_directory: false
+permission:
+  skill:
+    "*": "deny"
+    "code-philosophy": "allow"
+    "backend-code-philosophy": "allow"
+    "frontend-code-philosophy": "allow"
 ---
 
 # Finder Agent

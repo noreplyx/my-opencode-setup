@@ -111,3 +111,26 @@ The final description must be so detailed that an implementor can follow it with
 - A clear "Definition of Done" for each step.
 - References to existing files/lines that will be impacted.
 - A logical ordering that minimizes rework.
+
+---
+
+## Tooling (Manifest Generation)
+
+This skill includes an executable script to generate plan-manifest.json templates.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `generate-manifest.ts` | Generates a `plan-manifest.json` template with structural and behavioral checkpoints | `ts-node <skills-dir>/scripts/plan-describe/generate-manifest.ts --name=<feature-name> --out=<project-dir>` |
+
+### Usage
+
+```bash
+# Generate a plan manifest template for a feature
+ts-node skills/scripts/plan-describe/generate-manifest.ts \
+  --name=user-profile \
+  --out=./
+```
+
+This creates `plan-manifests/user-profile-manifest.json` with 5 checkpoints (3 structural + 2 behavioral) in dependency order. Customize the generated template with specific file paths, export names, and verification details for your feature.

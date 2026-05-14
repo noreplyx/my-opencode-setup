@@ -451,3 +451,37 @@ When applying the Accessibility skill:
    - Severity (Critical / High / Medium / Low)
 3. **Propose**: Suggest fixes following accessibility best practices for the relevant platform.
 4. **Verify**: Re-run automated tests and perform manual testing with assistive technology (TalkBack, VoiceOver, NVDA, etc.) to confirm the fix.
+
+---
+
+## Tooling (Automated Static Analysis)
+
+This skill includes an executable script that performs static analysis of React/HTML/Vue components for accessibility violations.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `check-a11y.ts` | Static analysis for WCAG violations: missing alt, missing labels, non-semantic HTML, focus outlines, color-only info, missing live regions | `ts-node <skills-dir>/scripts/accessibility/check-a11y.ts --dir=<project-dir> [--verbose]` |
+
+### WCAG Violations Detected
+
+| WCAG | Issue | Severity |
+|------|-------|----------|
+| 1.1.1 | Images missing alt attribute | Critical |
+| 1.3.1 | Form inputs without accessible labels | High |
+| 2.1.1 / 4.1.2 | Non-semantic elements (div/span) used as clickable elements | High |
+| 3.1.1 | Missing lang attribute on `<html>` | High |
+| 2.4.7 | Focus outline removed without replacement | High |
+| 1.4.1 | Color used as only means of conveying information | Medium |
+| 4.1.3 | Dynamic content without aria-live region | Medium |
+
+### CI Integration
+
+The script exits with code 1 if any critical or high-severity issues are found.
+
+```bash
+# Run the a11y checker after UI development
+ts-node skills/scripts/accessibility/check-a11y.ts --dir=./
+ts-node skills/scripts/accessibility/check-a11y.ts --dir=./ --verbose
+```

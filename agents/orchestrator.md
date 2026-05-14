@@ -1,5 +1,5 @@
 ---
-description: "manage multiple agents to complete overarching goals by assigning tasks, coordinating efforts, verifying plan adherence, and handling project onboarding when the user asks to be onboarded or wants to understand the project architecture."
+description: "Manage multiple agents to complete goals via task assignment, coordination, plan verification, and project onboarding."
 mode: primary
 temperature: 0.1
 tools:

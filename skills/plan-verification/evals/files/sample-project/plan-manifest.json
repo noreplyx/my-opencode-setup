@@ -1,0 +1,129 @@
+{
+  "manifestVersion": 1,
+  "planSummary": "Implement user and order management services",
+  "createdAt": "2026-05-14T12:00:00.000Z",
+  "checkpoints": [
+    {
+      "id": "CP-001",
+      "type": "structural",
+      "description": "User service file exists",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "fileExists"
+      },
+      "dependsOn": []
+    },
+    {
+      "id": "CP-002",
+      "type": "structural",
+      "description": "Order service file exists",
+      "target": "src/order-service.ts",
+      "verify": {
+        "kind": "fileExists"
+      },
+      "dependsOn": []
+    },
+    {
+      "id": "CP-003",
+      "type": "structural",
+      "description": "UserService class exported from user-service",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "exportExists",
+        "exportName": "UserService"
+      },
+      "dependsOn": ["CP-001"]
+    },
+    {
+      "id": "CP-004",
+      "type": "structural",
+      "description": "OrderService class exported from order-service",
+      "target": "src/order-service.ts",
+      "verify": {
+        "kind": "exportExists",
+        "exportName": "OrderService"
+      },
+      "dependsOn": ["CP-002"]
+    },
+    {
+      "id": "CP-005",
+      "type": "structural",
+      "description": "User interface exported from user-service",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "typeExists",
+        "typeName": "User"
+      },
+      "dependsOn": ["CP-001"]
+    },
+    {
+      "id": "CP-006",
+      "type": "structural",
+      "description": "Order interface exported from order-service",
+      "target": "src/order-service.ts",
+      "verify": {
+        "kind": "typeExists",
+        "typeName": "Order"
+      },
+      "dependsOn": ["CP-002"]
+    },
+    {
+      "id": "CP-007",
+      "type": "structural",
+      "description": "formatUserName function exported from user-service",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "functionExists",
+        "functionName": "formatUserName"
+      },
+      "dependsOn": ["CP-001"]
+    },
+    {
+      "id": "CP-008",
+      "type": "structural",
+      "description": "calculateDiscount function exported from order-service",
+      "target": "src/order-service.ts",
+      "verify": {
+        "kind": "functionExists",
+        "functionName": "calculateDiscount"
+      },
+      "dependsOn": ["CP-002"]
+    },
+    {
+      "id": "CP-009",
+      "type": "behavioral",
+      "description": "UserService.createUser handles errors with try-catch",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "handlesError",
+        "methodName": "createUser",
+        "details": "Should wrap validation and DB operations in try-catch"
+      },
+      "dependsOn": ["CP-003"]
+    },
+    {
+      "id": "CP-010",
+      "type": "behavioral",
+      "description": "UserService.createUser validates input using zod",
+      "target": "src/user-service.ts",
+      "verify": {
+        "kind": "validatesInput",
+        "methodName": "createUser",
+        "details": "Should use zod schema validation before processing"
+      },
+      "dependsOn": ["CP-003"]
+    },
+    {
+      "id": "CP-011",
+      "type": "behavioral",
+      "description": "OrderService.placeOrder validates input before processing",
+      "target": "src/order-service.ts",
+      "verify": {
+        "kind": "validatesInput",
+        "methodName": "placeOrder",
+        "details": "Should check input fields before creating order"
+      },
+      "dependsOn": ["CP-004"]
+    }
+  ]
+}

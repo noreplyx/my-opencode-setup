@@ -3,3 +3,6 @@ logs/
 package-lock.json
 plan-manifests/
 analyzer.*
+agent-skills-workspace/
+.env
+bun.lock

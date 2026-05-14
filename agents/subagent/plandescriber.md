@@ -2,6 +2,7 @@
 description: Expert plan describer responsible for transforming high-level technical plans or brainstorming ideas into detailed, actionable, and deep step-by-step implementation roadmaps.
 mode: subagent
 temperature: 0.1
+reasoningEffort: "high"
 tools:
   write: true
   edit: true

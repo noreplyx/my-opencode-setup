@@ -30,3 +30,27 @@ Provide a concrete method to verify that the plan is working as intended:
 - Specific test cases or scenarios to validate.
 - Success metrics (e.g., "latency should be <<  200ms").
 - Verification steps (e.g., "Run test script and check for X output").
+
+---
+
+## Tooling (Related Scripts)
+
+While this skill is primarily a collaborative brainstorming workflow, the plans it produces can be formalized using tools from related skills:
+
+| Tool | Skill | Purpose |
+|------|-------|---------|
+| `generate-manifest.ts` | plan-describe | Generate a `plan-manifest.json` from brainstormed decisions |
+| `verify-manifest.ts` | plan-verification | Verify implementation matches the agreed plan |
+| `check-consistency.ts` | orchestration | Check project consistency after implementation |
+
+### Workflow
+
+After brainstorming and agreeing on a direction:
+
+```bash
+# 1. Formalize the plan
+ts-node skills/scripts/plan-describe/generate-manifest.ts --name=<feature> --out=./
+
+# 2. After implementation, verify compliance
+ts-node skills/scripts/plan-verification/verify-manifest.ts --manifest=plan-manifests/<feature>-manifest.json --dir=./
+```

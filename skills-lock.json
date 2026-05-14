@@ -1,6 +1,84 @@
 {
   "version": 1,
   "skills": {
+    "accessibility": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/accessibility/SKILL.md",
+      "computedHash": "0b3f13a061e9eb820508ab559cc163a694646a4038f9f0b5cb07df5820813d7b"
+    },
+    "api-documentation": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/api-documentation/SKILL.md",
+      "computedHash": "1e2a6e5ad065aea16878fd017df3b5fa9468dacde0599617a60f21d1481e08cd"
+    },
+    "backend-code-philosophy": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/backend-code-philosophy/SKILL.md",
+      "computedHash": "fae155e1f42899e9da24928877f3b1cc51870e66216798ac928d402619da8e08"
+    },
+    "code-philosophy": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/code-philosophy/SKILL.md",
+      "computedHash": "5ff81c62adb45d4156cc110b7b9eac1bbf3e41f3f16a217fbaff7007b2938682"
+    },
+    "devops-cicd": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/devops-cicd/SKILL.md",
+      "computedHash": "512d948c79b0be6f27747fc118267c4b0e7432f3fc45f8af5194914bff3ae721"
+    },
+    "frontend-code-philosophy": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/frontend-code-philosophy/SKILL.md",
+      "computedHash": "1271dad3c2d765313c2ec6962f1a4028e27b3ceb0b9c92acc87ab02d663f1e96"
+    },
+    "orchestration": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/orchestration/SKILL.md",
+      "computedHash": "90f758b3c6fc99389be8173717956521ac1043bed6f378e599c56b05d5aeb999"
+    },
+    "plan-brainstorm": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/plan-brainstorm/SKILL.md",
+      "computedHash": "9504d6d576062d6826d60174c682399c04862d6de1bc956886105d64a998c883"
+    },
+    "plan-describe": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/plan-describe/SKILL.md",
+      "computedHash": "5a7b425fde47147371c9f5a19e2c96c02690193091a7c40436686077c9f82e37"
+    },
+    "plan-verification": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/plan-verification/SKILL.md",
+      "computedHash": "9365b11970954e354ccb6ef2dc55d3b04a5c4f0faca7dc07b712931fba579928"
+    },
+    "playwright-cli": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/playwright-cli/SKILL.md",
+      "computedHash": "75c615c34eea04e5d3c0c351181281343189c4f053190088642f9c0588d8b057"
+    },
+    "project-onboarding": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/project-onboarding/SKILL.md",
+      "computedHash": "c0b760b18a13464a335bf5c456229e2218bd07089a5ee3a47e281b593381ca29"
+    },
+    "quality-assurance": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/quality-assurance/SKILL.md",
+      "computedHash": "7f3b31c182f68b6e82228447e8a090b30ee9af158262fb853d3d2169ae50b425"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",

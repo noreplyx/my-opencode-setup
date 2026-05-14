@@ -227,3 +227,34 @@ The system includes a circuit breaker to prevent infinite agent loops:
   - PlanDescriber revises the roadmap
   - The Orchestrator manually resets after user intervention
 
+---
+
+## Tooling (Project & Consistency Tools)
+
+This skill includes executable scripts for project initialization and consistency checking.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `init-project.ts` | Scaffolds new projects with proper structure, configs, and boilerplate | `ts-node <skills-dir>/scripts/orchestration/init-project.ts --name=<project-name> --dir=<output-dir> --type=lib\|app\|monorepo` |
+| `check-consistency.ts` | Checks project for import/export style and naming convention consistency | `ts-node <skills-dir>/scripts/orchestration/check-consistency.ts --dir=<project-dir>` |
+
+### Project Scaffolding
+
+```bash
+# Scaffold a new library project
+ts-node skills/scripts/orchestration/init-project.ts --name=my-lib --dir=./ --type=lib
+
+# Scaffold a new application
+ts-node skills/scripts/orchestration/init-project.ts --name=my-app --dir=./ --type=app
+```
+
+### Consistency Checks
+
+Run after implementation to ensure code style consistency:
+
+```bash
+ts-node skills/scripts/orchestration/check-consistency.ts --dir=./
+```
+

@@ -10,13 +10,16 @@ tools:
   glob: true
   grep: true
   skill: true
-  task: false
+  task: true
   lsp: true
   question: false
   webfetch: false
   websearch: false
   external_directory: false
 permission:
+  task:
+    "*": "deny"
+    "subagent/browser-tester": "allow"
   skill:
     "*": "deny"
     "accessibility": "allow"

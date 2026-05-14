@@ -544,3 +544,37 @@ When applying the API Documentation skill, follow these steps:
 5. **Validate**: Run Spectral linting and fix all errors. Verify the spec renders correctly in Swagger UI or Redoc. Run contract tests to confirm the implementation matches the specification.
 
 6. **Communicate**: Publish the changelog entry, announce via developer portal or internal communication channels, and update the migration guide if this is a breaking change.
+
+---
+
+## Tooling (Automated Checks)
+
+This skill includes an executable script that performs automated OpenAPI/Swagger spec validation.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `check-api-docs.ts` | Validates OpenAPI specs for missing fields, examples, error responses, security schemes | `ts-node <skills-dir>/scripts/api-documentation/check-api-docs.ts --dir=<project-dir> [--spec=<openapi-file>]` |
+
+### What It Checks
+
+| Rule | Severity | What It Validates |
+|------|----------|-------------------|
+| `info-required` | Error | Missing info section with title and version |
+| `info-version` | Error | Missing semantic version (e.g., 1.0.0) |
+| `operation-id` | Warning | Missing operationId (needed for SDK generation) |
+| `operation-summary` | Warning | Missing summary on each endpoint |
+| `responses-required` | Error | Missing responses section |
+| `error-responses` | Warning | No 4xx/5xx error responses documented |
+| `response-examples` | Warning | No response examples provided |
+| `request-examples` | Warning | No request body examples provided |
+| `security-schemes` | Warning | No security schemes defined |
+
+### CI Integration
+
+```bash
+# Run in CI to validate OpenAPI specs
+ts-node skills/scripts/api-documentation/check-api-docs.ts --dir=./
+ts-node skills/scripts/api-documentation/check-api-docs.ts --spec=openapi.yaml
+```

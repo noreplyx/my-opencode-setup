@@ -124,11 +124,11 @@ Use the Onboarding Protocol section of your instructions.
 
 **Action (auto-run, no prompts):**
 
-Run the onboard-project.js script with all information gathered from Phases 1 and 2.
+Run the onboard-project.ts script with all information gathered from Phases 1 and 2.
 
 **Command:**
 ```bash
-node "skills/project-onboarding/scripts/onboard-project.js" \
+node "skills/project-onboarding/scripts/onboard-project.ts" \
   --dir "[project-root]" \
   --output "[project-root]"
 ```

@@ -1,6 +1,6 @@
 ---
 name: plan-verification
-description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds, a compliance scoring methodology, and a standard report format.
+description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds, a compliance scoring methodology, a standard report format, and detailed per-checkpoint results.
 ---
 
 # Plan Verification Skill
@@ -33,8 +33,8 @@ This skill enables a Verifier agent to systematically check that code produced b
 
 | Kind | What It Checks | How to Verify |
 |---|---|---|
-| `handlesError` | Method handles a specific error type | Search for try/catch blocks, error class references, or error-handling middleware related to the specified error |
-| `validatesInput` | Method validates input before processing | Search for input validation logic (e.g., zod schemas, if/else checks, regex tests, validation library calls) before the main processing logic |
+| `handlesError` | Method handles a specific error condition | Search for try/catch blocks, `if`-guard-`throw` patterns, error class references, or error-handling middleware. Accept any pattern that interrupts normal flow on error (throw, return error, catch block). The method does NOT need try/catch — a simple `if (condition) throw new Error(...)` is valid error handling. |
+| `validatesInput` | Method validates input before processing | Search for input validation logic (e.g., zod schemas, `if`/`else` guards that throw on invalid input, regex tests, validation library calls) **before** the main processing logic. An `if (!x) throw ...` guard at the top of a method counts as input validation. |
 | `logsAtLevel` | Logging at a specific severity level exists | `grep` for `logger.<level>(` or `console.<level>(` in the target file |
 | `hasMiddleware` | A route/endpoint has specified middleware | `grep` for the middleware name in route registrations (e.g., `app.get('/path', middlewareName` or `.use(middlewareName)`) |
 
@@ -139,7 +139,7 @@ Compliance % = (Total Passed / (Total Checkpoints - Total Skipped)) × 100
 
 ## Standard Report Format
 
-After verification, output a report in this format:
+After verification, output a report in this format. **You MUST include all sections below**, especially the Detailed Checkpoint Results table which lists every individual checkpoint by its ID.
 
 ```markdown
 ## Plan Verification Report
@@ -158,6 +158,13 @@ After verification, output a report in this format:
 | Behavioral | N | N | N | N |
 | **Total** | **N** | **N** | **N** | **N** |
 
+### Detailed Checkpoint Results
+| ID | Type | Verdict | Reason |
+|---|---|---|---|
+| CP-001 | structural (fileExists) | ✅ Pass | File exists at path/to/file.ts |
+| CP-002 | structural (exportExists) | ❌ Fail | Export "Foo" not found in target file |
+| CP-003 | behavioral (handlesError) | ⏭️ Skipped | Depends on CP-001 which failed |
+
 ### Failed Checkpoints
 | ID | Type | Description | Failure Reason |
 |---|---|---|---|
@@ -172,6 +179,8 @@ After verification, output a report in this format:
 **✅ PASS** / **⚠️ PARTIAL** / **❌ FAIL**
 ```
 
+**IMPORTANT**: Always include a **Detailed Checkpoint Results** table. This table lists every single checkpoint from the plan manifest by its ID (e.g., CP-001, CP-002, ...) with its verdict (✅ Pass / ❌ Fail / ⏭️ Skipped) and a brief reason. Do NOT report only aggregate counts — you must enumerate each checkpoint individually.
+
 ---
 
 ## Hard Rules
@@ -181,3 +190,38 @@ After verification, output a report in this format:
 - ✅ ONLY read files, search with grep/glob, and produce a verification report
 - ✅ Always process checkpoints in dependency order
 - ✅ Skip behavioral verification if structural verification failed for related files
+
+---
+
+## Tooling (Automated Verification)
+
+This skill includes an executable script that programmatically verifies code against a plan manifest.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `verify-manifest.ts` | Reads `plan-manifest.json` and verifies each checkpoint against actual code. Produces compliance score report. | `ts-node <skills-dir>/scripts/plan-verification/verify-manifest.ts --manifest=<manifest-path> --dir=<project-dir> [--verbose]` |
+
+### Supported Verification Kinds
+
+| Kind | What It Checks |
+|------|----------------|
+| `fileExists` | File exists at the specified path |
+| `fileNotExists` | File doesn't exist (e.g., after deletion) |
+| `exportExists` | Named export present in a module |
+| `functionExists` | Named function exported from module |
+| `methodExists` | Method exists on a class |
+| `handlesError` | Error handling in target file (try/catch, if-guard-throw, error class references) |
+| `validatesInput` | Input validation (zod, Joi, if/assert, if-guard-throw) in target file |
+
+### Usage
+
+```bash
+# After implementation, verify against the plan
+ts-node skills/scripts/plan-verification/verify-manifest.ts \
+  --manifest=plan-manifests/user-profile-manifest.json \
+  --dir=./
+```
+
+The script processes checkpoints in topological dependency order, automatically skipping downstream checks when dependencies fail. It produces a compliance score with pass/fail/skipped breakdown.

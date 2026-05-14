@@ -1,0 +1,74 @@
+{
+  "skill_name": "plan-describe",
+  "evals": [
+    {
+      "id": "user-profile-service",
+      "name": "generate manifest for user profile service",
+      "prompt": "I need to produce a plan-manifest.json for a User Profile Service feature. Read the attached feature description file and generate a complete plan-manifest.json.\n\nThe feature description: evals/files/feature-descriptions/user-profile-service.md\n\nThe manifest must follow this schema:\n- manifestVersion: 1\n- planSummary: brief description of the feature\n- createdAt: current ISO-8601 timestamp\n- checkpoints: array of verification checkpoints\n\nCheckpoint types to include:\n1. Structural: fileExists for each new file (src/services/user-profile-service.ts, src/routes/user-profile-routes.ts, src/types/user-profile.ts)\n2. Structural: exportExists for UserProfileService class, UserProfile type/interface\n3. Structural: functionExists for exported functions (getProfile, updateProfile, uploadAvatar if exported standalone)\n4. Behavioral: validatesInput for getProfile, updateProfile, uploadAvatar methods\n5. Behavioral: handlesError for database error handling in the service methods\n6. Structural: routeExists for the API endpoints (GET /api/users/:id, PUT /api/users/:id, POST /api/users/:id/avatar)\n\nUse dependsOn to express ordering: file existence checks should be dependencies of export/behavioral checks within that file.\n\nReturn the complete JSON plan-manifest. Make sure checkpoint IDs follow CP-NNN format (CP-001, CP-002, ...).",
+      "files": [
+        "evals/files/feature-descriptions/user-profile-service.md"
+      ],
+      "expected_output": "The output contains a valid JSON plan-manifest with at least 10 checkpoints. It includes fileExists checkpoints for the 3 new files, exportExists for UserProfileService and UserProfile, routeExists for the 3 API endpoints, validatesInput for the service methods, and handlesError for database errors. Structural checkpoints should be ordered before behavioral ones. Dependency ordering is correct (fileExists → exportExists → behavioral).",
+      "assertions": [
+        "The output is a valid JSON object with manifestVersion, planSummary, createdAt, and checkpoints fields.",
+        "The manifest includes a fileExists checkpoint for src/services/user-profile-service.ts.",
+        "The manifest includes a fileExists checkpoint for src/routes/user-profile-routes.ts.",
+        "The manifest includes a fileExists checkpoint for src/types/user-profile.ts.",
+        "The manifest includes an exportExists or classExists checkpoint for UserProfileService.",
+        "The manifest includes a typeExists or exportExists checkpoint for UserProfile.",
+        "The manifest includes a validatesInput behavioral checkpoint.",
+        "The manifest includes a handlesError behavioral checkpoint.",
+        "The manifest includes at least one routeExists checkpoint.",
+        "Checkpoint IDs follow the CP-NNN format (e.g., CP-001, CP-002).",
+        "Structural checkpoints use dependsOn to reference their prerequisite fileExists, exportExists, classExists, or methodExists checkpoints.",
+        "The planSummary describes the user profile service feature."
+      ]
+    },
+    {
+      "id": "auth-middleware",
+      "name": "generate manifest for auth middleware",
+      "prompt": "Read the attached feature description and produce a plan-manifest.json for the Authentication Middleware feature.\n\nFeature description: evals/files/feature-descriptions/auth-middleware.md\n\nFollow the standard plan manifest schema with manifestVersion: 1. Include both structural and behavioral checkpoints.\n\nThis feature involves:\n- Modifying an existing file: src/middleware/auth.ts (add authenticate middleware)\n- Creating a new file: src/types/auth.ts (AuthPayload type)\n- The authenticate function must handle errors (invalid/expired token)\n- The authenticate function must validate the Authorization header format\n\nUse dependsOn to express ordering correctly.\n\nReturn only the complete plan-manifest JSON.",
+      "files": [
+        "evals/files/feature-descriptions/auth-middleware.md"
+      ],
+      "expected_output": "The output contains a valid JSON plan-manifest with checkpoints for: fileExists for src/types/auth.ts (new file), exportExists for authenticate and AuthPayload, handlesError for token validation errors, validatesInput for Authorization header format. Checkpoints for the existing file src/middleware/auth.ts should reference it as the target.",
+      "assertions": [
+        "The output is a valid JSON object with manifestVersion: 1.",
+        "The manifest includes a fileExists checkpoint for src/types/auth.ts (the new file).",
+        "The manifest includes an exportExists or functionExists checkpoint for authenticate.",
+        "The manifest includes a typeExists or exportExists checkpoint for AuthPayload.",
+        "The manifest includes at least one handlesError behavioral checkpoint for token validation.",
+        "The manifest includes at least one validatesInput behavioral checkpoint for header validation.",
+        "The manifest references src/middleware/auth.ts as a target in at least one checkpoint.",
+        "Checkpoint IDs follow the CP-NNN format.",
+        "Behavioral checkpoints have dependsOn referencing their prerequisite structural checkpoints.",
+        "The planSummary describes the authentication middleware feature."
+      ]
+    },
+    {
+      "id": "notification-system-complex",
+      "name": "generate manifest for notification system",
+      "prompt": "Read the attached feature description and produce a complete plan-manifest.json for the Notification System feature.\n\nFeature description: evals/files/feature-descriptions/notification-system.md\n\nThis is a complex feature with multiple files, methods, and API routes. Include:\n\nStructural checkpoints:\n- fileExists for all 3 new files (src/services/notification-service.ts, src/routes/notification-routes.ts, src/types/notification.ts)\n- exportExists for NotificationService class\n- typeExists for Notification type/interface\n- functionExists for any exported standalone functions\n- routeExists for all 5 API routes (GET /api/notifications, POST /api/notifications, PATCH /api/notifications/:id/read, PATCH /api/notifications/read-all, GET /api/notifications/unread-count)\n\nBehavioral checkpoints:\n- validatesInput for sendNotification, getNotifications methods\n- handlesError for database error handling in all write methods\n\nUse dependsOn to express ordering correctly. Return only the complete JSON.",
+      "files": [
+        "evals/files/feature-descriptions/notification-system.md"
+      ],
+      "expected_output": "The output contains a valid JSON plan-manifest with at least 14 checkpoints covering all 3 files, all 5 methods, and all 5 API routes. Structural checkpoints are grouped first, behavioral second. Dependency chains are correct.",
+      "assertions": [
+        "The output is a valid JSON object with manifestVersion: 1.",
+        "The manifest includes a fileExists checkpoint for src/services/notification-service.ts.",
+        "The manifest includes a fileExists checkpoint for src/routes/notification-routes.ts.",
+        "The manifest includes a fileExists checkpoint for src/types/notification.ts.",
+        "The manifest includes an exportExists checkpoint for NotificationService.",
+        "The manifest includes a typeExists or exportExists checkpoint for Notification.",
+        "The manifest includes at least 3 routeExists checkpoints (for the API routes).",
+        "The manifest includes at least one validatesInput behavioral checkpoint.",
+        "The manifest includes at least one handlesError behavioral checkpoint.",
+        "All structural checkpoints use type: \"structural\" and all behavioral checkpoints use type: \"behavioral\".",
+        "Checkpoint IDs follow the CP-NNN format and are numbered sequentially.",
+        "Behavioral checkpoints have dependsOn referencing prerequisite fileExists, exportExists, classExists, or methodExists checkpoints.",
+        "The planSummary describes the notification system feature.",
+        "The manifest has at least 10 checkpoints total (complex feature needs thorough coverage)."
+      ]
+    }
+  ]
+}

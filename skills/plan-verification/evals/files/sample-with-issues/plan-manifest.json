@@ -1,0 +1,108 @@
+{
+  "manifestVersion": 1,
+  "planSummary": "Implement inventory and payment services with proper validation and error handling",
+  "createdAt": "2026-05-14T12:00:00.000Z",
+  "checkpoints": [
+    {
+      "id": "CP-001",
+      "type": "structural",
+      "description": "Inventory service file exists",
+      "target": "src/inventory-service.ts",
+      "verify": {
+        "kind": "fileExists"
+      },
+      "dependsOn": []
+    },
+    {
+      "id": "CP-002",
+      "type": "structural",
+      "description": "Payment service file exists",
+      "target": "src/payment-service.ts",
+      "verify": {
+        "kind": "fileExists"
+      },
+      "dependsOn": []
+    },
+    {
+      "id": "CP-003",
+      "type": "structural",
+      "description": "InventoryService class exported",
+      "target": "src/inventory-service.ts",
+      "verify": {
+        "kind": "exportExists",
+        "exportName": "InventoryService"
+      },
+      "dependsOn": ["CP-001"]
+    },
+    {
+      "id": "CP-004",
+      "type": "structural",
+      "description": "PaymentService class exported",
+      "target": "src/payment-service.ts",
+      "verify": {
+        "kind": "exportExists",
+        "exportName": "PaymentService"
+      },
+      "dependsOn": ["CP-002"]
+    },
+    {
+      "id": "CP-005",
+      "type": "structural",
+      "description": "Payment interface exported",
+      "target": "src/payment-service.ts",
+      "verify": {
+        "kind": "typeExists",
+        "typeName": "Payment"
+      },
+      "dependsOn": ["CP-002"]
+    },
+    {
+      "id": "CP-006",
+      "type": "behavioral",
+      "description": "InventoryService.addStock validates input quantity is positive",
+      "target": "src/inventory-service.ts",
+      "verify": {
+        "kind": "validatesInput",
+        "methodName": "addStock",
+        "details": "Should validate quantity > 0 before adding"
+      },
+      "dependsOn": ["CP-003"]
+    },
+    {
+      "id": "CP-007",
+      "type": "behavioral",
+      "description": "PaymentService.processPayment validates input amount is positive",
+      "target": "src/payment-service.ts",
+      "verify": {
+        "kind": "validatesInput",
+        "methodName": "processPayment",
+        "details": "Should validate amount > 0 before processing"
+      },
+      "dependsOn": ["CP-004"]
+    },
+    {
+      "id": "CP-008",
+      "type": "behavioral",
+      "description": "InventoryService.removeStock handles insufficient stock error",
+      "target": "src/inventory-service.ts",
+      "verify": {
+        "kind": "handlesError",
+        "methodName": "removeStock",
+        "details": "Should handle insufficient stock gracefully"
+      },
+      "dependsOn": ["CP-003"]
+    },
+    {
+      "id": "CP-009",
+      "type": "behavioral",
+      "description": "PaymentService.refundPayment handles missing payment error",
+      "target": "src/payment-service.ts",
+      "verify": {
+        "kind": "handlesError",
+        "methodName": "refundPayment",
+        "details": "Should handle missing payment gracefully"
+      },
+      "dependsOn": ["CP-004"]
+    }
+  ]
+}

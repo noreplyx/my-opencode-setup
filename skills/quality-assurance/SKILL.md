@@ -435,3 +435,32 @@ Follow this process for every feature, bug fix, or release.
 2. Verify smoke tests pass in production.
 3. Review any new bugs filed by users.
 4. **Output**: Release retrospective notes for the next sprint.
+
+---
+
+## Tooling (Automated Checks)
+
+This skill includes an executable script that performs automated QA readiness checks.
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `check-qa.ts` | Analyzes project for test coverage, test config, linter setup, CI pipeline, TS strict mode | `ts-node <skills-dir>/scripts/quality-assurance/check-qa.ts --dir=<project-dir> [--ci]` |
+
+### What It Checks
+
+| Area | Checks |
+|------|--------|
+| Testing | Test files exist, jest/vitest configured, test script in package.json, coverage script |
+| Config | TypeScript strict mode, ESLint config, Prettier config |
+| CI | GitHub Actions workflow presence |
+| E2E | Playwright configuration |
+
+### CI Integration
+
+Use the `--ci` flag to make the script exit with code 1 on failure, suitable for CI pipeline gating:
+
+```bash
+ts-node skills/scripts/quality-assurance/check-qa.ts --dir=./ --ci
+```

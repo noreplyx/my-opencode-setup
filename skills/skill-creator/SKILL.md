@@ -482,4 +482,58 @@ Repeating one more time the core loop here for emphasis:
 
 Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" in your TodoList to make sure it happens.
 
+---
+
+## Shared Framework Integration
+
+This skill can leverage the shared TypeScript framework at `skills\scripts\shared\` for utility functions.
+
+### Available Shared Utilities
+
+The shared framework provides reusable tools for creating scripts in any skill:
+
+| Module | Exports | Purpose |
+|--------|---------|---------|
+| `shared/types.ts` | `CheckResult`, `CheckReport`, `SkillContext`, `VerificationPoint`, `PlanManifest` | Type definitions for check results and reports |
+| `shared/utils.ts` | `readFile`, `writeFile`, `exists`, `grepFiles`, `formatReport`, `log` | File I/O, search, report formatting |
+| `shared/logger.ts` | `Logger` class | Structured logging with level support |
+
+### Using Framework in New Scripts
+
+When creating skill scripts, import from the shared framework:
+
+```typescript
+import { Logger } from '../shared/logger';
+import { readFile, formatReport } from '../shared/utils';
+import type { CheckResult, CheckReport } from '../shared/types';
+```
+
+### Skill Validation Tool
+
+Use the skill validator to check that any skill you create follows the required structure:
+
+```bash
+ts-node skills/scripts/tools/validate-skills.ts --dir=skills/
+```
+
+### Skill Scaffolding Tool
+
+Use the scaffold generator to create a new skill with the proper structure:
+
+```bash
+ts-node skills/scripts/tools/scaffold-skill.ts \
+  --name="my-new-skill" \
+  --description="This skill does X, Y, Z. Use it when..."
+```
+
+This creates:
+```
+my-new-skill/
+├── SKILL.md
+├── scripts/
+│   └── check-my-new-skill.ts
+├── references/
+└── assets/
+```
+
 Good luck!
