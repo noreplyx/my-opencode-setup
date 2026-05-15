@@ -7,8 +7,8 @@ description: Detailed reference for security, performance, logging, error handli
 
 #### Input Validation
 
-```typescript
-import { z } from 'zod';  // schema validation library
+```js
+// Using a schema validation library (e.g. Zod, Joi, Valibot)
 
 const CreateUserSchema = z.object({
   email: z.string().email('Invalid email format'),
@@ -16,7 +16,7 @@ const CreateUserSchema = z.object({
   role: z.enum(['admin', 'user', 'viewer']),
 });
 
-function validateUserInput(raw: unknown): CreateUserInput {
+function validateUserInput(raw) {
   const result = CreateUserSchema.safeParse(raw);
   if (!result.success) {
     throw new ValidationError(result.error.flatten().fieldErrors);
@@ -27,43 +27,41 @@ function validateUserInput(raw: unknown): CreateUserInput {
 
 #### Environment Variables (Avoid Secrets in Code)
 
-```typescript
-// config/env.ts
-import 'dotenv/config';
+```js
+// config/env.js
 
-function requireEnv(key: string): string {
+function requireEnv(key) {
   const value = process.env[key];
   if (!value) throw new Error(`Missing required env var: ${key}`);
   return value;
 }
 
-export const config = {
+const config = {
   db: {
     url: requireEnv('DATABASE_URL'),
     poolSize: Number(process.env.DB_POOL_SIZE) || 10,
   },
-  jwt: {
-    secret: requireEnv('JWT_SECRET'),
-    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  auth: {
+    secret: requireEnv('AUTH_SECRET'),
   },
   log: {
     level: process.env.LOG_LEVEL || 'info',
   },
-} as const;
+};
 ```
 
 #### SQL Injection Prevention
 
 **❌ Vulnerable — string interpolation:**
-```typescript
+```js
 const query = `SELECT * FROM users WHERE email = '${userInput}'`;
 await db.execute(query);
 ```
 
-**✅ Safe — parameterized queries (Prisma / Knex / pg):**
-```typescript
-// Prisma (safe by default):
-await prisma.user.findUnique({ where: { email: userInput } });
+**✅ Safe — parameterized queries:**
+```js
+// Using an ORM (safe by default):
+await db.users.findUnique({ where: { email: userInput } });
 
 // Raw with parameterized:
 await db.execute('SELECT * FROM users WHERE email = $1', [userInput]);
@@ -73,10 +71,10 @@ await db.execute('SELECT * FROM users WHERE email = $1', [userInput]);
 
 #### Big O Notation — Prefer Optimal Complexity
 
-```typescript
+```js
 // ❌ O(n²) — nested loop
-function findDuplicates(arr: number[]): number[] {
-  const dups: number[] = [];
+function findDuplicates(arr) {
+  const dups = [];
   for (let i = 0; i < arr.length; i++) {
     for (let j = i + 1; j < arr.length; j++) {
       if (arr[i] === arr[j] && !dups.includes(arr[i])) dups.push(arr[i]);
@@ -86,9 +84,9 @@ function findDuplicates(arr: number[]): number[] {
 }
 
 // ✅ O(n) — using a Set
-function findDuplicates(arr: number[]): number[] {
-  const seen = new Set<number>();
-  const dups = new Set<number>();
+function findDuplicates(arr) {
+  const seen = new Set();
+  const dups = new Set();
   for (const n of arr) {
     if (seen.has(n)) dups.add(n);
     else seen.add(n);
@@ -99,13 +97,11 @@ function findDuplicates(arr: number[]): number[] {
 
 #### Lazy Loading Pattern
 
-```typescript
+```js
 class HeavyService {
-  private constructor() { /* expensive initialization */ }
+  constructor() { /* expensive initialization */ }
 
-  private static instance: HeavyService | null = null;
-
-  static getInstance(): HeavyService {
+  static getInstance() {
     if (!this.instance) {
       this.instance = new HeavyService(); // initialized only on first use
     }
@@ -115,9 +111,11 @@ class HeavyService {
 
 // Or with a lazy async initializer:
 class ExpensiveReportGenerator {
-  private dataPromise: Promise<ReportData> | null = null;
+  constructor() {
+    this.dataPromise = null;
+  }
 
-  async generate(): Promise<Report> {
+  async generate() {
     if (!this.dataPromise) {
       this.dataPromise = this.fetchData(); // fetched once, cached
     }
@@ -125,37 +123,35 @@ class ExpensiveReportGenerator {
     return this.buildReport(data);
   }
 
-  private async fetchData(): Promise<ReportData> { /* ... */ }
-  private buildReport(data: ReportData): Report { /* ... */ }
+  async fetchData() { /* ... */ }
+  buildReport(data) { /* ... */ }
 }
 ```
 
 #### Connection Pooling
 
-```typescript
+```js
 // ❌ Open/close on every request:
-app.get('/users', async (req, res) => {
-  const client = new pg.Client(connectionString);
-  await client.connect();
+async function getUsers() {
+  const client = await createDbConnection(connectionString);
   const result = await client.query('SELECT * FROM users');
-  await client.end(); // expensive overhead per request
-  res.json(result.rows);
-});
+  await client.close(); // expensive overhead per request
+  return result.rows;
+}
 
 // ✅ Reuse pool:
-const pool = new pg.Pool({ connectionString, max: 20, idleTimeoutMillis: 30000 });
-
-app.get('/users', async (req, res) => {
+const pool = createDbPool({ connectionString, max: 20 });
+async function getUsers() {
   const result = await pool.query('SELECT * FROM users');
-  res.json(result.rows);
-});
+  return result.rows;
+}
 ```
 
 ### 7. Logging & Telemetry
 
 #### Structured Logging JSON Example
 
-```typescript
+```js
 // ❌ Unstructured:
 console.log(`User ${userId} placed order ${orderId} for $${total}`);
 
@@ -176,39 +172,45 @@ logger.info({
 
 #### Correlation ID Pattern
 
-```typescript
-import { randomUUID } from 'crypto';
-import { AsyncLocalStorage } from 'async_hooks';
+```js
+const { randomUUID } = await import('crypto');
 
-const asyncContext = new AsyncLocalStorage<{ correlationId: string }>();
+// Request context — stores correlation ID per request
+const requestContext = {
+  _store: new Map(),
+  run(correlationId, fn) {
+    this._store.set('correlationId', correlationId);
+    try { return fn(); } finally { this._store.delete('correlationId'); }
+  },
+  getCorrelationId() { return this._store.get('correlationId') || 'none'; },
+};
 
 // Middleware — generates and stores correlation ID per request
-function correlationMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const correlationId = (req.headers['x-correlation-id'] as string) || randomUUID();
-  res.setHeader('x-correlation-id', correlationId);
-  asyncContext.run({ correlationId }, () => next());
+function correlationMiddleware(request) {
+  const correlationId = request.headers['x-correlation-id'] || generateId();
+  requestContext.run(correlationId, () => {});
+  return correlationId;
 }
 
 // Logger — automatically attaches correlation ID
 function createLogger() {
-  const store = () => asyncContext.getStore();
   return {
-    info: (msg: string, meta?: Record<string, unknown>) => {
+    info(msg, meta) {
       console.log(JSON.stringify({
         level: 'info',
         message: msg,
         ...meta,
-        correlationId: store()?.correlationId || 'none',
+        correlationId: requestContext.getCorrelationId(),
         timestamp: new Date().toISOString(),
       }));
     },
-    error: (msg: string, err?: Error, meta?: Record<string, unknown>) => {
+    error(msg, err, meta) {
       console.error(JSON.stringify({
         level: 'error',
         message: msg,
-        error: { name: err?.name, message: err?.message, stack: err?.stack },
+        error: err ? { name: err.name, message: err.message } : undefined,
         ...meta,
-        correlationId: store()?.correlationId || 'none',
+        correlationId: requestContext.getCorrelationId(),
         timestamp: new Date().toISOString(),
       }));
     },
@@ -220,21 +222,19 @@ function createLogger() {
 
 #### Custom Error Classes
 
-```typescript
-export class AppError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number = 500,
-    public readonly code: string = 'INTERNAL_ERROR',
-    public readonly details?: Record<string, unknown>
-  ) {
+```js
+class AppError extends Error {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', details) {
     super(message);
     this.name = this.constructor.name;
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
   }
 }
 
-export class NotFoundError extends AppError {
-  constructor(resource: string, id?: string) {
+class NotFoundError extends AppError {
+  constructor(resource, id) {
     super(
       id ? `${resource} with id '${id}' not found` : `${resource} not found`,
       404,
@@ -243,8 +243,8 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class ValidationError extends AppError {
-  constructor(errors: Record<string, string[]>) {
+class ValidationError extends AppError {
+  constructor(errors) {
     super('Validation failed', 400, 'VALIDATION_ERROR', { errors });
   }
 }
@@ -253,45 +253,27 @@ export class ValidationError extends AppError {
 throw new NotFoundError('User', userId);
 ```
 
-#### Error Boundary Pattern (Frontend)
+#### Error Boundary Pattern (UI)
 
-```typescript
-interface ErrorBoundaryProps {
-  fallback?: React.ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  children: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    logger.error('React component crashed', error, { componentStack: errorInfo.componentStack });
-    this.props.onError?.(error, errorInfo);
-  }
-
-  render(): React.ReactNode {
-    if (this.state.hasError) {
-      return this.props.fallback ?? <DefaultFallback error={this.state.error} />;
+```js
+// Wrap render operations to catch and display errors gracefully
+function withErrorBoundary(renderFn, fallbackFn) {
+  return function (...args) {
+    try {
+      return renderFn(...args);
+    } catch (error) {
+      logger.error('UI component crashed', error);
+      if (fallbackFn) return fallbackFn(error);
+      return `<div role="alert">Something went wrong. Please try again.</div>`;
     }
-    return this.props.children;
-  }
+  };
 }
 ```
 
 #### Graceful Degradation
 
-```typescript
-async function fetchUserProfile(userId: string): Promise<UserProfile> {
+```js
+async function fetchUserProfile(userId) {
   try {
     return await userService.getProfile(userId);
   } catch (error) {
@@ -337,9 +319,9 @@ Use this checklist when reviewing pull requests or planning new code:
 
 #### Extract Method — Pull logic into named functions
 
-```typescript
+```js
 // BEFORE:
-function processOrder(order: Order): Receipt {
+function processOrder(order) {
   if (order.items.length === 0) throw new Error('Empty order');
   const subtotal = order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
   const tax = subtotal * 0.08;
@@ -350,7 +332,7 @@ function processOrder(order: Order): Receipt {
 }
 
 // AFTER:
-function processOrder(order: Order): Receipt {
+function processOrder(order) {
   assertNonEmpty(order.items);
   const subtotal = calculateSubtotal(order.items);
   const tax = calculateTax(subtotal);
@@ -360,20 +342,20 @@ function processOrder(order: Order): Receipt {
   return buildReceipt(order.items, subtotal, tax, discount, total);
 }
 
-function assertNonEmpty(items: Item[]): void { /* ... */ }
-function calculateSubtotal(items: Item[]): number { /* ... */ }
-function calculateTax(subtotal: number): number { /* ... */ }
-function calculateDiscount(subtotal: number, coupon?: Coupon): number { /* ... */ }
-function calculateTotal(subtotal: number, tax: number, discount: number): number { /* ... */ }
-function assertPositive(total: number): void { /* ... */ }
-function buildReceipt(items: Item[], subtotal: number, tax: number, discount: number, total: number): Receipt { /* ... */ }
+function assertNonEmpty(items) { /* ... */ }
+function calculateSubtotal(items) { /* ... */ }
+function calculateTax(subtotal) { /* ... */ }
+function calculateDiscount(subtotal, coupon) { /* ... */ }
+function calculateTotal(subtotal, tax, discount) { /* ... */ }
+function assertPositive(total) { /* ... */ }
+function buildReceipt(items, subtotal, tax, discount, total) { /* ... */ }
 ```
 
 #### Replace Conditionals with Polymorphism
 
-```typescript
+```js
 // BEFORE:
-function calculateShipping(order: Order): number {
+function calculateShipping(order) {
   switch (order.shippingType) {
     case 'standard': return order.weight * 0.5;
     case 'express': return order.weight * 1.5 + 5;
@@ -383,44 +365,34 @@ function calculateShipping(order: Order): number {
 }
 
 // AFTER:
-interface ShippingCalculator {
-  calculate(weight: number): number;
+// ShippingCalculator contract: { calculate(weight) }
+
+class StandardShipping {
+  calculate(weight) { return weight * 0.5; }
 }
 
-class StandardShipping implements ShippingCalculator {
-  calculate(weight: number): number { return weight * 0.5; }
+class ExpressShipping {
+  calculate(weight) { return weight * 1.5 + 5; }
 }
 
-class ExpressShipping implements ShippingCalculator {
-  calculate(weight: number): number { return weight * 1.5 + 5; }
-}
-
-class OvernightShipping implements ShippingCalculator {
-  calculate(weight: number): number { return weight * 3.0 + 10; }
+class OvernightShipping {
+  calculate(weight) { return weight * 3.0 + 10; }
 }
 ```
 
 #### Extract Parameter Object
 
-```typescript
+```js
 // BEFORE:
-function createUser(name: string, email: string, age: number, role: string, isActive: boolean): User {
+function createUser(name, email, age, role, isActive) {
   // ...
 }
 
 createUser('Alice', 'alice@example.com', 30, 'admin', true); // hard to read
 
 // AFTER:
-interface CreateUserParams {
-  name: string;
-  email: string;
-  age: number;
-  role: 'admin' | 'user';
-  isActive: boolean;
-}
-
-function createUser(params: CreateUserParams): User {
-  // ...
+function createUser(params) {
+  // params: { name, email, age, role, isActive }
 }
 
 createUser({
@@ -440,7 +412,7 @@ createUser({
 - **One assertion concept per test**: Each test should verify one logical behavior.
 - **Arrange-Act-Assert**: Structure every test into three clear phases.
 
-```typescript
+```js
 describe('OrderService', () => {
   describe('placeOrder', () => {
     it('should calculate total including tax and discount', async () => {
@@ -475,21 +447,23 @@ describe('OrderService', () => {
 
 #### Testability — Dependency Injection Enables Testing
 
-```typescript
+```js
 // In-memory implementation for tests:
-class InMemoryOrderRepository implements OrderRepository {
-  private orders: Order[] = [];
+class InMemoryOrderRepository {
+  constructor() {
+    this.orders = [];
+  }
 
-  async save(order: Order): Promise<void> {
+  async save(order) {
     this.orders.push(order);
   }
 
-  async findById(id: string): Promise<Order | null> {
+  async findById(id) {
     return this.orders.find(o => o.id === id) ?? null;
   }
 
   // Helper for test assertions:
-  findAll(): Order[] {
+  findAll() {
     return [...this.orders];
   }
 }
@@ -497,23 +471,23 @@ class InMemoryOrderRepository implements OrderRepository {
 
 #### Mocking Strategies
 
-```typescript
+```js
 // 1. Interface-based mocks (preferred — no framework needed):
-const mockRepo: OrderRepository = {
-  save: vi.fn().mockResolvedValue(undefined),
-  findById: vi.fn().mockResolvedValue(null),
+const mockRepo = {
+  save: jest.fn().mockResolvedValue(undefined),
+  findById: jest.fn().mockResolvedValue(null),
 };
 
 // 2. Partial real implementations:
-class FakePaymentGateway implements PaymentGateway {
-  async charge(amount: number, token: string): Promise<PaymentResult> {
+class FakePaymentGateway {
+  async charge(amount, token) {
     if (token === 'fail_me') throw new PaymentError('Card declined');
     return { id: `ch_${Date.now()}`, amount, status: 'succeeded' };
   }
 }
 
 // 3. Spy on side effects:
-const emailSpy = vi.spyOn(emailService, 'sendWelcome');
+const emailSpy = jest.spyOn(emailService, 'sendWelcome');
 await useCase.execute(input);
 expect(emailSpy).toHaveBeenCalledWith('user@example.com', 'Welcome!');
 ```

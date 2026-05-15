@@ -1,0 +1,45 @@
+{
+  "skill_name": "project-onboarding",
+  "evals": [
+    {
+      "id": "onboard-express-typescript-project",
+      "name": "onboarding an Express TypeScript project",
+      "prompt": "I just joined a new team and they have this Express + TypeScript project I need to understand. Can you help me get onboarded? The project is in the current directory. I need to understand the architecture, tech stack, and how to run it locally.\n\nWalk me through the full onboarding process: detect the project setup, explore the codebase, and give me the key documents I need.",
+      "files": [],
+      "expected_output": "The output follows the 5-phase onboarding pipeline. It reads package.json to detect tech stack, delegates to Finder for codebase mapping (entry points, data flow, dependencies, conventions), generates documentation files (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), walks through interactive setup steps, and presents a structured report.",
+      "assertions": [
+        "The output reads package.json to detect the project tech stack (Express, TypeScript).",
+        "The output delegates to the Finder agent for codebase mapping.",
+        "The output generates or describes generating ARCHITECTURE.md, GLOSSARY.md, SETUP.md, and WALKTHROUGH.md.",
+        "The output includes interactive setup steps (checking Node.js version, installing dependencies, creating .env, verifying build).",
+        "The output presents a structured report with tech stack summary and next steps."
+      ]
+    },
+    {
+      "id": "onboard-simple-node-library",
+      "name": "onboarding a simple Node.js library",
+      "prompt": "Show me how this project works. I need a getting-started guide and want to understand the architecture. It's a simple Node.js library project.",
+      "files": [],
+      "expected_output": "The output detects the project type (library vs app), explores the codebase, generates documentation files, and provides tailored guidance for a library project (exports, API surface, build commands).",
+      "assertions": [
+        "The output detects whether the project is a library or application.",
+        "The output generates at minimum an architecture overview and setup instructions.",
+        "The output identifies entry points and exports for the library.",
+        "The output presents a clear summary report."
+      ]
+    },
+    {
+      "id": "onboard-with-specific-question",
+      "name": "user asks specific architecture question",
+      "prompt": "I need help understanding the data flow in this project. Where does a request go from the API to the database? Can you trace through the key files for me? I'm working on the notification system feature.",
+      "files": [],
+      "expected_output": "The output traces the request lifecycle from API route to database, identifies key files in the chain, and explains the data flow. It may generate a focused subset of onboarding docs instead of the full pipeline.",
+      "assertions": [
+        "The output traces data flow from entry point to database.",
+        "The output identifies specific files in the request chain (route → controller → service → repository).",
+        "The output provides a clear explanation of the data flow path.",
+        "The output may generate targeted documentation (e.g., a data-flow focused section) rather than the full 4-document set."
+      ]
+    }
+  ]
+}

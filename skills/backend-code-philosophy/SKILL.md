@@ -1,6 +1,6 @@
 ---
 name: backend-code-philosophy
-description: Use this skill when planning or implementing backend code to ensure adherence to microservice readiness and horizontal scaling.
+description: Use this skill when planning or implementing backend code to ensure adherence to clean architecture, microservice readiness, and horizontal scaling.
 ---
 
 # Backend Code Philosophy
@@ -26,7 +26,7 @@ Detailed content is organized into reference files for progressive loading:
 - **Health checks** — Every service exposes `/health` and `/health/ready`
 
 ### 2. Horizontal Scaling
-- **Statelessness** — Session state in Redis, not process memory
+- **Statelessness** — Session state in external store (e.g. Redis), not process memory
 - **Shared-nothing** — No local mutexes, no in-memory caches assuming single process
 - **Idempotent handlers** — Same input always produces same result
 - **Graceful shutdown** — SIGTERM drains connections before exit
@@ -38,7 +38,7 @@ Detailed content is organized into reference files for progressive loading:
 - Idempotency-Key header for mutating endpoints
 
 ### 4. Caching
-- Multi-layer: L1 (memory) → L2 (Redis) → L3 (database)
+- Multi-layer: L1 (memory) → L2 (distributed cache) → L3 (database)
 - Write-through or event-driven cache invalidation
 - Probabilistic early expiration to prevent thundering herds
 
@@ -55,15 +55,15 @@ Detailed content is organized into reference files for progressive loading:
 - Timeouts on ALL external calls
 
 ### 7. Security
-- Schema validation at API boundary (Zod schemas)
-- JWT authentication + role-based authorization middleware
-- Distributed rate limiting (sliding window in Redis)
-- Secrets in environment variables, never in code
+- Schema validation at API boundary (e.g. Zod, Joi, or custom validators)
+- Token-based authentication + role-based authorization middleware
+- Rate limiting (distributed, e.g. sliding window in Redis)
+- Secrets in environment variables or secret manager, never in code
 
 ### 8. Observability
-- Structured logging (Pino/Winston) — never console.log
+- Structured logging — never raw console.log
 - Readiness + liveness health check endpoints
-- Metrics collection (Prometheus histograms, gauges)
+- Metrics collection (e.g. Prometheus histograms, gauges)
 
 ## Workflow
 

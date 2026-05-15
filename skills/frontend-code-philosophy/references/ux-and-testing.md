@@ -3,155 +3,175 @@ name: ux-and-testing
 description: Security, performance, routing & navigation, error handling, accessibility cross-reference, testing, and logging & telemetry for frontend code.
 ---
 
-## 4. Security
+## 6. Security
 
-### 4.1 XSS Prevention
+### 6.1 XSS Prevention
 
-**Never use `dangerouslySetInnerHTML` or `v-html` with unsanitized input.**
+**Never use `innerHTML`, `insertAdjacentHTML`, or `outerHTML` with unsanitized input.**
 
-```tsx
+```js
 // ❌ BAD: XSS vulnerability
-function Comment({ html }: { html: string }) {
-  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+function renderComment(container, html) {
+  container.innerHTML = html;
 }
 
 // ✅ GOOD: Sanitize before rendering HTML
-import DOMPurify from 'dompurify';
-
-function SafeComment({ html }: { html: string }) {
-  const sanitized = useMemo(() => DOMPurify.sanitize(html), [html]);
-  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+function renderSafeComment(container, html) {
+  const sanitized = DOMPurify.sanitize(html);
+  container.innerHTML = sanitized;
 }
 
-// ✅ BETTER: Prefer text rendering over HTML
-function CommentText({ text }: { text: string }) {
-  return <div>{text}</div>; // React auto-escapes
+// ✅ BETTER: Prefer text content over HTML when possible
+function renderCommentText(container, text) {
+  container.textContent = text; // Browser auto-escapes
 }
 ```
 
-### 4.2 Input Sanitization
+### 6.2 Input Sanitization
 
-```tsx
+```js
 // Sanitize user input at the boundary
-function sanitizeInput(value: string): string {
+function sanitizeInput(value) {
   return value
     .replace(/[<>"']/g, '')       // Strip HTML special chars
     .replace(/javascript:/gi, '') // Strip JS protocol
     .trim();
 }
 
-function SearchForm({ onSubmit }: { onSubmit: (query: string) => void }) {
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const raw = new FormData(e.target as HTMLFormElement).get('query') as string;
-    onSubmit(sanitizeInput(raw));
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="text" name="query" maxLength={200} autoComplete="off" />
+function setupSearchForm(container, { onSubmit }) {
+  container.innerHTML = `
+    <form id="search-form">
+      <input type="text" name="query" maxlength="200" autocomplete="off" />
       <button type="submit">Search</button>
     </form>
-  );
+  `;
+
+  container.querySelector('#search-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const raw = new FormData(e.target).get('query');
+    onSubmit(sanitizeInput(raw));
+  });
 }
 ```
 
-### 4.3 Never Expose Secrets
+### 6.3 Never Expose Secrets
 
 - API keys, tokens, and secrets must live on the server (BFF pattern or environment variables accessed server-side).
 - Use a backend-for-frontend (BFF) to proxy API calls and strip sensitive data from responses.
 
 ---
 
-## 5. Performance
+## 7. Performance
 
-### 5.1 Memoization
+### 7.1 Memoization
 
-```tsx
-// React.memo — prevent re-render when props haven't changed
-const ExpensiveChart = React.memo(function ExpensiveChart({ data }: { data: DataPoint[] }) {
-  return <Chart renderData={data} />;
+```js
+// Memoize expensive computations
+function memoize(fn) {
+  const cache = new Map();
+  return function (...args) {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const result = fn.apply(this, args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+// Usage: avoid recomputing expensive calculations
+const calculateTotals = memoize((transactions) => {
+  return transactions.reduce((acc, t) => acc + t.amount, 0);
 });
 
-// useMemo — memoize expensive computations
-function Dashboard({ transactions }: { transactions: Transaction[] }) {
-  const totals = useMemo(
-    () => transactions.reduce((acc, t) => acc + t.amount, 0),
-    [transactions]
-  );
-
-  return <div>Total: {formatCurrency(totals)}</div>;
+// Debounce — prevent rapid repeated execution
+function debounce(fn, delayMs) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delayMs);
+  };
 }
 
-// useCallback — memoize callbacks passed to child components
-function ProductList({ products }: { products: Product[] }) {
-  const handleAddToCart = useCallback((productId: string) => {
-    dispatch({ type: 'ADD_TO_CART', payload: productId });
-  }, []);
-
-  return products.map((p) => (
-    <ProductCard key={p.id} product={p} onAddToCart={handleAddToCart} />
-  ));
-}
-```
-
-### 5.2 Code Splitting & Lazy Loading
-
-**React:**
-
-```tsx
-import { lazy, Suspense } from 'react';
-
-const HeavyDashboard = lazy(() => import('./HeavyDashboard'));
-
-function App() {
-  return (
-    <Suspense fallback={<DashboardSkeleton />}>
-      <HeavyDashboard />
-    </Suspense>
-  );
+// Throttle — limit execution rate
+function throttle(fn, limitMs) {
+  let waiting = false;
+  return function (...args) {
+    if (waiting) return;
+    fn.apply(this, args);
+    waiting = true;
+    setTimeout(() => { waiting = false; }, limitMs);
+  };
 }
 ```
 
-**Vue:**
+### 7.2 Code Splitting & Dynamic Imports
 
-```vue
-<script setup lang="ts">
-import { defineAsyncComponent } from 'vue';
+Use dynamic `import()` to load heavy modules on demand, reducing initial bundle size.
 
-const HeavyDashboard = defineAsyncComponent(() => import('./HeavyDashboard.vue'));
-</script>
+```js
+// Lazy-load a heavy module
+async function openDashboard(container) {
+  container.innerHTML = `<div class="skeleton" aria-busy="true"></div>`;
 
-<template>
-  <Suspense>
-    <template #default><HeavyDashboard /></template>
-    <template #fallback><DashboardSkeleton /></template>
-  </Suspense>
-</template>
+  try {
+    const { renderDashboard } = await import('./dashboard.js');
+    renderDashboard(container);
+  } catch (err) {
+    container.innerHTML = `<div role="alert">Failed to load dashboard. <button onclick="openDashboard(this.parentElement.parentElement)">Retry</button></div>`;
+  }
+}
+
+// Route-level code splitting (used with a router)
+const routeModules = {
+  '/dashboard': () => import('./pages/dashboard.js'),
+  '/users/:id': () => import('./pages/user-profile.js'),
+};
 ```
 
-### 5.3 Virtualization (Long Lists)
+### 7.3 Virtualization (Long Lists)
 
-Use windowing libraries for large lists.
+Use windowing / virtual scrolling for large lists to avoid rendering all DOM nodes at once.
 
-```tsx
-import { FixedSizeList } from 'react-window';
+```js
+/**
+ * Virtual list — renders only visible items.
+ * Production-ready: use libraries like @tanstack/virtual, or virtual-scroller.
+ */
+function createVirtualList(container, { items, itemHeight, visibleHeight }) {
+  container.style.overflow = 'auto';
+  container.style.height = `${visibleHeight}px`;
+  container.style.position = 'relative';
 
-function VirtualUserList({ users }: { users: User[] }) {
-  return (
-    <FixedSizeList
-      height={600}
-      itemCount={users.length}
-      itemSize={72}
-      width="100%"
-    >
-      {({ index, style }) => (
-        <div style={style}>
-          <UserListItem user={users[index]} />
-        </div>
-      )}
-    </FixedSizeList>
-  );
+  const totalHeight = items.length * itemHeight;
+  const spacer = document.createElement('div');
+  spacer.style.height = `${totalHeight}px`;
+  container.appendChild(spacer);
+
+  function renderVisible() {
+    const scrollTop = container.scrollTop;
+    const startIdx = Math.floor(scrollTop / itemHeight);
+    const endIdx = Math.min(
+      startIdx + Math.ceil(visibleHeight / itemHeight) + 1,
+      items.length
+    );
+
+    // Remove old visible items
+    container.querySelectorAll('[data-virtual-item]').forEach(el => el.remove());
+
+    for (let i = startIdx; i < endIdx; i++) {
+      const item = document.createElement('div');
+      item.dataset.virtualItem = '';
+      item.style.position = 'absolute';
+      item.style.top = `${i * itemHeight}px`;
+      item.style.height = `${itemHeight}px`;
+      item.style.width = '100%';
+      item.textContent = items[i].label;
+      container.appendChild(item);
+    }
+  }
+
+  container.addEventListener('scroll', renderVisible);
+  renderVisible();
 }
 ```
 
@@ -161,62 +181,83 @@ function VirtualUserList({ users }: { users: User[] }) {
 
 ### 8.1 Route Design Principles
 
-- **Flat over nested** — Prefer flat route structures to avoid deep nesting.
-- **Colocate route config** — Keep route definitions close to lazy-loaded page components.
+- **Flat over nested** — Prefer flat route structures to avoid deep coupling.
+- **Colocate route config** — Keep route definitions close to lazy-loaded page modules.
 - **Use URL for source of truth** — Filter, sort, and pagination state belongs in URL search params.
 
-### 8.2 Lazy Loading Routes
+### 8.2 Client-Side Routing (History API)
 
-```tsx
-// React Router v6 with lazy routes
-const routes: RouteObject[] = [
-  {
-    path: '/',
-    element: <Layout />,
-    children: [
-      { index: true, element: <HomePage /> },
-      {
-        path: 'dashboard',
-        lazy: () => import('./pages/Dashboard'), // Route-level code splitting
-      },
-      {
-        path: 'users/:userId',
-        lazy: () => import('./pages/UserProfile'),
-      },
-    ],
-  },
-  { path: '*', element: <NotFoundPage /> },
-];
+```js
+// Minimal router using History API
+const routes = [];
 
-function AppRouter() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <RouterProvider router={createBrowserRouter(routes)} />
-    </Suspense>
-  );
+function defineRoute(pattern, loader) {
+  const paramNames = [];
+  const regexStr = pattern.replace(/:(\w+)/g, (_, name) => {
+    paramNames.push(name);
+    return '([^/]+)';
+  });
+  routes.push({
+    regex: new RegExp(`^${regexStr}$`),
+    paramNames,
+    loader,
+  });
 }
+
+async function navigate(path) {
+  window.history.pushState({}, '', path);
+  await handleRoute(path);
+}
+
+async function handleRoute(pathname) {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="page-skeleton" aria-busy="true"></div>`;
+
+  for (const route of routes) {
+    const match = pathname.match(route.regex);
+    if (match) {
+      const params = {};
+      route.paramNames.forEach((name, i) => { params[name] = match[i + 1]; });
+      try {
+        const module = await route.loader();
+        module.renderPage(app, params);
+      } catch (err) {
+        app.innerHTML = `<div role="alert">Failed to load page. <button onclick="navigate('${pathname}')">Retry</button></div>`;
+      }
+      return;
+    }
+  }
+
+  app.innerHTML = `<div role="alert">Page not found</div>`;
+}
+
+// Handle back/forward
+window.addEventListener('popstate', () => handleRoute(location.pathname));
+
+// Define routes
+defineRoute('/', () => import('./pages/home.js'));
+defineRoute('/dashboard', () => import('./pages/dashboard.js'));
+defineRoute('/users/:userId', () => import('./pages/user-profile.js'));
 ```
 
 ### 8.3 Navigation Guards (Auth)
 
-```tsx
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) return <PageSkeleton />;
-  if (!user) return <Navigate to="/login" replace />;
-
-  return <>{children}</>;
+```js
+async function requireAuth(guardFn) {
+  const isAuthenticated = await guardFn();
+  if (!isAuthenticated) {
+    navigate('/login');
+    return false;
+  }
+  return true;
 }
 
-// Usage in route config
-{
-  path: 'settings',
-  element: (
-    <ProtectedRoute>
-      <SettingsPage />
-    </ProtectedRoute>
-  ),
+// Usage in route handler
+async function renderSettingsPage(app) {
+  const allowed = await requireAuth(() => checkAuth());
+  if (!allowed) return;
+  const { renderPage } = await import('./pages/settings.js');
+  renderPage(app);
 }
 ```
 
@@ -224,53 +265,72 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 
 ## 9. Error Handling
 
-### 9.1 Error Boundary Component
+### 9.1 Error Boundary Pattern
 
-```tsx
-import { ErrorBoundary } from 'react-error-boundary';
+Catch rendering errors at a granular level — wrap each major section independently.
 
-function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
-  return (
-    <div role="alert" className="error-boundary">
-      <h2>Something went wrong</h2>
-      <pre>{error.message}</pre>
-      <button onClick={resetErrorBoundary}>Try again</button>
-    </div>
-  );
+```js
+function withErrorBoundary(renderFn, fallbackFn) {
+  return function (container, ...args) {
+    try {
+      return renderFn(container, ...args);
+    } catch (err) {
+      console.error('Render error:', err);
+      if (fallbackFn) {
+        fallbackFn(container, err);
+      } else {
+        container.innerHTML = `
+          <div role="alert" class="error-boundary">
+            <h2>Something went wrong</h2>
+            <pre>${escapeHtml(err.message)}</pre>
+            <button onclick="location.reload()">Try again</button>
+          </div>
+        `;
+      }
+    }
+  };
 }
 
 // Usage — wrap each major section independently
-function App() {
-  return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-      <Dashboard />
-    </ErrorBoundary>
-  );
-}
+const safeDashboard = withErrorBoundary(renderDashboard);
+safeDashboard(document.getElementById('dashboard'));
 ```
 
 ### 9.2 Graceful Degradation
 
-```tsx
-function UserProfile({ userId }: { userId: string }) {
-  const { data: user, isLoading, isError, error, refetch } = useUser(userId);
+Always handle the four states: loading → error → empty → success.
 
-  if (isLoading) return <UserProfileSkeleton />;
-  if (isError) return <ErrorState message={error.message} onRetry={refetch} />;
-  if (!user) return <NotFound />;
+```js
+async function renderUserProfile(container, userId) {
+  // Loading state
+  container.innerHTML = `<div class="profile-skeleton" aria-busy="true"></div>`;
 
-  return <UserDetails user={user} />;
-}
+  try {
+    const user = await fetchUser(userId);
 
-// Reusable error state
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div role="alert" className="error-state">
-      <Icon name="warning" />
-      <p>{message}</p>
-      <button onClick={onRetry}>Retry</button>
-    </div>
-  );
+    // Empty state
+    if (!user) {
+      container.innerHTML = `<div role="alert">User not found</div>`;
+      return;
+    }
+
+    // Success state
+    container.innerHTML = `
+      <div class="user-profile">
+        <h2>${escapeHtml(user.name)}</h2>
+        <p>${escapeHtml(user.email)}</p>
+      </div>
+    `;
+  } catch (err) {
+    // Error state
+    container.innerHTML = `
+      <div role="alert" class="error-state">
+        <span class="icon-warning"></span>
+        <p>${escapeHtml(err.message)}</p>
+        <button onclick="renderUserProfile(this.parentElement, '${userId}')">Retry</button>
+      </div>
+    `;
+  }
 }
 ```
 
@@ -295,7 +355,7 @@ For quick reference during frontend development, keep these key principles in mi
 5. **Color**: Never convey information through color alone — use icons, text, or patterns as supplements.
 6. **Contrast**: WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
 7. **Dynamic Content**: Use `aria-live` regions for toasts, errors, and loading announcements.
-8. **Testing**: Use `jest-axe` for automated a11y checks in component tests (see Section 11.3).
+8. **Testing**: Use `axe-core` for automated a11y checks (see Section 11.3).
 
 > 🔍 **When to load the `accessibility` skill**: During UI implementation, code review, or when running accessibility audits. Load it alongside this skill for the most comprehensive frontend guidance.
 
@@ -303,35 +363,49 @@ For quick reference during frontend development, keep these key principles in mi
 
 ## 11. Testing Frontend Code
 
-### 11.1 Component Testing (React Testing Library)
+### 11.1 Component Testing (User's Perspective)
 
-Test behavior from the user's perspective, not implementation details.
+Test behavior from the user's perspective — query the rendered DOM, not implementation internals.
 
-```tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ContactForm } from './ContactForm';
+```js
+// Using a DOM testing library (e.g., @testing-library/dom)
+import { getByRole, getByLabelText, fireEvent } from '@testing-library/dom';
+import { renderContactForm } from './ContactForm';
 
 describe('ContactForm', () => {
-  it('shows validation errors on invalid submission', async () => {
-    const user = userEvent.setup();
-    render(<ContactForm />);
+  function setup() {
+    const container = document.createElement('div');
+    renderContactForm(container, { onSubmit: vi.fn() });
+    document.body.appendChild(container);
+    return { container };
+  }
 
-    await user.click(screen.getByRole('button', { name: /send/i }));
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
 
-    expect(screen.getByText(/name must be at least 2 characters/i)).toBeInTheDocument();
-    expect(screen.getByText(/enter a valid email/i)).toBeInTheDocument();
+  it('shows validation errors on invalid submission', () => {
+    const { container } = setup();
+    const sendBtn = getByRole(container, 'button', { name: /send/i });
+    fireEvent.click(sendBtn);
+
+    expect(getByRole(container, 'alert')).toHaveTextContent(/name must be at least 2 characters/i);
   });
 
   it('submits successfully with valid data', async () => {
     const onSubmit = vi.fn();
-    const user = userEvent.setup();
-    render(<ContactForm onSubmit={onSubmit} />);
+    const container = document.createElement('div');
+    renderContactForm(container, { onSubmit });
+    document.body.appendChild(container);
 
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.type(screen.getByLabelText(/message/i), 'Hello, this is a test message.');
-    await user.click(screen.getByRole('button', { name: /send/i }));
+    const nameInput = getByLabelText(container, /name/i);
+    const emailInput = getByLabelText(container, /email/i);
+    const messageTextarea = getByLabelText(container, /message/i);
+
+    fireEvent.change(nameInput, { target: { value: 'Alice' } });
+    fireEvent.change(emailInput, { target: { value: 'alice@example.com' } });
+    fireEvent.change(messageTextarea, { target: { value: 'Hello, this is a test message.' } });
+    fireEvent.click(getByRole(container, 'button', { name: /send/i }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'Alice',
@@ -344,8 +418,8 @@ describe('ContactForm', () => {
 
 ### 11.2 E2E Testing (Playwright)
 
-```ts
-// tests/login.spec.ts
+```js
+// tests/login.spec.js
 import { test, expect } from '@playwright/test';
 
 test.describe('Login flow', () => {
@@ -378,14 +452,15 @@ For comprehensive accessibility testing guidance (automated + manual), refer to 
 
 **Quick start for component-level a11y testing:**
 
-```tsx
-import { render } from '@testing-library/react';
-import { axe, toHaveNoViolations } from 'jest-axe';
+```js
+import { getByRole } from '@testing-library/dom';
+import { axe, toHaveNoViolations } from 'axe-core';
 
 expect.extend(toHaveNoViolations);
 
 it('has no accessibility violations', async () => {
-  const { container } = render(<Navigation />);
+  const container = document.createElement('div');
+  renderNavigation(container);
   const results = await axe(container);
   expect(results).toHaveNoViolations();
 });
@@ -399,22 +474,13 @@ For full testing matrix (screen readers, color blindness simulators, contrast an
 
 ### 12.1 Structured Logging
 
-```tsx
+```js
 // Logger utility — never use console.log directly in production
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  component?: string;
-  action?: string;
-  metadata?: Record<string, unknown>;
-}
+const LOG_LEVELS = ['debug', 'info', 'warn', 'error'];
 
 class Logger {
-  private log(level: LogLevel, message: string, context?: Partial<LogEntry>) {
-    const entry: LogEntry = {
+  log(level, message, context = {}) {
+    const entry = {
       level,
       message,
       timestamp: new Date().toISOString(),
@@ -431,20 +497,20 @@ class Logger {
     }
   }
 
-  info(message: string, context?: Partial<LogEntry>) {
-    this.log('info', message, context);
-  }
-
-  error(message: string, context?: Partial<LogEntry>) {
-    this.log('error', message, context);
-  }
+  info(message, context) { this.log('info', message, context); }
+  error(message, context) { this.log('error', message, context); }
+  warn(message, context) { this.log('warn', message, context); }
+  debug(message, context) { this.log('debug', message, context); }
 }
 
 export const logger = new Logger();
 
-// Usage in a component
-function PaymentForm() {
-  const handleSubmit = async (data: PaymentData) => {
+// Usage in a UI module
+function setupPaymentForm(container) {
+  container.querySelector('#payment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+
     logger.info('Payment form submitted', {
       component: 'PaymentForm',
       action: 'submit',
@@ -460,13 +526,13 @@ function PaymentForm() {
         metadata: { error: err.message, amount: data.amount },
       });
     }
-  };
+  });
 }
 ```
 
 ### 12.2 Performance Monitoring
 
-```tsx
+```js
 // Report Web Vitals
 import { onCLS, onFID, onLCP, onINP } from 'web-vitals';
 
@@ -477,19 +543,15 @@ function reportWebVitals() {
   onINP((metric) => telemetryService.sendMetric('INP', metric.value));
 }
 
-// Component render tracking (dev only)
-function withRenderTracking<T extends object>(Component: React.ComponentType<T>, name: string) {
-  return function TrackedComponent(props: T) {
-    const renderCount = useRef(0);
-    renderCount.current += 1;
-
-    useEffect(() => {
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug(`Re-render: ${name} (#${renderCount.current})`);
-      }
-    });
-
-    return <Component {...props} />;
+// Render tracking (dev only)
+function withRenderTracking(renderFn, name) {
+  let renderCount = 0;
+  return function (container, ...args) {
+    renderCount += 1;
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug(`Re-render: ${name} (#${renderCount})`);
+    }
+    return renderFn(container, ...args);
   };
 }
 ```

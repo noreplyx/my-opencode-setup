@@ -37,6 +37,16 @@ Convert the deep dive into a linear sequence of actionable tasks.
   - Define the specific test cases (unit, integration, E2E) that must pass.
   - Specify the exact commands to run for linting and type-checking.
 
+### 4. Definition of Done
+
+For each phase and the overall feature, clearly define what "done" means. This prevents scope creep and gives the implementor a clear exit criterion.
+
+| Level | Criteria |
+|---|---|
+| **Per-File Done** | File created/modified, exports match the interface, builds without errors |
+| **Per-Phase Done** | All files in the phase created, tests pass for that phase, lint clean |
+| **Feature Done** | All phases complete, all checkpoints in plan-manifest pass, smoke test passes, no regressions |
+
 ### 5. Plan Manifest Generation
 After completing the roadmap, produce a machine-readable `plan-manifest.json` file in the `plan-manifests/` directory.
 
@@ -106,11 +116,74 @@ The manifest must follow this JSON structure:
 - ✅ Place all manifests under `plan-manifests/` directory (create it if it doesn't exist).
 - ✅ Use only the verification kinds listed above.
 
+## Full Roadmap Example
+
+Below is a complete example showing how a brainstormed decision translates into a step-by-step roadmap with a corresponding plan manifest.
+
+### Context
+After brainstorming, the user chose: **In-memory sliding window rate limiter** for a 5-route Express API at ~100 req/s.
+
+### Roadmap
+
+#### Phase 1: Prerequisites & Foundation
+1. **Install dependency**: `express-rate-limiter` (npm install)
+2. **Create directory**: `src/middleware/` if it doesn't exist
+
+#### Phase 2: Core Implementation
+1. **Create file `src/middleware/rate-limiter.ts`**:
+   - Export `RateLimiterOptions` interface with fields: `windowMs`, `maxRequests`, `statusCode`
+   - Export `createRateLimiter(options)` factory function
+   - Use an in-memory Map<string, number[]> keyed by IP address
+   - Implement sliding window logic: filter timestamps within `windowMs`, count, reject if over limit
+   - Return Express middleware `(req, res, next) => {...}`
+
+2. **Modify `src/app.ts`**:
+   - Import `createRateLimiter` from the new middleware
+   - Create limiter with `{ windowMs: 60_000, maxRequests: 100, statusCode: 429 }`
+   - Apply to all routes: `app.use(limiter)`
+
+#### Phase 3: Integration & Wiring
+- Register the rate limiter middleware **before** route handlers in `app.ts`
+- Ensure `/health` endpoint is either exempt or uses a higher limit
+
+#### Phase 4: Definition of Done
+- [ ] `src/middleware/rate-limiter.ts` exists with correct exports
+- [ ] `src/app.ts` imports and applies the limiter
+- [ ] Build passes: `npm run build`
+- [ ] Lint passes: `npm run lint`
+- [ ] Smoke test: 101 requests in 1 second from same IP → 100 succeed, 101st gets 429
+
+### Corresponding Manifest
+The `plan-manifests/rate-limiter-manifest.json` would contain:
+- CP-001: fileExists for src/middleware/rate-limiter.ts
+- CP-002: exportExists: createRateLimiter
+- CP-003: exportExists: RateLimiterOptions
+- CP-004: functionExists: createRateLimiter
+- CP-005: handlesError: rate limiter returns 429 when limit exceeded
+- CP-006: validatesInput: createRateLimiter validates options (windowMs > 0, maxRequests > 0)
+
 ## Output Requirements
 The final description must be so detailed that an implementor can follow it without needing further clarification. It should include:
 - A clear "Definition of Done" for each step.
 - References to existing files/lines that will be impacted.
 - A logical ordering that minimizes rework.
+
+### Roadmap Quality Checklist
+Before finalizing a roadmap, verify:
+- [ ] Every file to be created or modified is listed
+- [ ] Each file has a specific description of what logic to add/change
+- [ ] Dependencies between steps are explicit (step B references step A's output)
+- [ ] Edge cases are documented for non-trivial logic
+- [ ] Test commands are specified (build, lint, test, type-check)
+- [ ] A plan-manifest.json is always produced alongside the roadmap
+
+## Hard Rules
+- ❌ NEVER skip the Plan Analysis phase — always decompose the plan first
+- ❌ NEVER skip producing the plan-manifest.json — verification depends on it
+- ❌ NEVER use vague language like "implement the feature" — specify exact files, functions, and logic
+- ✅ ALWAYS include a Definition of Done for each phase
+- ✅ ALWAYS reference specific file paths and line numbers for modifications to existing files
+- ✅ ALWAYS specify exact commands for build, lint, and test verification
 
 ---
 

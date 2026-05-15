@@ -9,7 +9,7 @@ Design every service as if it will be extracted into its own deployment unit. No
 
 - **Independent Deployability:** A service must be deployable without requiring simultaneous changes to other services. Use feature flags to gate new behavior instead of coordinating deployments.
 
-  ```typescript
+  ```js
   // GOOD: Feature-flagged behavior
   const featureFlags = await getFeatureFlags(tenantId);
   if (featureFlags.isEnabled('new-checkout-flow')) {
@@ -21,11 +21,11 @@ Design every service as if it will be extracted into its own deployment unit. No
   // Service A expects Service B to have a new endpoint — both must deploy together
   ```
 
-- **Loose Coupling via Asynchronous Communication:** Prefer events and message queues over synchronous HTTP calls for cross-service workflows. Use a message broker (RabbitMQ, Kafka, SQS) to decouple producers from consumers.
+- **Loose Coupling via Asynchronous Communication:** Prefer events and message queues over synchronous HTTP calls for cross-service workflows. Use a message broker to decouple producers from consumers.
 
-  ```typescript
+  ```js
   // Event producer — Order Service
-  async function createOrder(cart: Cart): Promise<Order> {
+  async function createOrder(cart) {
     const order = await db.orders.create({ userId: cart.userId, items: cart.items });
     await eventBus.publish('order.created', {
       orderId: order.id,
@@ -37,7 +37,7 @@ Design every service as if it will be extracted into its own deployment unit. No
   }
 
   // Event consumer — Inventory Service (separate deployment, separate codebase)
-  eventBus.subscribe('order.created', async (event: OrderCreatedEvent) => {
+  eventBus.subscribe('order.created', async (event) => {
     for (const item of event.items) {
       await inventoryRepository.decrementStock(item.sku, item.quantity);
     }
@@ -46,7 +46,7 @@ Design every service as if it will be extracted into its own deployment unit. No
 
 - **API Gateway Pattern:** Route external client requests through a single gateway that handles authentication, rate limiting, request transformation, and routing to internal services.
 
-  ```typescript
+  ```js
   // API Gateway route configuration
   const gatewayRoutes = [
     { path: '/api/v1/users', target: 'http://user-service:3001', methods: ['GET', 'POST'] },
@@ -69,75 +69,73 @@ Design every service as if it will be extracted into its own deployment unit. No
 
 Services must scale horizontally by adding more instances, not by making individual instances larger (vertical scaling).
 
-- **Statelessness:** Never store session state or user context in process memory. Use external stores (Redis, database) for any state that must survive a restart or be shared across instances.
+- **Statelessness:** Never store session state or user context in process memory. Use external stores (e.g. Redis, database) for any state that must survive a restart or be shared across instances.
 
-  ```typescript
+  ```js
   // GOOD: Stateless — session stored in external cache
-  async function getSession(sessionId: string): Promise<Session | null> {
-    return redis.get(`session:${sessionId}`);
+  async function getSession(sessionId) {
+    return cache.get(`session:${sessionId}`);
   }
 
-  async function setSession(sessionId: string, data: Session): Promise<void> {
-    await redis.set(`session:${sessionId}`, data, { ttl: 3600 });
+  async function setSession(sessionId, data) {
+    await cache.set(`session:${sessionId}`, data, { ttl: 3600 });
   }
 
   // BAD: Stateful — session in local memory, lost on restart / breaks with multiple instances
-  const sessionStore = new Map<string, Session>();
-  function getSession(sessionId: string): Session | undefined {
+  const sessionStore = new Map();
+  function getSession(sessionId) {
     return sessionStore.get(sessionId);
   }
   ```
 
 - **Shared-Nothing Architecture:** Each instance operates independently. No file system sharing, no local mutexes, no in-memory caches that assume a single process.
 
-  ```typescript
-  // GOOD: Distributed lock via Redis (works across instances)
-  async function processPayment(orderId: string): Promise<void> {
+  ```js
+  // GOOD: Distributed lock via cache (works across instances)
+  async function processPayment(orderId) {
     const lockKey = `lock:payment:${orderId}`;
-    const acquired = await redis.setNX(lockKey, 'locked', { ttl: 5000 });
+    const acquired = await cache.setNX(lockKey, 'locked', { ttl: 5000 });
     if (!acquired) {
       throw new ConflictError('Payment already being processed');
     }
     try {
       await paymentGateway.charge(orderId);
     } finally {
-      await redis.del(lockKey);
+      await cache.del(lockKey);
     }
   }
 
   // BAD: Local lock — useless when 10 instances are running
-  const paymentLocks = new Set<string>();
+  const paymentLocks = new Set();
   ```
 
 - **Idempotent Handlers:** Message consumers and API handlers must produce the same result when invoked multiple times with the same input. Use idempotency keys for payment, order, and notification workflows.
 
-  ```typescript
-  async function handlePaymentWebhook(event: PaymentEvent): Promise<void> {
+  ```js
+  async function handlePaymentWebhook(event) {
     // Check idempotency store before processing
-    const alreadyProcessed = await redis.get(`idempotency:payment:${event.id}`);
+    const alreadyProcessed = await cache.get(`idempotency:payment:${event.id}`);
     if (alreadyProcessed) {
       logger.info(`Payment ${event.id} already processed, skipping`);
       return;
     }
     await db.transaction(async (tx) => {
       await tx.orders.update({ paymentId: event.id, status: 'paid' });
-      await redis.set(`idempotency:payment:${event.id}`, 'done', { ttl: 86400 });
+      await cache.set(`idempotency:payment:${event.id}`, 'done', { ttl: 86400 });
     });
   }
   ```
 
 - **Graceful Shutdown:** Handle SIGTERM/SIGINT to drain active requests, stop accepting new ones, and close connections cleanly.
 
-  ```typescript
-  const server = app.listen(port);
+  ```js
   process.on('SIGTERM', async () => {
     logger.info('SIGTERM received — draining connections');
-    server.close(() => {
-      logger.info('HTTP server closed');
-      db.disconnect();
-      redis.disconnect();
-      process.exit(0);
-    });
+    await server.close();
+    logger.info('HTTP server closed');
+    await db.disconnect();
+    await cache.disconnect();
+    process.exit(0);
   });
   ```
 
@@ -158,30 +156,12 @@ Define clear, consistent contracts between services and between the service and 
 
 - **Request/Response Envelope:** All responses follow a consistent structure. Never return raw arrays or unexpected shapes.
 
-  ```typescript
+  ```js
   // Success response
-  interface ApiResponse<T> {
-    success: true;
-    data: T;
-    meta?: {
-      requestId: string;
-      timestamp: string;
-    };
-  }
+  // { success: true, data: { ... }, meta: { requestId, timestamp } }
 
   // Error response
-  interface ApiError {
-    success: false;
-    error: {
-      code: string;            // e.g., 'VALIDATION_ERROR', 'NOT_FOUND', 'RATE_LIMITED'
-      message: string;          // Human-readable description
-      details?: unknown;        // Field-level errors (for validation failures)
-    };
-    meta: {
-      requestId: string;
-      timestamp: string;
-    };
-  }
+  // { success: false, error: { code, message, details? }, meta: { requestId, timestamp } }
 
   // Example: GET /api/v1/users/:id
   // 200 Response
@@ -219,14 +199,14 @@ Define clear, consistent contracts between services and between the service and 
 
 - **Pagination:** Use cursor-based pagination for large, dynamic datasets. Support `limit`, `cursor`, and optional `sort` parameters.
 
-  ```typescript
+  ```js
   // Request: GET /api/v1/users?limit=20&cursor=eyJsYXN0SWQiOiAidXNyXzEyMyJ9
   // Response
   {
     "success": true,
     "data": [
-      { "id": "usr_124", "name": "Alice", ... },
-      { "id": "usr_125", "name": "Bob", ... }
+      { "id": "usr_124", "name": "Alice" },
+      { "id": "usr_125", "name": "Bob" }
     ],
     "pagination": {
       "nextCursor": "eyJsYXN0SWQiOiAidXNyXzEyNSJ9",
@@ -235,10 +215,10 @@ Define clear, consistent contracts between services and between the service and 
     }
   }
 
-  // Handler implementation
-  async function listUsers(req: Request, res: Response): Promise<void> {
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-    const cursor = req.query.cursor as string | undefined;
+  // Handler implementation (framework-agnostic)
+  async function listUsers(query, sendResponse) {
+    const limit = Math.min(parseInt(query.limit) || 20, 100);
+    const cursor = query.cursor;
 
     const decodedCursor = cursor ? decodeCursor(cursor) : null;
     const users = await userRepository.findPaginated(limit + 1, decodedCursor?.lastId);
@@ -246,7 +226,7 @@ Define clear, consistent contracts between services and between the service and 
     const hasMore = users.length > limit;
     const data = hasMore ? users.slice(0, limit) : users;
 
-    res.json({
+    sendResponse({
       success: true,
       data,
       pagination: {
@@ -260,25 +240,24 @@ Define clear, consistent contracts between services and between the service and 
 
 - **Idempotency Key Pattern:** For mutating endpoints (especially payments, orders), clients send an `Idempotency-Key` header. The server deduplicates requests with the same key within a TTL window.
 
-  ```typescript
-  // Middleware
-  async function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
-    if (['POST', 'PATCH', 'PUT'].includes(req.method)) {
-      const key = req.headers['idempotency-key'] as string;
-      if (!key) return next(new BadRequestError('Idempotency-Key header required'));
+  ```js
+  // Middleware concept (framework-agnostic)
+  async function idempotencyHandler(request, response) {
+    if (['POST', 'PATCH', 'PUT'].includes(request.method)) {
+      const key = request.headers['idempotency-key'];
+      if (!key) return sendError(response, 400, 'Idempotency-Key header required');
 
-      const existing = await redis.get(`idempotency:${key}`);
+      const existing = await cache.get(`idempotency:${key}`);
       if (existing) {
-        return res.status(200).json(JSON.parse(existing));
+        return sendResponse(response, 200, JSON.parse(existing));
       }
 
-      res.locals.idempotencyKey = key;
+      request.idempotencyKey = key;
     }
-    next();
   }
 
   // After successful processing, store the response
-  function storeIdempotentResponse(key: string, response: unknown, ttl = 86400): Promise<void> {
-    return redis.set(`idempotency:${key}`, JSON.stringify(response), { ttl });
+  async function storeIdempotentResponse(key, responseData, ttl = 86400) {
+    return cache.set(`idempotency:${key}`, JSON.stringify(responseData), { ttl });
   }
   ```

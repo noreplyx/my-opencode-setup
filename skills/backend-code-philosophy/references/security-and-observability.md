@@ -7,8 +7,8 @@ description: Detailed reference for security best practices, observability (logg
 
 - **Input Validation:** Validate and sanitize all inputs at the API boundary. Never trust client data.
 
-  ```typescript
-  import { z } from 'zod'; // Schema validation library
+  ```js
+  // Using a schema validation library (e.g. Zod, Joi, Valibot)
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -17,35 +17,33 @@ description: Detailed reference for security best practices, observability (logg
     role: z.enum(['user', 'admin']).default('user'),
   });
 
-  type CreateUserInput = z.infer<typeof createUserSchema>;
-
-  // Middleware
-  function validate(schema: z.ZodSchema) {
-    return (req: Request, res: Response, next: NextFunction) => {
-      const result = schema.safeParse(req.body);
+  // Middleware — validate request body against schema
+  function validate(schema) {
+    return (request, sendResponse, next) => {
+      const result = schema.safeParse(request.body);
       if (!result.success) {
         throw new ValidationError(result.error.issues);
       }
-      req.body = result.data; // Use parsed (and coerced) data
+      request.body = result.data; // Use parsed (and coerced) data
       next();
     };
   }
 
-  // Route
-  router.post('/users', validate(createUserSchema), userController.create);
+  // Route — framework-agnostic
+  // POST /users with validate(createUserSchema) middleware
   ```
 
 - **Authentication & Authorization:**
 
-  ```typescript
+  ```js
   // Authentication middleware — verify token, attach user to request
-  async function authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+  async function authenticate(request, sendResponse, next) {
+    const token = request.headers.authorization?.replace('Bearer ', '');
     if (!token) throw new UnauthorizedError('Missing authentication token');
 
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET!);
-      req.user = { id: payload.sub, role: payload.role };
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
+      request.user = { id: payload.sub, role: payload.role };
       next();
     } catch {
       throw new UnauthorizedError('Invalid or expired token');
@@ -53,9 +51,9 @@ description: Detailed reference for security best practices, observability (logg
   }
 
   // Authorization middleware — check user role/permissions
-  function requireRole(...roles: string[]) {
-    return (req: Request, _res: Response, next: NextFunction): void => {
-      if (!req.user || !roles.includes(req.user.role)) {
+  function requireRole(...roles) {
+    return (request, sendResponse, next) => {
+      if (!request.user || !roles.includes(request.user.role)) {
         throw new ForbiddenError('Insufficient permissions');
       }
       next();
@@ -63,34 +61,36 @@ description: Detailed reference for security best practices, observability (logg
   }
 
   // Route-level usage
-  router.delete('/users/:id', authenticate, requireRole('admin'), userController.delete);
+  // DELETE /users/:id with authenticate, requireRole('admin')
   ```
 
 - **Rate Limiting:** Protect APIs from abuse. Use token bucket or sliding window algorithms.
 
-  ```typescript
-  // Sliding window rate limiter (stored in Redis for distributed rate limiting)
-  async function rateLimit(key: string, limit: number, windowMs: number): Promise<void> {
+  ```js
+  // Sliding window rate limiter (stored in distributed cache for cross-instance rate limiting)
+  async function rateLimit(key, limit, windowMs) {
     const now = Date.now();
     const windowStart = now - windowMs;
 
     // Remove old entries outside the window
-    await redis.zRemRangeByScore(key, 0, windowStart);
-    const count = await redis.zCard(key);
+    await cache.zRemRangeByScore(key, 0, windowStart);
+    const count = await cache.zCard(key);
 
     if (count >= limit) {
-      const oldest = await redis.zRange(key, 0, 0);
-      const retryAfter = oldest.length > 0 ? Math.ceil((parseInt(oldest[0].value) + windowMs - now) / 1000) : windowMs / 1000;
+      const oldest = await cache.zRange(key, 0, 0);
+      const retryAfter = oldest.length > 0
+        ? Math.ceil((parseInt(oldest[0]) + windowMs - now) / 1000)
+        : Math.ceil(windowMs / 1000);
       throw new RateLimitedError(retryAfter);
     }
 
-    await redis.zAdd(key, { score: now, value: `${now}-${crypto.randomUUID()}` });
-    await redis.expire(key, Math.ceil(windowMs / 1000));
+    await cache.zAdd(key, { score: now, value: `${now}-${crypto.randomUUID()}` });
+    await cache.expire(key, Math.ceil(windowMs / 1000));
   }
 
   // Middleware
-  async function rateLimitMiddleware(req: Request, _res: Response, next: NextFunction): Promise<void> {
-    const key = `ratelimit:api:${req.ip}`;
+  async function rateLimitMiddleware(request, sendResponse, next) {
+    const key = `ratelimit:api:${request.ip}`;
     await rateLimit(key, 100, 60000); // 100 requests per minute
     next();
   }
@@ -98,12 +98,12 @@ description: Detailed reference for security best practices, observability (logg
 
 - **Secrets Management:** Never hardcode secrets. Use environment variables injected by the deployment platform or a secrets manager (Vault, AWS Secrets Manager).
 
-  ```typescript
+  ```js
   // GOOD: Read from environment
   const config = {
     dbUrl: process.env.DATABASE_URL,
     jwtSecret: process.env.JWT_SECRET,
-    redisUrl: process.env.REDIS_URL,
+    cacheUrl: process.env.CACHE_URL,
   };
 
   if (!config.dbUrl || !config.jwtSecret) {
@@ -118,19 +118,13 @@ description: Detailed reference for security best practices, observability (logg
 
 Backend services must be observable: logs, metrics, and traces must be available for debugging and monitoring.
 
-- **Structured Logging:** Use structured loggers (Pino, Winston) with consistent fields. Never use `console.log`.
+- **Structured Logging:** Use structured loggers with consistent fields. Never use raw `console.log`.
 
-  ```typescript
-  import pino from 'pino';
-
-  const logger = pino({
+  ```js
+  const logger = createLogger({
     level: process.env.LOG_LEVEL || 'info',
-    formatters: {
-      level(label: string) {
-        return { severity: label.toUpperCase() };
-      },
-    },
-    redact: ['req.headers.authorization', 'req.body.password', 'req.body.ssn'], // Never log secrets
+    formatters: { level: (label) => ({ severity: label.toUpperCase() }) },
+    redact: ['request.headers.authorization', 'request.body.password'], // Never log secrets
   });
 
   // Usage throughout the codebase
@@ -139,67 +133,66 @@ Backend services must be observable: logs, metrics, and traces must be available
   logger.error({ err, orderId: 'ord_456' }, 'Failed to process payment for order');
 
   // Request-scoped logger (attach requestId to every log line)
-  app.use((req, res, next) => {
-    req.logger = logger.child({ requestId: req.id, path: req.path, method: req.method });
-    next();
-  });
+  function attachRequestLogger(request) {
+    request.logger = logger.child({ requestId: request.id, path: request.path, method: request.method });
+  }
   ```
 
 - **Health Check Endpoints:**
 
-  ```typescript
+  ```js
   // GET /health — liveness probe (is the process alive?)
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  function handleHealth(request, sendResponse) {
+    sendResponse(200, { status: 'ok', timestamp: new Date().toISOString() });
+  }
 
   // GET /health/ready — readiness probe (can the service accept traffic?)
-  app.get('/health/ready', async (_req, res) => {
+  async function handleReadiness(request, sendResponse) {
     const checks = {
       database: await checkDatabase(),
-      redis: await checkRedis(),
+      cache: await checkCache(),
       upstream: await checkUpstreamService(),
     };
 
     const allHealthy = Object.values(checks).every((c) => c.status === 'up');
     const statusCode = allHealthy ? 200 : 503;
 
-    res.status(statusCode).json({
+    sendResponse(statusCode, {
       status: allHealthy ? 'ok' : 'degraded',
       checks,
       timestamp: new Date().toISOString(),
     });
-  });
+  }
 
-  async function checkDatabase(): Promise<HealthCheckResult> {
+  async function checkDatabase() {
     try {
-      await db.$queryRaw`SELECT 1`;
+      await db.query('SELECT 1');
       return { status: 'up' };
     } catch (err) {
-      return { status: 'down', error: (err as Error).message };
+      return { status: 'down', error: err.message };
     }
   }
   ```
 
 - **Metrics Collection:** Expose metrics for monitoring systems (Prometheus, Datadog, etc.).
 
-  ```typescript
-  // Example using prom-client
-  import client from 'prom-client';
+  ```js
+  // Example using a metrics library (e.g. prom-client)
+  const metricsRegistry = createMetricsRegistry();
 
-  const httpRequestDuration = new client.Histogram({
+  const httpRequestDuration = new metricsRegistry.Histogram({
     name: 'http_request_duration_ms',
     help: 'Duration of HTTP requests in ms',
     labelNames: ['method', 'route', 'status_code'],
     buckets: [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000],
   });
 
-  const activeRequests = new client.Gauge({
+  const activeRequests = new metricsRegistry.Gauge({
     name: 'http_requests_active',
     help: 'Number of currently active HTTP requests',
   });
 
-  const dbQueryDuration = new client.Histogram({
+  const dbQueryDuration = new metricsRegistry.Histogram({
     name: 'db_query_duration_ms',
     help: 'Duration of database queries in ms',
     labelNames: ['query_name'],
@@ -207,21 +200,22 @@ Backend services must be observable: logs, metrics, and traces must be available
   });
 
   // Middleware to record request metrics
-  app.use((req, res, next) => {
+  function recordMetrics(request, sendResponse, next) {
     const end = httpRequestDuration.startTimer();
     activeRequests.inc();
-    res.on('finish', () => {
-      end({ method: req.method, route: req.route?.path || 'unknown', status_code: res.statusCode });
+    request.onFinish = () => {
+      end({ method: request.method, route: request.route || 'unknown', status_code: request.statusCode });
       activeRequests.dec();
-    });
+    };
     next();
-  });
+  }
 
   // Metrics endpoint
-  app.get('/metrics', async (_req, res) => {
-    res.set('Content-Type', client.register.contentType);
-    res.end(await client.register.metrics());
-  });
+  async function handleMetrics(request, sendResponse) {
+    sendResponse(200, await metricsRegistry.metrics(), {
+      'Content-Type': metricsRegistry.contentType,
+    });
+  }
   ```
 
 ### 10. API Versioning & Migration
@@ -230,38 +224,40 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
 
 - **URL Path Versioning (recommended for most cases):**
 
-  ```typescript
+  ```js
   // Routes are scoped by version
-  const v1Router = Router();
-  v1Router.get('/users', v1UserController.list);
-  v1Router.post('/users', v1UserController.create);
+  // /api/v1/users → handled by v1 handlers
+  // /api/v2/users → handled by v2 handlers
 
-  const v2Router = Router();
-  v2Router.get('/users', v2UserController.list);      // Updated response format
-  v2Router.post('/users', v2UserController.create);    // New required fields
+  const v1Handlers = {
+    listUsers: (req, res) => { /* v1 response format */ },
+    createUser: (req, res) => { /* v1 create logic */ },
+  };
 
-  app.use('/api/v1', v1Router);
-  app.use('/api/v2', v2Router);
+  const v2Handlers = {
+    listUsers: (req, res) => { /* v2 response format — updated */ },
+    createUser: (req, res) => { /* v2 create logic — new required fields */ },
+  };
   ```
 
 - **Header Versioning (alternative — keeps URLs clean but requires client cooperation):**
 
-  ```typescript
+  ```js
   // Client sends: Accept: application/vnd.myapi.v2+json
-  app.use((req, res, next) => {
-    const accept = req.headers.accept || '';
+  function resolveApiVersion(request) {
+    const accept = request.headers.accept || '';
     const match = accept.match(/application\/vnd\.myapi\.v(\d+)\+json/);
-    req.apiVersion = match ? parseInt(match[1]) : 1;
-    next();
-  });
+    return match ? parseInt(match[1]) : 1;
+  }
 
   // Route handlers check the version
-  app.get('/users', (req, res) => {
-    if (req.apiVersion >= 2) {
-      return handleV2UserList(req, res);
+  function handleUserList(request, sendResponse) {
+    const version = resolveApiVersion(request);
+    if (version >= 2) {
+      return handleV2UserList(request, sendResponse);
     }
-    return handleV1UserList(req, res);
-  });
+    return handleV1UserList(request, sendResponse);
+  }
   ```
 
 - **Backward Compatibility Rules:**
@@ -271,19 +267,21 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
   3. Support old request formats for at least one major version cycle.
   4. Use the `Sunset` and `Deprecation` HTTP headers to inform clients of upcoming changes.
 
-  ```typescript
+  ```js
   // Response with deprecated field
-  res.set('Deprecation', 'true');
-  res.set('Sunset', 'Sat, 01 Nov 2026 00:00:00 GMT');
-  res.set('Link', '</api/v2/users>; rel="successor-version"');
-
-  res.json({
-    success: true,
-    data: {
-      id: 'usr_123',
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      full_name: 'Jane Doe', // Deprecated — same as 'name', kept for backward compat
-    },
-  });
+  function sendUserResponse(sendResponse, user) {
+    sendResponse(200, {
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        full_name: user.name, // Deprecated — same as 'name', kept for backward compat
+      },
+    }, {
+      'Deprecation': 'true',
+      'Sunset': 'Sat, 01 Nov 2026 00:00:00 GMT',
+      'Link': '</api/v2/users>; rel="successor-version"',
+    });
+  }
   ```

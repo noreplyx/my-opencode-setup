@@ -43,7 +43,7 @@ Detailed content is organized into reference files for progressive loading:
 - **Composition over Inheritance**
 
 ### 5. Security
-- Validate all external input (Zod schemas)
+- Validate all external input (schema validation)
 - Secrets in environment variables, never in code
 - Parameterized queries prevent SQL injection
 

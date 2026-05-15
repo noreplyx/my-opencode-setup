@@ -5,100 +5,69 @@ description: Presentation layer, component design patterns, styling architecture
 
 ## 1. Presentation Layer
 
-### 1.1 Pure Rendering Components
+### 1.1 Pure Rendering Functions
 
-Rendering methods/functions **must be pure** — they transform state/props into a visual representation and **must NOT contain business logic**. Business logic belongs in custom hooks, services, or state management layers.
+Rendering functions **must be pure** — they transform state/data into a visual representation and **must NOT contain business logic**. Business logic belongs in separate modules, services, or controller layers.
 
-**React (Bad — business logic in render):**
+**Bad — business logic in the render function:**
 
-```tsx
-// ❌ BAD: Data transformation in render
-function UserProfile({ userId }: { userId: string }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  // Business logic in the component body
-  const fullName = user
-    ? `${user.firstName} ${user.lastName}`.toUpperCase()
-    : '';
-
-  if (!user) return <Spinner />;
-  return <div>{fullName}</div>;
+```js
+// ❌ BAD: Business logic mixed into rendering
+function renderUserProfile(container, userId) {
+  fetch(`/api/users/${userId}`)
+    .then(r => r.json())
+    .then(user => {
+      // Business logic in the rendering path
+      const fullName = `${user.firstName} ${user.lastName}`.toUpperCase();
+      container.innerHTML = `<div>${fullName}</div>`;
+    });
 }
 ```
 
-**React (Good — logic extracted to a hook):**
+**Good — logic extracted to a service layer:**
 
-```tsx
-// ✅ GOOD: Pure rendering component
-function UserProfile({ userId }: { userId: string }) {
-  const { user, isLoading } = useUser(userId);
-
-  if (isLoading) return <Spinner />;
-  if (!user) return <NotFound />;
-
-  return (
-    <div>
-      <UserAvatar src={user.avatarUrl} alt={user.displayName} />
-      <UserName name={user.displayName} />
+```js
+// ✅ GOOD: Pure rendering function
+function renderUserProfile(container, user) {
+  container.innerHTML = `
+    <div class="user-profile">
+      <img src="${escapeHtml(user.avatarUrl)}" alt="${escapeHtml(user.displayName)}" />
+      <span class="user-name">${escapeHtml(user.displayName)}</span>
     </div>
-  );
+  `;
 }
 
-// Hook isolates business logic
-function useUser(id: string) {
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['user', id],
-    queryFn: () => fetchUser(id),
-  });
-  return { user, isLoading };
+// Service layer handles data fetching and business logic
+async function loadUserProfile(container, userId) {
+  container.innerHTML = `<div class="skeleton" aria-busy="true"></div>`;
+  try {
+    const user = await fetchUser(userId);
+    if (!user) {
+      renderNotFound(container);
+      return;
+    }
+    renderUserProfile(container, user);
+  } catch (err) {
+    renderError(container, err);
+  }
 }
-```
-
-**Vue (Good — pure template):**
-
-```vue
-<template>
-  <div v-if="isLoading"><Spinner /></div>
-  <div v-else-if="!user"><NotFound /></div>
-  <div v-else>
-    <UserAvatar :src="user.avatarUrl" :alt="user.displayName" />
-    <UserName :name="user.displayName" />
-  </div>
-</template>
-
-<script setup lang="ts">
-// Composition API separates concerns
-const props = defineProps<{ userId: string }>();
-const { data: user, isLoading } = useUser(props.userId);
-</script>
 ```
 
 ### 1.2 Skeleton / Shimmer Pattern
 
-Improve perceived performance during loading states with skeleton screens. Never show a blank or janky loading spinner without context.
+Improve perceived performance during loading states with skeleton screens. Never show a blank area or janky spinner without context.
 
-**React Skeleton Component:**
-
-```tsx
-// Skeleton.tsx — reusable skeleton base
-interface SkeletonProps {
-  width?: string;
-  height?: string;
-  borderRadius?: string;
-  className?: string;
+```js
+// Skeleton element — reusable base
+function createSkeleton({ width = '100%', height = '1rem', borderRadius = '4px' } = {}) {
+  const el = document.createElement('div');
+  el.className = 'skeleton';
+  el.style.cssText = `width:${width};height:${height};border-radius:${borderRadius};`;
+  el.setAttribute('aria-hidden', 'true');
+  return el;
 }
 
-function Skeleton({ width = '100%', height = '1rem', borderRadius = '4px', className }: SkeletonProps) {
-  return (
-    <div
-      className={`skeleton ${className ?? ''}`}
-      style={{ width, height, borderRadius }}
-      aria-hidden="true"
-    />
-  );
-}
-
-// CSS
+// CSS (add to stylesheet)
 // .skeleton {
 //   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
 //   background-size: 200% 100%;
@@ -107,15 +76,21 @@ function Skeleton({ width = '100%', height = '1rem', borderRadius = '4px', class
 // @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 // Usage in a page skeleton
-function UserProfileSkeleton() {
-  return (
-    <div role="status" aria-label="Loading user profile">
-      <Skeleton width="48px" height="48px" borderRadius="50%" />
-      <Skeleton width="60%" height="1.5rem" />
-      <Skeleton width="40%" height="1rem" />
-      <span className="sr-only">Loading...</span>
-    </div>
-  );
+function renderUserProfileSkeleton(container) {
+  container.innerHTML = '';
+  container.setAttribute('role', 'status');
+  container.setAttribute('aria-label', 'Loading user profile');
+
+  const avatar = createSkeleton({ width: '48px', height: '48px', borderRadius: '50%' });
+  const nameLine = createSkeleton({ width: '60%', height: '1.5rem' });
+  const detailLine = createSkeleton({ width: '40%', height: '1rem' });
+
+  container.append(avatar, nameLine, detailLine);
+
+  const srOnly = document.createElement('span');
+  srOnly.className = 'sr-only';
+  srOnly.textContent = 'Loading...';
+  container.appendChild(srOnly);
 }
 ```
 
@@ -125,120 +100,138 @@ function UserProfileSkeleton() {
 
 ### 2.1 Container / Presentational Pattern
 
-Separate data-fetching (container) from rendering (presentational). Containers know about data sources; presentational components receive data via props and are highly reusable.
+Separate data orchestration (container) from rendering (presentational). Containers know about data sources and side effects; presentational functions receive data via arguments and are highly reusable.
 
-```tsx
+```js
 // Presentational — pure, reusable, testable
-interface UserListProps {
-  users: User[];
-  onSelect: (user: User) => void;
-  isLoading: boolean;
-}
+function renderUserList(container, { users, onSelect, isLoading }) {
+  if (isLoading) {
+    renderUserListSkeleton(container);
+    return;
+  }
+  if (users.length === 0) {
+    renderEmptyState(container, { message: 'No users found' });
+    return;
+  }
 
-function UserList({ users, onSelect, isLoading }: UserListProps) {
-  if (isLoading) return <UserListSkeleton />;
-  if (users.length === 0) return <EmptyState message="No users found" />;
+  const list = document.createElement('ul');
+  list.setAttribute('role', 'list');
 
-  return (
-    <ul role="list">
-      {users.map((user) => (
-        <UserListItem key={user.id} user={user} onSelect={onSelect} />
-      ))}
-    </ul>
-  );
+  users.forEach(user => {
+    const item = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.textContent = user.name;
+    btn.addEventListener('click', () => onSelect(user));
+    item.appendChild(btn);
+    list.appendChild(item);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(list);
 }
 
 // Container — data-aware, orchestrates side effects
-function UserListPage() {
-  const { data: users, isLoading } = useUsers();
-  const navigate = useNavigate();
+async function UserListPageController(container) {
+  const { data: users, isLoading } = await fetchUsers();
 
-  const handleSelect = (user: User) => {
-    trackEvent('user_selected', { userId: user.id });
-    navigate(`/users/${user.id}`);
+  renderUserList(container, {
+    users: users ?? [],
+    isLoading,
+    onSelect: (user) => {
+      trackEvent('user_selected', { userId: user.id });
+      navigateTo(`/users/${user.id}`);
+    },
+  });
+}
+```
+
+### 2.2 Composition via Event-Based Communication
+
+Components communicate via events and callbacks, avoiding tight coupling.
+
+```js
+// Accordion pattern using event delegation and data attributes
+
+function createAccordion(container, items) {
+  container.className = 'accordion';
+
+  items.forEach((item, index) => {
+    const section = document.createElement('div');
+    section.className = 'accordion-item';
+
+    const header = document.createElement('button');
+    header.className = 'accordion-header';
+    header.textContent = item.title;
+    header.setAttribute('aria-expanded', 'false');
+    header.setAttribute('aria-controls', `accordion-panel-${index}`);
+    header.dataset.accordionId = index;
+
+    const panel = document.createElement('div');
+    panel.id = `accordion-panel-${index}`;
+    panel.className = 'accordion-panel';
+    panel.setAttribute('role', 'region');
+    panel.hidden = true;
+    panel.innerHTML = item.content;
+
+    header.addEventListener('click', () => {
+      const isExpanded = header.getAttribute('aria-expanded') === 'true';
+      // Close all panels
+      container.querySelectorAll('.accordion-header').forEach(h =>
+        h.setAttribute('aria-expanded', 'false')
+      );
+      container.querySelectorAll('.accordion-panel').forEach(p =>
+        p.hidden = true
+      );
+      // Open this panel
+      if (!isExpanded) {
+        header.setAttribute('aria-expanded', 'true');
+        panel.hidden = false;
+      }
+    });
+
+    section.appendChild(header);
+    section.appendChild(panel);
+    container.appendChild(section);
+  });
+}
+```
+
+### 2.3 Reusable Stateful Logic (Module Pattern)
+
+Encapsulate reusable stateful logic into modules or classes. Each module has a single responsibility.
+
+```js
+// Debounce — reusable debounce function (framework-agnostic)
+function createDebounce(delayMs) {
+  let timer = null;
+  return {
+    call(fn) {
+      clearTimeout(timer);
+      timer = setTimeout(fn, delayMs);
+    },
+    cancel() {
+      clearTimeout(timer);
+    },
   };
-
-  return <UserList users={users ?? []} onSelect={handleSelect} isLoading={isLoading} />;
-}
-```
-
-### 2.2 Compound Components
-
-Related components that share implicit state via React Context without prop drilling.
-
-```tsx
-// ✅ GOOD: Compound component pattern
-interface AccordionContextValue {
-  expandedId: string | null;
-  toggle: (id: string) => void;
 }
 
-const AccordionContext = createContext<AccordionContextValue | null>(null);
-
-function Accordion({ children }: { children: ReactNode }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
-
-  return (
-    <AccordionContext.Provider value={{ expandedId, toggle }}>
-      <div className="accordion">{children}</div>
-    </AccordionContext.Provider>
-  );
+// MediaQuery — reactive media query observer
+function createMediaQuery(query) {
+  const mql = window.matchMedia(query);
+  return {
+    matches: mql.matches,
+    onChange(callback) {
+      mql.addEventListener('change', (e) => callback(e.matches));
+      return () => mql.removeEventListener('change', callback);
+    },
+  };
 }
 
-Accordion.Item = function AccordionItem({ id, title, children }: AccordionItemProps) {
-  const ctx = useContext(AccordionContext)!;
-  const isExpanded = ctx.expandedId === id;
-
-  return (
-    <div className="accordion-item">
-      <button
-        onClick={() => ctx.toggle(id)}
-        aria-expanded={isExpanded}
-        aria-controls={`accordion-panel-${id}`}
-      >
-        {title}
-      </button>
-      {isExpanded && (
-        <div id={`accordion-panel-${id}`} role="region">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-};
-```
-
-### 2.3 Custom Hooks
-
-Encapsulate reusable stateful logic into hooks. Each hook has a single responsibility.
-
-```tsx
-// useDebounce — reusable debounce hook
-function useDebounce<T>(value: T, delayMs: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-
-  return debouncedValue;
-}
-
-// useMediaQuery — responsive behavior hook
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, [query]);
-
-  return matches;
-}
+// Usage
+const debouncer = createDebounce(300);
+searchInput.addEventListener('input', () => {
+  debouncer.call(() => performSearch(searchInput.value));
+});
 ```
 
 ---
@@ -269,155 +262,183 @@ function useMediaQuery(query: string): boolean {
 .card__title--large { }
 ```
 
-**React component with BEM classes:**
+**Component with BEM classes:**
 
-```tsx
-function Card({ featured, title, children }: CardProps) {
-  const className = clsx('card', { 'card--featured': featured });
-
-  return (
-    <div className={className}>
-      <h2 className="card__title">{title}</h2>
-      <div className="card__body">{children}</div>
+```js
+function renderCard(container, { featured, title, content }) {
+  const className = ['card', featured && 'card--featured'].filter(Boolean).join(' ');
+  container.innerHTML = `
+    <div class="${className}">
+      <h2 class="card__title">${escapeHtml(title)}</h2>
+      <div class="card__body">${escapeHtml(content)}</div>
     </div>
-  );
+  `;
 }
 ```
 
-### 3.3 CSS Modules with TypeScript
+### 3.3 CSS Modules with Build Tools
 
-```tsx
-// Component.module.css
-// .root { padding: 1rem; }
-// .title { font-size: 1.25rem; color: var(--color-primary); }
+When using a bundler that supports CSS Modules:
 
+```css
+/* Component.module.css */
+.root { padding: 1rem; }
+.title { font-size: 1.25rem; color: var(--color-primary); }
+```
+
+```js
 import styles from './Component.module.css';
 
-function Component() {
-  return (
-    <div className={styles.root}>
-      <h2 className={styles.title}>Hello</h2>
+function renderComponent(container) {
+  container.innerHTML = `
+    <div class="${styles.root}">
+      <h2 class="${styles.title}">Hello</h2>
     </div>
-  );
+  `;
 }
 ```
 
 ---
 
-## 6. State Management
+## 4. State Management
 
-### 6.1 Local vs Global State
+### 4.1 Local vs Global State
 
 | State Type | Examples | Where |
 |---|---|---|
-| **Local UI state** | Form inputs, toggles, modals | `useState`, `useReducer` in component |
-| **Shared UI state** | Theme, sidebar open, locale | React Context, Zustand |
-| **Server state** | API data, cache | React Query / SWR / TanStack Query |
-| **URL state** | Search params, path, filters | `useSearchParams`, React Router |
+| **Local UI state** | Form inputs, toggles, modals | Local variables, closures, class fields |
+| **Shared UI state** | Theme, sidebar open, locale | Events, reactive stores (e.g. Zustand, RxJS), singleton modules |
+| **Server state** | API data, cache | Dedicated data layer with caching (e.g. TanStack Query, SWR, manual cache) |
+| **URL state** | Search params, path, filters | `URLSearchParams`, `History API`, hash |
 
-**Rule of thumb:** Start with local state. Lift state up only when multiple children need it. Reach for a global store only when many unrelated components share the state.
+**Rule of thumb:** Start with local state (closures/variables). Lift state up only when multiple children need it. Reach for a global store only when many unrelated parts of the UI share the state.
 
-### 6.2 Server State (React Query)
+### 4.2 Server State (Caching Data Layer)
 
-```tsx
-// ✅ GOOD: Server state managed by React Query
-function useProjects(page: number) {
-  return useQuery({
-    queryKey: ['projects', page],
-    queryFn: () => fetch(`/api/projects?page=${page}`).then((r) => r.json()),
-    staleTime: 5 * 60 * 1000, // 5 min before refetch
-    gcTime: 30 * 60 * 1000,    // 30 min cache retention
-  });
+```js
+// Simple cache wrapper for server state
+function createQueryCache() {
+  const cache = new Map();
+  const listeners = new Map();
+
+  return {
+    async query(key, fetcher, staleTime = 5 * 60 * 1000) {
+      const cached = cache.get(key);
+      if (cached && Date.now() - cached.timestamp < staleTime) {
+        return cached.data;
+      }
+      const data = await fetcher();
+      cache.set(key, { data, timestamp: Date.now() });
+      this.notify(key, data);
+      return data;
+    },
+    invalidate(key) {
+      cache.delete(key);
+      this.notify(key, null);
+    },
+    subscribe(key, listener) {
+      if (!listeners.has(key)) listeners.set(key, new Set());
+      listeners.get(key).add(listener);
+      return () => listeners.get(key)?.delete(listener);
+    },
+    notify(key, data) {
+      listeners.get(key)?.forEach(fn => fn(data));
+    },
+  };
 }
 
-// Mutations with optimistic updates
-function useUpdateProject() {
-  const queryClient = useQueryClient();
+const queryCache = createQueryCache();
 
-  return useMutation({
-    mutationFn: (project: Project) => fetch(`/api/projects/${project.id}`, { method: 'PUT', body: JSON.stringify(project) }),
-    onMutate: async (project) => {
-      await queryClient.cancelQueries({ queryKey: ['projects'] });
-      const previous = queryClient.getQueryData(['projects']);
-      queryClient.setQueryData(['projects'], (old: Project[]) => old.map((p) => (p.id === project.id ? project : p)));
-      return { previous };
-    },
-    onError: (_err, _project, context) => {
-      queryClient.setQueryData(['projects'], context?.previous);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
-  });
+// Optimistic update pattern
+async function updateProject(project) {
+  const previous = queryCache.getQueryData(['projects']);
+  // Optimistically update UI
+  queryCache.setQueryData(['projects'], (old) =>
+    old.map(p => p.id === project.id ? project : p)
+  );
+  try {
+    await fetch(`/api/projects/${project.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(project),
+    });
+  } catch (err) {
+    // Rollback on error
+    queryCache.setQueryData(['projects'], previous);
+    throw err;
+  }
 }
 ```
 
-### 6.3 UI State (Zustand)
+### 4.3 Shared UI State (Event-Based Store)
 
-```tsx
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+```js
+// Minimal observable store for shared UI state
+function createStore(initialState) {
+  let state = { ...initialState };
+  const listeners = new Set();
 
-interface UIState {
-  sidebarOpen: boolean;
-  theme: 'light' | 'dark';
-  toggleSidebar: () => void;
-  setTheme: (theme: 'light' | 'dark') => void;
+  return {
+    getState() { return state; },
+    setState(partial) {
+      state = { ...state, ...partial };
+      listeners.forEach(fn => fn(state));
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
 }
 
-const useUIStore = create<UIState>()(
-  devtools(
-    (set) => ({
-      sidebarOpen: false,
-      theme: 'light',
-      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setTheme: (theme) => set({ theme }),
-    }),
-    { name: 'UIStore' }
-  )
-);
+// Usage
+const uiStore = createStore({ sidebarOpen: false, theme: 'light' });
+
+uiStore.subscribe((state) => {
+  document.documentElement.dataset.theme = state.theme;
+});
+
+// Toggle sidebar
+uiStore.setState({ sidebarOpen: !uiStore.getState().sidebarOpen });
 ```
 
 ---
 
-## 7. Form Handling
+## 5. Form Handling
 
-### 7.1 Controlled vs Uncontrolled
+### 5.1 Controlled vs Uncontrolled Inputs
 
-```tsx
-// Controlled — React manages input state (preferred)
-function ControlledForm() {
-  const [email, setEmail] = useState('');
+```js
+// Controlled — JavaScript manages input state (preferred)
+function createControlledForm(container) {
+  let email = '';
 
-  return (
-    <input
-      type="email"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-    />
-  );
+  const input = document.createElement('input');
+  input.type = 'email';
+  input.value = email;
+  input.addEventListener('input', (e) => { email = e.target.value; });
+
+  container.appendChild(input);
 }
 
-// Uncontrolled — DOM manages input state (use with refs)
-function UncontrolledForm() {
-  const emailRef = useRef<HTMLInputElement>(null);
-
-  const handleSubmit = (e: FormEvent) => {
+// Uncontrolled — DOM manages input state (use on submit)
+function createUncontrolledForm(container) {
+  const form = document.createElement('form');
+  form.innerHTML = `
+    <input type="email" name="email" />
+    <button type="submit">Submit</button>
+  `;
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    submitEmail(emailRef.current?.value ?? '');
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input type="email" ref={emailRef} defaultValue="" />
-    </form>
-  );
+    const data = new FormData(form);
+    submitEmail(data.get('email'));
+  });
+  container.appendChild(form);
 }
 ```
 
-### 7.2 Form Validation with Zod + React Hook Form
+### 5.2 Form Validation with Zod
 
-```tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+```js
 import { z } from 'zod';
 
 const contactSchema = z.object({
@@ -426,54 +447,66 @@ const contactSchema = z.object({
   message: z.string().min(10, 'Message must be at least 10 characters').max(1000),
 });
 
-type ContactFormData = z.infer<typeof contactSchema>;
-
-function ContactForm() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ContactFormData>({
-    resolver: zodResolver(contactSchema),
-  });
-
-  const onSubmit = async (data: ContactFormData) => {
-    await submitContact(data);
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate>
-      <FormField label="Name" error={errors.name?.message}>
-        <input {...register('name')} aria-invalid={!!errors.name} />
-      </FormField>
-
-      <FormField label="Email" error={errors.email?.message}>
-        <input type="email" {...register('email')} aria-invalid={!!errors.email} />
-      </FormField>
-
-      <FormField label="Message" error={errors.message?.message}>
-        <textarea {...register('message')} aria-invalid={!!errors.message} />
-      </FormField>
-
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Sending...' : 'Send'}
-      </button>
+function renderContactForm(container, { onSubmit }) {
+  container.innerHTML = `
+    <form id="contact-form" novalidate>
+      <div class="form-field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" aria-invalid="false" />
+        <p class="form-field__error" role="alert" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" aria-invalid="false" />
+        <p class="form-field__error" role="alert" hidden></p>
+      </div>
+      <div class="form-field">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" aria-invalid="false"></textarea>
+        <p class="form-field__error" role="alert" hidden></p>
+      </div>
+      <button type="submit" id="submit-btn">Send</button>
     </form>
-  );
-}
+  `;
 
-// Reusable form field with error display
-function FormField({ label, error, children }: FormFieldProps) {
-  return (
-    <div className="form-field">
-      <label>{label}</label>
-      {children}
-      {error && (
-        <p className="form-field__error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
+  const form = container.querySelector('#contact-form');
+  const submitBtn = container.querySelector('#submit-btn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    const result = contactSchema.safeParse(data);
+
+    // Clear previous errors
+    container.querySelectorAll('.form-field__error').forEach(el => {
+      el.hidden = true;
+      el.textContent = '';
+    });
+    container.querySelectorAll('[aria-invalid]').forEach(el => {
+      el.setAttribute('aria-invalid', 'false');
+    });
+
+    if (!result.success) {
+      result.error.issues.forEach(issue => {
+        const field = form.querySelector(`[name="${issue.path[0]}"]`);
+        const errorEl = field?.closest('.form-field')?.querySelector('.form-field__error');
+        if (field) field.setAttribute('aria-invalid', 'true');
+        if (errorEl) {
+          errorEl.textContent = issue.message;
+          errorEl.hidden = false;
+        }
+      });
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    try {
+      await onSubmit(result.data);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send';
+    }
+  });
 }
 ```

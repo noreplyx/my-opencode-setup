@@ -17,6 +17,22 @@ Load this skill when the user expresses intent to:
 - Set up the project for local development
 - Generate documentation files (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md)
 
+### Quick Start
+1. **Phase 1** (auto): Reads package.json, tsconfig, Docker config, env files
+2. **Phase 2** (delegate): Finder agent maps entry points, data flow, dependencies, conventions
+3. **Phase 3** (auto): Generates ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md
+4. **Phase 3b** (auto): Verifies all docs exist with valid content
+5. **Phase 4** (interactive): Helps set up Node.js, npm install, .env, build
+6. **Phase 5** (auto): Presents structured summary report
+
+## Hard Rules
+- ❌ NEVER skip the Project Detection phase (Phase 1) — always read package.json first
+- ❌ NEVER proceed to documentation generation without first mapping the codebase via Finder
+- ❌ NEVER skip the verification step after generating docs — always confirm files exist
+- ✅ ALWAYS ask for user confirmation before running Phase 4 setup steps (npm install, .env creation, build)
+- ✅ ALWAYS present a structured Phase 5 report summarizing what was generated
+- ✅ ALWAYS offer to read key excerpts from generated documentation (architecture diagram, tech stack table)
+
 ## 5-Phase Onboarding Pipeline
 
 ### Phase 1: Project Detection
@@ -128,7 +144,13 @@ Run the onboard-project.ts script with all information gathered from Phases 1 an
 
 **Command:**
 ```bash
-node "skills/project-onboarding/scripts/onboard-project.ts" \
+# Prefer the TypeScript version with ts-node:
+ts-node "skills/project-onboarding/scripts/onboard-project.ts" \
+  --dir "[project-root]" \
+  --output "[project-root]"
+
+# Fallback (if ts-node not available):
+node "skills/project-onboarding/scripts/onboard-project.js" \
   --dir "[project-root]" \
   --output "[project-root]"
 ```
@@ -144,6 +166,22 @@ node "skills/project-onboarding/scripts/onboard-project.ts" \
 | `GLOSSARY.md`     | Domain terms, technical abbreviations                                               |
 | `SETUP.md`        | Prerequisites, installation, environment config, commands                           |
 | `WALKTHROUGH.md`  | File reading order, entry point explanation, request tracing guide                  |
+
+---
+
+### Phase 3b: Verification (Auto-Run)
+
+After generating documentation, verify that the output files exist and have reasonable content:
+
+1. Use `glob` to confirm all 4 expected files exist in the project root
+2. Use `read` to spot-check key sections of each file:
+   - `ARCHITECTURE.md`: Check that tech stack, directory tree, and a mermaid diagram are present
+   - `GLOSSARY.md`: Check that it has at least 5 domain terms
+   - `SETUP.md`: Check that prerequisites, installation steps, and commands are present
+   - `WALKTHROUGH.md`: Check that file reading order and request tracing are included
+3. If any file is missing or empty, re-run script generation before proceeding
+
+**Output**: Confirmation that all 4 documentation files are valid.
 
 ---
 

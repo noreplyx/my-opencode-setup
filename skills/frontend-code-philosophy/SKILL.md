@@ -5,7 +5,7 @@ description: Use this skill when planning or implementing frontend code to ensur
 
 # Frontend Code Philosophy
 
-This skill provides frontend-specific guidelines that supplement the universal `code-philosophy` skill. It covers React, Vue, and vanilla JavaScript UI patterns.
+This skill provides frontend-specific guidelines that supplement the universal `code-philosophy` skill. It covers web-standard UI development using vanilla JavaScript, HTML, and CSS — applicable regardless of framework choice.
 
 ## Relationship to code-philosophy
 
@@ -25,54 +25,56 @@ Detailed content is organized into reference files for progressive loading:
 ## Core Principles (Summary)
 
 ### 1. Presentation Layer
-- **Rendering must be PURE** — No business logic in render methods. Extract to custom hooks or services.
+- **Rendering must be PURE** — No business logic in render functions or templates. Extract logic to separate modules, services, or controller layers.
+  - **Why**: Pure rendering is predictable (same input → same output), easier to unit test, avoids side-effect bugs during DOM reconciliation, and keeps the UI layer a thin projection of state.
 - **Skeleton/Shimmer screens** for loading states — never blank or janky spinners.
 
 ### 2. Component Design
-- **Container/Presentational** — Separate data-fetching from rendering
-- **Compound Components** — Share state via Context without prop drilling
-- **Custom Hooks** — One responsibility per hook
+- **Container/Presentational** — Separate data-fetching/state orchestration from rendering
+- **Composition over inheritance** — Compose small, focused components together
+- **Single-file component organization** — Colocate template, logic, and styles per component
 
 ### 3. Styling
 - CSS Modules for large apps, Tailwind for rapid prototyping, CSS-in-JS for dynamic themes
 - BEM naming for maintainable CSS architecture
 
 ### 4. State Management
-- Start with local state (`useState`), lift only when needed
-- Server state → React Query / SWR / TanStack Query
-- Shared UI state → Zustand or Context
+- Start with local/component state, lift only when needed
+- Server state → dedicated data-fetching layer with caching
+- Shared UI state → events, reactive stores, or DI patterns
+- URL state → URL search params and hash as source of truth for filters/sort/pagination
 
 ### 5. Forms
-- Prefer controlled inputs
-- Validate with Zod schemas + React Hook Form
+- Prefer controlled inputs (state-driven values) — input values owned by the component
+- Validate with schema-based validators (e.g. Zod, Yup, Valibot)
 - Accessible error messages with `role="alert"`
 
 ### 6. Security
-- **NEVER use `dangerouslySetInnerHTML` / `v-html` with unsanitized input** — always sanitize with DOMPurify
+- **NEVER use `innerHTML` / `insertAdjacentHTML` / comparable raw-HTML APIs with unsanitized input** — always sanitize with DOMPurify
 - Sanitize user input at the boundary
 - Secrets must live on the server (BFF pattern)
 
 ### 7. Performance
-- `React.memo` / `useMemo` / `useCallback` to prevent unnecessary re-renders
-- Code splitting with `lazy()` + `Suspense`
-- Virtualization (`react-window`) for long lists
+- Memoization to avoid redundant computation
+- Code splitting with dynamic imports (`import()`) + loading states
+- Virtualization (window-based rendering) for long lists
 
 ### 8. Routing
 - Prefer flat route structures
-- Route-level code splitting via `lazy()`
+- Route-level code splitting via dynamic imports
 - URL search params as source of truth for filters/sort/pagination
 
 ### 9. Error Handling
-- Error Boundary per major section (not one for the whole app)
+- Error boundary per major section (cascading catch handlers, not one for the whole app)
 - Graceful degradation: loading → error → empty → success states
 
 ### 10. Accessibility
 > See the dedicated `accessibility` skill for comprehensive guidance.
 
 ### 11. Testing
-- Component tests from user's perspective (React Testing Library)
-- E2E tests for critical flows (Playwright)
-- Automated a11y checks (`jest-axe`)
+- Component tests from user's perspective (querying the rendered DOM)
+- E2E tests for critical flows (Playwright, Cypress)
+- Automated a11y checks (axe-core)
 
 ### 12. Logging
 - Structured logging with component/action/metadata context
@@ -84,7 +86,7 @@ Detailed content is organized into reference files for progressive loading:
 When applying the Frontend Code Philosophy skill:
 
 1. **Analyze the context** — Identify which area of frontend code is being worked on
-2. **Reference the relevant section** — Each reference file provides concrete patterns and code examples
+2. **Reference the relevant section** — Each reference file provides concrete patterns and code examples. For accessibility guidance, load and follow the `accessibility` skill alongside this one.
 3. **Evaluate against principles** — Use the checklist below
 4. **Propose improvements** — Provide code diffs following the patterns in this skill
 5. **Verify** — Build, lint, test, and audit for a11y/performance
