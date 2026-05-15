@@ -58,7 +58,7 @@
         "The manifest includes a fileExists checkpoint for src/services/notification-service.ts.",
         "The manifest includes a fileExists checkpoint for src/routes/notification-routes.ts.",
         "The manifest includes a fileExists checkpoint for src/types/notification.ts.",
-        "The manifest includes an exportExists checkpoint for NotificationService.",
+        "The manifest includes an exportExists or classExists checkpoint for NotificationService.",
         "The manifest includes a typeExists or exportExists checkpoint for Notification.",
         "The manifest includes at least 3 routeExists checkpoints (for the API routes).",
         "The manifest includes at least one validatesInput behavioral checkpoint.",

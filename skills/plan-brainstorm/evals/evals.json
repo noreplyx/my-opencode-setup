@@ -1,0 +1,92 @@
+{
+  "skill_name": "plan-brainstorm",
+  "evals": [
+    {
+      "id": "quick-rate-limiter-brainstorm",
+      "name": "quick brainstorm for API rate limiting approaches",
+      "prompt": "I need to add rate limiting to my Express API to prevent abuse. This is a small project with about 5 API routes, expected traffic of ~100 requests/second. I'm using a single Node.js server with in-memory state.\n\nWhat approaches should I consider for rate limiting?\n- I want something simple that I can implement in a day\n- I also want to know what a more production-ready approach looks like\n- I'm using Express with TypeScript\n\nWalk me through the options. Start by asking me a few questions to understand my needs better, then present at least 2 approaches with trade-offs.\n\nKeep it focused and practical — this is a straightforward feature, not a complex system.",
+      "files": [],
+      "expected_output": "The output demonstrates a focused brainstorming session. It asks at least 3 probing questions before presenting plans. It presents at least 2 distinct rate limiting approaches (e.g., in-memory sliding window vs Redis-based token bucket). Each approach has pros and cons with impact/severity ratings. At least 3 concerns are surfaced across different categories. A simple comparison is included. The session ends by asking the user which direction to proceed.",
+      "assertions": [
+        "The output starts by asking at least 3 deep probing questions (clarifying, constraint, or risk questions) before presenting any plans.",
+        "The output presents at least 2 distinct rate limiting approaches.",
+        "Each approach has at least 5 pros listed with impact ratings (High/Med/Low).",
+        "Each approach has at least 5 cons listed with severity ratings (High/Med/Low).",
+        "Each approach surfaces at least 3 concerns from different categories (scalability, reliability, security, operability, cost, etc.).",
+        "The output includes a comparison of the approaches (can be a simple table or structured comparison).",
+        "Each approach includes a verification strategy with test scenarios or success metrics.",
+        "The output references Express, rate limiting, and the request volume (~100 req/s).",
+        "The output ends by asking the user which approach to proceed with."
+      ]
+    },
+    {
+      "id": "user-profile-architecture-deep-dive",
+      "name": "brainstorm user profile architecture with trade-offs",
+      "prompt": "I'm building a user profile management service. I need to support: \n- GET /api/users/:id (get profile)\n- PUT /api/users/:id (update profile fields)\n- POST /api/users/:id/avatar (upload avatar image, JPEG/PNG only, max 5MB)\n\nThe UserProfile has: id, displayName, bio, avatarUrl, updatedAt.\n\nThis will live in a Node.js/Express backend with PostgreSQL. The team has 3 backend engineers and we want to ship within 2 weeks.\n\nPlease think through the architecture with me. Start by asking me clarifying questions, then present multiple approaches with full trade-off analysis, pros/cons, concerns, and a comparison matrix.\n\nRead the attached feature description for full context: evals/files/feature-descriptions/user-profile-service.md\n\nDo NOT generate a plan-manifest — this is a brainstorming session. Focus on questioning, surfacing concerns, and comparing architectural approaches.",
+      "files": [
+        "evals/files/feature-descriptions/user-profile-service.md"
+      ],
+      "expected_output": "The output demonstrates a complete brainstorming session following the plan-brainstorm skill guidelines. It starts with 3+ deep probing questions (clarifying, constraint, risk, or stakeholder). It presents 2+ distinct architectural approaches. Each approach has at least 5 structured pros and 5 structured cons with impact ratings. Each approach surfaces at least 3 concerns across different categories (scalability, reliability, security, operability, cost, etc.). A side-by-side comparative matrix is included. A verification strategy with success metrics is provided.",
+      "assertions": [
+        "The output starts by asking at least 3 deep probing questions (clarifying, constraint, risk, or stakeholder questions) before presenting any plans.",
+        "The output presents at least 2 distinct architectural approaches or plans.",
+        "Each plan has at least 5 structured pros with impact ratings (High/Med/Low).",
+        "Each plan has at least 5 structured cons with severity ratings (High/Med/Low).",
+        "Each plan surfaces at least 3 concerns from different categories (scalability, reliability, security, operability, cost, time-to-market, technical debt, or observability).",
+        "The output includes a side-by-side comparative matrix comparing the plans across multiple criteria (e.g., time to ship, cost, ops burden, scalability).",
+        "Each plan includes a verification strategy with specific success metrics or test scenarios.",
+        "The output includes a strategic fit analysis (ratings for delivery speed, maintainability, scalability, etc.) for at least one plan.",
+        "The output includes a risk profile assessment (likelihood and impact of key risks) for at least one plan.",
+        "The plan summary mentions the user profile service feature.",
+        "The output ends by asking the user which direction to proceed or to hybridize approaches."
+      ]
+    },
+    {
+      "id": "auth-middleware-strategy-brainstorm",
+      "name": "brainstorm authentication middleware strategies",
+      "prompt": "I need to add JWT-based authentication middleware to protect existing API routes. Here are the requirements:\n\n- `authenticate` middleware reads JWT from `Authorization: Bearer <token>` header\n- On success: attach decoded user payload (userId, role) to req.user\n- On failure: return 401 with appropriate error message (different messages for expired vs invalid tokens)\n- Must validate the Authorization header format before decoding\n- Existing file to modify: src/middleware/auth.ts\n- New file to create: src/types/auth.ts with AuthPayload interface\n\nRead the attached feature description for full context: evals/files/feature-descriptions/auth-middleware.md\n\nI'm not sure whether to use jsonwebtoken, jose, or a simpler approach. Also unsure if we should extract this into a reusable middleware factory or keep it as a single function. And I'm worried about edge cases like malformed tokens, missing headers, and token refresh flows.\n\nWalk me through the options. Ask me questions first, then lay out the alternatives with deep trade-off analysis.",
+      "files": [
+        "evals/files/feature-descriptions/auth-middleware.md"
+      ],
+      "expected_output": "The output demonstrates comprehensive brainstorming. It asks 3+ deep questions before presenting plans. It offers at least 2 distinct approaches (e.g., simple function vs middleware factory, or jsonwebtoken vs jose). Each approach has detailed pros/cons (5+ each), at least 3 concerns, a risk profile assessment, and a verification strategy. A comparison matrix contrasts the approaches.",
+      "assertions": [
+        "The output asks at least 3 deep probing questions before presenting any plans or solutions.",
+        "The output presents at least 2 distinct approaches for implementing the auth middleware.",
+        "Each approach has at least 5 pros listed with impact ratings.",
+        "Each approach has at least 5 cons listed with severity ratings.",
+        "Each approach surfaces at least 3 distinct concerns (e.g., security, performance, maintainability, operability).",
+        "The output includes a side-by-side comparison of the approaches (e.g., table with criteria like complexity, security, flexibility, testability).",
+        "The output includes a risk profile assessment (likelihood and impact of key risks).",
+        "The output includes a verification strategy with test scenarios or success metrics.",
+        "The output references the auth middleware feature (src/middleware/auth.ts, JWT, 401 responses).",
+        "The output ends with a clear question asking the user to choose or combine approaches."
+      ]
+    },
+    {
+      "id": "notification-system-architecture-battle",
+      "name": "brainstorm notification system — 3-way architecture comparison",
+      "prompt": "I need to design an in-app notification system. Here are the requirements:\n\nService methods:\n- sendNotification(userId, type, title, body)\n- getNotifications(userId) with pagination\n- markAsRead(notificationId)\n- markAllAsRead(userId)\n- getUnreadCount(userId)\n\nAPI Routes:\n- GET /api/notifications (paginated)\n- POST /api/notifications (admin)\n- PATCH /api/notifications/:id/read\n- PATCH /api/notifications/read-all\n- GET /api/notifications/unread-count\n\nTypes: Notification { id, userId, type: mention|like|follow|system, title, body, read, createdAt }\n\nFiles to create:\n- src/services/notification-service.ts\n- src/routes/notification-routes.ts\n- src/types/notification.ts\n\nRead the attached feature description for full context: evals/files/feature-descriptions/notification-system.md\n\nThis is a complex feature. I need help thinking through the architectural options. Should notifications be pushed (WebSocket/SSE) or pulled (polling)? Should we use a queue for sending? How do we scale this? What about real-time delivery? How do we handle the admin-only POST restriction?\n\nAsk me questions first. Then present 3 distinct architectural strategies with exhaustive trade-off analysis.",
+      "files": [
+        "evals/files/feature-descriptions/notification-system.md"
+      ],
+      "expected_output": "The output demonstrates an expert-level brainstorming session. It begins by asking 3+ probing questions. It presents 3 distinct architectural strategies (e.g., simple polling, WebSocket push, queue-based with worker). Each strategy includes: goal, summary, at least 5 pros with impact, at least 5 cons with severity, at least 3 concerns from different categories, strategic fit and risk profile tables, and a verification strategy. A comprehensive 3-way comparative matrix is included. The session ends with a recommendation scenario for each approach. The output follows the 6-phase session flow (questioning → reflection → generation → comparison → decision → hand-off). Each strategy includes rollback triggers and rollback execution. The output offers to hybridize plans if the user is unsure, and explicitly offers to pivot to entirely new plans if all are rejected.",
+      "assertions": [
+        "The output asks at least 3 deep probing questions before presenting any architectural strategies.",
+        "The output presents at least 3 distinct architectural strategies or approaches.",
+        "Each strategy has at least 5 detailed pros with impact levels (High/Med/Low).",
+        "Each strategy has at least 5 detailed cons with severity levels (High/Med/Low).",
+        "Each strategy surfaces at least 3 concerns across different categories (scalability, reliability, security, cost, operability, etc.).",
+        "The output includes a comprehensive 3-way comparative matrix comparing all strategies side-by-side.",
+        "The output includes a strategic fit analysis (e.g., ratings for delivery speed, maintainability, scalability).",
+        "The output includes a risk profile assessment for at least one strategy.",
+        "Each strategy includes a verification strategy with test scenarios or success metrics.",
+        "The output includes a recommended scenario for each strategy explaining when it is the best choice.",
+        "The output references the notification system feature details (NotificationService, API routes, Notification type).",
+        "The output ends by asking the user which strategy to pursue or how to hybridize.",
+        "Each strategy includes both rollback triggers (conditions that would cause a rollback, e.g., error rate > 1%) and rollback execution steps (how to revert the changes).",
+        "The output follows a phased session flow: deep questioning first, then plan generation, then comparison, then user decision.",
+        "The output offers to hybridize plans if the user is unsure, and explicitly offers to pivot to entirely new plans if the user rejects all presented options."
+      ]
+    }
+  ]
+}
