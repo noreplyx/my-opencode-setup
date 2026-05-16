@@ -5,6 +5,10 @@
     "port": 4096
   },
   "plugin": [
-    "@franlol/opencode-md-table-formatter@latest"
-  ]
+    "@franlol/opencode-md-table-formatter@latest",
+    "@mailshieldai/opencode-canvas"
+  ],
+  "permission": {
+    "canvas_*": "allow"
+  }
 }
