@@ -27,8 +27,14 @@ Review specs, identify gaps, write acceptance criteria (Given/When/Then). → Se
 ### Phase 2: Test Planning
 Determine scope, design test cases (equivalence partitioning, boundary analysis), identify test data needs. → See `references/testing-strategies.md` for test design techniques
 
+### Phase 2.5: Automatic Edge Case Generation
+After smoke tests pass and before full test execution, automatically generate boundary value tests. → See details below
+
 ### Phase 3: Test Execution
 Run automated tests, manual exploratory testing, verify edge cases, run regression, performance, and security scans. → See `references/testing-strategies.md` for test types, `references/ci-testing.md` for prioritization
+
+### Phase 3.5: Non-Functional Testing
+Run performance, accessibility, and security checks on critical paths. → See details below
 
 ### Phase 4: Bug Triage & Retesting
 Log bugs using the standard template, classify by severity/priority, assign, retest after fixes. → See `references/ci-testing.md` for bug reporting standards
@@ -36,10 +42,121 @@ Log bugs using the standard template, classify by severity/priority, assign, ret
 ### Phase 5: Release Sign-Off
 Verify smoke tests pass, no S1/S2 bugs open, coverage thresholds met, security scan clean. → See `references/qa-workflow.md` for the full sign-off checklist
 
+### Phase 5.5: Regression Impact Analysis
+After all tests pass, perform a cross-module impact analysis to identify modules that may be affected by the changes. → See details below
+
 ### Phase 6: Post-Release Monitoring
 Monitor error rates, verify production smoke tests, review user-reported bugs. → See `references/qa-workflow.md` for monitoring guidelines
 
 ---
+
+## Detailed Phase Guidance
+
+### Phase 2.5: Automatic Edge Case Generation
+
+After smoke tests pass and before full test execution, automatically generate boundary value tests for comprehensive coverage.
+
+**Generate test cases for:**
+- Null/undefined inputs
+- Empty arrays/strings
+- Max-length inputs (strings, arrays, buffers)
+- Negative/zero numbers
+- Special characters (HTML entities, Unicode, control characters)
+- For API endpoints: missing required fields, invalid types, out-of-range values
+
+**Implementation:**
+- Use the project's existing test framework (Jest, Vitest, pytest) to generate these automatically where possible
+- Write parameterized tests that iterate over edge case matrices
+- For JavaScript/TypeScript projects, use `test.each` or `describe.each` for data-driven edge case testing
+- For Python projects, use `@pytest.mark.parametrize`
+
+**Output:**
+- Report generated edge cases alongside bug findings
+- Each edge case test result should be logged with pass/fail status
+- Failed edge cases are automatically promoted to bug reports
+
+### Phase 3.5: Non-Functional Testing
+
+Run performance, accessibility, and security checks separately from functional tests. Report non-functional issues distinctly from functional bugs.
+
+**Performance:**
+- Run a basic response time check for critical paths (API endpoints, page loads, database queries)
+- If response time > 500ms for a simple query, flag as a **performance concern (S3 severity)**
+- Document baseline measurements for trend analysis
+
+**Accessibility (for UI changes):**
+- Run basic a11y checks including:
+  - Alt text presence on images
+  - ARIA labels on interactive elements
+  - Color contrast ratios (minimum 4.5:1 for normal text, 3:1 for large text)
+- Flag issues as **S2 (major)** by default
+- Use automated tools: axe-core, Lighthouse, or platform-specific a11y checkers
+
+**Security (for changes touching auth, input handling, or data access):**
+- Run security scan patterns for:
+  - `eval()` and similar dynamic code execution
+  - `innerHTML` and other DOM injection vectors
+  - SQL injection patterns (string concatenation in queries)
+  - Hardcoded secrets/tokens
+  - Insecure direct object references
+- Flag confirmed issues as **S1 (critical)** or **S2 (major)** depending on exploitability
+
+**Reporting:**
+- Report non-functional issues in a separate section from functional bugs
+- Include the type, finding, severity, and details for each issue
+
+### Phase 5.5: Regression Impact Analysis
+
+After all tests pass, perform a cross-module impact analysis to identify modules potentially affected by the changes.
+
+**Procedure:**
+1. Identify all changed files in the branch/PR
+2. For each changed file, search for import references across the codebase:
+   ```bash
+   grep -r "from '.*changed-file'" src/
+   grep -r "import.*changed-file" src/
+   grep -r "require('.*changed-file')" src/
+   ```
+3. For each importing module, flag: "This change may affect [module X] — review recommended"
+4. Classify risk level:
+   - **High**: Direct import of exported types/classes used in critical paths
+   - **Medium**: Indirect import or import of utility functions
+   - **Low**: Import of constants or type-only imports
+
+**Output:**
+- Include a regression impact table in the final QA report
+- List each affected module, the file that changed, risk level, and recommended action
+
+---
+
+## QA Output Contract
+
+When producing the final QA report, use this structured format:
+
+```
+---
+status: "completed" | "failed" | "partial"
+resultSummary: "2-3 sentence summary of overall QA outcome"
+agentOutputs:
+  qa:
+    status: "completed" | "failed" | "partial"
+    resultSummary: "Brief summary of QA findings"
+---
+### Results
+#### Smoke Test: ✅/❌
+#### Functional Tests: N passed / N failed / N skipped
+#### Edge Cases Tested: [list of edge case categories tested]
+#### Non-Functional Issues:
+| Type | Finding | Severity | Details |
+|------|---------|----------|---------|
+| Performance | ... | S3 | ... |
+| Accessibility | ... | S2 | ... |
+| Security | ... | S1/S2 | ... |
+#### Regression Impact:
+| Affected Module | File | Risk | Action |
+|-----------------|------|------|--------|
+| module-a.ts | changed-file.ts | High | Review recommended |
+```
 
 ## Core Principles
 

@@ -7,10 +7,12 @@ description: Use this skill to verify that implemented code aligns with the stru
 
 ## Purpose
 
-This skill enables a Verifier agent to systematically check that code produced by an Implementor matches the specification defined in a `plan-manifest.json` file. It supports two verification passes:
+This skill enables a Verifier agent to systematically check that code produced by an Implementor matches the specification defined in a `plan-manifest.json` file. It supports four verification passes:
 
 1. **Structural Pass** (fast, automated) — Check files exist, exports are present, types match
 2. **Behavioral Pass** (thorough) — Check error handling, input validation, logging patterns, etc.
+3. **Checkpoint Suggestion Pass** (corrective) — When behavioral checks fail, suggest missing checkpoints for PlanDescriber
+4. **Plan Drift Detection Pass** (architectural) — Verify overall implementation matches plan's architectural intent
 
 ---
 
@@ -108,10 +110,45 @@ For each behavioral checkpoint (in dependency order):
 - No logging at the specified level exists
 - Middleware is not applied to the route
 
+### Cross-File Consistency Checks
+
+During both structural and behavioral passes, perform cross-file checks to ensure imports and exports are consistent:
+
+- When checking `exportExists` for file A, verify that imports in file B that reference this export resolve correctly
+- When checking `classExists`, verify that files depending on this class import it correctly
+- Use `grep` to trace import chains: `grep "from './file-a'" src/**/*.ts`
+- Report cross-file issues as checkpoint failures (e.g., "Export 'Foo' exists in file A but file B's import does not resolve")
+
 ### Dependency Handling
 
 - If checkpoint B depends on A and A failed, B is automatically **Skipped** (not Failed)
 - This prevents cascading false negatives
+
+### Pass 3: Checkpoint Suggestion Pass
+
+After behavioral verification, analyze any failed behavioral checkpoints and suggest missing checkpoints for PlanDescriber:
+
+1. For each behavioral checkpoint that **Failed**, analyze the implementation to determine what checkpoint **would have caught** the issue
+2. Suggest the missing checkpoint in the format: `Suggested missing checkpoint: CP-NNN (handlesError) for method Y in file Z`
+3. Include these as a "Suggested Checkpoints" section in the report
+
+**Example**:
+- If CP-005 (`handlesError` for `validateEmail`) fails because no duplicate email error handling was found, suggest:
+  `Suggested missing checkpoint: CP-NNN (handlesError) for method validateEmail in file src/services/user-service.ts — Missing error handling for duplicate email`
+
+This feedback loop helps PlanDescriber produce better manifests next time.
+
+### Pass 4: Plan Drift Detection
+
+Beyond individual checkpoint compliance, check if the overall implementation approach matches the plan's architectural intent:
+
+1. Read the `planSummary` from the manifest and any architectural notes in the checkpoint descriptions
+2. Compare against actual implementation patterns found during structural/behavioral passes
+3. Detect architectural drift, for example:
+   - "Plan says 'use repository pattern' but implementation directly queries the database"
+   - "Plan says 'use dependency injection' but classes are instantiated with `new` directly"
+   - "Plan says 'use zod for validation' but implementation uses manual if/else guards"
+4. Report drift as a non-blocking **warning** unless it contradicts a specific checkpoint
 
 ---
 
@@ -135,6 +172,18 @@ Compliance % = (Total Passed / (Total Checkpoints - Total Skipped)) × 100
 | 50–79% | ❌ Low Compliance | Significant gaps between plan and implementation |
 | < 50% | 🚫 Critical Non-Compliance | Major deviations from the plan |
 
+### Confidence Level
+
+A `confidence` field accompanies the compliance score to indicate how trustworthy the score is:
+
+| Condition | Confidence |
+|---|---|
+| 100% pass rate + all cross-file checks pass + no drift detected | **HIGH** |
+| 100% pass rate but drift detected | **MEDIUM** |
+| < 100% pass rate (any failures) | **LOW** (explicit deviations) |
+
+The confidence level is reported alongside the compliance score (e.g., "95% — ⚠️ Partial Compliance — Confidence: LOW").
+
 ---
 
 ## Standard Report Format
@@ -149,7 +198,7 @@ After verification, output a report in this format. **You MUST include all secti
 **Verification Date**: <YYYY-MM-DD HH:MM:SS>
 
 ### Compliance Score
-**Overall**: <XX%> — <Status Label>
+**Overall**: <XX%> — <Status Label> — Confidence: <HIGH/MEDIUM/LOW>
 
 ### Results Summary
 | Category | Total | Passed | Failed | Skipped |
@@ -175,11 +224,21 @@ After verification, output a report in this format. **You MUST include all secti
 |---|---|---|---|
 | CP-XXX | behavioral | ... | Depends on CP-YYY which failed |
 
+### Suggested Checkpoints (for PlanDescriber)
+| Suggested ID | Type | Description | Based On |
+|---|---|---|---|
+| CP-NNN | behavioral | handlesError for method validateEmail | Missing error handling for duplicate email |
+
+### Drift Detection
+None detected ✅ / ⚠️ Drift found: [description]
+
 ### Verdict
 **✅ PASS** / **⚠️ PARTIAL** / **❌ FAIL**
 ```
 
 **IMPORTANT**: Always include a **Detailed Checkpoint Results** table. This table lists every single checkpoint from the plan manifest by its ID (e.g., CP-001, CP-002, ...) with its verdict (✅ Pass / ❌ Fail / ⏭️ Skipped) and a brief reason. Do NOT report only aggregate counts — you must enumerate each checkpoint individually.
+
+**IMPORTANT**: If Pass 3 or Pass 4 yielded any results, include the **Suggested Checkpoints** and **Drift Detection** sections in the report. If neither pass produced results, these sections can be omitted.
 
 ---
 

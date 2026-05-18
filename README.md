@@ -19,8 +19,9 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 | **Finder** | `agents/subagent/finder.md` | Codebase research, web search, information gathering (read-only) |
 | **Browser Tester** | `agents/subagent/browser-tester.md` | Browser automation with Playwright CLI — explore websites, find UI/UX bugs, verify implementations, create test scripts |
 | **PlanDescriber** | `agents/subagent/plandescriber.md` | Creates detailed implementation roadmaps + `plan-manifest.json` |
-| **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate + Lint Gate |
-| **QA** | `agents/subagent/qa.md` | Runs Smoke Test, code review, bug discovery, quality checks |
+| **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate + Lint Gate. No thinking — pure execution. |
+| **Fixer** | `agents/subagent/fixer.md` | Debugs and fixes bugs. Diagnoses root causes, applies targeted fixes. Has high reasoning effort. |
+| **QA** | `agents/subagent/qa.md` | Runs Smoke Test, code review, bug discovery, coverage analysis, quality checks |
 | **Verifier** | `agents/subagent/verifier.md` | Compares implementation against plan manifest (structural + behavioral checks) |
 
 ## Pipeline
@@ -28,11 +29,9 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA → Verifier → Orchestrator (report)
-                                        ↑                              ↑
-                                  Browser Tester                Lint Gate (after Build)
-  (website exploration,             (before or after
-   bug discovery, testing)          implementation)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan → QA → Verifier → Orchestrator (report + journal)
+                                                  ↓                              ↑
+                                            Build Gate + Lint Gate         Fixer (feedback loop)
 ```
 
 ### Validation Gates
@@ -41,15 +40,33 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → QA �
 |---|---|---|---|
 | **Build Gate** | Implementor | Code compiles without errors | Fix and rebuild before proceeding |
 | **Lint Gate** | Implementor | Code passes linter/style checks (eslint, prettier, tsc --noEmit) | Fix lint errors before proceeding |
-| **Smoke Test** | QA | App boots/starts without crashing | Critical bug; cycle back to Implementor |
-| **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score ≥ 80%) | Score < 80% → cycle to Implementor or PlanDescriber |
+| **Security Scan** | Orchestrator | npm audit for High/Critical vulns, secrets scan, anti-patterns | Report to user; may fix, except, or block |
+| **Smoke Test** | QA | App boots/starts without crashing | Critical bug → cycle to Fixer |
+| **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score ≥ 80%) | Score < 80% → cycle to Fixer; 3 attempts → PlanDescriber |
+
+### Fixer Agent
+
+The **Fixer** agent is called when QA discovers bugs or Verifier finds deviations. Unlike the Implementor (which is pure plan-following with no reasoning), the Fixer has `reasoningEffort: "high"` and is explicitly allowed to think and debug.
+
+**Workflow**: Receive bug/deviation report → Diagnose root cause → Apply minimal targeted fix → Build + Lint → Self-check → Report
+
+**Escalation**: If the same issue persists after 3 Fixer attempts, the Orchestrator escalates to PlanDescriber for roadmap revision.
 
 ### Skip Shortcuts
 
-- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → QA
+- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → Security Scan → QA
 - **Exploratory/research tasks**: Use only Finder, report findings directly
-- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Implementor → QA → Verifier
+- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer → QA → Verifier
+- **Trivial config changes**: Skip all gates — just delegate to Implementor
 - **UI/website testing**: Use Browser Tester to explore, find bugs, and verify UI implementations
+
+### Pre-Flight Check
+
+Before starting any pipeline, the Orchestrator runs a quick pre-flight check:
+1. Verify the project currently compiles
+2. Check for uncommitted changes (`git status`)
+3. Verify essential configs exist (`package.json`, `tsconfig.json`)
+4. Read the Project Journal for past work and failure patterns
 
 ### Circuit Breaker & Timeout System
 
@@ -61,21 +78,36 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 | **Open** | Repeated failures detected | Orchestrator pauses cycling to the same agent |
 | **Half-Open** | Probation period | One retry allowed to test resolution |
 
-**Escalation limits**: 3 failed attempts for the same bug/agent → escalate to PlanDescriber. 5 total pipeline retries → pause and report to user.
+**Escalation limits**:
+- 3 Fixer attempts for same bug → escalate to PlanDescriber
+- 3 Verifier failures → escalate to PlanDescriber
+- 3 Security Scan failures → escalate to user for direction
+- 5 total pipeline retries → pause and report to user
 
-### Built-in Skills (13 total)
+## Project Journal
+
+The Project Journal at `.opencode/journal/journal.yaml` provides cross-session memory. After every pipeline, the Orchestrator appends an entry recording:
+- Feature name, pipeline type, result (pass/fail/partial)
+- Files changed, key architecture decisions
+- Circuit breaker events and failed gates
+
+**Readers**: Finder, PlanDescriber, and Orchestrator all read the journal to understand past work before starting a new session.
+
+## Built-in Skills (14 total)
 
 | Skill | Used By | Description |
 |---|---|---|
 | `orchestration` | Orchestrator | Multi-agent orchestration, task management, pipeline workflows |
 | `plan-brainstorm` | Orchestrator | Collaborative brainstorming with trade-off analysis |
 | `skill-creator` | Orchestrator | Skill lifecycle management — create, modify, evaluate AI agent skills |
+| `project-onboarding` | Orchestrator | 5-phase project onboarding: detect, map, document, set up, report |
+| `security-scan` | Orchestrator | Dependency vulnerability scanning, secrets detection, anti-pattern checks |
 | `plan-describe` | PlanDescriber | Detailed implementation roadmap creation |
 | `plan-verification` | Verifier | Plan-to-implementation verification, compliance scoring |
 | `quality-assurance` | QA, Browser Tester | Software testing, bug discovery, quality standards |
-| `code-philosophy` | Implementor, PlanDescriber | SOLID, clean code, clean architecture, security |
-| `backend-code-philosophy` | Implementor, PlanDescriber | Backend principles: scaling, caching, database patterns |
-| `frontend-code-philosophy` | Implementor, PlanDescriber | Frontend principles: rendering, state management, a11y |
+| `code-philosophy` | Implementor, Fixer, PlanDescriber | SOLID, clean code, clean architecture, security |
+| `backend-code-philosophy` | Implementor, Fixer, PlanDescriber | Backend principles: scaling, caching, database patterns |
+| `frontend-code-philosophy` | Implementor, Fixer, PlanDescriber | Frontend principles: rendering, state management, a11y |
 | `accessibility` | Implementor, QA | Accessibility guidelines for UI development |
 | `api-documentation` | Implementor | API documentation standards and patterns |
 | `devops-cicd` | Implementor | DevOps and CI/CD pipeline patterns |
@@ -96,10 +128,10 @@ The **Browser Tester** agent uses Playwright CLI to automate real browser intera
 
 PlanDescriber produces a machine-readable `plan-manifest.json` alongside every roadmap. The manifest contains checkpoints that the Verifier agent uses to programmatically confirm the implementation matches the plan.
 
-- **Location**: `plan-manifests/<feature-name>-manifest.json`
-- **Checkpoint types**: structural (files, exports, types, routes, **file deletions**) and behavioral (error handling, validation, logging, middleware)
+- **Location**: `plan-manifests/<feature>/v<version>-manifest.json` (versioned — never overwrite)
+- **Checkpoint types**: structural (files, exports, types, routes, file deletions) and behavioral (error handling, validation, logging, middleware)
 - **Compliance score**: `(Passed / (Total - Skipped)) × 100`
-- **Schema validation**: Manifests are validated against `plan-manifests/plan-manifest-schema.json` (JSON Schema Draft-07)
+- **Schema validation**: Manifests are validated against JSON schema
 - **Deletion verification**: Use `fileNotExists` kind to verify files/directories have been successfully removed
 
 ## Skill Authoring

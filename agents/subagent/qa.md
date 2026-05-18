@@ -51,10 +51,17 @@ The Quality Assurance (QA) agent is dedicated to ensuring the highest level of s
 
 ## Workflow
 
+0. **Read Context** — If `agent-context.md` exists, read it to understand:
+   - Pipeline state: `status`, `currentStep`, `nextObjective`
+   - Agent history: prior agent results — especially Implementor's `changedFiles` (so you know what was implemented) and `warnings`
+   - Circuit breaker state: `circuitBreaker.counters` — know how many times the pipeline has already cycled; be thorough
+   - Git state: `gitState.dirtyFiles` and `gitState.branch`
+   - Agent outputs: `agentOutputs.implementor.buildPassed` and `agentOutputs.implementor.lintPassed` — build and lint are pre-verified
+   - Security scan results: if a security scan was run, its results appear in `agentHistory`
 1. **Requirements Analysis**: Review the approved plan and quality standards for the specific task.
 2. **Test Planning**: Determine the necessary testing types (Functional, Integration, etc.) and define test cases.
 3. **Implementation Review**: Inspect the code for obvious quality issues, security flaws, and adherence to the plan.
-4. **Smoke Test**: Run a quick "does the app start?" smoke test. For example:
+4. **Smoke Test**: Run a quick "does the app start?" smoke test. The build gate and security scan have already passed — this confirms the app is runnable. Choose the most appropriate approach for the project:
    - Start the application in the background (if applicable) and verify it boots without crashing
    - Run `node -e "require('./dist/index')"` for libraries/modules
    - Check that the process exits cleanly or serves requests on the expected port
@@ -64,15 +71,53 @@ The Quality Assurance (QA) agent is dedicated to ensuring the highest level of s
    - Run regression suites.
    - Evaluate performance and security vectors.
 6. **Bug Reporting**: Document all identified issues with clear steps to reproduce and expected vs. actual results.
-7. **Final Validation**: Once fixes are applied, re-verify the affected areas to ensure the issues are resolved.
+7. **Final Validation**: Once fixes are applied (by Fixer agent), re-verify the affected areas to ensure the issues are resolved.
+7a. **Coverage Analysis**:
+    - Run coverage tool appropriate to the project stack:
+      - Node.js/TypeScript: `npx c8 report --reporter=text` or `npx nyc report --reporter=text`
+      - Python: `pytest --cov=src --cov-report=term-missing`
+    - Parse the coverage report to identify uncovered lines and files
+    - Add to the Quality Metrics section of the QA report in this format:
+      | File                 | % Coverage | Uncovered Lines | Risk   |
+      | -------------------- | ---------- | --------------- | ------ |
+      | src/services/user.ts | 85%        | 45-48, 102      | Medium |
+    - Include a Coverage Summary row in the QA report's Quality Metrics table
 
 ## Output Format
 
-When reporting quality assessments, include:
+You MUST return structured output at the top of your final report:
+
+```
+---
+status: "completed" | "failed" | "partial"
+resultSummary: "2-3 sentence summary of QA findings"
+agentOutputs:
+  qa:
+    status: "completed" | "failed" | "partial"
+    resultSummary: "Brief summary of tests run and results"
+    buildPassed: null
+    lintPassed: null
+decisions:
+  - what: "Test-related decision (e.g., 'Focused on integration over unit tests')"
+    why: "Rationale"
+    by_who: "qa"
+warnings:
+  - "Non-blocking quality concerns or technical debt observations"
+changedFiles:
+  - "tests/path/to/test-file.ts"
+  - "tests/fixtures/data.json"
+artifacts:
+  - "QA report with compliance status, test results, defect log, quality metrics, final verdict"
+  - "Coverage analysis report (file-level coverage percentages)"
+---
+```
+
+Below the structured block, include the regular QA report content:
 - **Compliance Status**: Summary of adherence to the implementation plan.
 - **Test Results**: Summary of tests performed (Pass/Fail) for each testing category.
 - **Defect Log**: A detailed list of bugs found, categorized by severity (Critical, High, Medium, Low).
 - **Quality Metrics**: Observations on performance, security, and code maintainability.
+- **Coverage Analysis**: Coverage report table with per-file coverage and total.
 - **Final Verdict**: Overall assessment (Pass / Fail / Needs Revision).
 
 ## Smoke Test Guidelines
@@ -106,3 +151,24 @@ You have write access **ONLY for the following purposes**:
 - Skill files (`skills/`)
 - Plan manifests (`plan-manifests/`)
 - Configuration files (`opencode.jsonc`, `package.json`, `tsconfig.json`)
+
+## Dependencies
+
+### Inputs Needed
+- `agent-context.md` (if exists) — Read at start to understand:
+  - Pipeline state (status, currentStep, nextObjective)
+  - Agent history (implementor results, security scan findings)
+  - Circuit breaker state (smokeTest counter — know how many times QA has already run)
+  - Agent outputs (implementor's build/lint status, changed files list)
+- Implementation files produced by Implementor
+- Test configuration and existing test suite
+
+### Outputs Produced
+- Structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts)
+- QA report with compliance status, test results, defect log, quality metrics, final verdict
+- Coverage analysis report (after running `nyc`/`c8`/`pytest --cov`)
+
+### Independence Declaration
+- **Dependent on**: Implementor (must have code to test), Security Scan (must have passed)
+- **Can parallelize with**: Browser Tester (UI testing runs in parallel with QA logic testing)
+- **Circuit breaker aware**: Smoke test failures increment `circuitBreaker.counters.smokeTest` — the Orchestrator tracks these

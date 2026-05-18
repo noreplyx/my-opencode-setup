@@ -106,15 +106,42 @@ The manifest must follow this JSON structure:
 | `logsAtLevel` | Must log at a specific level | `level`: "info/warn/error/debug" |
 | `hasMiddleware` | A route must use middleware | `middlewareName`, `routePath`, `method` |
 
+**Meta kinds** (use `type: "meta"`):
+| kind | When to Use | verify fields |
+|---|---|---|
+| `selfReviewCheckpoint` | A meta-checkpoint for the Implementor to self-verify | `prompt`: what to check, `method`: "grep" / "read" / "reason" |
+
 #### Dependency Mapping
 - Use `dependsOn` to express ordering: if checkpoint A must pass before B can be verified, set B's `dependsOn: ["CP-00A"]`
 - File existence checks should be dependencies of export/behavioral checks within that file
 - Keep dependencies minimal — only declare what's strictly necessary
 
+#### Manifest Diffing Support
+
+Each manifest version should include a `changes` field listing what changed from the previous version. This enables the Verifier to produce plan diff reports across versions.
+
+Schema addition:
+```json
+{
+  "manifestVersion": 2,
+  "changes": [
+    {
+      "from": "CP-005",
+      "to": "CP-007",
+      "description": "Split error handling checkpoint into two: one for 429 response, one for timeout"
+    }
+  ]
+}
+```
+
+When incrementing the manifest version, always document the diff in the `changes` array. If there is no previous version (first manifest), omit the `changes` field or set it to an empty array.
+
 #### Hard Rule
 - ❌ NEVER skip producing the manifest. Every roadmap MUST have a corresponding manifest.
 - ✅ Place all manifests under `plan-manifests/` directory (create it if it doesn't exist).
 - ✅ Use only the verification kinds listed above.
+- ❌ NEVER produce a plan manifest with only structural checkpoints — every manifest MUST include at least 2 behavioral checkpoints (`handlesError`, `validatesInput`, or `logsAtLevel`) per file being modified.
+- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits.
 
 ## Full Roadmap Example
 
@@ -161,6 +188,35 @@ The `plan-manifests/rate-limiter-manifest.json` would contain:
 - CP-004: functionExists: createRateLimiter
 - CP-005: handlesError: rate limiter returns 429 when limit exceeded
 - CP-006: validatesInput: createRateLimiter validates options (windowMs > 0, maxRequests > 0)
+
+## Plan Confidence Score
+
+Before finalizing a roadmap, the PlanDescriber should rate its own confidence (1-10) in each phase. This gives the Orchestrator a signal to provide more context or run Finder first.
+
+### How to Score
+
+For each phase in the roadmap, assign a confidence score:
+
+| Score | Meaning | Action |
+|---|---|---|
+| 10 | Certain — exact files, lines, and logic are known | Proceed |
+| 7-9 | Mostly confident — minor ambiguity about internal details | Proceed, but note the uncertainty |
+| 4-6 | Partial — unsure about some file locations or interfaces | Orchestrator should consider running Finder for more context |
+| 1-3 | Uncertain — significant gaps in understanding of the codebase | Orchestrator MUST run Finder before proceeding |
+
+### Scoring Format
+
+Include confidence scores in the roadmap as a comment block before the phase:
+
+```
+<!-- Confidence: Phase 1 = 9, Phase 2 = 6 (unsure about middleware registration order), Phase 3 = 8 -->
+```
+
+If any phase scores below 7, append a note explaining what's uncertain and what additional context would help:
+
+```
+<!-- Low Confidence Note: Phase 2 scores 6 because the exact location of route registration in app.ts is unknown. Running Finder with goal "find route registration in app.ts" would raise confidence to 9. -->
+```
 
 ## Output Requirements
 The final description must be so detailed that an implementor can follow it without needing further clarification. It should include:

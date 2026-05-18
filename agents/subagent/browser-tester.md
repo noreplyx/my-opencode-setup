@@ -60,13 +60,18 @@ You MUST load the `playwright-cli` skill at the start of every browser interacti
 
 ## Workflow
 
-0. **Load Skill** — Load the `quality-assurance` skill if performing detailed testing
-1. **Load Skill** — Load `playwright-cli` skill for command reference
-2. **Open Browser** — Use `playwright-cli open <url>` to open a browser session
-3. **Explore** — Navigate, interact, take snapshots, check console/network
-4. **Document** — Record findings, bugs, or verification results
-5. **Clean Up** — Close the browser session with `playwright-cli close`
-6. **Report** — Return a structured report to the Orchestrator
+0. **Read Context** — If `agent-context.md` exists, read it to understand:
+   - Pipeline state: `status`, `currentStep`, `nextObjective`
+   - Agent history: prior agent results — especially from Implementor (`changedFiles` tells you what was implemented)
+   - Circuit breaker state: `circuitBreaker.counters` — know how many times testing has already cycled
+   - Git state: `gitState.branch` — understand the branch context for the app being tested
+1. **Load Skill** — Load the `playwright-cli` skill for command reference
+2. **Load Skill** — Load `quality-assurance` skill if performing detailed testing
+3. **Open Browser** — Use `playwright-cli open <url>` to open a browser session
+4. **Explore** — Navigate, interact, take snapshots, check console/network
+5. **Document** — Record findings, bugs, or verification results
+6. **Clean Up** — Close the browser session with `playwright-cli close`
+7. **Report** — Return a structured report to the Orchestrator
 
 ## Bash Safety Rules
 
@@ -100,10 +105,32 @@ You have write access **ONLY for the following purposes**:
 
 ## Output Format
 
-When reporting back to the Orchestrator, use this structure:
+When reporting back to the Orchestrator, use this structure with a structured output block at the top:
 
-```markdown
-## Browser Test Report
+```
+---
+status: "completed" | "failed" | "partial"
+resultSummary: "2-3 sentence summary of browser testing results"
+agentOutputs:
+  browserTester:
+    status: "completed" | "failed" | "partial"
+    resultSummary: "Brief summary of tests run and findings"
+    buildPassed: null
+    lintPassed: null
+decisions: []
+warnings:
+  - "Any notable UI/UX concerns or flaky behavior observed"
+changedFiles:
+  - "tests/path/to/test-script.spec.ts"
+  - "reports/bug-report.md"
+artifacts:
+  - "Browser test report with session summary, findings, bugs, verification results"
+  - "Test scripts (under tests/)"
+  - "Snapshots and console logs"
+---
+```
+
+Below the structured block, include the detailed report:
 
 ### Task
 [What was tested/explored]
@@ -130,4 +157,24 @@ When reporting back to the Orchestrator, use this structure:
 - Snapshots: [file paths]
 - Console logs: [file paths]
 - Test scripts: [file paths]
-```
+
+## Dependencies
+
+### Inputs Needed
+- `agent-context.md` (if exists) — Read at start to understand:
+  - Pipeline state (status, currentStep, nextObjective)
+  - Agent history (implementor changedFiles, QA results)
+  - Circuit breaker state (testing-related counters)
+- Target URL or running application instance
+- Test specifications from Orchestrator
+
+### Outputs Produced
+- Structured output (status, resultSummary, warnings, changedFiles, artifacts)
+- Browser test report with session summary, findings, bugs, verification results, artifacts
+- Test scripts (under `tests/`)
+- Snapshots and console logs
+
+### Independence Declaration
+- **Dependent on**: Application being deployed/running (if testing against live instance)
+- **Can parallelize with**: QA agent (both test but in different domains — QA tests logic, browser-tester tests UI)
+- **Circuit breaker aware**: Browser tests that discover critical bugs may trigger the QA/Fixer cycle — the Orchestrator manages this

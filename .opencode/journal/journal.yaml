@@ -1,0 +1,36 @@
+# Project Journal — append-only pipeline history
+# Each entry is appended by the Orchestrator after pipeline completion.
+# Format: YAML list of pipeline records.
+# 
+# Schema:
+#   - date: ISO-8601 timestamp
+#     feature: short feature name
+#     pipelineType: full | standard | fixer-only | finder-only | brainstorm
+#     result: pass | fail | partial
+#     durationMinutes: integer
+#     filesChanged: [list of relative file paths]
+#     keyDecisions: [list of architectural/design decisions made]
+#     circuitBreakerEvents: [{gate: string, attempts: int, resolution: string}]
+#     failedGates: [list of gate names that failed]
+#     notes: free text
+
+- date: "2026-05-19T00:00:00Z"
+  feature: "system-init"
+  pipelineType: "full"
+  result: "pass"
+  durationMinutes: 0
+  filesChanged:
+    - "agents/subagent/fixer.md"
+    - "skills/security-scan/SKILL.md"
+    - ".opencode/journal/README.md"
+    - ".opencode/journal/journal.yaml"
+    - "agents/orchestrator.md"
+    - "skills/orchestration/SKILL.md"
+    - "agents/subagent/qa.md"
+  keyDecisions:
+    - "Created Fixer agent to separate debugging from pure implementation"
+    - "Added security scan gate (npm audit + grep for secrets) before QA"
+    - "Introduced Project Journal for cross-session memory"
+  circuitBreakerEvents: []
+  failedGates: []
+  notes: "Initial system improvements: Fixer agent, Security Scan, Project Journal"
