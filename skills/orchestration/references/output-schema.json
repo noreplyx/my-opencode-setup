@@ -1,0 +1,234 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Output Contract Schema",
+  "description": "Shared schema for all subagent structured output blocks. Every agent's report MUST contain a YAML block at the top conforming to this schema. Supports: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator.",
+  "type": "object",
+  "required": ["status", "resultSummary", "agentOutputs", "changedFiles", "artifacts"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "partial"],
+      "description": "Overall status of the agent task"
+    },
+    "resultSummary": {
+      "type": "string",
+      "description": "2-3 sentence summary of what was accomplished",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "agentOutputs": {
+      "type": "object",
+      "description": "Agent-specific output, keyed by agent name. Recognized agent keys include: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "resultSummary"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["completed", "failed", "partial"]
+          },
+          "resultSummary": {
+            "type": "string",
+            "description": "Brief summary of this agent's results"
+          },
+          "buildPassed": {
+            "type": ["boolean", "null"],
+            "description": "Whether the build passed (mandatory for Implementor, Fixer, Integrator; null for read-only agents)"
+          },
+          "lintPassed": {
+            "type": ["boolean", "null"],
+            "description": "Whether lint passed (mandatory for Implementor, Fixer, Integrator; null for read-only agents)"
+          },
+          "buildOutput": {
+            "type": ["string", "null"],
+            "description": "Full stdout + stderr from build command"
+          },
+          "lintOutput": {
+            "type": ["string", "null"],
+            "description": "Full stdout + stderr from lint command (or 'No linter configured')"
+          },
+          "importScanResults": {
+            "type": "array",
+            "description": "Cross-file import scan results (Merge Coordinator only)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": { "type": "string" },
+                "imports": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": { "type": "string" },
+                      "resolved": { "type": "boolean" },
+                      "symbolMatch": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "rootCauseAnalysis": {
+            "type": "object",
+            "description": "Root cause analysis (Fixer only; not used by other agents)",
+            "properties": {
+              "classification": {
+                "type": "string",
+                "enum": ["plan-omission", "implementation-error", "edge-case-miss", "integration-mismatch", "environment-issue"]
+              },
+              "primaryCause": { "type": "string" },
+              "contributingFactors": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "fixApplied": { "type": "string" },
+              "fixConfidence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "crossModuleCheck": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "module": { "type": "string" },
+                    "status": {
+                      "type": "string",
+                      "enum": ["unaffected", "affected", "needsReview"]
+                    }
+                  },
+                  "required": ["module", "status"]
+                }
+              }
+            },
+            "required": ["classification", "primaryCause", "fixApplied", "fixConfidence"]
+          },
+          "wiringSummary": {
+            "type": "object",
+            "description": "Wiring summary (Integrator only; not used by other agents)",
+            "properties": {
+              "barrelFilesUpdated": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Barrel/index files modified to include new exports"
+              },
+              "diRegistrationsAdded": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "DI container registration statements added"
+              },
+              "routesAdded": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "method": { "type": "string" },
+                    "path": { "type": "string" },
+                    "handler": { "type": "string" }
+                  },
+                  "required": ["method", "path", "handler"]
+                },
+                "description": "Route registrations added"
+              },
+              "importsFixed": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "file": { "type": "string" },
+                    "from": { "type": "string" },
+                    "to": { "type": "string" }
+                  },
+                  "required": ["file", "from", "to"]
+                },
+                "description": "Import paths that were corrected"
+              }
+            },
+            "required": ["barrelFilesUpdated", "diRegistrationsAdded", "routesAdded"]
+          },
+          "docsGenerated": {
+            "type": "array",
+            "description": "Documentation generated (Documentor only; not used by other agents)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["inline", "readme", "api", "changelog", "migration"]
+                },
+                "files": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "summary": { "type": "string" }
+              },
+              "required": ["type", "files", "summary"]
+            }
+          },
+          "acceptanceResults": {
+            "type": "object",
+            "description": "Acceptance criteria results (Acceptance Gate only; not used by other agents)",
+            "properties": {
+              "appStarted": { "type": "boolean" },
+              "appStartDuration": { "type": "string" },
+              "totalCheckpoints": { "type": "integer" },
+              "passed": { "type": "integer" },
+              "failed": { "type": "integer" },
+              "skipped": { "type": "integer" },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "checkpointId": { "type": "string" },
+                    "description": { "type": "string" },
+                    "command": { "type": "string" },
+                    "exitCode": { "type": "integer" },
+                    "stdout": { "type": "string" },
+                    "stderr": { "type": "string" },
+                    "verdict": {
+                      "type": "string",
+                      "enum": ["pass", "fail", "skipped"]
+                    }
+                  },
+                  "required": ["checkpointId", "verdict", "exitCode"]
+                }
+              }
+            },
+            "required": ["appStarted", "totalCheckpoints", "passed", "failed", "skipped", "details"]
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "description": "Key decisions made during the task (required: Finder, PlanDescriber, QA, Integrator, Documentor; optional: others)",
+      "items": {
+        "type": "object",
+        "required": ["what", "why", "by_who"],
+        "properties": {
+          "what": { "type": "string", "description": "Decision description" },
+          "why": { "type": "string", "description": "Rationale" },
+          "by_who": { "type": "string", "description": "Agent name" }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "description": "Non-blocking issues or concerns discovered",
+      "items": { "type": "string" }
+    },
+    "changedFiles": {
+      "type": "array",
+      "description": "Files created or modified by this agent",
+      "items": { "type": "string" }
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Descriptions of artifacts produced (reports, manifests, test files, documentation, etc.)",
+      "items": { "type": "string" }
+    }
+  }
+}

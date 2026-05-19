@@ -263,3 +263,40 @@ ts-node skills/scripts/plan-describe/generate-manifest.ts \
 ```
 
 This creates `plan-manifests/user-profile-manifest.json` with 5 checkpoints (3 structural + 2 behavioral) in dependency order. Customize the generated template with specific file paths, export names, and verification details for your feature.
+
+#### Acceptance Criteria Kinds (NEW)
+Use `type: "acceptance"` for business-verifiable checkpoints. These checkpoints define a concrete test that the Verifier can execute to confirm the implementation meets the business requirement.
+
+| kind | When to Use | verify fields |
+|------|-------------|---------------|
+| `acceptanceCriteria` | A specific business scenario must work end-to-end | `given`: precondition, `when`: action/trigger, `then`: expected outcome, `testCommand`: shell command that exits 0 on pass |
+
+**Why acceptance criteria matter:**
+Structural checkpoints verify that code has certain patterns (exports, error handling). Behavioral checkpoints verify code patterns exist. But neither verifies that the code actually *works correctly* for the business scenario. Acceptance criteria close this gap by defining an executable test.
+
+**Schema example:**
+```json
+{
+  "id": "CP-010",
+  "type": "acceptance",
+  "description": "Registration with existing email returns 409",
+  "target": "src/controllers/user.controller.ts",
+  "verify": {
+    "kind": "acceptanceCriteria",
+    "given": "A user with email 'alice@example.com' already exists in the database",
+    "when": "POST /api/users is called with body { email: 'alice@example.com', name: 'Alice' }",
+    "then": "Response status is 409 and body contains error: 'Email already registered'",
+    "testCommand": "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users -H 'Content-Type: application/json' -d '{\"email\":\"alice@example.com\",\"name\":\"Alice\"}' | grep -q 409"
+  },
+  "dependsOn": ["CP-001", "CP-006"]
+}
+```
+
+**When to add acceptance criteria:**
+- Every POST/PUT/DELETE endpoint should have at least 1 acceptance criteria (happy path)
+- Every endpoint with business validation should have 2 acceptance criteria (happy + validation failure)
+- Error scenarios from the plan's edge case analysis should have acceptance criteria
+- At minimum, each manifest MUST include at least 2 acceptance criteria checkpoints for features that modify data or have business rules
+
+#### Hard Rule Update
+- ✅ At minimum, each manifest MUST include at least 2 `acceptanceCriteria` checkpoints for features that create/modify data or have business rules. This ensures the code actually works for the business scenario, not just that the code structure matches expectations.

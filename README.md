@@ -18,6 +18,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 | **Orchestrator** | `agents/orchestrator.md` | Delegates tasks, coordinates agents, reviews results, reports to user |
 | **Finder** | `agents/subagent/finder.md` | Codebase research, web search, information gathering (read-only) |
 | **Browser Tester** | `agents/subagent/browser-tester.md` | Browser automation with Playwright CLI — explore websites, find UI/UX bugs, verify implementations, create test scripts |
+| **Documentor** | `agents/subagent/documentor.md` | Creates documentation — README, API docs, inline comments, architecture docs |
 | **PlanDescriber** | `agents/subagent/plandescriber.md` | Creates detailed implementation roadmaps + `plan-manifest.json` |
 | **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate + Lint Gate. No thinking — pure execution. |
 | **Fixer** | `agents/subagent/fixer.md` | Debugs and fixes bugs. Diagnoses root causes, applies targeted fixes. Has high reasoning effort. |
@@ -29,7 +30,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan → QA → Verifier → Orchestrator (report + journal)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan → QA → Verifier → Documentor → Orchestrator (report + journal)
                                                   ↓                              ↑
                                             Build Gate + Lint Gate         Fixer (feedback loop)
 ```
@@ -59,6 +60,7 @@ The **Fixer** agent is called when QA discovers bugs or Verifier finds deviation
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer → QA → Verifier
 - **Trivial config changes**: Skip all gates — just delegate to Implementor
 - **UI/website testing**: Use Browser Tester to explore, find bugs, and verify UI implementations
+- **Documentation updates**: Run Documentor after any pipeline that created/modified code but before the final journal entry
 
 ### Pre-Flight Check
 
@@ -109,7 +111,7 @@ The Project Journal at `.opencode/journal/journal.yaml` provides cross-session m
 | `backend-code-philosophy` | Implementor, Fixer, PlanDescriber | Backend principles: scaling, caching, database patterns |
 | `frontend-code-philosophy` | Implementor, Fixer, PlanDescriber | Frontend principles: rendering, state management, a11y |
 | `accessibility` | Implementor, QA | Accessibility guidelines for UI development |
-| `api-documentation` | Implementor | API documentation standards and patterns |
+| `api-documentation` | Implementor, Documentor | API documentation standards and patterns |
 | `devops-cicd` | Implementor | DevOps and CI/CD pipeline patterns |
 | `playwright-cli` | Browser Tester, Implementor | Browser automation: navigate, click, fill, snapshot, eval, console, network, etc. |
 
@@ -123,6 +125,19 @@ The **Browser Tester** agent uses Playwright CLI to automate real browser intera
 - **Test Script Creation** — Generate Playwright test scripts from discovered workflows
 
 **Workflow**: Load `playwright-cli` skill → open browser → explore/interact → document findings → close browser → report
+
+### Documentor Agent
+
+The **Documentor** agent creates and maintains project documentation:
+
+- **README & Project Documentation** — Update README.md with new features, usage instructions, config changes
+- **API Documentation** — Document new endpoints with request/response schemas using `api-documentation` skill
+- **Inline Code Documentation** — Add JSDoc/TSDoc comments for public APIs and complex logic
+- **Architecture Decision Records** — Document key architecture decisions and trade-offs
+
+**Workflow**: Load `api-documentation` skill → Review implementation changes → Write docs → Verify accuracy → Report
+
+**When to use**: After any pipeline that creates or modifies code, before the final Orchestrator journal entry.
 
 ## Plan Manifests
 

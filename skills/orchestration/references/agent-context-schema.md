@@ -12,6 +12,7 @@
   3. **Read** by every agent at startup (step 0 in their workflow)
   4. **Appended** by Orchestrator after each agent completes (add to `agentHistory`)
   5. **Deleted** when the pipeline ends (after journal entry is written)
+  6. **Cleaned up** when a new pipeline detects a stale previous context and the user approves cleanup
 
 ---
 
@@ -25,8 +26,10 @@ feature: "user-profile"                  # Feature being implemented
 pipelineType: "full"                     # See Pipeline Selection Protocol
 pipelineComplexity: "moderate"           # simple | moderate | complex — used for contextual circuit breaker thresholds
 pipelineConfidence: 85                   # Orchestrator's confidence (0-100) in pipeline selection
+securityProfile: "standard"              # standard | sensitive | infrastructure | security-fix
 currentStep: "implementor"               # Current agent step name
 createdAt: "2025-05-19T10:00:00Z"        # ISO-8601 timestamp
+pipelineHeartbeat: "2025-05-19T10:05:00Z" # Last activity timestamp — used for stale detection
 status: "running"                        # running | completed | failed
 
 # ── Agent History (append-only) ──
@@ -160,6 +163,9 @@ agentOutputs:
     lintOutput: "[stdout + stderr truncated]"
     selfReview:
       confidence: 95
+      securityItemsPassed: 12
+      securityItemsTotal: 12
+      securitySelfReviewPassed: true
       preCheckPassed: true
       scopeGuardFlags: []
   fixer:
@@ -180,12 +186,39 @@ agentOutputs:
     buildOutput: null
     lintOutput: null
     suggestedCheckpoints:
+      - id: "CP-SEC-001"
+        type: "behavioral (security)"
+        description: "Use parameterized queries in src/services/user.ts"
+        file: "src/services/user.ts"
+        risk: "high"
       - id: "CP-NNN"
         type: "behavioral"
         description: "handlesError for validateEmail"
     driftDetection:
       hasDrift: false
       details: null
+  securityScan:
+    status: "completed" | "failed"
+    resultSummary: "Security scan results: SAST X issues, supply chain Y issues"
+    buildPassed: null
+    lintPassed: null
+    findings:
+      critical: 2
+      high: 3
+      medium: 5
+      low: 1
+    supplyChain:
+      installScripts: 1
+      typosquatting: 0
+      stalePackages: 3
+      sbomGenerated: true
+    sastFindings:
+      - cwe: "CWE-22"
+        severity: "high"
+        file: "src/services/user.ts"
+        description: "Path traversal risk in readFileSync"
+    auditTrailPath: ".opencode/audit/<pipeline-id>.audit.yaml"
+    auditIntegrity: "intact" | "broken" | null
 
 # ── Progressive Summaries (context window budgeting) ──
 summaries:
@@ -220,9 +253,10 @@ circuitBreaker:
       moderate: 2
       complex: 3
     securityScan:
-      simple: 1
-      moderate: 2
-      complex: 3
+      standard: 3
+      sensitive: 3
+      infrastructure: 3
+      security-fix: 3
     smokeTest:
       simple: 1
       moderate: 2
@@ -234,7 +268,7 @@ circuitBreaker:
   currentThresholds:
     build: 2
     lint: 2
-    securityScan: 2
+    securityScan: 3
     smokeTest: 2
     verifier: 2
   counters:
@@ -255,6 +289,12 @@ circuitBreaker:
     attempt: 3
     classification: "plan-omission"        # Root cause classification from Fixer
     timestamp: "2025-05-19T10:30:00Z"
+
+  # ── NEW: Audit trail reference ──
+  auditLog:
+    path: ".opencode/audit/<pipeline-id>.audit.yaml"
+    integrity: "intact" | "broken" | "not_verified"
+    entryCount: 0
 
 # ── Failure Summary (only populated when circuit opens) ──
 failureSummary:
@@ -310,6 +350,14 @@ gitState:
   dirtyFiles: []
   lastCommitSha: "abc123def456"
   lastCommitMessage: "feat: add user profile service and controller"
+
+# ── Pre-Pipeline Git State (for rollback) ──
+prePipelineGitState:
+  branch: "main"
+  dirtyFiles: ["src/services/user.ts"]        # Files modified before pipeline started
+  lastCommitSha: "abc123def456"
+  lastCommitMessage: "feat: add base services"
+  stashedChanges: true | false               # Whether changes were stashed before pipeline
 
 # ── Next Objective ──
 nextObjective: "Diagnose Verifier deviations and apply fixes"
@@ -394,6 +442,7 @@ artifacts:
 | **Verifier** | No (read-only) | No | No | Yes — `suggestedCheckpoints`, `driftDetection` |
 | **Fixer** | Yes (mandatory) | Yes (root cause classification) | Yes (files modified) | Yes — `rootCauseAnalysis` (classification, fixConfidence, crossModuleCheck) |
 | **Browser Tester** | No | No | Yes (test scripts, screenshots) | No |
+| **Documentor** | No | Yes (documentation format/structure decisions) | Yes (documentation files created/modified) | No |
 
 ### Output Verification by Orchestrator
 
@@ -453,11 +502,19 @@ Orchestrator's confidence in pipeline selection.
 ### `circuitBreaker.patternDetection`
 Failure pattern tracking for smart escalation.
 
+- `patternDetection.persistentDeviations`: Tracks checkpoint IDs that failed across multiple attempts. Used to identify recurring issues that are not being resolved by Fixer.
+- `patternDetection.sameClassificationCounts`: Tracks how many failures share the same root cause classification (e.g., 3 failures all classified as "edge-case-miss"). Used for auto-escalation when the same type of failure keeps occurring.
+- `patternDetection.autoEscalationTriggered`: Set to `true` when pattern detection determines that escalation is needed (based on thresholds in `sameClassificationCounts`).
+
 ### `circuitBreaker.currentThresholds`
 Active thresholds based on pipeline complexity.
 
 ### `failureSummary.partialDelivery`
-What passed/failed when circuit opens.
+Tracks what was successfully delivered despite pipeline failure. Contains three sub-fields:
+
+- `passed`: List of pipeline gates/steps that completed successfully (e.g., ["Build", "Lint", "Security", "Smoke Test"]). These represent work that can be retained even though the overall pipeline failed.
+- `failed`: List of gates/steps that did not pass (e.g., ["Verifier"]). These represent the blocking failures that caused circuit breaker to open.
+- `needsReview`: List of specific items that are partially implemented and need human review (e.g., "CP-003: exportExists validateEmail — partial implementation exists but incomplete"). These items are functional enough to keep but need verification/correction.
 
 ### `failureSummary.retrospective`
 Post-pipeline self-evaluation.
@@ -485,3 +542,246 @@ Post-pipeline self-evaluation.
 8. If `circuitBreaker.patternDetection.autoEscalationTriggered` is true, `failureSummary` MUST be populated
 9. `loadedSkills` MUST include the override rationale when skills with priority < 5 are loaded alongside higher-priority skills
 10. `pipelineComplexity` MUST be set before circuit breaker thresholds are calculated
+11. `pipelineHeartbeat` MUST be updated every time `agent-context.md` is written
+12. If `status` is "running" and `createdAt` is more than 1 hour old, the pipeline is considered STALE
+13. On stale detection, Orchestrator MUST prompt the user before continuing
+14. Before starting a new pipeline, Orchestrator MUST check for stale `agent-context.md` files (status="running" + createdAt > 1 hour ago). If found, user MUST be prompted to clean up.
+15. `securityProfile` MUST be one of: `standard`, `sensitive`, `infrastructure`, `security-fix`
+16. If `securityProfile` is `sensitive`, `securityScan.currentThresholds` MUST be >= 3
+17. `auditLog.path` MUST point to a valid file if audit logging has been initialized
+18. `agentOutputs.securityScan.findings` MUST include all severity levels (critical, high, medium, low)
+
+## New Agent Steps (Schema Additions)
+
+### `agentHistory[].step` — New Valid Values
+Add: `integrator`, `documentor`, `acceptanceGate`
+
+These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `implementor`, `qa`, `securityScan`, `verifier`, `fixer`, `browserTester`, `documentor`.
+
+### Integrator History Entry
+```yaml
+- step: "integrator"
+  agent: "ses_iii"
+  result: "completed"
+  summary: "Wired 3 new files into project: barrel, DI, routes"
+  wiringSummary:                    # NEW — Integrator specific
+    barrelFilesUpdated:
+      - "src/services/index.ts"
+    diRegistrationsAdded:
+      - "container.bind<UserService>(TYPES.UserService).to(UserService)"
+    routesAdded:
+      - method: "POST"
+        path: "/api/users"
+        handler: "UserController.createUser"
+    importsFixed:
+      - file: "src/controllers/user.controller.ts"
+        from: "./user.service"
+        to: "../services/user.service"
+  decisions:
+    - what: "Added UserService to NestJS module providers"
+      why: "Project uses NestJS DI — must register in @Module decorator"
+      by_who: "integrator"
+  changedFiles:
+    - "src/services/index.ts"
+    - "src/app.module.ts"
+    - "src/routes/index.ts"
+  artifacts:
+    - "Integration report"
+```
+
+### Documentor History Entry
+```yaml
+- step: "documentor"
+  agent: "ses_ddd"
+  result: "completed"
+  summary: "Added JSDoc to 4 exports, updated CHANGELOG.md"
+  docsGenerated:                    # NEW — Documentor specific
+    - type: "inline"
+      files: ["src/services/user.service.ts", "src/controllers/user.controller.ts"]
+      summary: "Added JSDoc to UserService, UserController, and all public methods"
+    - type: "changelog"
+      files: ["CHANGELOG.md"]
+      summary: "Added [Unreleased] entries for user-profile feature"
+    - type: "readme"
+      files: ["README.md"]
+      summary: "Added API endpoints table and configuration section"
+  decisions:
+    - what: "Used imperative mood for JSDoc descriptions"
+      why: "Project convention — all existing JSDoc uses imperative"
+      by_who: "documentor"
+  warnings:
+    - "README.md doesn't exist — skipped README update"
+  changedFiles:
+    - "src/services/user.service.ts"
+    - "src/controllers/user.controller.ts"
+    - "CHANGELOG.md"
+  artifacts:
+    - "Documentation report"
+```
+
+### Acceptance Gate History Entry
+```yaml
+- step: "acceptanceGate"
+  agent: "ses_aaa"
+  result: "completed"
+  summary: "2/2 acceptance criteria passed"
+  acceptanceResults:                # NEW — Acceptance Gate specific
+    appStarted: true
+    appStartDuration: "3.2s"
+    totalCheckpoints: 2
+    passed: 2
+    failed: 0
+    skipped: 0
+    details:
+      - checkpointId: "CP-010"
+        description: "Registration with existing email returns 409"
+        command: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users ... | grep -q 409"
+        exitCode: 0
+        stdout: ""
+        stderr: ""
+        verdict: "pass"
+      - checkpointId: "CP-011"
+        description: "Valid registration returns 201"
+        command: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users ... | grep -q 201"
+        exitCode: 0
+        stdout: ""
+        stderr: ""
+        verdict: "pass"
+  decisions: []
+  warnings: []
+  changedFiles: []
+  artifacts:
+    - "Acceptance gate report"
+```
+
+## Semantic Circuit Breaker (New Section in Schema)
+
+Replace the simple `counters` block with this enhanced structure:
+
+```yaml
+circuitBreaker:
+  state: "closed"                        # closed | open | half-open
+  complexity: "moderate"                 # mirrors pipelineComplexity
+
+  # ── OLD: Simple counters (retained for backward compatibility) ──
+  counters:
+    build: 0
+    lint: 0
+    securityScan: 0
+    smokeTest: 0
+    verifier: 0
+  thresholds:
+    build: 3
+    lint: 3
+    securityScan: 3
+    smokeTest: 3
+    verifier: 3
+
+  # ── NEW: Semantic failure tracking ──
+  signatures:                           # Track distinct failure patterns
+    - signature: "a1b2c3d4e5f6..."
+      gate: "verifier"
+      agent: "fixer"
+      classification: "plan-omission"
+      primaryCause: "Plan did not specify duplicate email handling"
+      count: 2
+      lastSeen: "2026-05-19T10:35:00Z"
+
+  # ── NEW: Escalation hints from pattern analysis ──
+  escalationSignals:
+    sameSignatureThresholdReached: false     # true when any signature count >= 3
+    sameClassificationThresholdReached: false # true when any classification count >= 3
+    totalDistinctSignatures: 2
+    recommendedAction: "Escalate to PlanDescriber — plan-omission pattern detected"
+
+  # ── OLD: Remaining fields (unchanged) ──
+  patternDetection:
+    persistentDeviations: ["CP-003"]
+    sameClassificationCounts:
+      edge-case-miss: 3
+      implementation-error: 1
+    autoEscalationTriggered: true
+  lastFailure:
+    step: "verifier"
+    agent: "fixer"
+    attempt: 2
+    classification: "plan-omission"
+    timestamp: "2026-05-19T10:35:00Z"
+```
+
+### Signature Generation
+The `signature` field is computed as:
+```python
+signature = SHA256(f"{gate}:{agent}:{classification}:{primaryCause}")[:16]
+```
+
+Using only the first 16 hex characters for readability while maintaining sufficient collision resistance.
+
+### Escalation Logic (replaces simple counter >= 3)
+| Condition | Action | Circuit State Change |
+|-----------|--------|---------------------|
+| Any signature count >= 3 | Open circuit — same fix not working | closed → open |
+| No signature >= 3, but different signatures >= 3 combined | Stay closed — different problems each time | no change |
+| Same classification count >= 3 across different signatures | Auto-escalate to PlanDescriber | closed → half-open |
+| Mixed signatures + mixed classifications >= 5 | Open circuit + user notification | closed → open |
+
+## Session Resume Data in Journal (Reference)
+
+The journal entry at `.opencode/journal/journal.yaml` already exists. The Session Resume Report references it as follows:
+
+```yaml
+# Fields used by Session Resume Report:
+retrospective:
+  pipelineQuality: "rough"
+  handoffQuality:
+    rating: 7
+  agentPerformance:
+    - role: "finder"
+      effectiveness: "good"
+  wastedSteps:
+    - "Finder was unnecessary — domain was already well-understood"
+  improvementsForNextPipeline:
+    - "Give PlanDescriber more context about existing error handling patterns"
+  lessonsLearned:
+    - "Edge case checkpoints in plan manifests prevent Fixer from having to rediscover them"
+```
+
+The Orchestrator reads the journal's last 7 days of entries to build the Session Resume Report.
+
+## Dynamic Context Injection Metadata
+
+When dynamic context injection is used, the hand-off is recorded in `agent-context.md` with a new field:
+
+```yaml
+# ── Context Injection Metadata ──
+contextInjection:
+  agent: "implementor"
+  injectedSections:                  # What was included
+    - "Plan roadmap"
+    - "Plan manifest checkpoints"
+    - "Existing project structure"
+    - "Git state"
+  summarizedSections:                # What was summarized (not raw)
+    - "Finder exploration (3 bullet points)"
+    - "Brainstorm decisions (1 line)"
+  excludedSections:                  # What was not included at all
+    - "QA reports from prior pipelines"
+    - "Verifier history"
+    - "Full agent-context.md body"
+  estimatedTokenSavings: "~40%"
+```
+
+This field is optional and only used when dynamic context injection is active.
+
+## Validation Rules Update
+
+Add these rules to the existing set (after rule 14):
+
+15. `agentHistory[].step` can now also be `integrator`, `documentor`, `acceptanceGate`
+16. If `step` is `integrator`, `wiringSummary` is REQUIRED
+17. If `step` is `documentor`, `docsGenerated` is REQUIRED
+18. If `step` is `acceptanceGate`, `acceptanceResults` is REQUIRED
+19. `circuitBreaker.signatures` MUST be updated every time a gate fails
+20. `circuitBreaker.signatures` entries MUST be deduplicated by `signature` hash
+21. `circuitBreaker.escalationSignals` MUST be recalculated whenever `signatures` is updated
+22. `contextInjection` is OPTIONAL but recommended for pipelines with 4+ agents

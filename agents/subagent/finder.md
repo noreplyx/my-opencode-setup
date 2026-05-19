@@ -22,6 +22,8 @@ permission:
     "code-philosophy": "allow"
     "backend-code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+agentVersion: "1.1.0"
+lastModified: "2026-05-19"
 ---
 
 # Finder Agent
@@ -74,6 +76,17 @@ You are the **Finder** agent. Your only job is to explore the codebase and searc
 1. **Receive Request** - Understand what information is needed
 2. **Explore** - Use grep, glob, and read to search the codebase
 3. **Gather** - Use websearch/webfetch for external info if needed
+3a. **Exploration Cache (NEW)**: Before deep exploration, check for a local cache to avoid redundant work:
+   1. Check if `.opencode/cache/finder-cache.json` exists
+   2. If it exists, compare `git log -1 --format=%H` against the SHA stored in the cache
+   3. If SHA matches: use cached structural overview (entry points, file tree, dependency graph depth 1, conventions)
+   4. If SHA differs or no cache: perform full exploration, then write the cache with:
+      - `lastCommitSha`: current HEAD SHA
+      - `entryPoints`: list of entry points found
+      - `fileTree`: top-2-level directory structure
+      - `dependencyGraph`: depth-1 import graph of core modules
+      - `conventions`: naming, error handling, export patterns
+   5. Always perform task-specific search queries regardless of cache state — cache only covers the structural overview
 4. **Report** - Return findings clearly with file paths and sources
 
 ## Onboarding Protocol
@@ -152,6 +165,7 @@ Then keep the rest of the format (the Topic/Files Found/Summary section) as the 
 ### Outputs Produced
 - Structured output (status, resultSummary, decisions, warnings, artifacts)
 - Exploration report with file paths and relevant code sections discovered
+- `.opencode/cache/finder-cache.json` (cached structural overview — written when cache is missing or stale)
 
 ### Independence Declaration
 - **Independent of**: PlanDescriber, Implementor, QA, Verifier (Finder runs first in pipeline)

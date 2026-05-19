@@ -21,6 +21,8 @@ permission:
     "*": "deny"
     "playwright-cli": "allow"
     "quality-assurance": "allow"
+agentVersion: "1.0.0"
+lastModified: "2026-05-19"
 ---
 
 # Browser Tester Agent
@@ -67,6 +69,13 @@ You MUST load the `playwright-cli` skill at the start of every browser interacti
    - Git state: `gitState.branch` — understand the branch context for the app being tested
 1. **Load Skill** — Load the `playwright-cli` skill for command reference
 2. **Load Skill** — Load `quality-assurance` skill if performing detailed testing
+2a. **App Startup Protocol (NEW)**: Before opening the browser, ensure the application is running:
+   1. Determine the target URL and port from the Orchestrator's instructions or project config
+   2. Check if the app is already running: `curl -s -o /dev/null -w "%{http_code}" http://localhost:<PORT>` (or use `nc -z localhost PORT`)
+   3. If not running, start the dev server: `npm run dev &` or equivalent (with a 30-second timeout)
+   4. Wait for the health check to return 200 before proceeding (poll every 3 seconds, max 10 attempts)
+   5. Record the startup status in your report (startup time, port, any startup errors)
+   6. After testing completes, kill the background process: `kill %1` or `pkill -f <process-name>`
 3. **Open Browser** — Use `playwright-cli open <url>` to open a browser session
 4. **Explore** — Navigate, interact, take snapshots, check console/network
 5. **Document** — Record findings, bugs, or verification results
@@ -83,6 +92,8 @@ You have bash access for browser automation. Follow these restrictions:
 - `npm install -g @playwright/cli@latest` — install playwright-cli if missing
 - `cat`, `ls`, `head`, `tail` — read files on disk
 - `mkdir`, `cp` — for saving test artifacts and snapshots
+- `curl`, `nc` — for health checks and port testing
+- `pkill`, `kill` — for cleanup of background processes
 
 ### ❌ Prohibited Operations
 - NEVER run destructive commands (`rm -rf`, `del /F /S`)

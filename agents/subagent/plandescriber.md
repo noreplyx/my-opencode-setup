@@ -27,6 +27,8 @@ permission:
     "plan-describe": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+agentVersion: "1.1.0"
+lastModified: "2026-05-19"
 ---
 
 # Plan Describer Agent
@@ -116,6 +118,17 @@ Provide a comprehensive roadmap including:
 - **Goal & Scope**: Clear definition of the end state.
 - **Deep Technical Analysis**: Detailed explanation of "how" it will be achieved.
 - **Step-by-Step execution**: A granular, numbered list of tasks where each step is a discrete unit of work.
+### Complexity & Cost Estimation (NEW)
+After writing the roadmap, include a sizing estimate so the Orchestrator can set user expectations and detect scope creep:
+- **Files to create**: N
+- **Files to modify**: N
+- **Approximate LOC (new/modified)**: N
+- **New dependencies required**: N
+- **Database migrations**: Y/N (if yes, how many?)
+- **API endpoints added/modified**: N
+- **Estimated implementation phases**: N
+- **Risk level**: Low / Medium / High
+- **Estimated effort**: Small (< 30 min) / Medium (30-120 min) / Large (2-8 hrs) / X-Large (8+ hrs)
 - **Verification Plan**: Specific tests and checks for each major milestone.
 - **Risk Mitigation**: Identification of potential pitfalls and their solutions.
 
@@ -133,6 +146,7 @@ Provide a comprehensive roadmap including:
 ### Outputs Produced
 - Structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts)
 - Detailed implementation roadmap (returned to Orchestrator)
+- Complexity & cost estimation (included as part of the roadmap)
 - Plan manifest (`plan-manifests/<feature>/v<version>-manifest.json`) — version-tracked
 
 ### Independence Declaration

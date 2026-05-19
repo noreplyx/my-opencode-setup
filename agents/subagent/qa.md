@@ -23,6 +23,8 @@ permission:
     "*": "deny"
     "accessibility": "allow"
     "quality-assurance": "allow"
+agentVersion: "1.1.0"
+lastModified: "2026-05-19"
 ---
 
 # Quality Assurance Agent
@@ -61,11 +63,24 @@ The Quality Assurance (QA) agent is dedicated to ensuring the highest level of s
 1. **Requirements Analysis**: Review the approved plan and quality standards for the specific task.
 2. **Test Planning**: Determine the necessary testing types (Functional, Integration, etc.) and define test cases.
 3. **Implementation Review**: Inspect the code for obvious quality issues, security flaws, and adherence to the plan.
+3a. **Project Type Detection** — Before running the smoke test, auto-detect the project type:
+    1. Read package.json: check for `scripts.start`, `scripts.build`, `main`, `bin` fields  
+    2. Check dependencies: react, vue, next, express, commander, etc.
+    3. Check config files: vite.config, next.config, webpack.config, tsconfig (jsx setting)
+    4. Classify into: 'web-app-backend' | 'web-app-frontend' | 'library' | 'cli-tool' | 'react-spa' | 'monorepo-package' | 'unknown'
+    5. Select and report the type-specific smoke test from the table below
 4. **Smoke Test**: Run a quick "does the app start?" smoke test. The build gate and security scan have already passed — this confirms the app is runnable. Choose the most appropriate approach for the project:
    - Start the application in the background (if applicable) and verify it boots without crashing
    - Run `node -e "require('./dist/index')"` for libraries/modules
    - Check that the process exits cleanly or serves requests on the expected port
    - If no sensible smoke test exists, at minimum verify the module loads without import errors
+4a. **Test Auto-Discovery (NEW)**: Before running any test suite, auto-discover the project's test framework:
+   1. Read `package.json` scripts → find the "test" key
+   2. Check for config files: `jest.config.*`, `vitest.config.*`, `pytest.ini`, `mocha.opts`, etc.
+   3. Check for test directories: `tests/`, `__tests__/`, `src/__tests__/`
+   4. Report: "Detected [Jest/Vitest/Pytest/Mocha/None] with tests in [path]"
+   5. If no framework detected: report "No test framework detected" and proceed with manual quality checks
+   6. Run the detected test command (e.g., `npm test` or `jest`). Collect full output.
 5. **Execution & Verification**:
    - Perform functional and integration checks.
    - Run regression suites.
@@ -73,15 +88,58 @@ The Quality Assurance (QA) agent is dedicated to ensuring the highest level of s
 6. **Bug Reporting**: Document all identified issues with clear steps to reproduce and expected vs. actual results.
 7. **Final Validation**: Once fixes are applied (by Fixer agent), re-verify the affected areas to ensure the issues are resolved.
 7a. **Coverage Analysis**:
-    - Run coverage tool appropriate to the project stack:
-      - Node.js/TypeScript: `npx c8 report --reporter=text` or `npx nyc report --reporter=text`
-      - Python: `pytest --cov=src --cov-report=term-missing`
-    - Parse the coverage report to identify uncovered lines and files
-    - Add to the Quality Metrics section of the QA report in this format:
-      | File                 | % Coverage | Uncovered Lines | Risk   |
-      | -------------------- | ---------- | --------------- | ------ |
-      | src/services/user.ts | 85%        | 45-48, 102      | Medium |
-    - Include a Coverage Summary row in the QA report's Quality Metrics table
+     - Run coverage tool appropriate to the project stack:
+       - Node.js/TypeScript: `npx c8 report --reporter=text` or `npx nyc report --reporter=text`
+       - Python: `pytest --cov=src --cov-report=term-missing`
+     - Parse the coverage report to identify uncovered lines and files
+     - Add to the Quality Metrics section of the QA report in this format:
+       | File                 | % Coverage | Uncovered Lines | Risk   |
+       | -------------------- | ---------- | --------------- | ------ |
+       | src/services/user.ts | 85%        | 45-48, 102      | Medium |
+     - Include a Coverage Summary row in the QA report's Quality Metrics table
+7b. **Security Regression Test Generation (NEW)**:
+
+### 7b. Security Regression Test Generation (NEW)
+
+After coverage analysis, automatically generate security regression tests for the changed code. These tests prevent re-introduction of security vulnerabilities when code is modified in future pipelines.
+
+**For each file in Implementor's `changedFiles`, detect security-relevant patterns and generate tests:**
+
+| If file contains... | Generate security test... | Example |
+|---------------------|--------------------------|---------|
+| Database queries (`db.query`, `db.execute`, `.find(`, `.raw(`) | SQL/NoSQL injection test — try injection payloads on all endpoints that use this file | `POST /api/users with payload: {"email": "' OR 1=1 --"}` |
+| Route handlers (`@Post`, `app.post`, `router.post`, `@Get`, `app.get`) | Auth bypass test — try accessing protected routes without a token | `GET /api/users without Authorization header` |
+| File I/O (`readFileSync`, `writeFileSync`, `createReadStream`) | Path traversal test — try path traversal payloads in file-related parameters | `GET /api/files?path=../../../etc/passwd` |
+| User input processing (`req.body`, `req.query`, `req.params`) | XSS test — try XSS payloads on text input fields | `POST /api/profile with payload: {"name": "<script>alert(1)</script>"}` |
+| `res.redirect` or `response.redirect` | Open redirect test — try external URL redirects | `GET /api/redirect?url=https://evil.com` |
+| JWT or auth logic | Token tampering test — try modified JWTs | `Authorization: Bearer eyJ... (modified payload)` |
+| ID-based resource access (`/api/:id`, `/api/users/:userId`) | IDOR test — try accessing another user's resource | `GET /api/users/me (as user A, try user B's ID)` |
+| File upload handling | Upload validation test — try uploading malicious file types | `POST /api/upload with .exe or .svg with script` |
+| Rate limiting (or missing rate limiting) | Rate limit test — verify 429 after N rapid requests | Send 100 requests in 1 second, expect 429 |
+
+**Implementation:**
+1. Create test files under `tests/security/<feature>.security.test.ts`
+2. Each test must be self-contained and runnable
+3. If the project uses Jest/Vitest, write tests in the project's test framework
+4. If no test framework exists, write the tests as bash scripts under `tests/security/`
+5. Include a clear description of what each test checks
+
+**Test file naming convention:**
+- `tests/security/<feature>-sqli.test.ts` — SQL injection tests
+- `tests/security/<feature>-idor.test.ts` — IDOR tests  
+- `tests/security/<feature>-auth.test.ts` — Auth bypass tests
+- `tests/security/<feature>-xss.test.ts` — XSS tests
+
+**Output in QA report:**
+```markdown
+### Security Regression Tests
+| Test Type | File | Status | Notes |
+|-----------|------|--------|-------|
+| SQL Injection | tests/security/user-profile-sqli.test.ts | ✅ Generated | 5 injection payloads |
+| Auth Bypass | tests/security/user-profile-auth.test.ts | ✅ Generated | 3 auth scenarios |
+| IDOR | tests/security/user-profile-idor.test.ts | ✅ Generated | 2 IDOR scenarios |
+| **Total** | **3 test files** | **✅ Generated** | |
+```
 
 ## Output Format
 
@@ -124,14 +182,14 @@ Below the structured block, include the regular QA report content:
 
 When performing a smoke test, choose the most appropriate approach for the project:
 
-| Project Type        | Smoke Test Command / Approach                    |
-|---------------------|--------------------------------------------------|
-| Node.js library     | `node -e "require('./dist/index')"`              |
-| Web app (frontend)  | `npm run build` and verify dist/ is produced     |
-| Web app (backend)   | Start server, verify it binds to the port        |
-| CLI tool            | Run `node dist/cli.js --help` and check exit code |
-| React/Vue app       | Verify build completes and bundle is generated   |
-| Monorepo package    | Run the package-specific build + import check    |
+| Project Type        | Smoke Test Command / Approach                    | Detection Heuristics                             |
+|---------------------|--------------------------------------------------|--------------------------------------------------|
+| Node.js library     | `node -e "require('./dist/index')"`              | `main` field in package.json, no framework deps  |
+| Web app (frontend)  | `npm run build` and verify dist/ is produced     | `react`, `vue`, `next` in deps                   |
+| Web app (backend)   | Start server, verify it binds to the port        | `express`, `fastify`, `koa` in deps, `scripts.start` |
+| CLI tool            | Run `node dist/cli.js --help` and check exit code | `bin` field in package.json                     |
+| React/Vue app       | Verify build completes and bundle is generated   | `react`, `vue` in deps, vite.config/next.config  |
+| Monorepo package    | Run the package-specific build + import check    | Workspaces config in package.json                |
 
 The smoke test should be simple, fast (under 10 seconds), and give high confidence the code is runnable.
 
@@ -167,6 +225,8 @@ You have write access **ONLY for the following purposes**:
 - Structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts)
 - QA report with compliance status, test results, defect log, quality metrics, final verdict
 - Coverage analysis report (after running `nyc`/`c8`/`pytest --cov`)
+- Test framework discovery report
+- Security regression test files (generated under tests/security/)
 
 ### Independence Declaration
 - **Dependent on**: Implementor (must have code to test), Security Scan (must have passed)

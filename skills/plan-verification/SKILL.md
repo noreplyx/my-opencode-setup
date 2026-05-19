@@ -284,3 +284,90 @@ ts-node skills/scripts/plan-verification/verify-manifest.ts \
 ```
 
 The script processes checkpoints in topological dependency order, automatically skipping downstream checks when dependencies fail. It produces a compliance score with pass/fail/skipped breakdown.
+
+### Pass 2.5: Acceptance Criteria Verification (NEW)
+
+For each `acceptance` type checkpoint, run the specified `testCommand` to verify the implementation meets the business requirement:
+
+1. Check that all `dependsOn` checkpoints passed
+2. Execute the `testCommand` from the checkpoint manifest using your bash tool
+3. If exit code is 0 → ✅ Pass
+4. If exit code is non-zero → ❌ Fail, capture stdout+stderr
+5. Record: Pass / Fail / Skipped (if dependency failed)
+
+**Acceptance criteria pass fails if:**
+- The `testCommand` exits with non-zero status
+- The command fails to connect to the application (app not running)
+- The response does not match the expected `then` description
+
+**Important considerations:**
+- `acceptanceCriteria` checkpoints require the application to be running
+- The Verifier MUST start the application before running these checks if it's not already running:
+  ```bash
+  # Start app in background, wait for health check
+  npm run start &  # or npm run dev, or the appropriate command
+  sleep 3
+  curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/health || \
+    (echo "App failed to start" && kill %1 && exit 1)
+  ```
+- After all acceptance checks, stop the background app: `kill %1 2>/dev/null || true`
+- If the app cannot be started, all acceptance checkpoints are Skipped with reason "App not running"
+- For unit-testable acceptance criteria (pure function tests), use the test runner instead:
+  ```bash
+  npx jest --testPathPattern="user-service" --silent 2>&1 | grep -q "PASS"
+  ```
+
+**Dependency ordering:**
+- `acceptanceCriteria` checkpoints typically depend on structural checkpoints (file exists, export exists)
+- They should also depend on any behavioral checkpoints that validate the same code path
+- This ensures acceptance tests only run when the underlying implementation exists
+
+### Pass 2.5 Impact on Scoring
+
+Acceptance criteria checkpoints are weighted **double** in the compliance score:
+
+```
+Compliance % = ((Structural Passed × 1) + (Behavioral Passed × 1) + (Acceptance Passed × 2)) / 
+               ((Total Structural × 1) + (Total Behavioral × 1) + (Total Acceptance × 2)) × 100
+```
+
+This weighting reflects that acceptance criteria provide the highest confidence that the implementation works correctly.
+
+**Example:**
+- 5 structural (all pass), 3 behavioral (2 pass, 1 fail), 2 acceptance (1 pass, 1 fail)
+- Score = ((5 × 1) + (2 × 1) + (1 × 2)) / ((5 × 1) + (3 × 1) + (2 × 2)) × 100
+- Score = (5 + 2 + 2) / (5 + 3 + 4) × 100 = 9/12 × 100 = 75%
+
+
+### Acceptance Criteria Verification Kind
+
+In addition to structural and behavioral kinds, the Verifier now supports `acceptance` type checkpoints:
+
+| Kind | What It Checks | How to Verify |
+|------|----------------|---------------|
+| `acceptanceCriteria` | A specific business scenario works end-to-end | Execute `verify.testCommand` via bash. Exit 0 = pass. Exit non-zero = fail with captured output. |
+
+**Full `acceptanceCriteria` manifest schema:**
+```json
+{
+  "id": "CP-010",
+  "type": "acceptance",
+  "description": "Registration with existing email returns 409",
+  "target": "src/controllers/user.controller.ts",
+  "verify": {
+    "kind": "acceptanceCriteria",
+    "given": "A user with email 'alice@example.com' already exists",
+    "when": "POST /api/users with body { email: 'alice@example.com' }",
+    "then": "Response is 409 with error message",
+    "testCommand": "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users -H 'Content-Type: application/json' -d '{\"email\":\"alice@example.com\",\"name\":\"Alice\"}' | grep -q 409"
+  },
+  "dependsOn": ["CP-001"]
+}
+```
+
+## Hard Rules Update
+
+- ❌ NEVER skip acceptance criteria verification — these provide the highest-confidence check that code works for the business scenario
+- ✅ ALWAYS start the application if acceptance criteria checkpoints exist in the manifest
+- ✅ ALWAYS stop the application after all acceptance checks complete
+- ✅ ALWAYS report the exit code and captured output for failed acceptance criteria checkpoints

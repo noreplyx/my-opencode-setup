@@ -6,3 +6,7 @@ analyzer.*
 agent-skills-workspace/
 .env
 bun.lock
+.opencode/
+dist/
+agent-context.md
+manifest.yaml

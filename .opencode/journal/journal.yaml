@@ -34,3 +34,37 @@
   circuitBreakerEvents: []
   failedGates: []
   notes: "Initial system improvements: Fixer agent, Security Scan, Project Journal"
+
+- date: "2026-05-19T18:00:00Z"
+  feature: "system-review-improvements"
+  pipelineType: "full"
+  result: "pass"
+  durationMinutes: 15
+  filesChanged:
+    - "agents/orchestrator.md"
+    - "skills/orchestration/SKILL.md"
+    - "skills/orchestration/references/agent-context-schema.md"
+    - "agents/subagent/documentor.md"
+    - "plan-manifests/orchestration-system/v1-manifest.json"
+  keyDecisions:
+    - "Consolidated orchestrator.md to meta-config (90 lines vs 231); all protocols moved to SKILL.md (ends duplication)"
+    - "Integrated Documentor agent into pipeline: step 7 in workflow, referenced in all tables"
+    - "Created first plan manifest for orchestration-system (28 checkpoints across 4 phases)"
+    - "Test harness exists with 5 tests (context-lifecycle, fixer-output, calibration, stale-context, output-contract)"
+    - "Calibration database bootstrapped with data from all previous pipeline runs"
+  circuitBreakerEvents: []
+  failedGates: []
+  retrospective:
+    pipelineQuality: "smooth"
+    handoffQuality:
+      rating: 8
+      issues: ["Implementor needed explicit instructions about editing vs appending"]
+    agentPerformance:
+      - role: "implementor"
+        effectiveness: "good"
+        notes: "Successfully rewrote orchestrator.md and applied surgical edits to SKILL.md"
+    wastedSteps: []
+    improvementsForNextPipeline:
+      - "Add a 'surgical edit' mode for implementor when only adding rows to existing tables"
+    lessonsLearned:
+      - "Documentor was completely unreferenced before this pipeline — all agent types must be verified against system prompt references"

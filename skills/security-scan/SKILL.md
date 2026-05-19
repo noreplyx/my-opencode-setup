@@ -63,6 +63,57 @@ Check for common security anti-patterns in the modified code:
 
 For each finding, report the file and line number.
 
+### 4. Supply Chain Integrity Check
+
+Run the supply chain scanner to check for:
+- **Install Script Detection**: Packages with `hasInstallScript: true` can run arbitrary code during install
+- **Typosquatting Detection**: Package names that are 1-2 character edits away from popular packages
+- **Package Freshness**: New packages (< 30 days old) and stale packages (> 2 years without updates)
+- **Deprecated Packages**: Known-deprecated packages still in use
+- **Dependency Count**: Warn if transitive dependencies exceed 500
+
+```bash
+# Run supply chain integrity check
+ts-node skills/scripts/code-philosophy/check-supply-chain.ts --dir=./
+```
+
+If install scripts are detected (HIGH severity), the scan fails.
+All other findings are warnings.
+
+### 5. Software Bill of Materials (SBOM) Generation
+
+After the dependency scan passes (or as a non-blocking step), generate an SBOM for the project:
+
+```bash
+# Generate CycloneDX SBOM if cyclonedx-bom is available
+npx @cyclonedx/bom --output .opencode/sboms/<pipeline-id>-sbom.json 2>/dev/null || true
+```
+
+The SBOM is stored at `.opencode/sboms/<pipeline-id>-sbom.json` and contains:
+- All direct and transitive dependencies
+- Version numbers and license information
+- Dependency relationships
+
+This enables retrospective vulnerability analysis — if a CVE is disclosed tomorrow,
+you can check which pipelines were affected by scanning the SBOM archive.
+
+**Non-blocking**: If `@cyclonedx/bom` is not installed, log a warning and proceed.
+
+### 6. Git History Secret Scan
+
+Scan the git commit history for secrets that may have been committed and later removed.
+Secrets in git history persist even after removal from the current file contents:
+
+```bash
+# Scan commit diffs for secret patterns
+git log -p --all -- ':(exclude)package-lock.json' ':(exclude)pnpm-lock.yaml' ':(exclude)yarn.lock' | \
+  rg -n \
+  '(?:api[_-]?key|apikey|secret|password|auth[_-]?token|private[_-]?key|GITHUB_TOKEN_PREFIX|STRIPE_SECRET_PREFIX|PRIVATE_KEY_HEADER)' \
+  || true
+```
+
+**Non-blocking** (informational only). If critical secrets found (AWS keys, GitHub tokens in history), emit a WARNING.
+
 ## Scan Workflow
 
 1. **Detect project type** — Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
@@ -71,7 +122,11 @@ For each finding, report the file and line number.
 4. **Parse results** — Extract vulnerability IDs, severity, package, and description
 5. **Run secrets scan** — Grep for hardcoded secrets
 6. **Run anti-pattern scan** — Grep for security anti-patterns in the changed files
-7. **Report findings** — Use the standard report format below
+7. **Generate SBOM (NEW)**
+8. **Run supply chain integrity check (NEW)**
+9. **Run git history secret scan (NEW)**
+10. **Run SAST scan (NEW)**
+11. **Report findings** — Use the standard report format below
 
 ### Lockfile Warnings
 
@@ -108,6 +163,18 @@ If the package manager config exists but the lockfile is missing, emit:
 |------|------|---------|------|
 | src/routes/user.ts | 42 | `eval(` | High |
 
+### Supply Chain Integrity
+| Check | Result |
+|-------|--------|
+| Install Scripts | ✅ None / ❌ Found |
+| Typosquatting | ✅ None / ⚠️ Warning |
+| Stale Packages | ⚠️ N packages |
+| SBOM | ✅ Generated / ⚠️ Skipped |
+
+### Git History Secrets (Informational)
+| File | Commit | Pattern | Confidence |
+|------|--------|---------|------------|
+
 ### Verdict
 **✅ PASS** — No High/Critical vulnerabilities found
 **❌ FAIL** — High/Critical vulnerabilities detected — block pipeline
@@ -128,6 +195,11 @@ When issues are found, the following commands and practices can help resolve the
 | **Hardcoded JWT secrets** | Use environment variables or a key management service. Rotate exposed keys immediately. |
 | **Missing input validation** | Add validation using a schema library (e.g., Joi, Zod, Pydantic, `validate`). Never trust `req.body` directly. |
 | **`console.log()` in production** | Remove or replace with a structured logger (e.g., Winston, Pino) that supports log levels and can be disabled in production. |
+| **Install scripts in dependencies** | Review each package with install scripts. Prefer packages without native build steps. Pin versions to avoid unexpected script changes. |
+| **Typosquatting risk** | Verify the package name is correct. Check the package's npm page for legitimacy. Consider using a scoped package from the official organization. |
+| **SBOM generation** | Install cyclonedx-bom: `npm install --save-dev @cyclonedx/bom` and add SBOM generation to CI. |
+| **Secrets in git history** | Use `git filter-branch` or `bfg-repo-cleaner` to remove secrets from history. Rotate any exposed keys immediately. |
+| **Deprecated packages** | Replace with the recommended alternatives listed in the report. |
 
 Remediation is **not** performed automatically by the scan — these suggestions are provided for the Orchestrator or developer to act upon.
 
@@ -155,3 +227,13 @@ If the Security Scan fails (High/Critical vulnerabilities):
 - ❌ The Security Scan MUST NOT modify any files — it is read-only
 - ❌ The Security Scan MUST NOT install additional dependencies
 - ❌ The Security Scan MUST NOT run on test files or fixture data
+
+## Related Tools
+
+| Tool | Purpose | Location |
+|------|---------|----------|
+| `check-security.ts` | SAST scanner (prototype pollution, path traversal, command injection, SSRF, NoSQL injection, ReDoS, Zip Slip) | `skills/scripts/code-philosophy/check-security.ts` |
+| `check-supply-chain.ts` | Supply chain integrity (install scripts, typosquatting, SBOM, package age) | `skills/scripts/code-philosophy/check-supply-chain.ts` |
+| `self-test-security.ts` | Self-test for security tools (7 tests, verifies tools work) | `skills/scripts/code-philosophy/self-test-security.ts` |
+| `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
+| `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |
