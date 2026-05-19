@@ -107,8 +107,8 @@ function testSecretsDetection(verbose: boolean): TestResult {
   const testDir = path.join(TEMP_DIR, 'test-secrets');
   removeDirRecursive(testDir);
 
-  const content = `const API_KEY = "PLACEHOLDER_TOKEN_1234567890abcdef1234567890abcdef";
-const dbPassword = "PLACEHOLDER_VAL_123!";
+  const content = `const API_KEY = "TEST_API_KEY_1234567890abcdef1234567890abcdef";
+const dbPassword = "DB_PASS_PLACEHOLDER_123!";
 const normalVar = "hello";
 `;
   writeTestFile('test-secrets/demo.ts', content);
