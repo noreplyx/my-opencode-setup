@@ -192,6 +192,34 @@ The script prints a summary report that the Orchestrator should relay to the use
 ### When to Skip
 If the project is clearly in good shape (user just asked for a quick fix) and the feature is trivial, the Orchestrator MAY skip the full pre-flight check and simply create a minimal `agent-context.md` manually.
 
+### Evidence Validation Gate (NEW)
+
+After EVERY agent returns its output (before updating agent-context.md), the Orchestrator MUST run the Evidence Validation Gate:
+
+```bash
+# Step 1: Validate output contract structure
+ts-node skills/scripts/orchestration/validate-output-contract.ts --file=<agent-output-file>
+
+# Step 2: Validate truthfulness of claims (re-verify against filesystem)
+ts-node skills/scripts/orchestration/validate-truth.ts --file=<agent-output-file>
+
+# Step 3: Score evidence quality
+ts-node skills/scripts/orchestration/validate-truth.ts --quality-report --file=<agent-output-file>
+```
+
+#### Gate Rules
+| Check | Pass | Fail |
+|-------|------|------|
+| Output contract schema | All required fields present | Missing required fields → cycle back to agent |
+| Truthfulness score | ≥ 95% | < 95% → return refuted claims to agent for correction |
+| Evidence quality score | ≥ 70 | < 70 → warn Orchestrator, add evidence requirements to next hand-off |
+
+#### Circuit Breaker for Evidence Quality
+If an agent submits evidence quality < 70 for 3 consecutive attempts:
+1. First low quality: Warn agent with specific feedback
+2. Second low quality: Cycle back with explicit evidence template
+3. Third low quality: Open circuit breaker → escalate to Orchestrator
+
 ### Pipeline Teardown (Automated)
 
 After every pipeline completes (success or failure), the Orchestrator MUST run the automated pipeline-teardown script:
@@ -223,6 +251,18 @@ Every implementation MUST pass through these mandatory validation gates:
 
 **Build Gate Protocol:**
 - The Implementor MUST run the build command after writing code
+- If the build fails, the Orchestrator MUST run `ts-node skills/scripts/orchestration/classify-build-error.ts --output="<build-output>"` to classify the error type and route to the correct agent:
+  - `import-error` → route to **Integrator** (fix import paths)
+  - `type-error` → route to **Fixer** (fix type signatures)
+  - `syntax-error` → route to **Implementor** (fix syntax)
+  - `config-error` → route to **Orchestrator** (fix tsconfig/ESLint config)
+  - `dependency-error` → route to **user** (fix package.json)
+  - `lint-error` → route to **Implementor** (fix code style)
+  - `test-failure` → route to **Fixer** (fix test assertions)
+  - `missing-export` → route to **Implementor** (add missing export)
+  - `duplicate-identifier` → route to **Implementor** (remove duplicate)
+  - `unknown-error` → route to **Implementor** (manual review)
+
 - The Implementor MUST return the full build output (stdout + stderr) to the Orchestrator
 - If the build fails, the Implementor MUST fix the issue and rebuild before reporting completion
 - The Orchestrator MUST inspect the build output to confirm success before proceeding to QA
@@ -259,15 +299,27 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 ## Agent Hand-off Protocol
 
-### Hand-off Checklist
+### Hand-off Checklist (Enhanced)
 When passing work from one agent to the next, the Orchestrator MUST include:
 
 1. **Context Summary**: What was done in the previous step(s)
 2. **Artifacts**: Relevant file paths, outputs, or data produced
-3. **Clear Objective**: Exactly what the next agent should do
-4. **Constraints**: Any boundaries, rules, or restrictions
-5. **Expected Output**: What the agent should return/report
-6. **Agent Output Format reminder**: "Return your results with the structured output contract (status, resultSummary, decisions, warnings, changedFiles, artifacts, buildPassed/lintPassed where applicable)"
+3. **Previous Evidence**: Structured evidence from prior agent(s) with content hashes:
+   ```
+   Previous Evidence (from <agent>):
+     - Claim: <claim>
+       Source: <file>, Lines [start, end]
+       ContentHash: <sha256>
+       Method: grep/read/stat
+       Command: <exact command>
+       Excerpt: "<relevant output>"
+       Result: found/passed
+   ```
+4. **Clear Objective**: Exactly what the next agent should do
+5. **Constraints**: Any boundaries, rules, or restrictions
+6. **Expected Output**: What the agent should return/report (structured output contract with evidence)
+7. **Evidence Requirements**: "Include evidence for every substantive claim with contentHash, line numbers, exact commands, and verbatim excerpts"
+8. **Visual Generation**: After the agent returns, generate the appropriate pipeline visualization
 
 ### Example Hand-off
 ```
@@ -319,6 +371,30 @@ QA smoke test passed. Security scan passed (no High/Critical vulnerabilities).
 Please verify all checkpoints in the manifest and report the compliance score."
 ```
 
+### Evidence Hand-off Protocol (NEW)
+
+When handing off between agents, the Orchestrator MUST include structured evidence from the PRIOR agent's work:
+
+**Format:**
+```markdown
+Previous Evidence:
+  - Claim: "User model exists at src/models/user.ts"
+    Source: src/models/user.ts, Lines 5-20
+    ContentHash: a1b2c3d4e5f6...
+    Method: grep
+    Command: grep -n 'interface User' src/models/user.ts
+    Excerpt: "interface User { email: string; name: string; }"
+    Result: found
+  - Claim: "Validation middleware exists"
+    Source: src/middleware/validation.ts, Lines 1-50
+    Method: read
+    Command: head -50 src/middleware/validation.ts
+    Excerpt: "export function validateRequest(...)"
+    Result: found
+```
+
+This ensures downstream agents have verified facts, not paraphrased summaries.
+
 ## Fixer Feedback Loop
 
 When QA discovers bugs or Verifier finds deviations, use this iterative refinement cycle:
@@ -351,6 +427,39 @@ If the same issue resurfaces after 3 Fixer attempts, escalate back to PlanDescri
 
 ### Context Preservation
 When cycling back to Fixer, use `task_id` (ses_xxx) to preserve conversation context with the prior Fixer session so the agent retains memory of what it diagnosed.
+
+### Cross-Agent Evidence Provenance (NEW)
+
+Every plan manifest checkpoint now tracks its lifecycle through the pipeline:
+
+```json
+{
+  "id": "CP-003",
+  "type": "behavioral",
+  "description": "validateEmail handles invalid input",
+  "target": "src/services/user.ts",
+  "provenance": {
+    "createdBy": "PlanDescriber",
+    "implementedBy": "Implementor",
+    "implementationEvidence": {
+      "claim": "validateEmail throws on invalid email",
+      "command": "grep -n 'throw.*Invalid email' src/services/user.ts"
+    },
+    "verificationResult": {
+      "verdict": "fail",
+      "verifier": "Verifier",
+      "evidence": { "result": "not_found" }
+    },
+    "fixedBy": "Fixer",
+    "fixEvidence": {
+      "claim": "Added error handling to validateEmail",
+      "command": "grep -n 'throw new ValidationError' src/services/user.ts"
+    }
+  }
+}
+```
+
+This enables the Verifier and Fixer to trace exactly what evidence was collected at each step.
 
 ## Project Journal Protocol
 
@@ -473,6 +582,13 @@ retrospective:
     - "Give PlanDescriber more context about existing error handling patterns"
   lessonsLearned:
     - "Edge case checkpoints in plan manifests prevent Fixer from having to rediscover them"
+  evidenceQuality:                       # NEW: Evidence quality retrospective
+    overallScore: 87
+    agentsWithLowQuality: ["implementor"]
+    stalenessIssues: 2
+    actionItems:
+      - "Add content hashing requirements to Implementor hand-off"
+      - "Include exact line numbers in Verifier evidence"
 ```
 
 ### Analysis Prompts (for Orchestrator self-reflection)
@@ -1462,12 +1578,12 @@ Circuit breaker counters are reset when:
 ### Security-Specific Thresholds (NEW)
 The circuit breaker now supports security-specific contextual thresholds:
 
-| Pipeline Profile | securityScan Threshold | Supply Chain Threshold | Description |
-|-----------------|----------------------|----------------------|-------------|
-| Standard | 3 | 1 | Default for most features |
-| Sensitive (auth, payments, PII) | 3 | 3 | More lenient — supply chain issues can be fixed |
-| Infrastructure | 3 | 3 | Security-critical config changes |
-| Security Fix | 3 | 3 | Fixes for known vulns — chain issues expected |
+| Pipeline Profile | securityScan Threshold | Supply Chain Threshold | evidenceQuality Threshold | Description |
+|-----------------|----------------------|----------------------|--------------------------|-------------|
+| Standard | 3 | 1 | 3 | Default for most features |
+| Sensitive (auth, payments, PII) | 3 | 3 | 3 | More lenient — supply chain issues can be fixed |
+| Infrastructure | 3 | 3 | 3 | Security-critical config changes |
+| Security Fix | 3 | 3 | 3 | Fixes for known vulns — chain issues expected |
 
 The security profile is set based on the feature type in the pipeline selection:
 - Features touching auth, payment, PII, or security → "Sensitive"
@@ -1622,6 +1738,7 @@ Fixed thresholds (3 attempts for everything) are replaced with contextual thresh
 | Security Scan | 1 | 2 | 3 |
 | Smoke Test | 1 | 2 | 3 |
 | Verifier | 1 (single file) | 2 (2-3 files) | 3 (4+ files) |
+| Evidence Quality | 2 | 3 | 4 |
 
 **Task complexity classification:**
 - **Simple**: Config change, single file, < 50 lines changed
@@ -2142,3 +2259,483 @@ The Integrator loads the `integrator` skill which provides full guidance on dete
 | **Browser Tester** | No | No | Yes (test scripts) |
 | **Security Scan** | No | No | No (read-only) |
 
+
+## Evidence Contract Protocol (NEW)
+
+### Purpose
+Every agent claim must be backed by **anchored evidence** that can be independently verified. This transforms the system from "trust-based" to "verify-based." Without evidence, the Orchestrator has no way to distinguish a correct agent output from a hallucinated one.
+
+### The Evidence Contract
+Every subagent's output MUST include an `evidence` array (at the agentOutputs level, and optionally at the top level). Each evidence entry MUST include:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `claim` | ✅ | What the agent claims to be true (e.g., "File X exists", "Build passed", "Export Y found") |
+| `source` | ✅ | File path, or "build"/"lint"/"test" for non-file evidence |
+| `lines` | ❌ | Specific line numbers [start, end] |
+| `method` | ✅ | How the evidence was obtained: `grep`, `read`, `stat`, `glob`, `test`, `build`, `lint`, `run`, `analysis` |
+| `command` | ✅ | The exact command that was run to obtain this evidence |
+| `excerpt` | ✅ | Relevant output excerpt proving the claim (even for failures — show what was found instead of what was expected) |
+| `result` | ✅ | `found`, `not_found`, `passed`, `failed`, `exists`, `not_exists`, `verified`, `analysis_complete` |
+
+### When Evidence Is Required
+
+| Agent Type | Minimum Evidence Entries | What to Provide Evidence For |
+|------------|------------------------|------------------------------|
+| **Finder** | 1 per finding | File existence, export patterns, hazards found. Each "found X at path Y" claim needs grep/read evidence showing X. |
+| **PlanDescriber** | 0 (plans are prescriptive) | N/A — but decision provenance is recommended |
+| **Implementor** | 1 per changed file + 1 for build + 1 for lint | File creation (stat), exports (grep), build pass (build), lint pass (lint) |
+| **Fixer** | 1 per root cause + 1 for fix + 1 for build + 1 for lint | Evidence of the bug (read/grep), evidence of the fix (read/grep to show the change), build and lint verification |
+| **QA** | 1 per bug + 1 per smoke test + 1 per edge case category | Each bug needs reproduction command + output. Each test pass needs verification command. |
+| **Verifier** | 1 per checkpoint | Every individual checkpoint verdict must include the grep/stat/read output that proves it |
+| **Browser Tester** | 1 per test scenario | Screenshot paths, script execution output |
+| **Documentor** | 1 per documentation file changed | Verify the documentation was written correctly (read the file) |
+| **Integrator** | 1 per wiring change + 1 for build | Barrel file change verified (grep), DI registration verified (read), build pass |
+| **Merge Coordinator** | 1 per file pair checked | Import resolution evidence for each cross-file check |
+
+### Evidence Validation Gate
+
+After every agent completes, the Orchestrator MUST run the Truthfulness Validator:
+
+```bash
+ts-node skills/scripts/orchestration/validate-truth.ts --file=<agent-output-path> --agent=<agent-name>
+```
+
+Or for a full pipeline audit:
+```bash
+ts-node skills/scripts/orchestration/validate-truth.ts --pipeline
+```
+
+If any evidence is refuted (claim does not match reality), the pipeline should:
+1. **Route back to the agent** for correction if it's a minor, fixable issue
+2. **Escalate to user** if the agent fabricated evidence (refuted claims suggest hallucination)
+
+### Evidence Scoring
+
+The Truthfulness Validator produces a score (0-100%) for each agent:
+- **>= 95%**: ✅ Pass — evidence is reliable
+- **70-94%**: ⚠️ Warning — some evidence is missing or unverifiable
+- **< 70%**: ❌ Fail — significant evidence issues, route back to agent or escalate
+
+## Hand-off Completeness Protocol (NEW)
+
+### Purpose
+Before dispatching any subagent, the Orchestrator MUST verify that the hand-off includes all required context. Incomplete hand-offs are the #1 source of agents producing wrong results.
+
+### Pre-Dispatch Check
+
+Before every agent dispatch, run the hand-off completeness checker:
+
+```bash
+ts-node skills/scripts/orchestration/check-handoff.ts --agent=<agent-name> --context="<handoff-text>"
+```
+
+The checker validates these fields for every agent:
+
+| Field | Mandatory | Description |
+|-------|-----------|-------------|
+| **contextSummary** | ✅ | Summary of what was done in the previous step(s) |
+| **artifacts** | ✅ | Relevant file paths, outputs, or data produced |
+| **clearObjective** | ✅ | Exactly what the next agent should do (must contain an action verb) |
+| **constraints** | ✅ | Any boundaries, rules, or restrictions (must contain "must not", "avoid", "only", etc.) |
+| **expectedOutput** | ✅ | What the agent should return/report (must reference output format) |
+| **evidenceFromPriorAgent** | ✅ | Citations and evidence from the prior agent's work |
+
+Plus agent-specific fields:
+
+| Agent | Mandatory Additional Fields |
+|-------|----------------------------|
+| **Implementor** | Plan manifest path, target files, definition of done (build/lint commands) |
+| **Verifier** | Plan manifest path, acceptance criteria |
+| **Fixer** | Deviation report (checkpoint failures), root cause information |
+| **QA** | Smoke test command, test scope |
+| **Integrator** | Parallel file list, wiring conventions |
+| **Documentor** | Changed files list, documentation types to update |
+| **Finder** | Research questions, codebase scope |
+| **PlanDescriber** | Brainstorm outcome (chosen option), existing codebase context |
+
+### Auto-Fill Protocol
+
+If the hand-off is missing a mandatory field, the Orchestrator MUST:
+1. Detect the missing field (from the checker's output)
+2. Auto-fill it from available context (agent-context.md, plan manifest, prior agent output)
+3. Re-run the checker to confirm completeness
+4. If auto-fill is impossible, ask the user for clarification
+
+### Pipeline Retrospective Impact
+
+After each pipeline, the Orchestrator records hand-off quality in calibration:
+```bash
+ts-node skills/scripts/orchestration/update-calibration.ts --agent=orchestrator --success=<true/false> --handoff-quality=<1-10>
+```
+
+If hand-off quality < 6 for 3 consecutive pipelines: enable the hand-off checker as a mandatory pre-dispatch gate for ALL future pipelines.
+
+## Pattern-Based Circuit Breaker (Enhanced)
+
+### Purpose
+The old circuit breaker tracked simple retry counts (build: 3, lint: 3, etc.). The enhanced version tracks **failure patterns** — distinct signatures of what failed and why — to make smarter escalation decisions. This prevents infinite Fixer→Verifier loops by detecting the pattern and routing directly to PlanDescriber.
+
+### Signature-Based Failure Tracking
+
+Each failure generates a SHA256-based signature:
+```
+signature = SHA256(gate + ":" + agent + ":" + classification + ":" + primaryCause)[:8]
+```
+
+Example:
+```yaml
+circuitBreaker:
+  patternSignatures:
+    - signature: "a1b2c3d4"
+      gate: "verifier"
+      agent: "fixer"
+      classification: "plan-omission"
+      primaryCause: "Plan did not specify duplicate email handling"
+      count: 2                # Incremented when same signature repeats
+      firstSeen: "2026-05-19T10:25:00Z"
+      lastSeen: "2026-05-19T10:35:00Z"
+```
+
+### Escalation Logic
+
+| Condition | Circuit State | Action |
+|-----------|--------------|--------|
+| Any single signature.count >= 3 | closed → open | Same fix not working — STOP cycling. Escalate to user. |
+| Same classification appears in >= 3 distinct signatures | closed → half-open | Same TYPE of failure. Escalate to PlanDescriber for plan revision. |
+| Fixer→Verifier cycle repeats >= 3 times (detected from cyclePatternHistory) | closed → half-open | Loop detected. Skip Fixer and go directly to PlanDescriber. |
+| >= 5 distinct signatures with mixed classifications | closed → open | Multiple different failures. Flag for user review. |
+| After PlanDescriber revises the plan | open → closed | Reset all counters and signatures. Fresh start. |
+
+### Cycle Pattern Detection
+
+The circuit breaker tracks agent dispatch sequences to detect loops:
+
+```yaml
+cyclePatternHistory:
+  - pattern: "fixer-verifier-loop"
+    occurrences: 2
+    lastOccurrence: "2026-05-19T10:35:00Z"
+    recommendedAction: "escalate-to-plandescriber"
+```
+
+Detection logic:
+1. After each agent completes, check if the last 2-3 steps form a repeating pattern
+2. Patterns: fixer→verifier→fixer, implementor→build→fixer→build, etc.
+3. If same pattern repeats >= 2 times → record in cyclePatternHistory
+4. If any pattern reaches >= 3 occurrences → trigger escalation
+
+### Integration with Pre-Flight
+
+The `pipeline-init.ts` script now initializes the pattern-based circuit breaker:
+```yaml
+circuitBreaker:
+  patternSignatures: []
+  escalationSignals:
+    sameSignatureThresholdReached: false
+    sameClassificationThresholdReached: false
+    totalDistinctSignatures: 0
+    totalClassificationInstances: {}
+    recommendedAction: "No failures yet"
+    escalationHistory: []
+  patternDetection:
+    cyclePatternHistory: []
+```
+
+## Decision Provenance Protocol (NEW)
+
+### Purpose
+Every architectural decision recorded in `agent-context.md` MUST include provenance — evidence of what source information led to that decision. This is critical for:
+- **Auditing**: Understanding why a decision was made (not just what was decided)
+- **Cross-session learning**: Future pipelines can reference past decisions with full context
+- **Debugging**: When a decision leads to problems, the provenance shows what information it was based on
+
+### Decision Provenance Format
+
+Every decision in the `decisions` array MUST include an `evidence` array:
+
+```yaml
+decisions:
+  - what: "Chose Zod over Joi for input validation"
+    why: "Already in dependency tree — no new install needed"
+    by_who: "finder"
+    evidence:                    # NEW — REQUIRED
+      - source: "package.json"
+        excerpt: '"zod": "^3.22.0"'
+      - source: "src/services/user.ts"
+        excerpt: "import { z } from 'zod'"
+```
+
+### When Decision Provenance Is Required
+
+| Agent Type | Decision Provenance Required? | Examples |
+|-----------|------------------------------|----------|
+| **Finder** | ✅ Always | "Chose X because Y exists in package.json" → cite package.json |
+| **PlanDescriber** | ✅ Always | "Chose 3-phase split because existing service follows this pattern" → cite the existing service |
+| **Implementor** | ❌ (usually no decisions) | N/A |
+| **Fixer** | ✅ For root cause conclusions | "Root cause is plan-omission because no CP for duplicate email exists" → show the manifest |
+| **QA** | ✅ For test strategy choices | "Chose integration tests over unit tests because the service uses a database" → cite the service |
+| **Verifier** | ❌ (no decisions) | N/A |
+| **Integrator** | ✅ Always | "Used NestJS module pattern because app.module.ts uses @Module" → cite app.module.ts |
+| **Documentor** | ✅ For style decisions | "Used imperative mood because existing docs use it" → cite existing JSDoc |
+
+### Hard Rule
+- ❌ NEVER record a decision without provenance evidence unless it is self-evident (e.g., "Created file X as specified in the plan")
+- ✅ ALWAYS cite the specific source file and excerpt that informed each decision
+- ✅ ALWAYS use at least one evidence entry per decision
+
+## Cross-Session Citation Linking (NEW)
+
+### Purpose
+Journal entries and pipeline logs now link back to specific pieces of evidence, making cross-session learning more precise. Instead of "Last time the fixer had trouble," the system says "Last time fixer had trouble with `handlesError` for `validateEmail` — see evidence in pipeline log."
+
+### Journal Entry Enhancement
+
+Journal entries now include an `evidenceCitations` field:
+
+```yaml
+- date: "2026-05-19T10:30:00Z"
+  feature: "user-profile"
+  pipelineType: "full"
+  result: "partial"
+  evidenceCitations:                     # NEW
+    - claim: "Verifier found 72% compliance"
+      source: "pipeline-logs/user-profile-20260519/agent-context.md"
+      method: "read"
+      excerpt: "verifier compliance: 72% — 2/8 checkpoints failed (CP-003, CP-007)"
+    - claim: "Root cause: plan-omission (missing CP for duplicate email)"
+      source: "pipeline-logs/user-profile-20260519/agent-context.md"
+      method: "read"
+      excerpt: "fixer.rootCauseAnalysis.classification: 'plan-omission'"
+  notes: "Revised plan twice due to edge cases"
+```
+
+### Evidence File Storage
+
+During pipeline teardown, individual evidence files are archived:
+```
+.opencode/pipeline-logs/<pipelineId>/
+├── agent-context.md                          # Full pipeline state
+├── evidence/
+│   ├── finder-evidence.yaml                  # Finder's evidence
+│   ├── implementor-evidence.yaml             # Implementor's evidence
+│   ├── verifier-evidence.yaml                # Verifier's evidence per checkpoint
+│   └── fixer-evidence.yaml                   # Fixer's evidence
+```
+
+### Cross-Session Lookup Enhancement
+
+The pipeline-init's cross-session learning now retrieves EVIDENCE:
+
+```bash
+ts-node skills/scripts/orchestration/journal-lookup.ts --feature=<name> --include-evidence
+```
+
+This returns not just "Lesson: X" but also "Evidence: cited from pipeline logs at path Y."
+
+### Pipeline Teardown Update
+
+The teardown script now archives evidence files:
+
+```bash
+ts-node skills/scripts/orchestration/pipeline-teardown.ts \
+  --feature=<name> --pipeline-type=<type> --result=pass|fail|partial \
+  --evidence-path=.opencode/pipeline-logs/<pipelineId>/evidence/
+```
+
+### Journal Reference in Evidence
+
+When the Orchestrator reads cross-session lessons before a pipeline, it now includes evidence citations in the hand-off:
+
+```
+Hand-off note to PlanDescriber:
+"Last time we implemented user-profile, the Verifier found 72% compliance
+because the plan was missing a handlesError checkpoint for duplicate email.
+See evidence: pipeline-logs/user-profile-20260519/evidence/verifier-evidence.yaml
+CP-003: exportExists 'validateEmail' — not found."
+```
+
+## Parallel Dispatch Version Contracts (NEW)
+
+### Purpose
+When dispatching multiple Implementors in parallel, each creates files that may depend on types/interfaces from other files. Version contracts prevent integration issues by ensuring each file declares what versions of dependencies it expects, and the Merge Coordinator verifies they match.
+
+### Version Contract Format
+
+Each file created by a parallel Implementor includes an `@contract` comment at the top:
+
+```typescript
+// @contract version 1.0
+// @exports: UserService, CreateUserDto, UserResponse
+// @depends: types/user.types.ts@^1.0 (User, CreateUserDto)
+```
+
+When the Merge Coordinator runs, it:
+1. Extracts all `@contract` comments from all new files
+2. Verifies that each `@depends` entry matches a corresponding `@exports` entry in another file
+3. Checks version compatibility (semver range matching)
+4. Reports any mismatches
+
+### Contract Format Specification
+
+```typescript
+// @contract <semver-version>
+// @exports: <comma-separated-export-names>
+// @depends: <file-path>@<semver-range> (<comma-separated-symbol-names>)
+// @depends: <file-path>@<semver-range> (<comma-separated-symbol-names>)
+```
+
+Rules:
+- `@contract` is the version of THIS file (what it exports)
+- `@depends` lists dependencies on OTHER files with expected version ranges
+- Each `@depends` includes the file path, version range (semver), and symbols needed
+- Multiple `@depends` lines are allowed
+- The contract block MUST be at the top of the file (first 10 lines)
+
+### Merge Coordinator Integration
+
+The Merge Coordinator now checks these contracts:
+
+```yaml
+# In Merge Coordinator output:
+contractVerification:
+  totalContracts: 3
+  matched: 3
+  mismatched: 0
+  warnings: []
+  details:
+    - file: "src/types/user.types.ts"
+      version: "1.0"
+      exports: ["User", "CreateUserDto", "UserResponse"]
+    - file: "src/services/user.service.ts"
+      version: "1.0"
+      depends:
+        - target: "src/types/user.types.ts"
+          expectedRange: "^1.0"
+          resolved: "1.0"
+          status: "matched"
+    - file: "src/controllers/user.controller.ts"
+      version: "1.0"
+      depends:
+        - target: "src/services/user.service.ts"
+          expectedRange: "^1.0"
+          resolved: "1.0"
+          status: "matched"
+```
+
+### When to Use
+
+| Dispatch Mode | Version Contracts Required? |
+|---------------|---------------------------|
+| Single Implementor | No (no merge needed) |
+| Parallel Implementors (independent files) | ✅ Yes — ensures cross-file type compatibility |
+| Parallel Implementors (with Merge Coordinator) | ✅ Yes — Merge Coordinator checks contracts |
+| Sequential Implementors | No (files built on each other directly) |
+
+### Hard Rules
+- ❌ NEVER dispatch parallel Implementors without @contract annotations in all new files
+- ❌ NEVER skip Merge Coordinator's contract verification when using parallel dispatch
+- ✅ ALWAYS include @contract/@exports/@depends in every new file from parallel dispatch
+- ✅ ALWAYS use semver ranges (@^1.0, @~1.0, @1.0.0) for dependency versions
+- ✅ ALWAYS report contract mismatches as blocking issues (prevent proceeding to Build Gate)
+
+### Automation in check-parallelism.ts
+
+The `check-parallelism.ts` script now also extracts and validates @contract annotations. Run with:
+
+```bash
+ts-node skills/scripts/orchestration/check-parallelism.ts \
+  --manifest=plan-manifests/<feature>/v1-manifest.json \
+  --dir=./ \
+  --verify-contracts  # NEW: also checks @contract annotations
+```
+
+If contracts are missing or mismatched, the script outputs a recommendation with specific files:
+```
+❌ Contract Mismatch: src/controllers/user.controller.ts depends on 
+   src/types/user.types.ts@^1.0 but actual version is 1.0 — matched ✓
+   
+❌ Missing Contract: src/services/user.service.ts has no @contract annotation
+   → All parallel files must have @contract headers
+```
+
+## Orchestration Workflow Update
+
+The full pipeline sequence now includes evidence, hand-off checking, and pattern-based circuit breaker:
+
+```
+PRE-FLIGHT:
+  Pipeline init → Hand-off check pre-dispatch for every agent
+  ↓
+EVIDENCE CONTRACT:
+  Every agent → Evidence in output → Truthfulness validation
+  ↓
+HAND-OFF COMPLETENESS:
+  Before every dispatch → check-handoff.ts → auto-fill missing fields
+  ↓
+PATTERN-BASED CIRCUIT BREAKER:
+  Failure → Generate signature → Check escalation thresholds → Route correctly
+  Detects fixer→verifier loops → Routes to PlanDescriber instead
+  ↓
+CROSS-SESSION CITATION:
+  Pipeline teardown → Archive evidence → Journal with citations
+  Next pipeline init → Read evidence along with lessons
+  ↓
+PARALLEL DISPATCH:
+  @contract annotations → Merge Coordinator verifies → Block on mismatch
+```
+
+### Hand-off Checklist (Updated with Evidence)
+
+When passing work from one agent to the next, the Orchestrator MUST include:
+
+1. **Context Summary**: What was done in the previous step(s), with evidence citations
+2. **Artifacts**: Relevant file paths, outputs, or data produced
+3. **Previous Evidence**: Structured evidence from prior agent(s) with content hashes:
+   ```
+   Previous Evidence (from <agent>):
+     - Claim: <claim>
+       Source: <file>, Lines [start, end]
+       ContentHash: <sha256>
+       Method: grep/read/stat
+       Command: <exact command>
+       Excerpt: "<relevant output>"
+       Result: found/passed
+   ```
+4. **Clear Objective**: Exactly what the next agent should do
+5. **Constraints**: Any boundaries, rules, or restrictions
+6. **Expected Output**: What the agent should return/report (including evidence requirements)
+7. **Agent Output Format reminder**: "Return your results with the structured output contract (status, resultSummary, evidence, decisions, warnings, changedFiles, artifacts, buildPassed/lintPassed where applicable)"
+8. **Evidence Minimum**: "Provide at least <N> evidence entries: one per <claim-type>"
+9. **Evidence Requirements**: "Include evidence for every substantive claim with contentHash, line numbers, exact commands, and verbatim excerpts"
+10. **Run Hand-off Check**: Before dispatch, run `check-handoff.ts`
+11. **Visual Generation**: After the agent returns, generate the appropriate pipeline visualization
+
+### Example Hand-off with Evidence
+
+```
+Orchestrator to Implementor:
+"After brainstorming and planning, we've agreed on the user-profile feature.
+Plan manifest: plan-manifests/user-profile/v1-manifest.json
+Target files: src/services/user.ts, src/controllers/user.ts
+
+Prior evidence from Finder:
+- Evidence: User model exists at src/models/user.ts (line 5: interface User)
+- Evidence: Zod is already in the dependency tree (package.json: "zod": "^3.22.0")
+
+Your task:
+1. Create src/services/user.ts with UserService class (exports: createUser, getUser)
+2. Create src/controllers/user.ts with UserController (handlers for POST/GET)
+
+Constraints:
+- Must NOT modify src/models/user.ts (it already exists)
+- Must use Zod for input validation (not Joi — it's not installed)
+
+Expected output:
+- Structured YAML with evidence for each file created, build pass, lint pass
+- Minimum 3 evidence entries: 2x fileExists (stat), 1x buildPass (build)
+
+Definition of Done:
+- Build passes: npm run build
+- Lint passes: npm run lint (or 'No linter configured')
+- Files exist with correct exports

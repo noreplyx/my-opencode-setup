@@ -55,37 +55,24 @@ agentHistory:
       - what: "Chose Zod over Joi for input validation"
         why: "Already in dependency tree — no new install needed"
         by_who: "finder"
-    warnings:                            # Non-blocking issues found
-      - "src/models/user.ts uses `any` type for email field"
-    changedFiles: []                     # Files this agent created/modified
-    artifacts:                           # Outputs produced
-      - "Exploration report (returned to Orchestrator)"
-
-  - step: "planDescriber"
-    agent: "ses_yyy"
-    result: "completed"
-    summary: "Created roadmap: 3 phases, 8 steps"
-    decisions:
-      - what: "Split user profile into 3 phases (model, service, controller)"
-        why: "Clear dependency ordering — model independent, service depends on model, controller depends on service"
-        by_who: "planDescriber"
-    warnings: []
-    changedFiles:
-      - "plan-manifests/user-profile/v1-manifest.json"
-    artifacts:
-      - "Roadmap (sent to Orchestrator)"
-      - "plan-manifests/user-profile/v1-manifest.json"
-
-  - step: "implementor"
-    agent: "ses_zzz"
-    result: "completed"
-    summary: "Created src/services/user.ts, src/controllers/user.ts"
-    selfReview:                          # Self-review from Implementor
-      confidence: 95
-      preCheckPassed: true
-      scopeGuardFlags: []
-      selfReviewIssues:
-        - "CP-005: Error handling uses console.error instead of logger.error"
+        evidence:                        # NEW: Decision provenance
+          - source: "package.json"
+            excerpt: "\"zod\": \"^3.22.0\""
+    evidence:                            # NEW: Anchored evidence for key claims
+      - claim: "User model exists with email field"
+        source: "src/models/user.ts"
+        lines: [1, 30]
+        contentHash: "a1b2c3d4e5f6..."  # SHA-256 of file content at collection time
+        method: "read"
+        command: "cat src/models/user.ts"
+        excerpt: "Line 5: interface User { email: string; name: string; }"
+        result: "found"
+      - claim: "Build passed"
+        source: "build"
+        method: "build"
+        command: "npm run build"
+        excerpt: "Build succeeded"
+        result: "passed"
     decisions: []
     warnings:
       - "TypeScript strict mode not enabled — consider enabling for better type safety"
@@ -107,6 +94,14 @@ agentHistory:
       crossModuleCheck:
         - module: "src/controllers/user.ts"
           status: "unaffected"
+    evidence:                            # NEW: Fixer evidence
+      - claim: "Duplicate email error handling added to createUser"
+        source: "src/services/user.ts"
+        lines: [42, 48]
+        method: "read"
+        command: "sed -n '42,48p' src/services/user.ts"
+        excerpt: "if (existingUser) { throw new ConflictError('Email already registered'); }"
+        result: "found"
     decisions: []
     changedFiles:
       - "src/services/user.ts"
@@ -125,6 +120,19 @@ agentHistory:
     driftDetection:                      # Plan drift check
       hasDrift: false
       details: null
+    evidence:                            # NEW: Verifier evidence per checkpoint
+      - claim: "CP-001: fileExists for src/services/user.ts"
+        source: "src/services/user.ts"
+        method: "stat"
+        command: "ls src/services/user.ts"
+        excerpt: "src/services/user.ts"
+        result: "exists"
+      - claim: "CP-003: exportExists 'validateEmail'"
+        source: "src/services/user.ts"
+        method: "grep"
+        command: "grep -n 'export.*validateEmail' src/services/user.ts"
+        excerpt: "(no match — export not found)"
+        result: "not_found"
     decisions: []
     warnings: []
     changedFiles: []
@@ -141,6 +149,13 @@ agentOutputs:
     lintPassed: null
     buildOutput: null
     lintOutput: null
+    evidence:
+      - claim: "User model exists"
+        source: "src/models/user.ts"
+        method: "read"
+        command: "cat src/models/user.ts"
+        excerpt: "interface User { email: string; name: string; }"
+        result: "found"
     knowledgeGraph:
       entities:
         - name: "UserService"
@@ -161,6 +176,19 @@ agentOutputs:
     lintPassed: true
     buildOutput: "[stdout + stderr truncated]"
     lintOutput: "[stdout + stderr truncated]"
+    evidence:
+      - claim: "Files created"
+        source: "src/services/user.ts"
+        method: "stat"
+        command: "ls -la src/services/user.ts"
+        excerpt: "src/services/user.ts exists"
+        result: "exists"
+      - claim: "Build passed"
+        source: "build"
+        method: "build"
+        command: "npm run build 2>&1 | tail -5"
+        excerpt: "Build succeeded"
+        result: "passed"
     selfReview:
       confidence: 95
       securityItemsPassed: 12
@@ -168,6 +196,11 @@ agentOutputs:
       securitySelfReviewPassed: true
       preCheckPassed: true
       scopeGuardFlags: []
+    ## NEW: Evidence metrics for this agent
+    evidenceMetrics:
+      avgQuality: 92
+      completeness: 100
+      precision: 80
   fixer:
     status: "completed"
     resultSummary: "Fixed CP-003 and CP-007 deviations"
@@ -175,6 +208,13 @@ agentOutputs:
     lintPassed: true
     buildOutput: "[stdout + stderr truncated]"
     lintOutput: "[stdout + stderr truncated]"
+    evidence:
+      - claim: "Error handling fixed in createUser"
+        source: "src/services/user.ts"
+        method: "grep"
+        command: "grep -n 'ConflictError|duplicate email' src/services/user.ts"
+        excerpt: "Line 44: throw new ConflictError('Email already registered')"
+        result: "found"
     rootCauseAnalysis:
       classification: "implementation-error"
       fixConfidence: 8
@@ -185,6 +225,13 @@ agentOutputs:
     lintPassed: null
     buildOutput: null
     lintOutput: null
+    evidence:
+      - claim: "CP-003 verified"
+        source: "src/services/user.ts"
+        method: "grep"
+        command: "grep -n 'export.*validateEmail' src/services/user.ts"
+        excerpt: "(not found)"
+        result: "not_found"
     suggestedCheckpoints:
       - id: "CP-SEC-001"
         type: "behavioral (security)"
@@ -220,6 +267,48 @@ agentOutputs:
     auditTrailPath: ".opencode/audit/<pipeline-id>.audit.yaml"
     auditIntegrity: "intact" | "broken" | null
 
+# ── Evidence Quality Metrics (NEW) ──
+evidenceQuality:
+  overallScore: 87                    # Average quality score across all agents (0-100)
+  agents:
+    finder:
+      score: 92
+      totalEvidence: 5
+      completeness: 100
+      precision: 80
+      reproducibility: 100
+      excerptAccuracy: 100
+      verifiability: 80
+    implementor:
+      score: 85
+      totalEvidence: 8
+      completeness: 88
+      precision: 75
+      reproducibility: 100
+      excerptAccuracy: 90
+      verifiability: 75
+  stalenessScan:
+    lastRun: "2026-05-20T10:00:00Z"
+    totalChecked: 45
+    valid: 38
+    stale: 5
+    invalidated: 2
+
+# ── Evidence Dependencies (Cross-Agent Provenance) (NEW) ──
+evidenceDependencies:
+  - dependentClaim: "UserService.createUser works (Verifier CP-003)"
+    dependsOn:
+      - claim: "UserService class exists (Implementor)"
+        source: "src/services/user.ts"
+        contentHash: "a1b2c3d4e5f6..."
+      - claim: "createUser method exists (Implementor)"
+        source: "src/services/user.ts"
+        contentHash: "a1b2c3d4e5f6..."
+      - claim: "ConflictError import exists (Fixer)"
+        source: "src/services/user.ts"
+        contentHash: "c3d4e5f6a7b8..."
+    chainStatus: "verified"
+
 # ── Progressive Summaries (context window budgeting) ──
 summaries:
   finder: "Found User model at src/models/user.ts. Key finding: existing validation middleware."
@@ -239,7 +328,7 @@ loadedSkills:
   activeOverrides:
     - "accessibility.aria overrides code-philosophy.naming for button components"
 
-# ── Circuit Breaker State (Smart Thresholds) ──
+# ── Circuit Breaker State (Pattern-Based) ──
 circuitBreaker:
   state: "closed"                        # closed | open | half-open
   complexity: "moderate"                 # mirrors pipelineComplexity — used to select contextual thresholds
@@ -277,12 +366,53 @@ circuitBreaker:
     securityScan: 0
     smokeTest: 0
     verifier: 3
+
+  # ── NEW: Pattern-Based Circuit Breaker ──
+  patternSignatures:                    # Track DISTINCT failure patterns (deduplicated by signature hash)
+    - signature: "a1b2c3d4"
+      gate: "verifier"
+      agent: "fixer"
+      classification: "plan-omission"
+      primaryCause: "Plan did not specify duplicate email handling"
+      count: 2
+      firstSeen: "2026-05-19T10:25:00Z"
+      lastSeen: "2026-05-19T10:35:00Z"
+    - signature: "e5f6a7b8"
+      gate: "verifier"
+      agent: "fixer"
+      classification: "implementation-error"
+      primaryCause: "validateEmail function signature mismatch"
+      count: 1
+      firstSeen: "2026-05-19T10:30:00Z"
+      lastSeen: "2026-05-19T10:30:00Z"
+
+  # ── NEW: Pattern Escalation Signals ──
+  escalationSignals:
+    sameSignatureThresholdReached: false       # true when any single signature.count >= 3
+    sameClassificationThresholdReached: true    # true when any classification appears in >= 3 distinct signatures
+    totalDistinctSignatures: 2
+    totalClassificationInstances:
+      plan-omission: 2
+      implementation-error: 1
+    recommendedAction: "Monitor — plan-omission pattern has 2 occurrences across signatures"
+    escalationHistory:                         # NEW: Append-only log of escalation events
+      - timestamp: "2026-05-19T10:35:00Z"
+        action: "escalated-to-plandescriber"
+        reason: "plan-omission pattern detected: same root cause across 2 Fixer attempts"
+
+  # Enhanced pattern detection
   patternDetection:
     persistentDeviations: ["CP-003"]       # Checkpoints that failed across multiple attempts
     sameClassificationCounts:
       edge-case-miss: 3                    # Count of failures with same root cause classification
       implementation-error: 1
     autoEscalationTriggered: true          # True if pattern detection triggered auto-escalation
+    cyclePatternHistory:                   # NEW: Track Fixer→Verifier→Fixer cycles
+      - pattern: "fixer-verifier-loop"
+        occurrences: 2
+        lastOccurrence: "2026-05-19T10:35:00Z"
+        recommendedAction: "escalate-to-plandescriber"
+
   lastFailure:
     step: "verifier"
     agent: "fixer"
@@ -290,7 +420,18 @@ circuitBreaker:
     classification: "plan-omission"        # Root cause classification from Fixer
     timestamp: "2025-05-19T10:30:00Z"
 
-  # ── NEW: Audit trail reference ──
+  evidenceQuality:                   # NEW
+    state: "closed"
+    thresholds:
+      simple: 2
+      moderate: 3
+      complex: 4
+    counters:
+      evidenceQuality: 1            # Incremented when agent submits < 80% evidence quality
+    lastLowQualityAgent: "implementor"
+    lastLowQualityScore: 65
+
+  # NEW: Audit trail reference
   auditLog:
     path: ".opencode/audit/<pipeline-id>.audit.yaml"
     integrity: "intact" | "broken" | "not_verified"
@@ -385,7 +526,7 @@ Fixer: Diagnose and fix the Verifier deviations (CP-003, CP-007) in the user-pro
 
 Every subagent MUST return structured output in this format within their final report message to the Orchestrator. The Orchestrator uses this to programmatically update `agent-context.md`.
 
-### Standard Output Schema
+### Standard Output Schema (with Evidence)
 
 ```
 ---
@@ -399,7 +540,17 @@ agentOutputs:
     lintPassed: true | false | null
     buildOutput: "Full stdout + stderr from build command" | null
     lintOutput: "Full stdout + stderr from lint command" | null
-    # NEW: Optional enhanced fields
+    # NEW: Evidence for every substantive claim
+    evidence:
+      - claim: "Claim description"
+        source: "file/path.ts"
+        lines: [10, 20]
+        contentHash: "sha256..."              # NEW: SHA-256 of source at collection time
+        method: "grep" | "read" | "stat" | "build" | "lint" | "test" | "run" | "analysis"
+        command: "Exact command used to obtain proof"
+        excerpt: "Relevant output excerpt"
+        result: "found" | "not_found" | "passed" | "failed" | "exists" | "not_exists"
+    # Agent-specific enhanced fields
     selfReview:                           # Only for Implementor
       confidence: 95
       preCheckPassed: true
@@ -418,10 +569,25 @@ agentOutputs:
     driftDetection:                       # Only for Verifier
       hasDrift: false
       details: null
+evidence:                                 # NEW: Top-level evidence for cross-cutting claims
+  - claim: "Cross-cutting claim"
+    source: "..."
+    method: "grep"
+    command: "..."
+    excerpt: "..."
+    result: "found"
 decisions:
   - what: "Description of the decision"
     why: "Rationale"
     by_who: "<agent-name>"
+    evidence:                             # NEW: Evidence provenance for decisions
+      - source: "file/path.ts"
+        excerpt: "Relevant snippet that informed this decision"
+    evidenceMetrics:                      # NEW: Aggregated evidence quality
+      avgQuality: 92
+      completeness: 100
+      precision: 80
+      totalCount: 5
 warnings:
   - "Non-blocking issue or concern"
 changedFiles:
@@ -431,18 +597,20 @@ artifacts:
 ---
 ```
 
-### Per-Agent Responsibility
+### Per-Agent Evidence Requirements
 
-| Agent | Must Report `buildPassed`/`lintPassed`? | Must Report `decisions`? | Must Report `changedFiles`? | Must Report Enhanced Fields? |
-|---|---|---|---|---|
-| **Finder** | No (read-only) | Yes (exploration direction) | No | Yes — `knowledgeGraph` (entities, relationships, hazards) |
-| **PlanDescriber** | No | Yes (architectural decisions) | Yes (plan manifest) | Yes — `confidence` in plan phases |
-| **Implementor** | Yes (mandatory) | No | Yes (all files written) | Yes — `selfReview` (confidence, preCheckPassed, scopeGuardFlags) |
-| **QA** | No | Yes (test decisions) | Yes (test files created/modified) | Yes — edge cases tested, non-functional issues, regression impact |
-| **Verifier** | No (read-only) | No | No | Yes — `suggestedCheckpoints`, `driftDetection` |
-| **Fixer** | Yes (mandatory) | Yes (root cause classification) | Yes (files modified) | Yes — `rootCauseAnalysis` (classification, fixConfidence, crossModuleCheck) |
-| **Browser Tester** | No | No | Yes (test scripts, screenshots) | No |
-| **Documentor** | No | Yes (documentation format/structure decisions) | Yes (documentation files created/modified) | No |
+| Agent | Must Provide Evidence For |
+|-------|--------------------------|
+| **Finder** | Every finding (file exists, export names, patterns discovered) with grep/read evidence |
+| **PlanDescriber** | Architecture decisions with rationale citing existing code patterns |
+| **Implementor** | File creation, export existence, build pass, lint pass |
+| **QA** | Smoke test pass/fail, each bug with reproducible command + output |
+| **Verifier** | Every checkpoint verdict with the exact grep/read command and its output |
+| **Fixer** | Root cause identification with evidence of the bug, fix verification |
+| **Browser Tester** | Screenshot paths, test script verification |
+| **Documentor** | Each documentation change with citation of what was documented |
+| **Integrator** | Barrel file changes, DI registrations, route wiring with build verification |
+| **Merge Coordinator** | Import resolution evidence for each cross-file check |
 
 ### Output Verification by Orchestrator
 
@@ -450,22 +618,32 @@ After receiving an agent's output, the Orchestrator MUST:
 1. Parse the structured output fields from the agent's report
 2. Cross-reference `changedFiles` against actual disk state (using read/glob/grep)
 3. Cross-reference `buildPassed`/`lintPassed` against raw output excerpts
-4. Append the agent's results to `agentHistory` in `agent-context.md`
-5. Update `circuitBreaker.counters` if the agent failed
-6. Update `agentOutputs.<agent-name>` with the structured output
-7. Save the updated `agent-context.md`
+4. **Validate evidence**: Run `ts-node skills/scripts/orchestration/validate-truth.ts --pipeline` to verify claims
+5. **Classify build output**: If build/lint failed, run `ts-node skills/scripts/orchestration/classify-build-error.ts --pipeline` to determine routing
+6. Append the agent's results to `agentHistory` in `agent-context.md`
+7. Update `circuitBreaker.counters` if the agent failed
+8. Update `circuitBreaker.patternSignatures` with failure pattern (deduplicated by SHA256 hash of `gate:agent:classification:primaryCause`)
+9. Update `circuitBreaker.escalationSignals` by recalculating pattern thresholds
+10. Update `agentOutputs.<agent-name>` with the structured output
+11. Save the updated `agent-context.md`
 
 ---
 
 ## Field Reference
 
 ### `agentHistory[].step`
-Must match one of: `finder`, `brainstorm`, `planDescriber`, `implementor`, `qa`, `securityScan`, `verifier`, `fixer`, `browserTester`, `documentor`.
+Must match one of: `finder`, `brainstorm`, `planDescriber`, `implementor`, `qa`, `securityScan`, `verifier`, `fixer`, `browserTester`, `documentor`, `integrator`, `acceptanceGate`.
 
 ### `agentHistory[].result`
 - `completed`: Agent finished successfully
 - `failed`: Agent failed (build break, test failure, etc.)
 - `partial`: Agent completed but with warnings/non-blocking issues
+
+### `agentHistory[].evidence`
+Anchored evidence for each claim made during this step. Each entry includes claim, source, method, command, excerpt, and result. This enables the Truthfulness Validator to verify every claim independently.
+
+### `agentHistory[].decisions[].evidence`
+Provenance for decisions — shows what source information led to each decision.
 
 ### `agentHistory[].knowledgeGraph`
 Structured exploration output from Smart Finder (entities, relationships, hazards).
@@ -499,12 +677,25 @@ Orchestrator's confidence in pipeline selection.
 - `open`: Repeated failures detected — Orchestrator pauses cycling
 - `half-open`: Probation period — one retry allowed
 
-### `circuitBreaker.patternDetection`
-Failure pattern tracking for smart escalation.
+### `circuitBreaker.patternSignatures` (NEW)
+Tracks DISTINCT failure patterns by deduplicating on a SHA256 signature hash. The signature is computed as:
+```
+signature = SHA256(gate + ":" + agent + ":" + classification + ":" + primaryCause)[:8]
+```
+Using only the first 8 hex characters for readability. When the same signature appears again, increment its count rather than adding a duplicate entry.
 
-- `patternDetection.persistentDeviations`: Tracks checkpoint IDs that failed across multiple attempts. Used to identify recurring issues that are not being resolved by Fixer.
-- `patternDetection.sameClassificationCounts`: Tracks how many failures share the same root cause classification (e.g., 3 failures all classified as "edge-case-miss"). Used for auto-escalation when the same type of failure keeps occurring.
-- `patternDetection.autoEscalationTriggered`: Set to `true` when pattern detection determines that escalation is needed (based on thresholds in `sameClassificationCounts`).
+### `circuitBreaker.escalationSignals` (NEW)
+Computed automatically from `patternSignatures`:
+
+| Condition | Action |
+|-----------|--------|
+| Any signature count >= 3 | Open circuit — same fix not working |
+| Same classification appears in >= 3 distinct signatures | Auto-escalate to PlanDescriber |
+| Same cycle pattern (e.g., fixer→verifier→fixer) repeats >= 3 times | Escalate to PlanDescriber |
+| Total distinct signatures >= 5 with mixed classifications | Flag for user review |
+
+### `circuitBreaker.patternDetection.cyclePatternHistory` (NEW)
+Tracks recurring sequences of agent dispatches that form a cycle (e.g., "fixer-verifier-loop"). When a cycle pattern repeats >= 3 times, auto-escalate to PlanDescriber instead of cycling through Fixer again.
 
 ### `circuitBreaker.currentThresholds`
 Active thresholds based on pipeline complexity.
@@ -535,21 +726,33 @@ Post-pipeline self-evaluation.
    - PlanDescriber revises the roadmap
    - Fixer successfully resolves the root cause
    - Orchestrator manually resets after user intervention
-4. `failureSummary` MUST only be populated when `circuitBreaker.state` is `open`
-5. `gitState` MUST be updated at pipeline start and after any file-modifying step
-6. `agentOutputs` MUST be updated after each agent completes
-7. `summaries` MUST be updated after each agent completes (progressive summarization)
-8. If `circuitBreaker.patternDetection.autoEscalationTriggered` is true, `failureSummary` MUST be populated
-9. `loadedSkills` MUST include the override rationale when skills with priority < 5 are loaded alongside higher-priority skills
-10. `pipelineComplexity` MUST be set before circuit breaker thresholds are calculated
-11. `pipelineHeartbeat` MUST be updated every time `agent-context.md` is written
-12. If `status` is "running" and `createdAt` is more than 1 hour old, the pipeline is considered STALE
-13. On stale detection, Orchestrator MUST prompt the user before continuing
-14. Before starting a new pipeline, Orchestrator MUST check for stale `agent-context.md` files (status="running" + createdAt > 1 hour ago). If found, user MUST be prompted to clean up.
-15. `securityProfile` MUST be one of: `standard`, `sensitive`, `infrastructure`, `security-fix`
-16. If `securityProfile` is `sensitive`, `securityScan.currentThresholds` MUST be >= 3
-17. `auditLog.path` MUST point to a valid file if audit logging has been initialized
-18. `agentOutputs.securityScan.findings` MUST include all severity levels (critical, high, medium, low)
+4. `circuitBreaker.patternSignatures` MUST be updated every time a gate fails (with deduplication by signature hash)
+5. `circuitBreaker.escalationSignals` MUST be recalculated whenever `patternSignatures` is updated
+6. `circuitBreaker.patternDetection.cyclePatternHistory` MUST be updated when a Fixer→Verifier→Fixer cycle is detected
+7. `failureSummary` MUST only be populated when `circuitBreaker.state` is `open`
+8. `gitState` MUST be updated at pipeline start and after any file-modifying step
+9. `agentOutputs` MUST be updated after each agent completes
+10. `summaries` MUST be updated after each agent completes (progressive summarization)
+11. If `circuitBreaker.patternDetection.autoEscalationTriggered` is true, `failureSummary` MUST be populated
+12. `loadedSkills` MUST include the override rationale when skills with priority < 5 are loaded alongside higher-priority skills
+13. `pipelineComplexity` MUST be set before circuit breaker thresholds are calculated
+14. `pipelineHeartbeat` MUST be updated every time `agent-context.md` is written
+15. If `status` is "running" and `createdAt` is more than 1 hour old, the pipeline is considered STALE
+16. On stale detection, Orchestrator MUST prompt the user before continuing
+17. Before starting a new pipeline, Orchestrator MUST check for stale `agent-context.md` files (status="running" + createdAt > 1 hour ago). If found, user MUST be prompted to clean up.
+18. `securityProfile` MUST be one of: `standard`, `sensitive`, `infrastructure`, `security-fix`
+19. If `securityProfile` is `sensitive`, `securityScan.currentThresholds` MUST be >= 3
+20. `auditLog.path` MUST point to a valid file if audit logging has been initialized
+21. `agentOutputs.securityScan.findings` MUST include all severity levels (critical, high, medium, low)
+22. **NEW**: `agentHistory[].evidence` MUST be populated for every step that makes substantive claims
+23. **NEW**: `agentHistory[].decisions[].evidence` SHOULD be populated to show decision provenance
+24. **NEW**: On circuit breaker open, `escalationSignals.escalationHistory` MUST record the escalation event
+25. **NEW**: `agentHistory[].evidence[].contentHash` is REQUIRED for evidence with method `grep`, `read`, `stat`, or `glob`
+26. **NEW**: `evidenceQuality` SHOULD be populated after each pipeline completes
+27. **NEW**: `evidenceDependencies` SHOULD be updated when a checkpoint fails verification
+28. **NEW**: `circuitBreaker.evidenceQuality.state` transitions to `open` when threshold exceeded
+29. **NEW**: On evidence quality circuit open, the agent MUST be cycled back with specific feedback
+30. **NEW**: `evidenceQuality.stalenessScan` SHOULD be updated during pipeline teardown
 
 ## New Agent Steps (Schema Additions)
 
@@ -564,7 +767,20 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
   agent: "ses_iii"
   result: "completed"
   summary: "Wired 3 new files into project: barrel, DI, routes"
-  wiringSummary:                    # NEW — Integrator specific
+  evidence:
+    - claim: "Barrel file updated with UserService export"
+      source: "src/services/index.ts"
+      method: "grep"
+      command: "grep UserService src/services/index.ts"
+      excerpt: "export { UserService } from './user.service';"
+      result: "found"
+    - claim: "Build passed after wiring"
+      source: "build"
+      method: "build"
+      command: "npm run build 2>&1 | tail -5"
+      excerpt: "Build succeeded"
+      result: "passed"
+  wiringSummary:
     barrelFilesUpdated:
       - "src/services/index.ts"
     diRegistrationsAdded:
@@ -581,6 +797,9 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
     - what: "Added UserService to NestJS module providers"
       why: "Project uses NestJS DI — must register in @Module decorator"
       by_who: "integrator"
+      evidence:
+        - source: "src/app.module.ts"
+          excerpt: "@Module({ providers: [...] })"
   changedFiles:
     - "src/services/index.ts"
     - "src/app.module.ts"
@@ -595,7 +814,14 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
   agent: "ses_ddd"
   result: "completed"
   summary: "Added JSDoc to 4 exports, updated CHANGELOG.md"
-  docsGenerated:                    # NEW — Documentor specific
+  evidence:
+    - claim: "JSDoc added to UserService"
+      source: "src/services/user.service.ts"
+      method: "read"
+      command: "head -20 src/services/user.service.ts"
+      excerpt: "/** Service for user management */ export class UserService"
+      result: "found"
+  docsGenerated:
     - type: "inline"
       files: ["src/services/user.service.ts", "src/controllers/user.controller.ts"]
       summary: "Added JSDoc to UserService, UserController, and all public methods"
@@ -609,6 +835,9 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
     - what: "Used imperative mood for JSDoc descriptions"
       why: "Project convention — all existing JSDoc uses imperative"
       by_who: "documentor"
+      evidence:
+        - source: "src/services/existing.service.ts"
+          excerpt: "/** Validate input */"
   warnings:
     - "README.md doesn't exist — skipped README update"
   changedFiles:
@@ -625,7 +854,14 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
   agent: "ses_aaa"
   result: "completed"
   summary: "2/2 acceptance criteria passed"
-  acceptanceResults:                # NEW — Acceptance Gate specific
+  evidence:
+    - claim: "CP-010: Registration with existing email returns 409"
+      source: "test"
+      method: "test"
+      command: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users ..."
+      excerpt: "HTTP 409"
+      result: "passed"
+  acceptanceResults:
     appStarted: true
     appStartDuration: "3.2s"
     totalCheckpoints: 2
@@ -635,95 +871,52 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
     details:
       - checkpointId: "CP-010"
         description: "Registration with existing email returns 409"
-        command: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users ... | grep -q 409"
+        command: "curl ..."
         exitCode: 0
         stdout: ""
         stderr: ""
         verdict: "pass"
-      - checkpointId: "CP-011"
-        description: "Valid registration returns 201"
-        command: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/users ... | grep -q 201"
-        exitCode: 0
-        stdout: ""
-        stderr: ""
-        verdict: "pass"
-  decisions: []
-  warnings: []
   changedFiles: []
   artifacts:
     - "Acceptance gate report"
 ```
 
-## Semantic Circuit Breaker (New Section in Schema)
+## Pattern-Based Circuit Breaker: Signature Generation
 
-Replace the simple `counters` block with this enhanced structure:
+The `patternSignatures` field tracks distinct failure patterns. Each entry's `signature` is computed as:
 
-```yaml
-circuitBreaker:
-  state: "closed"                        # closed | open | half-open
-  complexity: "moderate"                 # mirrors pipelineComplexity
+```
+SHA256(gate + ":" + agent + ":" + classification + ":" + primaryCause)[:8]
+```
 
-  # ── OLD: Simple counters (retained for backward compatibility) ──
-  counters:
-    build: 0
-    lint: 0
-    securityScan: 0
-    smokeTest: 0
-    verifier: 0
-  thresholds:
-    build: 3
-    lint: 3
-    securityScan: 3
-    smokeTest: 3
-    verifier: 3
+Example:
+```
+# If Fixer fails at Verifier gate with:
+#   gate: "verifier", agent: "fixer"
+#   classification: "plan-omission", primaryCause: "Plan did not specify duplicate email"
+# hash = SHA256("verifier:fixer:plan-omission:Plan did not specify duplicate email")[:8]
+#     = "a1b2c3d4"
 
-  # ── NEW: Semantic failure tracking ──
-  signatures:                           # Track distinct failure patterns
-    - signature: "a1b2c3d4e5f6..."
-      gate: "verifier"
-      agent: "fixer"
-      classification: "plan-omission"
-      primaryCause: "Plan did not specify duplicate email handling"
-      count: 2
-      lastSeen: "2026-05-19T10:35:00Z"
-
-  # ── NEW: Escalation hints from pattern analysis ──
-  escalationSignals:
-    sameSignatureThresholdReached: false     # true when any signature count >= 3
-    sameClassificationThresholdReached: false # true when any classification count >= 3
-    totalDistinctSignatures: 2
-    recommendedAction: "Escalate to PlanDescriber — plan-omission pattern detected"
-
-  # ── OLD: Remaining fields (unchanged) ──
-  patternDetection:
-    persistentDeviations: ["CP-003"]
-    sameClassificationCounts:
-      edge-case-miss: 3
-      implementation-error: 1
-    autoEscalationTriggered: true
-  lastFailure:
-    step: "verifier"
+circuitBreaker.patternSignatures:
+  - signature: "a1b2c3d4"
+    gate: "verifier"
     agent: "fixer"
-    attempt: 2
     classification: "plan-omission"
-    timestamp: "2026-05-19T10:35:00Z"
+    primaryCause: "Plan did not specify duplicate email"
+    count: 2        # Incremented when same signature repeats
+    firstSeen: "2026-05-19T10:25:00Z"
+    lastSeen: "2026-05-19T10:35:00Z"
 ```
 
-### Signature Generation
-The `signature` field is computed as:
-```python
-signature = SHA256(f"{gate}:{agent}:{classification}:{primaryCause}")[:16]
-```
+### Escalation Logic
 
-Using only the first 16 hex characters for readability while maintaining sufficient collision resistance.
-
-### Escalation Logic (replaces simple counter >= 3)
-| Condition | Action | Circuit State Change |
-|-----------|--------|---------------------|
-| Any signature count >= 3 | Open circuit — same fix not working | closed → open |
-| No signature >= 3, but different signatures >= 3 combined | Stay closed — different problems each time | no change |
-| Same classification count >= 3 across different signatures | Auto-escalate to PlanDescriber | closed → half-open |
-| Mixed signatures + mixed classifications >= 5 | Open circuit + user notification | closed → open |
+| Signatures Condition | Circuit State | Action |
+|----------------------|--------------|--------|
+| Any signature.count >= 3 | closed → open | Same fix not working — STOP cycling |
+| Same classification in >= 3 distinct signatures | closed → half-open | Same TYPE of failure — escalate to PlanDescriber |
+| Fixer→Verifier cycle repeats >= 3 times | closed → half-open | Loop detected — skip Fixer, go to PlanDescriber |
+| >= 5 distinct signatures, mixed classifications | closed → open | Multiple different failures — flag for user review |
+| After PlanDescriber revises plan | open → closed | Reset all counters and signatures |
 
 ## Session Resume Data in Journal (Reference)
 
@@ -775,13 +968,15 @@ This field is optional and only used when dynamic context injection is active.
 
 ## Validation Rules Update
 
-Add these rules to the existing set (after rule 14):
+Add these rules to the existing set (after rule 21):
 
-15. `agentHistory[].step` can now also be `integrator`, `documentor`, `acceptanceGate`
-16. If `step` is `integrator`, `wiringSummary` is REQUIRED
-17. If `step` is `documentor`, `docsGenerated` is REQUIRED
-18. If `step` is `acceptanceGate`, `acceptanceResults` is REQUIRED
-19. `circuitBreaker.signatures` MUST be updated every time a gate fails
-20. `circuitBreaker.signatures` entries MUST be deduplicated by `signature` hash
-21. `circuitBreaker.escalationSignals` MUST be recalculated whenever `signatures` is updated
-22. `contextInjection` is OPTIONAL but recommended for pipelines with 4+ agents
+22. `agentHistory[].step` can now also be `integrator`, `documentor`, `acceptanceGate`
+23. If `step` is `integrator`, `wiringSummary` is REQUIRED
+24. If `step` is `documentor`, `docsGenerated` is REQUIRED
+25. If `step` is `acceptanceGate`, `acceptanceResults` is REQUIRED
+26. `circuitBreaker.patternSignatures` entries MUST be deduplicated by `signature` hash — never have duplicate entries for the same signature
+27. `circuitBreaker.escalationSignals` MUST be recalculated whenever `patternSignatures` is updated
+28. `circuitBreaker.escalationSignals.escalationHistory` MUST be append-only — never overwrite entries
+29. `contextInjection` is OPTIONAL but recommended for pipelines with 4+ agents
+30. `agentHistory[].evidence` MUST be populated with at least 1 entry per step that makes substantive claims
+31. `agentHistory[].decisions[].evidence` is RECOMMENDED but not required

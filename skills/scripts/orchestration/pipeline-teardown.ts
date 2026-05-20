@@ -22,6 +22,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { execSync } from 'child_process';
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ interface CliArgs {
   failedGates: string[];
   circuitBreakerEvents: CircuitBreakerEvent[];
   keepContext: boolean;
+  evidenceScan: boolean;
 }
 
 interface CircuitBreakerEvent {
@@ -111,6 +113,39 @@ interface LessonsEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Evidence types
+// ---------------------------------------------------------------------------
+
+interface EvidenceStalenessEntry {
+  agent: string;
+  claim: string;
+  source: string;
+  method: string;
+  status: 'valid' | 'stale' | 'file_deleted' | 'unverifiable';
+  originalHash: string | null;
+  currentHash: string | null;
+}
+
+interface EvidenceStalenessReport {
+  total: number;
+  valid: number;
+  stale: number;
+  fileDeleted: number;
+  unverifiable: number;
+  entries: EvidenceStalenessEntry[];
+}
+
+interface EvidenceQualityMetrics {
+  totalEvidence: number;
+  withContentHash: number;
+  withExactLines: number;
+  withVerifiableMethod: number;
+  avgCompleteness: number;      // % of all fields present
+  avgPrecision: number;         // % with exact line numbers
+  avgVerifiability: number;     // % with verifiable method
+}
+
+// ---------------------------------------------------------------------------
 // Path resolution
 // ---------------------------------------------------------------------------
 
@@ -155,11 +190,17 @@ function parseArgs(): CliArgs {
     failedGates: [],
     circuitBreakerEvents: [],
     keepContext: false,
+    evidenceScan: true,
   };
 
   for (const arg of args) {
     if (arg === '--keep-context') {
       result.keepContext = true;
+      continue;
+    }
+
+    if (arg === '--no-evidence-scan') {
+      result.evidenceScan = false;
       continue;
     }
 
@@ -205,6 +246,13 @@ function parseArgs(): CliArgs {
         } catch {
           console.error(`❌ --circuit-breaker-events must be valid JSON, got "${value}"`);
           process.exit(1);
+        }
+        break;
+      case '--evidence-scan':
+        if (value === 'false' || value === '0' || value === 'no') {
+          result.evidenceScan = false;
+        } else {
+          result.evidenceScan = true;
         }
         break;
       default:
@@ -1058,6 +1106,333 @@ function getResultEmoji(result: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Evidence staleness scan
+// ---------------------------------------------------------------------------
+
+function computeFileHash(filePath: string): string | null {
+  try {
+    const content = fs.readFileSync(filePath);
+    return crypto.createHash('sha256').update(content).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts all evidence from agentHistory and agentOutputs and checks
+ * whether the source files still exist and their content hashes match.
+ */
+function runEvidenceStalenessScan(rootDir: string, ctx: AgentContextData): EvidenceStalenessReport {
+  const entries: EvidenceStalenessEntry[] = [];
+
+  // 1. Extract evidence from agentHistory
+  for (const historyEntry of ctx.agentHistory) {
+    // Check if the output field looks like evidence with structured data
+    if (historyEntry.output) {
+      // Try to parse output as JSON with evidence
+      let parsedOutput: any;
+      try {
+        parsedOutput = JSON.parse(historyEntry.output);
+      } catch {
+        parsedOutput = null;
+      }
+
+      if (parsedOutput && typeof parsedOutput === 'object') {
+        // Look for evidence arrays in the output
+        const evidenceList = findEvidenceInObject(parsedOutput);
+        for (const evidence of evidenceList) {
+          entries.push(buildStalenessEntry(historyEntry.agent, evidence, rootDir));
+        }
+      } else {
+        // Treat the entire output as an unverifiable evidence claim
+        entries.push({
+          agent: historyEntry.agent,
+          claim: historyEntry.output.substring(0, 200),
+          source: 'agent-output',
+          method: 'analysis',
+          status: 'unverifiable',
+          originalHash: null,
+          currentHash: null,
+        });
+      }
+    }
+
+    // Check decisions for file references (e.g., "created src/foo.ts")
+    for (const decision of historyEntry.decisions) {
+      // Look for file path references in decisions
+      const fileRefs = extractFileReferences(decision);
+      for (const fileRef of fileRefs) {
+        const fullPath = path.resolve(rootDir, fileRef);
+        const currentHash = computeFileHash(fullPath);
+        const fileExists = fs.existsSync(fullPath);
+
+        entries.push({
+          agent: historyEntry.agent,
+          claim: decision,
+          source: fileRef,
+          method: 'decision',
+          status: fileExists ? 'valid' : 'file_deleted',
+          originalHash: null,
+          currentHash,
+        });
+      }
+    }
+  }
+
+  // 2. Extract evidence from agentOutputs
+  for (const [agentName, output] of Object.entries(ctx.agentOutputs)) {
+    let parsedOutput: any;
+    try {
+      parsedOutput = typeof output === 'string' ? JSON.parse(output) : output;
+    } catch {
+      parsedOutput = null;
+    }
+
+    if (parsedOutput && typeof parsedOutput === 'object') {
+      const evidenceList = findEvidenceInObject(parsedOutput);
+      for (const evidence of evidenceList) {
+        entries.push(buildStalenessEntry(agentName, evidence, rootDir));
+      }
+    }
+  }
+
+  // 3. Aggregate report
+  let validCount = 0;
+  let staleCount = 0;
+  let deletedCount = 0;
+  let unverifiableCount = 0;
+
+  for (const entry of entries) {
+    switch (entry.status) {
+      case 'valid': validCount++; break;
+      case 'stale': staleCount++; break;
+      case 'file_deleted': deletedCount++; break;
+      case 'unverifiable': unverifiableCount++; break;
+    }
+  }
+
+  return {
+    total: entries.length,
+    valid: validCount,
+    stale: staleCount,
+    fileDeleted: deletedCount,
+    unverifiable: unverifiableCount,
+    entries,
+  };
+}
+
+/**
+ * Recursively searches an object for evidence-like structures.
+ * Looks for objects with properties like `source`, `file`, `path`, `contentHash`.
+ */
+function findEvidenceInObject(obj: any, depth: number = 0): any[] {
+  if (depth > 5) return [];
+  if (typeof obj !== 'object' || obj === null) return [];
+
+  const results: any[] = [];
+
+  // Is this object itself an evidence entry?
+  if (obj.source || obj.file || obj.path || obj.contentHash || obj.evidence) {
+    results.push(obj);
+  }
+
+  // Recurse into arrays
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      results.push(...findEvidenceInObject(item, depth + 1));
+    }
+  } else {
+    // Recurse into object keys
+    for (const val of Object.values(obj)) {
+      results.push(...findEvidenceInObject(val, depth + 1));
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Extracts file path references from a decision string.
+ * Matches patterns like "created src/foo.ts", "modified src/bar.ts", "src/baz.ts"
+ */
+function extractFileReferences(text: string): string[] {
+  const refs: string[] = [];
+
+  // Match patterns like: created/modified/added/deleted <path>
+  const actionFilePattern = /\b(?:created|modified|added|deleted|updated|changed|removed)\s+([\w./-]+\.(?:ts|tsx|js|jsx|json|yaml|yml|md|css|scss|html|py|go|rs|java))\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = actionFilePattern.exec(text)) !== null) {
+    refs.push(match[1]);
+  }
+
+  // Match standalone file paths
+  const pathPattern = /\b([\w./-]+\/(?:[\w.-]+\.(?:ts|tsx|js|jsx|json|yaml|yml|md|css|scss|html|py|go|rs|java)))\b/g;
+  while ((match = pathPattern.exec(text)) !== null) {
+    refs.push(match[1]);
+  }
+
+  return [...new Set(refs)];
+}
+
+/**
+ * Builds an EvidenceStalenessEntry from an evidence object.
+ */
+function buildStalenessEntry(agent: string, evidence: any, rootDir: string): EvidenceStalenessEntry {
+  // Determine the source file path
+  const sourcePath = evidence.source || evidence.file || evidence.path || 'unknown';
+  const method = evidence.method || evidence.type || 'analysis';
+  const claim = evidence.claim || evidence.evidence || evidence.description || JSON.stringify(evidence).substring(0, 200);
+
+  // If method is reason/analysis, mark as unverifiable
+  const unverifiableMethods = ['reason', 'analysis', 'inference', 'deduction', 'synthesis'];
+  if (unverifiableMethods.includes(method.toLowerCase())) {
+    return {
+      agent,
+      claim: claim.substring(0, 200),
+      source: sourcePath,
+      method,
+      status: 'unverifiable',
+      originalHash: evidence.contentHash || null,
+      currentHash: null,
+    };
+  }
+
+  // Resolve file path
+  const fullPath = path.resolve(rootDir, sourcePath);
+
+  if (!fs.existsSync(fullPath)) {
+    return {
+      agent,
+      claim: claim.substring(0, 200),
+      source: sourcePath,
+      method,
+      status: 'file_deleted',
+      originalHash: evidence.contentHash || null,
+      currentHash: null,
+    };
+  }
+
+  // Compute current hash
+  const currentHash = computeFileHash(fullPath);
+  const originalHash = evidence.contentHash || null;
+
+  // Compare hashes
+  if (originalHash && currentHash === originalHash) {
+    return {
+      agent,
+      claim: claim.substring(0, 200),
+      source: sourcePath,
+      method,
+      status: 'valid',
+      originalHash,
+      currentHash,
+    };
+  } else if (originalHash && currentHash !== originalHash) {
+    return {
+      agent,
+      claim: claim.substring(0, 200),
+      source: sourcePath,
+      method,
+      status: 'stale',
+      originalHash,
+      currentHash,
+    };
+  } else {
+    // No original hash — can't verify
+    return {
+      agent,
+      claim: claim.substring(0, 200),
+      source: sourcePath,
+      method,
+      status: 'unverifiable',
+      originalHash: null,
+      currentHash,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Evidence quality report
+// ---------------------------------------------------------------------------
+
+function generateEvidenceQualityReport(ctx: AgentContextData): EvidenceQualityMetrics {
+  const allEvidence: any[] = [];
+
+  // Collect all evidence from agentHistory outputs
+  for (const entry of ctx.agentHistory) {
+    if (entry.output) {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(entry.output);
+      } catch {
+        parsed = null;
+      }
+      if (parsed && typeof parsed === 'object') {
+        allEvidence.push(...findEvidenceInObject(parsed));
+      }
+    }
+  }
+
+  // Collect all evidence from agentOutputs
+  for (const output of Object.values(ctx.agentOutputs)) {
+    let parsed: any;
+    try {
+      parsed = typeof output === 'string' ? JSON.parse(output) : output;
+    } catch {
+      parsed = null;
+    }
+    if (parsed && typeof parsed === 'object') {
+      allEvidence.push(...findEvidenceInObject(parsed));
+    }
+  }
+
+  const total = allEvidence.length;
+
+  if (total === 0) {
+    return {
+      totalEvidence: 0,
+      withContentHash: 0,
+      withExactLines: 0,
+      withVerifiableMethod: 0,
+      avgCompleteness: 0,
+      avgPrecision: 0,
+      avgVerifiability: 0,
+    };
+  }
+
+  // Count evidence with specific fields
+  const withContentHash = allEvidence.filter(e => e.contentHash).length;
+  const withExactLines = allEvidence.filter(e => e.line || e.lineStart || e.lines || e.lineEnd).length;
+  const verifiableMethods = ['file', 'code', 'test', 'log', 'output', 'trace', 'diff', 'commit'];
+  const withVerifiableMethod = allEvidence.filter(e => {
+    const method = (e.method || e.type || '').toLowerCase();
+    return verifiableMethods.includes(method);
+  }).length;
+
+  // Compute completeness per entry (what % of known fields are present)
+  const knownFields = ['source', 'claim', 'method', 'contentHash', 'line', 'lineStart', 'lineEnd', 'file', 'path', 'type', 'evidence', 'description'];
+  let totalCompleteness = 0;
+  for (const ev of allEvidence) {
+    const presentFields = knownFields.filter(f => ev[f] !== undefined && ev[f] !== null);
+    totalCompleteness += (presentFields.length / knownFields.length) * 100;
+  }
+
+  const avgCompleteness = Math.round((totalCompleteness / total) * 10) / 10;
+  const avgPrecision = Math.round((withExactLines / total) * 1000) / 10;
+  const avgVerifiability = Math.round((withVerifiableMethod / total) * 1000) / 10;
+
+  return {
+    totalEvidence: total,
+    withContentHash,
+    withExactLines,
+    withVerifiableMethod,
+    avgCompleteness,
+    avgPrecision,
+    avgVerifiability,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Print summary
 // ---------------------------------------------------------------------------
 
@@ -1067,6 +1442,8 @@ function printSummary(
   retrospective: Retrospective,
   calibratedAgentsCount: number,
   lessonsCount: number,
+  stalenessReport?: EvidenceStalenessReport,
+  qualityReport?: EvidenceQualityMetrics,
 ): void {
   const completedCount = ctx
     ? ctx.agentHistory.filter(e => e.result === 'pass' || e.result === 'completed').length
@@ -1128,6 +1505,18 @@ function printSummary(
       const icon = perf.effectiveness === 'good' ? '✓' : perf.effectiveness === 'ok' ? '~' : '✗';
       console.log(`    ${icon} ${perf.role}: ${perf.effectiveness} — ${perf.notes}`);
     }
+  }
+
+  // Evidence staleness summary
+  if (stalenessReport && stalenessReport.total > 0) {
+    console.log(`  Evidence Scan:`);
+    console.log(`    Total: ${stalenessReport.total} | ✅ ${stalenessReport.valid} valid | ⚠️  ${stalenessReport.stale} stale | 🗑️  ${stalenessReport.fileDeleted} deleted | ⏭️  ${stalenessReport.unverifiable} unverifiable`);
+  }
+
+  // Evidence quality summary
+  if (qualityReport && qualityReport.totalEvidence > 0) {
+    console.log(`  Evidence Quality:`);
+    console.log(`    ${qualityReport.totalEvidence} entries | ${Math.round(qualityReport.withContentHash/qualityReport.totalEvidence*100)}% with hash | ${Math.round(qualityReport.withExactLines/qualityReport.totalEvidence*100)}% with lines`);
   }
 
   console.log('');
@@ -1223,8 +1612,75 @@ function main(): void {
   // 5. Delete agent-context.md
   deleteAgentContext(rootDir, args.keepContext);
 
-  // 6. Print summary
-  printSummary(ctx, args, retrospective, historyAgents.size, lessonsCount);
+  // 6. Evidence staleness and quality reports
+  let stalenessReport: EvidenceStalenessReport | undefined;
+  let qualityReport: EvidenceQualityMetrics | undefined;
+
+  if (args.evidenceScan) {
+    // 6a. Run evidence staleness scan
+    stalenessReport = runEvidenceStalenessScan(rootDir, ctx);
+    if (stalenessReport.total > 0) {
+      console.log(`\n🔍 Evidence Staleness Scan:`);
+      console.log(`   Total: ${stalenessReport.total}`);
+      console.log(`   ✅ Valid: ${stalenessReport.valid}`);
+      console.log(`   ⚠️  Stale (file modified): ${stalenessReport.stale}`);
+      console.log(`   🗑️  File deleted: ${stalenessReport.fileDeleted}`);
+      console.log(`   ⏭️  Unverifiable: ${stalenessReport.unverifiable}`);
+
+      if (stalenessReport.stale > 0 || stalenessReport.fileDeleted > 0) {
+        console.log(`   ⚠️ ${stalenessReport.stale + stalenessReport.fileDeleted} evidence entries need attention`);
+        // Print first 3 stale/deleted entries
+        for (const entry of stalenessReport.entries.filter(e => e.status === 'stale' || e.status === 'file_deleted').slice(0, 3)) {
+          console.log(`     [${entry.status}] ${entry.agent}: "${entry.claim.substring(0, 60)}..." → ${entry.source}`);
+        }
+      }
+    }
+
+    // 6b. Generate evidence quality report
+    qualityReport = generateEvidenceQualityReport(ctx);
+    if (qualityReport.totalEvidence > 0) {
+      console.log(`\n📊 Evidence Quality Metrics:`);
+      console.log(`   Total evidence entries: ${qualityReport.totalEvidence}`);
+      console.log(`   With content hash: ${qualityReport.withContentHash} (${Math.round(qualityReport.withContentHash/qualityReport.totalEvidence*100)}%)`);
+      console.log(`   With exact lines: ${qualityReport.withExactLines} (${Math.round(qualityReport.withExactLines/qualityReport.totalEvidence*100)}%)`);
+      console.log(`   Avg completeness: ${qualityReport.avgCompleteness}%`);
+      console.log(`   Avg precision: ${qualityReport.avgPrecision}%`);
+      console.log(`   Avg verifiability: ${qualityReport.avgVerifiability}%`);
+    }
+
+    // 6c. Write evidence quality data to calibration
+    // Call update-calibration.ts with evidence quality metrics
+    try {
+      const scriptPath = getCalibrationScriptPath();
+      if (fs.existsSync(scriptPath) && qualityReport && qualityReport.totalEvidence > 0) {
+        const cmd = [
+          'ts-node',
+          `"${scriptPath}"`,
+          `--agent=evidence-tracker`,
+          `--success=true`,
+          `--effectiveness=good`,
+          `--evidence-total=${qualityReport.totalEvidence}`,
+          `--evidence-with-hash=${qualityReport.withContentHash}`,
+          `--evidence-with-lines=${qualityReport.withExactLines}`,
+          `--evidence-completeness=${qualityReport.avgCompleteness}`,
+          `--evidence-precision=${qualityReport.avgPrecision}`,
+          `--evidence-verifiability=${qualityReport.avgVerifiability}`,
+        ].join(' ');
+
+        execSync(cmd, {
+          encoding: 'utf-8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          timeout: 15000,
+        });
+      }
+    } catch (err: any) {
+      const stderr = err.stderr || err.message || 'unknown error';
+      console.warn(`⚠️  Evidence quality calibration update failed: ${stderr.trim()}`);
+    }
+  }
+
+  // 7. Print summary
+  printSummary(ctx, args, retrospective, historyAgents.size, lessonsCount, stalenessReport, qualityReport);
 
   process.exit(0);
 }

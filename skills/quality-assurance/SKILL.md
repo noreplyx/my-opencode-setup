@@ -212,3 +212,95 @@ ts-node skills/scripts/quality-assurance/check-qa.ts --dir=./ --ci
 > - `references/testing-strategies.md` — Test pyramid, functional/integration/performance/security testing, smoke tests
 > - `references/qa-workflow.md` — Full QA workflow phases, test documentation, acceptance criteria
 > - `references/ci-testing.md` — CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting
+
+## Phase 7: Reproducible Bug Evidence (NEW)
+
+Every bug discovered by QA MUST include **reproducible evidence** — the exact command, its output, and reproduction steps. Without this, the Fixer cannot reliably diagnose and fix the issue.
+
+### Bug Evidence Format
+
+Every bug report MUST include a `evidence` block:
+
+```yaml
+evidence:
+  - claim: "POST /api/users crashes with TypeError when email is null"
+    method: "test"
+    source: "test"
+    command: "curl -s -X POST http://localhost:3000/api/users -H 'Content-Type: application/json' -d '{\"name\":\"Alice\"}'"
+    excerpt: |
+      HTTP/1.1 500 Internal Server Error
+      TypeError: Cannot read properties of null (reading 'includes')
+          at validateEmail (src/services/user.ts:42)
+    result: "failed"
+    lines: [42, 42]
+  - claim: "Smoke test: app boots successfully"
+    method: "test"
+    source: "test"
+    command: "npm start & sleep 3 && curl -s http://localhost:3000/health"
+    excerpt: '{"status":"ok"}'
+    result: "passed"
+```
+
+### Evidence Requirements by Test Type
+
+| Test Type | Required Evidence | Minimum Fields |
+|-----------|------------------|----------------|
+| **Smoke Test** | Command used, exit code, app response | `claim`, `method`, `command`, `excerpt`, `result` |
+| **Functional Test** | Command/test name, pass/fail count, failed test output | `claim`, `method`, `command`, `excerpt`, `result` |
+| **Edge Case** | Input values, expected vs actual output | `claim`, `method`, `command`, `excerpt`, `result` |
+| **Bug Report** | Full reproduction steps, request, response, stack trace | `claim`, `method`, `command`, `excerpt`, `result`, `lines` |
+| **Non-Functional Issue** | Tool used, metric value, threshold comparison | `claim`, `method`, `command`, `excerpt`, `result` |
+| **Regression Impact** | Import graph, affected modules | `claim`, `method`, `command`, `excerpt`, `result` |
+
+### Output Schema Update
+
+Include evidence in the structured output contract:
+
+```
+---
+status: "completed" | "failed" | "partial"
+resultSummary: "2-3 sentence summary of QA outcome"
+agentOutputs:
+  qa:
+    status: "completed" | "failed" | "partial"
+    resultSummary: "Brief summary of QA findings"
+    evidence:                    # NEW
+      - claim: "Smoke test passed"
+        method: "test"
+        source: "test"
+        command: "npm start & sleep 3 && curl -s http://localhost:3000/health"
+        excerpt: '{"status":"ok"}'
+        result: "passed"
+      - claim: "Edge case: null email returns 400"
+        method: "test"
+        source: "test"
+        command: "curl -s -w '%{http_code}' -X POST http://localhost:3000/api/users -H 'Content-Type: application/json' -d '{\"name\":\"Alice\"}'"
+        excerpt: "HTTP 400"
+        result: "passed"
+evidence:                         # NEW — top-level for cross-cutting claims
+  - claim: "All smoke and functional tests passed"
+    method: "analysis"
+    source: "test"
+    command: "Aggregated from individual test results"
+    excerpt: "Smoke: ✅, Functional: 5/5 pass, Edge cases: 3/3 pass"
+    result: "analysis_complete"
+decisions:
+  - what: "Test decision description"
+    why: "Rationale"
+    by_who: "qa"
+warnings: []
+changedFiles:
+  - "path/to/test/file.ts"
+artifacts:
+  - "QA report"
+---
+```
+
+### Hard Rules Update
+
+- ❌ NEVER report a bug without reproducible evidence (command + output + reproduction steps)
+- ❌ NEVER report a test as passed without showing the command and output excerpt
+- ✅ ALWAYS include the exact command used to reproduce each bug
+- ✅ ALWAYS include the exact output/error for failed tests
+- ✅ ALWAYS include line numbers for bugs that reference specific code locations
+- ✅ ALWAYS include reproduction steps in the bug description

@@ -35,7 +35,7 @@
       "source": "local",
       "sourceType": "local",
       "skillPath": "skills/frontend-code-philosophy/SKILL.md",
-      "computedHash": "1271dad3c2d765313c2ec6962f1a4028e27b3ceb0b9c92acc87ab02d663f1e96"
+      "computedHash": "1271dad3c2dec313c2ec6962f1a4028e27b3ceb0b9c92acc87ab02d663f1e96"
     },
     "orchestration": {
       "source": "local",
@@ -78,6 +78,12 @@
       "sourceType": "local",
       "skillPath": "skills/quality-assurance/SKILL.md",
       "computedHash": "7f3b31c182f68b6e82228447e8a090b30ee9af158262fb853d3d2169ae50b425"
+    },
+    "shared-agent-workflow": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/shared-agent-workflow/SKILL.md",
+      "computedHash": "shared-v1"
     },
     "skill-creator": {
       "source": "anthropics/skills",

@@ -64,6 +64,7 @@ export interface AgentSchema {
 const BASE_TOP_LEVEL_FIELDS: FieldRule[] = [
   { name: 'status', type: 'string', required: true },
   { name: 'resultSummary', type: 'string', required: true },
+  { name: 'evidence', type: 'array', required: true, elementType: 'object' },
   { name: 'decisions', type: 'array', required: true, elementType: 'object' },
   { name: 'warnings', type: 'array', required: true, elementType: 'string' },
   { name: 'changedFiles', type: 'array', required: true, elementType: 'string' },

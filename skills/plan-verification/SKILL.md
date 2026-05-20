@@ -371,3 +371,130 @@ In addition to structural and behavioral kinds, the Verifier now supports `accep
 - ✅ ALWAYS start the application if acceptance criteria checkpoints exist in the manifest
 - ✅ ALWAYS stop the application after all acceptance checks complete
 - ✅ ALWAYS report the exit code and captured output for failed acceptance criteria checkpoints
+
+## Pass 5: Evidence Anchoring (NEW — Mandatory)
+
+Every checkpoint verdict MUST include anchored evidence showing exactly what was checked and what was found. Without this, the Verifier's claims cannot be independently verified.
+
+### Evidence Format
+
+For every checkpoint, include an `evidence` block in the structured output:
+
+```yaml
+evidence:
+  - claim: "CP-001: fileExists for src/services/user.ts"
+    source: "src/services/user.ts"
+    method: "stat"
+    command: "ls src/services/user.ts 2>&1"
+    excerpt: "src/services/user.ts"
+    result: "exists"
+  - claim: "CP-003: exportExists 'validateEmail' in src/services/user.ts"
+    source: "src/services/user.ts"
+    method: "grep"
+    command: "grep -n 'export.*validateEmail' src/services/user.ts"
+    excerpt: "(no match — export not found)"
+    result: "not_found"
+  - claim: "CP-008: handlesError for createUser on duplicate email"
+    source: "src/services/user.ts"
+    method: "grep"
+    command: "grep -n 'ConflictError|duplicate email|409' src/services/user.ts"
+    excerpt: "Line 44: throw new ConflictError('Email already registered');"
+    result: "found"
+```
+
+### Evidence Methods by Checkpoint Kind
+
+| Checkpoint Kind | Recommended Method | Command Pattern |
+|----------------|-------------------|-----------------|
+| `fileExists` | `stat` | `ls <path> 2>&1` |
+| `fileNotExists` | `glob` | `ls <path> 2>&1; echo "exit: $?"` |
+| `exportExists` | `grep` | `grep -n 'export.*<Name>' <file>` |
+| `classExists` | `grep` | `grep -n 'export class <Name>' <file>` |
+| `functionExists` | `grep` | `grep -n 'export function <Name>' <file>` |
+| `methodExists` | `read` | `sed -n '/class <Name>/,/^}/p' <file>` |
+| `typeExists` | `grep` | `grep -n 'export (type|interface) <Name>' <file>` |
+| `routeExists` | `grep` | `grep -n 'app\.<method>\|<router>\.<method>' <file>` |
+| `handlesError` | `read` | `sed -n '<start>,<end>p' <file> # read the method body` |
+| `validatesInput` | `read` | `sed -n '<start>,<end>p' <file> # read the method body` |
+| `logsAtLevel` | `grep` | `grep -n 'logger\.<level>(' <file>` |
+| `hasMiddleware` | `grep` | `grep -n '<middlewareName>' <file>` |
+| `acceptanceCriteria` | `test` | Execute the `testCommand` and capture exit code + output |
+
+### Failure Evidence Specifics
+
+For every **Failed** checkpoint, the evidence MUST include the exact output that proves the failure:
+
+```yaml
+evidence:
+  - claim: "CP-003: exportExists 'validateEmail' — FAILED"
+    source: "src/services/user.ts"
+    method: "grep"
+    command: "grep -n 'export.*validateEmail' src/services/user.ts"
+    excerpt: "Command produced no output — export 'validateEmail' not found"
+    result: "not_found"
+```
+
+For every **Passed** checkpoint, the evidence MUST include a relevant excerpt:
+
+```yaml
+evidence:
+  - claim: "CP-001: fileExists for src/services/user.ts — PASSED"
+    source: "src/services/user.ts"
+    method: "stat"
+    command: "ls src/services/user.ts 2>&1"
+    excerpt: "src/services/user.ts"
+    result: "exists"
+```
+
+### Hard Rules Update
+
+- ❌ NEVER report a checkpoint verdict without accompanying evidence
+- ❌ NEVER report "exists" or "found" as evidence result without also showing the excerpt
+- ✅ ALWAYS include the exact command used to verify each checkpoint
+- ✅ ALWAYS include the raw output excerpt (even for failures — show what was found instead)
+- ✅ ALWAYS include line numbers in the excerpt when using read method
+- ✅ ALWAYS include exit code for acceptance criteria evidence
+
+### Output Schema Update
+
+Include evidence in the structured output contract as a top-level field:
+
+```
+---
+status: "completed" | "failed" | "partial"
+resultSummary: "2-3 sentence summary of verification results"
+agentOutputs:
+  verifier:
+    status: "completed" | "failed" | "partial"
+    resultSummary: "Brief summary"
+    buildPassed: null
+    lintPassed: null
+    evidence:                    # NEW — one entry per checkpoint
+      - claim: "CP-001: fileExists — ✅ Pass"
+        source: "src/services/user.ts"
+        method: "stat"
+        command: "ls src/services/user.ts 2>&1"
+        excerpt: "src/services/user.ts"
+        result: "exists"
+      - claim: "CP-003: exportExists validateEmail — ❌ Fail"
+        source: "src/services/user.ts"
+        method: "grep"
+        command: "grep -n 'export.*validateEmail' src/services/user.ts"
+        excerpt: "(no output — not found)"
+        result: "not_found"
+    suggestedCheckpoints: [...]
+    driftDetection: {...}
+evidence:                         # NEW — top-level cross-cutting evidence
+  - claim: "Structural pass: 5/5 passed"
+    source: "aggregate"
+    method: "analysis"
+    command: "Aggregated from individual checkpoint evidence"
+    excerpt: "5 structural, 3 behavioral, 2 acceptance"
+    result: "analysis_complete"
+decisions: [...]
+warnings: [...]
+changedFiles: []
+artifacts:
+  - "Verification report"
+---
+```
