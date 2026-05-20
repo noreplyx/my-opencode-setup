@@ -28,6 +28,7 @@ interface PipelineArgs {
   pipelineType: string;
   pipelineComplexity: 'simple' | 'moderate' | 'complex';
   confidence: number;
+  skipReadiness: boolean;
 }
 
 interface JournalEntry {
@@ -126,7 +127,15 @@ function parseArgs(): PipelineArgs {
   const confidenceRaw = confidenceArg ? parseInt(confidenceArg, 10) : 80;
   const confidence = isNaN(confidenceRaw) ? 80 : Math.max(0, Math.min(100, confidenceRaw));
 
-  return { feature, pipelineType, pipelineComplexity, confidence };
+  const skipReadiness = args.some(a => a === '--skip-readiness');
+
+  const validTypes = ['full', 'quick', 'fixer-only', 'parallel-feature', 'tdd', 'security-fix', 'ui-bug', 'documentation', 'micro-pipeline', 'refactor', 'research'];
+  if (pipelineType && !validTypes.includes(pipelineType)) {
+    console.warn(`⚠️  Unknown pipeline type "${pipelineType}". Valid types: ${validTypes.join(', ')}`);
+    // Don't exit — let it proceed with the unknown type
+  }
+
+  return { feature, pipelineType, pipelineComplexity, confidence, skipReadiness };
 }
 
 // ---------------------------------------------------------------------------
@@ -673,6 +682,12 @@ function printSummary(
 
   console.log('');
 
+  // Agent readiness section (if check ran)
+  console.log('Agent Readiness:');
+  // The readiness check runs in main() before printSummary, so the output is already shown
+  console.log('  See above for agent readiness details');
+  console.log('');
+
   // Cross-session learning section
   console.log('Cross-Session Learning:');
 
@@ -798,6 +813,34 @@ function main(): void {
     console.log('');
     console.log('After cleanup, re-run pipeline-init.ts.');
     process.exit(2);
+  }
+
+  // 2b. Agent readiness check — verify required agents have correct permissions
+  if (args.pipelineType !== 'documentation' && !args.skipReadiness) {
+    const readinessResult = execSafe(
+      `ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType} 2>&1`,
+      15000,
+    );
+    
+    if (readinessResult.exitCode !== 0) {
+      console.log('');
+      console.log('⚠️  AGENT READINESS CHECK FAILED');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(readinessResult.stderr || readinessResult.stdout);
+      console.log('');
+      console.log('Some agents required for this pipeline are not properly configured.');
+      console.log('Run the check manually for details:');
+      console.log(`  ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType}`);
+      console.log('');
+      console.log('To fix: Ensure all required agent config files exist with correct permissions.');
+      process.exit(3);
+    }
+    
+    // Parse the readiness output and log agent statuses
+    const readinessOutput = readinessResult.stdout || readinessResult.stderr || '';
+    if (readinessOutput.length > 0) {
+      console.log(readinessOutput);
+    }
   }
 
   // 3. Ensure pipeline logs directory

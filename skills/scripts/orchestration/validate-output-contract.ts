@@ -61,6 +61,24 @@ export interface AgentSchema {
 
 // ── Schema Definitions ──
 
+const PIPELINE_ERROR_CHILDREN: FieldRule[] = [
+  { name: 'errorCode', type: 'string', required: true },
+  { name: 'category', type: 'string', required: true },
+  { name: 'severity', type: 'string', required: true },
+  { name: 'detector', type: 'string', required: false },
+  { name: 'checkpointId', type: 'string', required: false },
+  { name: 'rootCause', type: 'string', required: true },
+  { name: 'reproduction', type: 'string', required: false },
+  { name: 'firstSeenSession', type: 'string', required: false },
+  { name: 'timesSeen', type: 'number', required: false },
+];
+
+const ROLLBACK_CHILDREN: FieldRule[] = [
+  { name: 'checkpointCommit', type: 'string', required: true },
+  { name: 'rollbackCommand', type: 'string', required: true },
+  { name: 'filesChanged', type: 'array', required: false, elementType: 'string' },
+];
+
 const BASE_TOP_LEVEL_FIELDS: FieldRule[] = [
   { name: 'status', type: 'string', required: true },
   { name: 'resultSummary', type: 'string', required: true },
@@ -69,6 +87,12 @@ const BASE_TOP_LEVEL_FIELDS: FieldRule[] = [
   { name: 'warnings', type: 'array', required: true, elementType: 'string' },
   { name: 'changedFiles', type: 'array', required: true, elementType: 'string' },
   { name: 'artifacts', type: 'array', required: true, elementType: 'string' },
+  // v2.0 fields (optional)
+  { name: 'pipelineError', type: 'object', required: false, children: PIPELINE_ERROR_CHILDREN },
+  { name: 'sources', type: 'array', required: false, elementType: 'object' },
+  { name: 'rollback', type: 'object', required: false, children: ROLLBACK_CHILDREN },
+  { name: 'diagnostics', type: 'array', required: false, elementType: 'object' },
+  { name: 'checkpointResults', type: 'array', required: false, elementType: 'object' },
 ];
 
 const AGENT_OUTPUT_BASE_FIELDS: FieldRule[] = [
@@ -159,6 +183,7 @@ const SCHEMAS: AgentSchema[] = [
       { name: 'lintPassed', type: 'boolean', required: true, nullable: true },
       { name: 'buildOutput', type: 'string', required: true, nullable: true },
       { name: 'lintOutput', type: 'string', required: true, nullable: true },
+      { name: 'diagnostics', type: 'array', required: false, elementType: 'object' },
       {
         name: 'rootCauseAnalysis',
         type: 'object',
@@ -245,6 +270,7 @@ const SCHEMAS: AgentSchema[] = [
       { name: 'lintOutput', type: 'null', required: true },
       { name: 'suggestedCheckpoints', type: 'array', required: false, elementType: 'object' },
       { name: 'driftDetection', type: 'object', required: false },
+      { name: 'checkpointResults', type: 'array', required: false, elementType: 'object' },
     ],
   },
   // ── QA ──
@@ -765,6 +791,21 @@ function validateFields(
             const elem = value[i];
             if (typeof elem !== 'object' || elem === null) {
               issues.push({ type: 'error', message: `Wrong type: ${fieldPath}[${i}] expected object got ${elem === null ? 'null' : typeof elem}` });
+            } else if (rule.name === 'evidence' || rule.name === 'sources') {
+              // Recursive validation: evidence/sources items must have required fields
+              const evFields: FieldRule[] = [
+                { name: 'claim', type: 'string', required: true },
+                { name: 'source', type: 'string', required: true },
+                { name: 'method', type: 'string', required: true },
+                { name: 'command', type: 'string', required: true },
+                { name: 'excerpt', type: 'string', required: true },
+                { name: 'result', type: 'string', required: true },
+                { name: 'lines', type: 'array', required: false, elementType: 'number' },
+                { name: 'contentHash', type: 'string', required: false },
+                { name: 'timestamp', type: 'string', required: false },
+                { name: 'qualityScore', type: 'object', required: false },
+              ];
+              issues.push(...validateFields(elem as Record<string, unknown>, evFields, `${fieldPath}[${i}]`));
             }
           }
         } else if (rule.elementType === 'string') {
@@ -1101,6 +1142,12 @@ function validatePipeline(filePath: string): ValidationResult[] {
 function main(): void {
   const args = process.argv.slice(2);
 
+  if (args.includes('--version')) {
+    console.log('validate-output-contract.ts v2.0');
+    console.log('Output Contract Validator for OpenCode orchestration system');
+    process.exit(0);
+  }
+
   const fileArg = args.find(a => a.startsWith('--file='));
   const agentArg = args.find(a => a.startsWith('--agent='));
   const pipelineArg = args.includes('--pipeline');
@@ -1226,6 +1273,8 @@ Usage:
   ts-node validate-output-contract.ts --file=<path> [--agent=<name>]
   ts-node validate-output-contract.ts --agent=<name>          (pipe YAML via stdin)
   ts-node validate-output-contract.ts --pipeline              (validates agent-context.md)
+
+  v2.0 — New fields validated: pipelineError, sources, rollback, diagnostics, checkpointResults
 
 Agents: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester
 `);

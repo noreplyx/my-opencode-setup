@@ -5,6 +5,26 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 
 # Skill: orchestration
 
+## Quick Reference — New in v2.0
+
+| Improvement | Script/Skill | Purpose |
+|-------------|-------------|---------|
+| **Pipeline State Machine** | `validate-transition.ts` | Enforces valid agent step transitions |
+| **Build Command Detection** | `detect-project-commands.ts` | Auto-discovers build/lint/test commands |
+| **Parallel Dispatch** | `parallel-dispatch.ts` | Native parallel dispatch with phase grouping |
+| **Parallel Security Scan** | `parallel-security-scan.ts` | Runs 6 security scans in parallel |
+| **Citation Index** | `citation-index.ts` | Cross-session checkpoint failure patterns |
+| **Shared Test Manifest** | `shared-test-manifest.ts` | QA + Browser Tester coordination |
+| **Unified Error Taxonomy** | `unified-pipeline-error-schema.ts` | Typed PipelineError with 30 error codes |
+| **Agent Readiness Check** | `check-agent-readiness.ts` | Pre-flight agent permission verification |
+| **Provenance Tracker** | `provenance-tracker.ts` | File-level checkpoint lifecycle tracking |
+| **Implementor Workflow** | `skills/implementor-workflow/SKILL.md` | Decoupled workflow for Implementor |
+| **Fixer Workflow** | `skills/fixer-workflow/SKILL.md` | Decoupled workflow for Fixer |
+| **QA Workflow** | `skills/qa-workflow/SKILL.md` | Decoupled workflow for QA |
+| **Verifier Workflow** | `skills/verifier-workflow/SKILL.md` | Decoupled workflow for Verifier |
+| **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
+| **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
+
 ## Core Principles
 
 ### 1. Multi-Agent Orchestration
@@ -182,6 +202,23 @@ This script performs:
    - Check lockfile age — if last `npm audit` was > 7 days, warn about stale audit
    - These checks protect against supply chain attacks before any `npm install` runs during the build gate
 
+6. **Agent Readiness Check (NEW)**: After the security check, run the automated agent readiness verification:
+
+   ```bash
+   ts-node skills/scripts/orchestration/check-agent-readiness.ts --agents=<agent1,agent2,...>
+   ```
+
+   Or for pipeline-type-based selection:
+   ```bash
+   ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=<type>
+   ```
+
+   This verifies:
+   - Required agent config files exist
+   - Agents have the correct tool permissions (write, bash, edit)
+   - Agents have the required skill access (shared-agent-workflow, code-philosophy, etc.)
+   - If any agent is not ready, the pipeline is blocked with a clear error message
+
 ### Pre-Flight Report
 The script prints a summary report that the Orchestrator should relay to the user, including:
 - ✅ / ❌ / ⚠️ for each pre-flight check
@@ -219,6 +256,8 @@ If an agent submits evidence quality < 70 for 3 consecutive attempts:
 1. First low quality: Warn agent with specific feedback
 2. Second low quality: Cycle back with explicit evidence template
 3. Third low quality: Open circuit breaker → escalate to Orchestrator
+
+> **v2.0 Enhancement**: The `validate-truth.ts` script now supports stale evidence detection (`--stale-detection`), auto-refresh (`--refresh-stale`), and evidence quality scoring (`--quality-report`). Run `validate-truth.ts --pipeline --quality-report` for the full pipeline evidence quality assessment.
 
 ### Pipeline Teardown (Automated)
 
@@ -284,6 +323,24 @@ Every implementation MUST pass through these mandatory validation gates:
 - SAST findings (path traversal, command injection, etc.) → FAIL for Critical, WARN for High/Medium
 - The Security Scan MUST NOT modify any files
 
+### Parallel Security Scan (NEW)
+The security scan now runs all 6 scan types in parallel using the `parallel-security-scan.ts` script:
+
+```bash
+ts-node skills/scripts/orchestration/parallel-security-scan.ts --dir=./
+```
+
+This runs concurrently:
+1. npm audit — dependency vulnerability scan
+2. Secrets detection — hardcoded credentials search
+3. Anti-pattern scan — eval, innerHTML, dangerous patterns
+4. SAST scan — deep static analysis (check-security.ts)
+5. Supply chain scan — install scripts, typosquatting (check-supply-chain.ts)
+6. Git history scan — secrets committed to git
+
+Aggregates results and produces a unified security report with a single pass/fail/warn verdict.
+The total wall-clock time is roughly the slowest single scan (not the sum of all 6).
+
 #### Re-Audit on Dependency Change (NEW)
 If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` during the pipeline:
 1. The dependency scan MUST be re-run after the modification
@@ -296,6 +353,28 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 - If the smoke test fails, QA reports it as a Critical severity bug
 - The Orchestrator reviews the report and cycles to the **Fixer agent** for diagnosis and fix
 - After Fixer applies the fix, QA re-runs the smoke test
+
+### Shared Test Manifest (NEW)
+When QA and Browser Tester run in parallel, use the shared test manifest to coordinate:
+
+```bash
+# Generate from plan manifest
+ts-node skills/scripts/orchestration/shared-test-manifest.ts --generate --manifest=... --feature=<name> --out=.opencode/test-manifest.yaml
+
+# Check status
+ts-node skills/scripts/orchestration/shared-test-manifest.ts --status
+
+# QA marks logic tests complete
+ts-node skills/scripts/orchestration/shared-test-manifest.ts --complete --test-type=logic --test-file=tests/unit/... --result=pass
+
+# Browser Tester marks UI tests complete
+ts-node skills/scripts/orchestration/shared-test-manifest.ts --complete --test-type=ui --test-file=tests/e2e/... --result=pass
+
+# Wait for all to finish before proceeding to Verifier
+ts-node skills/scripts/orchestration/shared-test-manifest.ts --wait --timeout=300000
+```
+
+This prevents the race condition where "QA passed but Browser Tester was never run."
 
 ## Agent Hand-off Protocol
 
@@ -461,6 +540,23 @@ Every plan manifest checkpoint now tracks its lifecycle through the pipeline:
 
 This enables the Verifier and Fixer to trace exactly what evidence was collected at each step.
 
+### Provenance Tracking (NEW)
+After each agent completes, track checkpoint provenance:
+
+```bash
+# Implementor records implementation evidence
+ts-node skills/scripts/orchestration/provenance-tracker.ts --implement --manifest=... --agent=implementor --session=<ses_id> --file=<path> --lines=<range> --claim="..."
+
+# Verifier records verification results
+ts-node skills/scripts/orchestration/provenance-tracker.ts --verify --manifest=... --checkpoint=<id> --verdict=<pass|fail> --evidence="command" --result=<found|not_found>
+
+# Fixer records fix
+ts-node skills/scripts/orchestration/provenance-tracker.ts --fix --manifest=... --checkpoint=<id> --agent=fixer --session=<ses_id> --file=<path> --lines=<range> --claim="..."
+
+# View full provenance chain
+ts-node skills/scripts/orchestration/provenance-tracker.ts --view --manifest=... --checkpoint=<id>
+```
+
 ## Project Journal Protocol
 
 ### Purpose
@@ -493,6 +589,25 @@ After every pipeline that:
 - **Before starting a pipeline** in a new session: read the journal to understand past work
 - **Before dispatching PlanDescriber**: read the journal to check for relevant past decisions
 - **Before dispatching Finder**: read the journal so you know what's already been explored
+
+### Citation Index (NEW)
+The citation index maps checkpoint IDs to past pipeline results. It enables PlanDescriber to see patterns (e.g., "CP-003 has failed 3 times before") and proactively add guardrails.
+
+```bash
+# Build/refresh index
+ts-node skills/scripts/orchestration/citation-index.ts --build
+
+# Query a specific checkpoint
+ts-node skills/scripts/orchestration/citation-index.ts --checkpoint=CP-003
+
+# Query all checkpoints in a manifest
+ts-node skills/scripts/orchestration/citation-index.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json
+
+# Show summary statistics
+ts-node skills/scripts/orchestration/citation-index.ts --stats
+```
+
+The index is stored at `.opencode/cache/citation-index.json`.
 
 ## Agent Action Audit Trail (NEW)
 
@@ -548,6 +663,40 @@ Audit logs are stored at `.opencode/audit/<pipeline-id>.audit.yaml`
 
 ### Stale Audit Log Cleanup
 Audit logs older than 30 days should be archived or deleted during pipeline teardown.
+
+## Unified Error Taxonomy (NEW)
+
+All pipeline errors are now standardized across all agents using the canonical `PipelineError` type defined in `unified-pipeline-error-schema.ts`. This replaces the previous stringly-typed error classifications.
+
+### Error Code Categories
+| Prefix | Category | Example |
+|--------|----------|---------|
+| PLN | Plan | PLN-001: Missing checkpoint |
+| IMP | Implementation | IMP-001: Missing export |
+| INT | Integration | INT-001: Broken import |
+| ENV | Environment | ENV-001: Missing tool |
+| SEC | Security | SEC-001: Critical vulnerability |
+
+### Fixer Classification → Error Code Mapping
+| Fixer Classification | Mapped Error Code |
+|---------------------|-------------------|
+| plan-omission | PLN-001 or PLN-002 |
+| implementation-error | IMP-001, IMP-002, or IMP-003 |
+| edge-case-miss | IMP-004 or IMP-005 |
+| integration-mismatch | INT-001, INT-002, or INT-003 |
+| environment-issue | ENV-001, ENV-002, or ENV-003 |
+
+### Usage
+```bash
+# Look up an error code
+ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --lookup=IMP-001
+
+# Validate an error object
+ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --validate
+
+# Classify a fixer root cause
+ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --classify="Missing export in user.ts" --fixer-classification=implementation-error
+```
 
 ## Pipeline Retrospective Protocol
 
@@ -779,6 +928,21 @@ When all 3 return, check:
 - Types used in services match types defined in types file
 - Controller methods match service method signatures
 
+### Automated Dispatch Manifest Generation (NEW)
+After check-parallelism.ts produces a recommendation, use parallel-dispatch.ts to generate dispatch manifests:
+
+```bash
+ts-node skills/scripts/orchestration/parallel-dispatch.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json --pipeline-id=<id>
+```
+
+This creates per-phase dispatch manifests at `.opencode/dispatch/<pipelineId>/phase-<N>.json` with:
+- File-level checkpoint breakdown
+- Agent instructions
+- Phase dependency ordering
+- Post-phase actions (mergeAfter, integrateAfter)
+
+Use `--dry-run` to preview, `--plan` for human-readable output, and `--verify` for consistency checking.
+
 ### Merge Coordinator Protocol
 
 After dispatching parallel Implementors (multiple instances writing to independent files), the Orchestrator dispatches the **Merge Coordinator** before the Build Gate:
@@ -987,12 +1151,13 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` | Dependency and secrets scanning |
+| Security Scan | `security-scan` or `security-workflow` | Dependency scanning + shared security patterns |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
 | Documentation | `api-documentation` | README, API docs, inline comments, ADRs |
 | Pre-Flight | `smart-finder` | Cross-session journal search + proactive hazard detection |
+| Parallel Dispatch | `parallel-dispatch` + `check-parallelism` | Phase-based parallel implementor dispatch |
 
 ### Agent Health Monitoring (NEW)
 
