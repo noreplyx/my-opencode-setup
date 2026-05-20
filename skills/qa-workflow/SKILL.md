@@ -268,6 +268,11 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `coverage.totalCoverage` | Overall coverage percentage |
 | `coverage.files` | Per-file coverage data |
 | `securityTestsGenerated` | Number of security test files created |
+| `securityTestCoverage.patternsDetected` | Number of security patterns found in modified code |
+| `securityTestCoverage.testsGenerated` | Number of security tests actually created |
+| `securityTestCoverage.coverage` | Coverage percentage (testsGenerated / patternsDetected * 100) |
+| `securityTestCoverage.gatePassed` | Whether coverage meets the ≥ 80% threshold |
+| `securityTestCoverage.missingTests` | List of untested patterns with documented skip reasons |
 
 ### Sources Block (C1 Compliance)
 

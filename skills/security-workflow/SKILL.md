@@ -1,6 +1,6 @@
 ---
 name: security-workflow
-description: Shared security workflow for all subagents. Provides security self-review checklist, auto-detection tables for security anti-patterns, security regression test generation mapping, vulnerability severity classification, common anti-pattern fixes, and parallel security scan protocol. Load this skill when performing any security-sensitive task: implementation, fixing, verification, or QA testing.
+description: Shared security workflow for all subagents. Provides security self-review checklist, auto-detection tables for security anti-patterns, security regression test generation mapping, security test coverage gate, vulnerability severity classification, common anti-pattern fixes, and parallel security scan protocol. Load this skill when performing any security-sensitive task: implementation, fixing, verification, or QA testing.
 ---
 
 # Security Workflow Skill
@@ -12,6 +12,8 @@ A shared security knowledge base that consolidates patterns, anti-patterns, scan
 After writing or modifying code, run this mandatory 15-item self-review against every created/modified file. Answer each question for every file.
 
 > **Note for Implementor agents**: Integrate this into your Security Self-Review step after writing code and before the Pre-Build Import Validation.
+
+> **Note for Fixer agents**: Re-run the self-review after applying any security-related fix. Report the results in `securityFixDetails.selfReviewPassed`.
 
 ### The Checklist
 
@@ -97,6 +99,46 @@ Used by QA agents to generate security regression tests. For each pattern detect
 | 11 | **SSRF** | SSRF test | Send URL pointing to `169.254.169.254` (metadata IP), `127.0.0.1`, or custom DNS; verify blocked |
 | 12 | **Prototype Pollution** | Prototype pollution test | Send payload with `{"__proto__": {"admin": true}}`, verify no pollute |
 | 13 | **Zip Slip** | Zip slip test | Create zip with symlink or `../` paths, verify extraction fails |
+
+### Security Test Coverage Gate (NEW)
+
+After generating tests for the detected patterns, produce a **security test coverage report** that the Verifier will use to gate the pipeline:
+
+```yaml
+securityTestCoverage:
+  patternsDetected: 5             # Number of security patterns found in modified code (from Section 2 auto-detection)
+  testsGenerated: 4               # Number of tests actually created
+  coverage: 80.0                  # Percentage (testsGenerated / patternsDetected * 100)
+  gatePassed: true                # true if coverage >= 80%
+  missingTests:
+    - pattern: "SSRF Protection"
+      file: "src/services/http.ts"
+      risk: "High"
+      reason: "SSRF pattern detected but user-input URL flow too complex to test without mocking infrastructure"
+```
+
+#### Coverage Calculation Rules
+
+| Scenario | Coverage | Notes |
+|----------|----------|-------|
+| All patterns tested | 100% | ✅ Full coverage |
+| Some patterns skipped (valid reason) | 80-99% | ✅ Pass gate with note |
+| Some patterns skipped (no valid reason) | < 80% | ❌ Fail gate — block pipeline |
+| No patterns detected | N/A | ⏭️ Gate skipped (not applicable) |
+| No tests generated at all | 0% | ❌ Fail gate — block pipeline |
+
+#### Valid Skip Reasons
+
+When a pattern cannot be tested, it MUST have a documented valid reason:
+- `not_applicable` — Pattern not relevant to this code change (e.g., Zip Slip in a JSON API)
+- `needs_mock_infrastructure` — Requires mocking that doesn't exist
+- `already_covered_by_existing_test` — Existing test already covers this pattern
+- `blocked_by_dependency` — Can't test without a dependency that isn't installed
+
+Invalid reasons (these fail the gate):
+- `ran_out_of_time`
+- `too_difficult`
+- `not_important`
 
 ## 4. Parallel Security Scan Protocol
 
@@ -239,17 +281,20 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 | Agent | When to Load This Skill | What to Use |
 |-------|------------------------|-------------|
 | Implementor | After writing code, before build | Section 1 (Self-Review Checklist) |
-| Fixer | When fixing security-related bugs | Section 5 (Severity), Section 6 (Anti-Pattern Fixes) |
-| Verifier | Pass 2b — security checkpoint detection | Section 2 (Auto-Detection Table) |
-| QA | Security regression test generation | Section 3 (Test Generation Table) |
+| Fixer | When fixing security-related bugs | Section 1 (Self-Review — re-run after fix), Section 5 (Severity), Section 6 (Anti-Pattern Fixes) |
+| Verifier | Pass 2b — security checkpoint detection and security test coverage gate | Section 2 (Auto-Detection Table), Section 3 (Test Generation Table — for coverage reconciliation) |
+| QA | Security regression test generation | Section 3 (Test Generation Table + Coverage Gate output format) |
 | Security Scanner | Running parallel security scans | Section 4 (Parallel Scan Protocol), Section 7 (Report Format) |
-| Orchestrator | Pipeline decisions on security findings | Section 5 (Severity Classification) |
+| Orchestrator | Pipeline decisions on security findings, security test coverage gate enforcement | Section 5 (Severity Classification), Section 3 (Coverage Gate rules) |
 
 ## Hard Rules
 
 - ✅ Section 1 (Self-Review Checklist) MUST be run by Implementor agents after every code modification
+- ✅ Section 1 (Self-Review Checklist) MUST be re-run by Fixer agents after every security-related fix
 - ✅ Section 2 (Auto-Detection) MUST be used by Verifier during Pass 2b
 - ✅ Section 3 (Test Generation) MUST be used by QA when creating security regression tests
+- ✅ Section 3 (Security Test Coverage Gate) MUST be reported by QA in every pipeline that touches security-sensitive code
+- ✅ Section 3 (Security Test Coverage Gate) MUST be verified by Verifier during its Pass 2b check
 - ✅ Section 4 (Parallel Scan) is the PREFERRED method for running security scans
 - ✅ Section 5 (Severity Classification) MUST be used to determine pipeline blocking decisions
 - ❌ This skill MUST NOT be treated as a replacement for the `security-scan` skill — it complements it (security-scan handles tool execution, this skill handles knowledge and workflows)

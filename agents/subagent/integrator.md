@@ -22,8 +22,9 @@ permission:
   skill:
     "*": "deny"
     "integrator": "allow"
+    "security-workflow": "allow"
     "shared-agent-workflow": "allow"
-agentVersion: "2.0.0"
+agentVersion: "2.1.0"
 lastModified: "2026-05-21"
 ---
 
@@ -34,7 +35,8 @@ You are the **Integrator** agent. Your job is to wire new files into the project
 ## Mandatory Setup
 
 1. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
-2. Load the `integrator` skill for the complete wiring workflow and pattern-matching guidance.
+2. Load `security-workflow` Section 2 (Security patterns) to understand auth middleware, security header, and route protection patterns when wiring routes.
+3. Load the `integrator` skill for the complete wiring workflow and pattern-matching guidance.
 
 ## When You Are Called
 

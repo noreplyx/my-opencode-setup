@@ -1,18 +1,20 @@
 ---
 name: plan-verification
-description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds, a compliance scoring methodology, a standard report format, and detailed per-checkpoint results.
+description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds (structural, behavioral, acceptance criteria, security test coverage cross-check), a compliance scoring methodology, a standard report format, and detailed per-checkpoint results. Requires `security-workflow` for Pass 2.6 (Security Test Coverage Cross-Check).
 ---
 
 # Plan Verification Skill
 
 ## Purpose
 
-This skill enables a Verifier agent to systematically check that code produced by an Implementor matches the specification defined in a `plan-manifest.json` file. It supports four verification passes:
+This skill enables a Verifier agent to systematically check that code produced by an Implementor matches the specification defined in a `plan-manifest.json` file. It supports five verification passes:
 
 1. **Structural Pass** (fast, automated) — Check files exist, exports are present, types match
 2. **Behavioral Pass** (thorough) — Check error handling, input validation, logging patterns, etc.
-3. **Checkpoint Suggestion Pass** (corrective) — When behavioral checks fail, suggest missing checkpoints for PlanDescriber
-4. **Plan Drift Detection Pass** (architectural) — Verify overall implementation matches plan's architectural intent
+3. **Acceptance Criteria Pass** (business scenarios) — Verify end-to-end scenarios work correctly
+4. **Security Test Coverage Cross-Check** (Pass 2.6) — Cross-reference QA's security regression tests against independently detected security patterns
+5. **Checkpoint Suggestion Pass** (corrective) — When behavioral checks fail, suggest missing checkpoints for PlanDescriber
+6. **Plan Drift Detection Pass** (architectural) — Verify overall implementation matches plan's architectural intent
 
 ---
 
@@ -123,6 +125,54 @@ During both structural and behavioral passes, perform cross-file checks to ensur
 
 - If checkpoint B depends on A and A failed, B is automatically **Skipped** (not Failed)
 - This prevents cascading false negatives
+
+### Pass 2.6: Security Test Coverage Cross-Check (NEW)
+
+After acceptance criteria verification (or after Pass 2 if no acceptance criteria exist), perform a security test coverage reconciliation:
+
+1. **Read QA output**: Extract `securityTestCoverage` from the QA agent's structured output (in agent-context.md or the Orchestrator's hand-off)
+2. **Run Security Checkpoint Auto-Detection**: Use Section 2 of `security-workflow` skill to scan all modified/created files for security patterns
+3. **Cross-reference**: Compare your detected patterns against QA's `securityTestCoverage.patternsDetected` and `securityTestCoverage.testsGenerated`
+4. **Calculate independent coverage**: Run your own detection and compare
+5. **Report discrepancies**: If you find security patterns that QA did not test, flag them
+
+### Security Test Coverage Gate Output
+
+Include this in your structured output:
+
+```yaml
+securityTestCoverageGate:
+  securityPatternsDetected: 5        # Security patterns found by Verifier (from Section 2 auto-detection)
+  securityTestsGenerated: 4          # Reported by QA
+  coverage: 80.0                     # Percentage (testsGenerated / patternsDetected * 100)
+  gatePassed: true                   # true if coverage >= 80%
+  missingTestPatterns:
+    - pattern: "SSRF Protection"
+      file: "src/services/http.ts"
+      risk: "High"
+```
+
+### Gate Rules (Enforced by Orchestrator)
+
+| Coverage | Verdict | Action by Verifier |
+|----------|---------|--------------------|
+| ≥ 80% | ✅ PASS | Include in output, proceed to Pass 3 |
+| 50-79% | ⚠️ WARN | Flag in report as `gatePassed: false`, proceed to Pass 3 |
+| < 50% | ❌ FAIL | Flag in report as `gatePassed: false`. Orchestrator will block pipeline. |
+
+### Reconciliation Logic
+
+```
+if (verifierPatterns !== qaPatterns):
+  # Discrepancy: Verifier found patterns QA missed
+  patternsDetected = max(verifierPatterns, qaPatterns)  # Use the larger count
+  missingTestPatterns += patterns found by Verifier but not tested by QA
+
+coverage = testsGenerated / patternsDetected * 100
+```
+
+This ensures security patterns are never silently dropped between QA and Verifier.
+
 
 ### Pass 3: Checkpoint Suggestion Pass
 
@@ -454,6 +504,15 @@ evidence:
 - ✅ ALWAYS include the raw output excerpt (even for failures — show what was found instead)
 - ✅ ALWAYS include line numbers in the excerpt when using read method
 - ✅ ALWAYS include exit code for acceptance criteria evidence
+
+### Hard Rules Update (Security Test Coverage)
+
+- ✅ ALWAYS run Pass 2.6 (Security Test Coverage Cross-Check) after Pass 2.5
+- ✅ ALWAYS load `security-workflow` skill for Section 2 (Security Checkpoint Auto-Detection)
+- ✅ ALWAYS report `securityTestCoverageGate` in structured output
+- ❌ NEVER skip the security test coverage cross-check — this gate prevents unchecked security patterns from reaching production
+- ❌ NEVER accept QA's test count as the sole truth — independently verify by running your own pattern detection
+
 
 ### Output Schema Update
 

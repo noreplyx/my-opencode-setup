@@ -159,7 +159,7 @@ Write code files in the specified order, following the plan exactly. Do not devi
 
 ### Step 3 — Security Self-Review (MANDATORY)
 
-After writing all files, run the Security Self-Review checklist (see section "Security Self-Review Checklist" below) before proceeding to Pre-Build Import Validation.
+After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 — the canonical 17-item checklist) before proceeding to Pre-Build Import Validation.
 
 ### Step 4 — Pre-Build Import Validation (MANDATORY)
 
@@ -208,6 +208,8 @@ Report back to the Orchestrator with structured output at the top of your messag
 ---
 
 ## Security Self-Review Checklist (MANDATORY)
+
+> **Note**: This checklist is the canonical reference duplicated here for convenience. The authoritative version lives in `security-workflow` Section 1. Run `security-workflow` skill for the most up-to-date checklist, scoring rules, and output format.
 
 After completing the self-review pass and before reporting, run a mandatory security self-review against every file you created or modified. Answer each of these questions for each file:
 

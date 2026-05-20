@@ -142,9 +142,9 @@ Below the frontmatter, include the detailed report in markdown.
 | Agent           | Additional Fields in Structured Output                                          |
 |-----------------|----------------------------------------------------------------------------------|
 | **Implementor** | `selfReview` (confidence, securityItemsPassed, wiringManifest), `securitySelfReview` (passed, failures) |
-| **Fixer**       | `rootCauseAnalysis` (classification, primaryCause, fixApplied, fixConfidence, crossModuleCheck) |
-| **QA**          | `projectType`, `smokeTestPassed`, `testFramework`, `coverage`, `securityTestsGenerated` |
-| **Verifier**    | `complianceScore`, `weightedScore`, `suggestedCheckpoints` |
+| **Fixer**       | `rootCauseAnalysis` (classification, primaryCause, fixApplied, fixConfidence, crossModuleCheck), `securityFixDetails` (vulnerabilityType, severity, cwe, fixApplied, selfReviewPassed, regressionTestsCreated), `crossSessionMatch` (pipelineId, previousRootCause, previousFix) |
+| **QA**          | `projectType`, `smokeTestPassed`, `testFramework`, `coverage`, `securityTestsGenerated`, `securityTestCoverage` (patternsDetected, testsGenerated, coverage, gatePassed, missingTests) |
+| **Verifier**    | `complianceScore`, `weightedScore`, `suggestedCheckpoints`, `securityTestCoverageGate` (securityPatternsDetected, securityTestsGenerated, coverage, gatePassed, missingTestPatterns) |
 | **MergeCoordinator** | `filesChecked`, `importIssues`, `typeIssues`, `blocking` |
 | **Integrator**  | `wiringSummary` (barrelFilesUpdated, diRegistrationsAdded, routesAdded, importsFixed) |
 | **PlanDescriber** | `manifestPath`, `manifestVersion`, `phases`, `estimatedEffort`, `riskLevel` |
