@@ -229,3 +229,166 @@ const myPriorAttempts = agentHistory.filter(h => h.step === '<your agent name>')
 const retryCount = myPriorAttempts.length;
 const isReattempt = retryCount > 0;
 ```
+
+## Step 0b: Dry-Run Mode (optional)
+
+When the Orchestrator includes `--dry-run` in the hand-off message, your task changes from **execution** to **preview**:
+
+### Dry-Run Rules
+1. **Perform all analysis** — Read context, read files, trace imports, plan changes
+2. **NEVER write files** — Do not create, modify, or delete any file
+3. **NEVER run bash commands** — No build, no lint, no test
+4. **Output a diff manifest** instead of implementation:
+
+```yaml
+---
+status: "completed"
+resultSummary: "Dry-run: Would create 2 files, modify 1 file"
+dryRun:
+  enabled: true
+  wouldCreate:
+    - "src/services/user.ts"
+    - "src/controllers/user.ts"
+  wouldModify:
+    - "src/controllers/index.ts"
+  wouldDelete: []
+  estimatedLOC: 145
+  planAdherence: 0.92
+  risks:
+    - "New dependency: zod@3.22 — verify bundle size impact"
+  diffPreview: |
+    --- a/src/controllers/index.ts
+    +++ b/src/controllers/index.ts
+    @@ -1,3 +1,4 @@
+    +export * from './user.controller';
+changedFiles: []
+artifacts: ["Dry-run report"]
+---
+```
+
+### When Dry-Run is Useful
+- Before a complex implementation: see what will change before committing
+- Before a Fixer cycle: see the proposed fix before applying it
+- Before a PlanDescriber revision: see what the new plan would produce
+
+## Step 0c: Reproduction Command Protocol
+
+Every agent MUST include a `reproduction` field in their structured output when:
+- A build, lint, or test command is run (pass or fail)
+- A bug is discovered
+- A deviation is found
+
+### Format
+```yaml
+reproduction:
+  command: "npm run build"
+  expectedExitCode: 0
+  actualExitCode: 2
+  expectedOutput: "Build completed successfully"
+  actualOutputSnippet: "src/services/user.ts:42:3 - error TS2322"
+  environment:
+    nodeVersion: "20.11.0"
+    dependencies: ["express@4.18.2", "typescript@5.3.3"]
+```
+
+### Why This Matters
+Without standardized reproduction commands, bugs can't be reproduced by other agents or across sessions. The reproduction command makes every failure **executable** rather than just **describable**.
+
+### When to Include
+| Scenario | Include reproduction? | Example |
+|----------|----------------------|---------|
+| Build passes | ✅ Yes (shows what command was run) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 0 }` |
+| Build fails | ✅ Yes (critical for debugging) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 2, ... }` |
+| Lint fails | ✅ Yes | `reproduction: { command: "npx eslint src/", expectedExitCode: 0, actualExitCode: 1 }` |
+| Test fails | ✅ Yes | `reproduction: { command: "npm test", expectedExitCode: 0, actualExitCode: 1 }` |
+| No command run | ⏭️ Skip | (omit the field entirely) |
+
+### Storing Reproduction Commands
+The Orchestrator will write reproduction commands to `.opencode/reproductions/<pipelineId>-<step>-<timestamp>.yaml` so they can be:
+- Searched across sessions
+- Replayed in CI
+- Compared to find regressions
+
+## Step 4: Error Reproduction Packets
+
+When your agent encounters a **failure** (build error, test failure, unexpected exception), you MUST emit an Error Reproduction Packet in addition to your standard output.
+
+### Format
+Add an `errorReproduction` block to your structured output:
+
+```yaml
+errorReproduction:
+  pipelineId: "<from agent-context.md>"
+  failedStep: "<your agent name>"
+  feature: "<from agent-context.md>"
+  attemptNumber: <1-based retry count>
+  symptom: "<one-line description of what went wrong>"
+  reproduction:
+    command: "npm run build"
+    workingDir: "/home/oat/.config/opencode"
+    expectedExitCode: 0
+    actualExitCode: 2
+    actualOutputSnippet: "src/services/user.ts:42:3 - error TS2322"
+  inputState:
+    files: ["src/services/user.ts", "src/types/user.ts"]
+    gitHeadSha: "<from agent-context.gitState.lastCommitSha>"
+    uncommittedChanges: true
+  environment:
+    nodeVersion: "<from node --version>"
+    os: "linux"
+    workspaceHash: "<sha256 of workspace structure>"
+  context:
+    planCheckpointsAtFailure: ["CP-003", "CP-005"]
+    priorAgentResults:
+      - step: "finder"
+        result: "completed"
+      - step: "plandescriber"
+        result: "completed"
+```
+
+### When to Emit
+| Situation | Emit errorReproduction? |
+|-----------|------------------------|
+| Build command returns non-zero | ✅ Yes |
+| Lint command fails | ✅ Yes |
+| Test suite fails | ✅ Yes |
+| Unexpected file read/write error | ✅ Yes |
+| Task completes successfully | ❌ No |
+| Dry-run mode (no execution) | ❌ No |
+
+### Why Error Packets Matter
+1. **Cross-session error matching**: The Orchestrator can query `.opencode/errors/` for similar errors
+2. **Reproducibility**: Every error has an executable command to reproduce it
+3. **Debug hand-off**: When the Fixer receives an error packet, it can immediately run the reproduction command instead of reasoning from scratch
+4. **Trend analysis**: Over time, error patterns emerge (e.g., "80% of build errors are in src/services/")
+
+## Step 5: Git Checkpoint Protocol
+
+After completing your task (if you modified files), indicate to the Orchestrator that a git checkpoint should be created:
+
+```yaml
+checkpoint:
+  create: true
+  message: "Implemented UserService with createUser and getUser"
+  changedFiles:
+    - "src/services/user.ts"
+    - "src/controllers/user.ts"
+```
+
+The Orchestrator will then run:
+```bash
+ts-node skills/scripts/orchestration/pipeline-checkpoint.ts \
+  --pipeline-id=<id> --step=<your-name> --session-id=<ses> \
+  --feature=<feature> --message="<summary>"
+```
+
+This creates a lightweight git commit with a structured message that enables:
+- `git log --grep="pipeline-checkpoint"` → see the full pipeline timeline
+- `git diff <checkpoint-A>..<checkpoint-B>` → see exactly what each agent changed
+- `git bisect` → identify which agent step introduced a regression
+
+### Important Rules
+- Checkpoints create non-push commits only (never pushed to remote)
+- No checkpoint is created if no files changed
+- Checkpoints use `--no-verify` to bypass git hooks (they're lightweight markers, not production commits)
+- The parent commit SHA is recorded in every checkpoint message for traceability

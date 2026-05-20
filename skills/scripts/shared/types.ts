@@ -462,3 +462,144 @@ export interface PreFlightReport {
   crossSessionLessons?: string[];
   timestamp: string;
 }
+
+// ── Debugging & Reproducibility Types ─────────────────────────────
+
+/**
+ * Structured error reproduction packet.
+ * Every agent emits this when encountering a failure.
+ * Enables cross-session error matching and replay.
+ */
+export interface ErrorReproduction {
+  pipelineId: string;
+  failedStep: AgentName;
+  feature: string;
+  attemptNumber: number;
+  symptom: string;
+  reproduction: ReproductionCommand;
+  inputState: {
+    files: string[];
+    gitHeadSha: string;
+    uncommittedChanges: boolean;
+  };
+  environment: {
+    nodeVersion: string;
+    os: string;
+    workspaceHash: string;
+  };
+  context: {
+    planCheckpointsAtFailure: string[];
+    priorAgentResults: Array<{
+      step: AgentName;
+      result: string;
+      manifestVersion?: number;
+    }>;
+  };
+}
+
+/**
+ * Standardized reproduction command.
+ * Every agent output includes this for their build/lint/test commands.
+ * QA/Verifier bug reports include this so bugs are reproducible by command.
+ */
+export interface ReproductionCommand {
+  command: string;
+  workingDir: string;
+  expectedExitCode: number;
+  actualExitCode: number;
+  expectedOutput?: string;
+  actualOutputSnippet: string;
+  environment?: {
+    nodeVersion: string;
+    dependencies: string[];
+  };
+}
+
+/**
+ * Dry-run mode output contract.
+ * When --dry-run is passed, agents produce this instead of modifying files.
+ */
+export interface DryRunOutput {
+  enabled: true;
+  wouldCreate: string[];
+  wouldModify: string[];
+  wouldDelete: string[];
+  estimatedLOC: number;
+  planAdherence: number; // 0.0 - 1.0
+  risks: string[];
+  diffPreview?: string;
+}
+
+/**
+ * Structured bug report from QA/Verifier.
+ * Every bug includes reproduction steps so it's executable, not just prose.
+ */
+export interface BugReport {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  symptom: string;
+  reproduction: BugReproductionSteps;
+  evidence: Array<{
+    type: 'build_output' | 'test_output' | 'curl_output' | 'log' | 'screenshot';
+    path?: string;
+    content?: string;
+  }>;
+  source: AgentName;
+}
+
+export interface BugReproductionSteps {
+  setup: string;
+  steps: string[];
+  expected: string;
+  actual: string;
+}
+
+/**
+ * Git pipeline checkpoint metadata.
+ * Written as structured commit message for each checkpoint.
+ */
+export interface PipelineCheckpoint {
+  pipelineId: string;
+  step: AgentName;
+  sessionId: string;
+  timestamp: string;
+  changedFiles: string[];
+  decisions: string[];
+  warnings: string[];
+  hasErrors: boolean;
+}
+
+/**
+ * Automated diagnostic result (run by Fixer before reasoning).
+ */
+export interface DiagnosticResult {
+  type: 'build' | 'ast' | 'consistency' | 'git-blame' | 'evidence-regression';
+  tool: string;
+  passed: boolean;
+  output: string;
+  findings: string[];
+  recommendations: string[];
+}
+
+/**
+ * Pipeline replay request.
+ */
+export interface ReplayRequest {
+  pipelineId: string;
+  fromStep: AgentName;
+  modifyPlanPath?: string;
+  originalPlanPath: string;
+}
+
+/**
+ * Debug agent escalation record.
+ */
+export interface DebugEscalation {
+  pipelineId: string;
+  feature: string;
+  previousFixerAttempts: number;
+  escalationReason: string;
+  reproductionPacket: ErrorReproduction;
+  diagnosticResults: DiagnosticResult[];
+}

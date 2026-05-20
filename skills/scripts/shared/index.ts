@@ -65,6 +65,11 @@ export type {
 
   // ── Pre-Flight ──
   CheckStatus, PreFlightCheckResult, PreFlightReport,
+
+  // ── Debugging & Reproducibility ──
+  ErrorReproduction, ReproductionCommand, DryRunOutput,
+  BugReport, BugReproductionSteps, PipelineCheckpoint,
+  DiagnosticResult, ReplayRequest, DebugEscalation,
 } from './types';
 export type {
   SkillContext, CheckResult, CheckReport, FileChange,

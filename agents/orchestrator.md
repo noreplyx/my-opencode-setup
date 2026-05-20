@@ -112,6 +112,13 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | Agent Action Audit Trail | Agent Action Audit Trail |
 | Output Contract Validation | Output Verification |
 | Security Tool Self-Test | self-test-security.ts |
+| Dry-Run Mode | shared-agent-workflow skill (Step 0b) |
+| Reproduction Command | shared-agent-workflow skill (Step 0c) |
+| Error Reproduction Packets | shared-agent-workflow skill (Step 4) |
+| Git Checkpoints | pipeline-checkpoint.ts |
+| Pipeline Replay | pipeline-replay.ts |
+| Debug Agent | Debug Agent (agents/subagent/debug.md) |
+| Fixer Diagnostics | Fixer Automated Diagnostics Protocol (fixer.md) |
 | Shared Agent Workflow | shared-agent-workflow skill |
 
 ## Security Tools Reference
@@ -125,4 +132,6 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | **Agent Audit Log** | Tamper-evident hash-chained audit trail | `skills/scripts/orchestration/audit-log.ts` | See SKILL.md "Agent Action Audit Trail" section |
 | **Context Validator** | Validate agent-context.md schema | `skills/scripts/orchestration/validate-context.ts` | `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` |
 
+| **Pipeline Checkpoint** | Git-based checkpoint after each agent step | `skills/scripts/orchestration/pipeline-checkpoint.ts` | `ts-node skills/scripts/orchestration/pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name>` |
+| **Pipeline Replay** | Re-run a pipeline from archived checkpoints | `skills/scripts/orchestration/pipeline-replay.ts` | `ts-node skills/scripts/orchestration/pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]` |
 All tools use only Node.js built-in modules (fs, path, crypto). No external dependencies required.
