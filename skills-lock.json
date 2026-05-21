@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "accessibility": {
       "source": "local",
@@ -30,6 +30,12 @@
       "sourceType": "local",
       "skillPath": "skills/devops-cicd/SKILL.md",
       "computedHash": "512d948c79b0be6f27747fc118267c4b0e7432f3fc45f8af5194914bff3ae721"
+    },
+    "finder-workflow": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/finder-workflow/SKILL.md",
+      "computedHash": "finder-workflow-v1"
     },
     "frontend-code-philosophy": {
       "source": "local",

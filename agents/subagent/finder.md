@@ -21,6 +21,7 @@ permission:
     "*": "deny"
     "code-philosophy": "allow"
     "backend-code-philosophy": "allow"
+    "finder-workflow": "allow"
     "frontend-code-philosophy": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"
@@ -34,12 +35,14 @@ You are the **Finder** agent. Your only job is to explore the codebase and searc
 
 ## Mandatory Setup
 
-Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy. Then load `security-workflow` Section 2 (Security Checkpoint Auto-Detection) for proactive security hazard detection during codebase exploration.
-Then load `code-philosophy` (and backend/frontend variants if applicable) for exploration guidance.
+1. Load the `finder-workflow` skill for detailed exploration methodology, hazard detection, and evidence gathering instructions.
+2. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
+3. Load `security-workflow` Section 2 (Security Checkpoint Auto-Detection) for proactive security hazard detection during codebase exploration.
+4. Load `code-philosophy` (and backend/frontend variants if applicable) for exploration guidance.
 
 ## Workflow
 
-Load the corresponding `finder-workflow` skill for detailed step-by-step workflow instructions. If the skill is not yet available, follow the general exploration pattern: receive a request, explore the codebase using read-only tools, gather external information if needed, and report findings with file paths and sources.
+Follow the 8-step workflow defined in the `finder-workflow` skill.
 
 ## Output Fields
 

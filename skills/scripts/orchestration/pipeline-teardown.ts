@@ -112,6 +112,15 @@ interface LessonsEntry {
   injected: boolean;  // Whether this has been injected into a subsequent pipeline
 }
 
+interface ExistingLesson {
+  date: string;
+  lesson: string;
+  sourceFeature: string;
+  category?: string;
+  severity?: string;
+  injected?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Evidence types
 // ---------------------------------------------------------------------------
@@ -542,6 +551,22 @@ function generateRetrospective(
     improvements.push('Improve agent context handoff: provide more explicit context and reduce ambiguity');
   }
 
+  // Auto-generate lessons from pipeline data
+  const lessons: string[] = [];
+
+  if (totalRetries > 0 && result === 'pass') {
+    lessons.push('Pipeline succeeded despite circuit breaker retries — investigate root cause of retries to prevent future slowdown');
+  }
+  if (failedCount > 0) {
+    lessons.push(`Pipeline had ${failedCount} agent failure(s) — add pre-validation gates for agent inputs`);
+  }
+  if (handoffRating < 7) {
+    lessons.push('Low handoff quality rating indicates agent context needs more explicit detail and less ambiguity');
+  }
+  if (allWarnings.length > 5) {
+    lessons.push('High warning volume across agents suggests need for stricter input validation or clearer specifications');
+  }
+
   return {
     pipelineQuality,
     handoffQuality: {
@@ -551,7 +576,7 @@ function generateRetrospective(
     agentPerformance,
     wastedSteps: [],
     improvementsForNextPipeline: improvements,
-    lessonsLearned: [],
+    lessonsLearned: lessons,
   };
 }
 
@@ -778,7 +803,7 @@ function determineSeverity(result: 'pass' | 'fail' | 'partial'): string {
   return 'low';
 }
 
-function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs): void {
+function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs, retrospective?: Retrospective): void {
   const lessonsPath = getLessonsPath(rootDir);
   const lessonsDir = path.dirname(lessonsPath);
 
@@ -786,14 +811,38 @@ function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs): v
     fs.mkdirSync(lessonsDir, { recursive: true });
   }
 
+  // Read existing lessons for duplicate detection
+  const existingLessons = readExistingLessons(lessonsPath);
+
+  function isDuplicate(lesson: string, sourceFeature: string): boolean {
+    return existingLessons.some(e => e.lesson === lesson && e.sourceFeature === sourceFeature);
+  }
+
   const lessons: LessonsEntry[] = [];
   const now = new Date().toISOString();
   const severity = determineSeverity(args.result);
   const injected = false;
 
-  // Extract key decisions as lessons with intelligent categorization
+  // ── 1. Extract lessons from retrospective.lessonsLearned ──
+  if (retrospective && Array.isArray(retrospective.lessonsLearned)) {
+    for (const lessonText of retrospective.lessonsLearned) {
+      if (!lessonText || typeof lessonText !== 'string') continue;
+      if (isDuplicate(lessonText, args.feature)) continue;
+      lessons.push({
+        date: now,
+        lesson: lessonText,
+        sourceFeature: args.feature,
+        category: categorizeLesson(lessonText, 'process'),
+        severity,
+        injected,
+      });
+    }
+  }
+
+  // ── 2. Extract key decisions as lessons ──
   const decisions = extractKeyDecisions(ctx);
   for (const decision of decisions) {
+    if (isDuplicate(decision, args.feature)) continue;
     lessons.push({
       date: now,
       lesson: decision,
@@ -804,9 +853,8 @@ function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs): v
     });
   }
 
-  // If pipeline failed, extract failure summary as lessons
+  // ── 3. If pipeline failed, extract failure summary as lessons ──
   if (args.result === 'fail' && ctx.failureSummary) {
-    // failureSummary may be a JSON string — try to parse it
     const summaryText = ctx.failureSummary;
     let parsedSummary: any = null;
     try {
@@ -816,63 +864,73 @@ function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs): v
     }
 
     if (parsedSummary && typeof parsedSummary === 'object') {
-      // Extract rootCause as a separate lesson
       if (parsedSummary.rootCause) {
         const rootCauseStr = typeof parsedSummary.rootCause === 'string'
           ? parsedSummary.rootCause
           : JSON.stringify(parsedSummary.rootCause);
-        lessons.push({
-          date: now,
-          lesson: `Root cause: ${rootCauseStr}`,
-          sourceFeature: args.feature,
-          category: categorizeLesson(rootCauseStr, 'implementation'),
-          severity: 'high',
-          injected,
-        });
-      }
-
-      // Extract each attempt from attemptsLog as a separate lesson
-      if (Array.isArray(parsedSummary.attemptsLog)) {
-        for (const attempt of parsedSummary.attemptsLog) {
-          const attemptStr = typeof attempt === 'string' ? attempt : JSON.stringify(attempt);
+        const lessonText = `Root cause: ${rootCauseStr}`;
+        if (!isDuplicate(lessonText, args.feature)) {
           lessons.push({
             date: now,
-            lesson: `Failed attempt: ${attemptStr}`,
+            lesson: lessonText,
             sourceFeature: args.feature,
-            category: categorizeLesson(attemptStr, 'implementation'),
+            category: categorizeLesson(rootCauseStr, 'implementation'),
             severity: 'high',
             injected,
           });
         }
       }
 
-      // Also add the full failure summary as a lesson
-      lessons.push({
-        date: now,
-        lesson: `Pipeline failure summary: ${summaryText.substring(0, 500)}`,
-        sourceFeature: args.feature,
-        category: 'process',
-        severity: 'high',
-        injected,
-      });
+      if (Array.isArray(parsedSummary.attemptsLog)) {
+        for (const attempt of parsedSummary.attemptsLog) {
+          const attemptStr = typeof attempt === 'string' ? attempt : JSON.stringify(attempt);
+          const lessonText = `Failed attempt: ${attemptStr}`;
+          if (!isDuplicate(lessonText, args.feature)) {
+            lessons.push({
+              date: now,
+              lesson: lessonText,
+              sourceFeature: args.feature,
+              category: categorizeLesson(attemptStr, 'implementation'),
+              severity: 'high',
+              injected,
+            });
+          }
+        }
+      }
+
+      const summaryLesson = `Pipeline failure summary: ${summaryText.substring(0, 500)}`;
+      if (!isDuplicate(summaryLesson, args.feature)) {
+        lessons.push({
+          date: now,
+          lesson: summaryLesson,
+          sourceFeature: args.feature,
+          category: 'process',
+          severity: 'high',
+          injected,
+        });
+      }
     } else {
-      // Plain text failure summary
-      lessons.push({
-        date: now,
-        lesson: `Pipeline failure: ${summaryText.substring(0, 500)}`,
-        sourceFeature: args.feature,
-        category: 'process',
-        severity: 'high',
-        injected,
-      });
+      const summaryLesson = `Pipeline failure: ${summaryText.substring(0, 500)}`;
+      if (!isDuplicate(summaryLesson, args.feature)) {
+        lessons.push({
+          date: now,
+          lesson: summaryLesson,
+          sourceFeature: args.feature,
+          category: 'process',
+          severity: 'high',
+          injected,
+        });
+      }
     }
   }
 
-  // If circuit breaker detected patterns, add those as lessons
+  // ── 4. Extract circuit breaker patterns ──
   for (const pattern of ctx.circuitBreaker.patternDetection) {
+    const lessonText = `Circuit breaker pattern detected: ${pattern}`;
+    if (isDuplicate(lessonText, args.feature)) continue;
     lessons.push({
       date: now,
-      lesson: `Circuit breaker pattern detected: ${pattern}`,
+      lesson: lessonText,
       sourceFeature: args.feature,
       category: 'tooling',
       severity,
@@ -881,20 +939,70 @@ function appendLessons(rootDir: string, ctx: AgentContextData, args: CliArgs): v
   }
 
   if (lessons.length === 0) {
-    console.log('📓 Lessons: ⏭️  No lessons to record');
+    console.log('📓 Lessons: ⏭️  No new lessons to record');
     return;
   }
 
-  // Create file if not exists with header
+  // Create file with header if it doesn't exist
   if (!fs.existsSync(lessonsPath)) {
     const header = buildLessonsContent([]);
     fs.writeFileSync(lessonsPath, header, 'utf-8');
   }
 
-  // Append lessons
-  const yaml = buildLessonsContent(lessons);
+  // Append lessons as individual YAML entries (no header duplication)
+  const yamlLines: string[] = [];
+  for (const entry of lessons) {
+    yamlLines.push(`- date: "${entry.date}"`);
+    yamlLines.push(`  lesson: "${entry.lesson.replace(/"/g, '\\"')}"`);
+    yamlLines.push(`  sourceFeature: "${entry.sourceFeature}"`);
+    yamlLines.push(`  category: "${entry.category}"`);
+    yamlLines.push(`  severity: "${entry.severity}"`);
+    yamlLines.push(`  injected: ${entry.injected}`);
+    yamlLines.push('');
+  }
+  const yaml = '\n' + yamlLines.join('\n');
+
   fs.appendFileSync(lessonsPath, yaml, 'utf-8');
-  console.log(`📓 Lessons: ✅ Appended ${lessons.length} lesson(s) to .opencode/lessons/learned.yaml`);
+  console.log(`📓 Lessons: ✅ Appended ${lessons.length} new lesson(s) to .opencode/lessons/learned.yaml`);
+}
+
+/**
+ * Read existing lessons from learned.yaml for duplicate detection.
+ */
+function readExistingLessons(filePath: string): ExistingLesson[] {
+  if (!fs.existsSync(filePath)) return [];
+
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+
+  const lessons: ExistingLesson[] = [];
+  let currentLesson: any = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') || trimmed === '' || trimmed === 'lessons: []') continue;
+
+    const entryStart = trimmed.match(/^-\s+date:\s*"?([^"]+)"?/);
+    if (entryStart) {
+      if (currentLesson && currentLesson.lesson) {
+        lessons.push(currentLesson);
+      }
+      currentLesson = { date: entryStart[1] };
+      continue;
+    }
+
+    if (currentLesson) {
+      const kvMatch = trimmed.match(/^(\w+):\s*"?([^"]*)"?$/);
+      if (kvMatch) {
+        currentLesson[kvMatch[1]] = kvMatch[2];
+      }
+    }
+  }
+  if (currentLesson && currentLesson.lesson) {
+    lessons.push(currentLesson);
+  }
+
+  return lessons;
 }
 
 // ---------------------------------------------------------------------------
@@ -1594,9 +1702,10 @@ function main(): void {
   {
     const decisions = extractKeyDecisions(ctx);
     const patterns = ctx.circuitBreaker.patternDetection;
-    lessonsCount = decisions.length + (args.result === 'fail' && ctx.failureSummary ? 1 : 0) + patterns.length;
+    const retroLessons = retrospective.lessonsLearned || [];
+    lessonsCount = decisions.length + (args.result === 'fail' && ctx.failureSummary ? 1 : 0) + patterns.length + retroLessons.length;
   }
-  appendLessons(rootDir, ctx, args);
+  appendLessons(rootDir, ctx, args, retrospective);
 
   // 3. Archive raw agent outputs
   if (rawContent) {

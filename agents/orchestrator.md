@@ -120,6 +120,10 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | Debug Agent | Debug Agent (agents/subagent/debug.md) |
 | Fixer Diagnostics | Fixer Automated Diagnostics Protocol (fixer.md) |
 | Shared Agent Workflow | shared-agent-workflow skill |
+| Lessons Injection | Lessons Injection Protocol |
+
+### Lessons Injection
+Before dispatching PlanDescriber or Implementor, read `.opencode/lessons/learned.yaml`, filter relevant lessons using token matching, and include them in the hand-off as a "Lessons From Previous Pipelines" table. See the orchestration SKILL.md "Lessons Injection Protocol" section for details.
 
 ## Security Tools Reference
 

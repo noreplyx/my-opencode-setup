@@ -29,6 +29,7 @@ interface PipelineArgs {
   pipelineComplexity: 'simple' | 'moderate' | 'complex';
   confidence: number;
   skipReadiness: boolean;
+  forceClean: boolean;
 }
 
 interface JournalEntry {
@@ -60,6 +61,7 @@ interface PreFlightReport {
   projectCompiles: boolean;
   buildOutput: string;
   journalStructureOk: boolean;
+  securityToolsOk: boolean;
   staleContextFound: boolean;
   staleContextStatus?: string;
   staleContextAge?: string;
@@ -80,6 +82,18 @@ function generateUuid(): string {
 
 function isoNow(): string {
   return new Date().toISOString();
+}
+
+function getTsNodePath(): string {
+  const candidates = [
+    path.resolve(__dirname, '..', '..', '..', '..', 'node_modules', '.bin', 'ts-node'),
+    path.join(process.cwd(), 'node_modules', '.bin', 'ts-node'),
+    '/home/oat/.config/opencode/node_modules/.bin/ts-node',
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return 'ts-node'; // fallback to PATH-based
 }
 
 function execSafe(command: string, timeout = 30000): { stdout: string; stderr: string; exitCode: number } {
@@ -128,6 +142,7 @@ function parseArgs(): PipelineArgs {
   const confidence = isNaN(confidenceRaw) ? 80 : Math.max(0, Math.min(100, confidenceRaw));
 
   const skipReadiness = args.some(a => a === '--skip-readiness');
+  const forceClean = args.some(a => a === '--force-clean');
 
   const validTypes = ['full', 'quick', 'fixer-only', 'parallel-feature', 'tdd', 'security-fix', 'ui-bug', 'documentation', 'micro-pipeline', 'refactor', 'research'];
   if (pipelineType && !validTypes.includes(pipelineType)) {
@@ -135,7 +150,7 @@ function parseArgs(): PipelineArgs {
     // Don't exit — let it proceed with the unknown type
   }
 
-  return { feature, pipelineType, pipelineComplexity, confidence, skipReadiness };
+  return { feature, pipelineType, pipelineComplexity, confidence, skipReadiness, forceClean };
 }
 
 // ---------------------------------------------------------------------------
@@ -479,13 +494,17 @@ function runPreFlight(): PreFlightReport {
   const lastCommitMessage = msgResult.stdout || 'unknown';
 
   // Check if project compiles
-  const buildResult = execSafe('npm run build 2>&1 | tail -20');
+  const buildResult = execSafe('npm run build', 30000);
   const projectCompiles = buildResult.exitCode === 0;
   const buildOutput = buildResult.stderr || buildResult.stdout || '(no output)';
 
   // Check journal structure
   const journalReadmePath = path.resolve('.opencode/journal/README.md');
   const journalStructureOk = fs.existsSync(journalReadmePath);
+
+  // Check security self-test
+  const selfTestResult = execSafe(`"${getTsNodePath()}" skills/scripts/code-philosophy/self-test-security.ts 2>&1`, 30000);
+  const securityToolsOk = selfTestResult.exitCode === 0;
 
   // Check for stale agent-context.md
   const contextPath = path.resolve('agent-context.md');
@@ -522,6 +541,7 @@ function runPreFlight(): PreFlightReport {
     projectCompiles,
     buildOutput,
     journalStructureOk,
+    securityToolsOk,
     staleContextFound,
     staleContextStatus,
     staleContextAge,
@@ -543,7 +563,7 @@ function ensurePipelineLogsDir(): void {
 // Agent-context.md generation
 // ---------------------------------------------------------------------------
 
-function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): string {
+function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): { content: string; pipelineId: string } {
   const pipelineId = generateUuid();
   const now = isoNow();
 
@@ -634,7 +654,7 @@ function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): s
   lines.push('This file is managed by the Orchestrator. Do not edit manually.');
   lines.push('');
 
-  return lines.join('\n');
+  return { content: lines.join('\n'), pipelineId };
 }
 
 // ---------------------------------------------------------------------------
@@ -678,6 +698,12 @@ function printSummary(
     console.log('  ✅ Journal structure OK');
   } else {
     console.log('  ⚠️  Journal README.md not found — journal may not be initialized');
+  }
+
+  if (preFlight.securityToolsOk) {
+    console.log('  ✅ Security self-test passed');
+  } else {
+    console.log('  ⚠️  Security self-test failed');
   }
 
   console.log('');
@@ -799,20 +825,35 @@ function main(): void {
   // 2. Run pre-flight checks
   const preFlight = runPreFlight();
 
-  // 2a. Stale pipeline detection — exit code 2 if stale context found
+  // 2a. Stale pipeline detection — exit code 2 if stale context found (unless --force-clean)
   if (preFlight.staleContextFound) {
-    console.log('');
-    console.log('⚠️  STALE PIPELINE DETECTED');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`An agent-context.md exists with status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge}`);
-    console.log('This may be an abandoned pipeline from a previous session.');
-    console.log('');
-    console.log('To proceed, you need to either:');
-    console.log('  1. Archive it: mv agent-context.md .opencode/pipeline-logs/stale-<pipelineId>/');
-    console.log('  2. Delete it: rm agent-context.md');
-    console.log('');
-    console.log('After cleanup, re-run pipeline-init.ts.');
-    process.exit(2);
+    if (args.forceClean) {
+      // Archive stale context automatically
+      const stalePipelineId = generateUuid();
+      const staleDir = path.resolve(`.opencode/pipeline-logs/stale-${stalePipelineId}/`);
+      if (!fs.existsSync(staleDir)) {
+        fs.mkdirSync(staleDir, { recursive: true });
+      }
+      const contextPathStale = path.resolve('agent-context.md');
+      if (fs.existsSync(contextPathStale)) {
+        fs.renameSync(contextPathStale, path.join(staleDir, 'agent-context.md'));
+      }
+      console.log(`  ✅ Archived stale agent-context.md to .opencode/pipeline-logs/stale-${stalePipelineId}/`);
+    } else {
+      console.log('');
+      console.log('⚠️  STALE PIPELINE DETECTED');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`An agent-context.md exists with status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge}`);
+      console.log('This may be an abandoned pipeline from a previous session.');
+      console.log('');
+      console.log('To proceed, you need to either:');
+      console.log('  1. Run with --force-clean to auto-archive');
+      console.log('  2. Archive it: mv agent-context.md .opencode/pipeline-logs/stale-<pipelineId>/');
+      console.log('  3. Delete it: rm agent-context.md');
+      console.log('');
+      console.log('After cleanup, re-run pipeline-init.ts.');
+      process.exit(2);
+    }
   }
 
   // 2b. Agent readiness check — verify required agents have correct permissions
@@ -847,9 +888,22 @@ function main(): void {
   ensurePipelineLogsDir();
 
   // 4. Create agent-context.md
-  const contextContent = generateAgentContext(args, preFlight);
+  const { content: contextContent, pipelineId } = generateAgentContext(args, preFlight);
   const contextPath = path.resolve('agent-context.md');
   fs.writeFileSync(contextPath, contextContent, 'utf-8');
+
+  // 4a. Initialize audit log (non-fatal — warning only on failure)
+  const tsNodeBin = getTsNodePath();
+  const auditLogScript = path.resolve(__dirname, 'audit-log.ts');
+  const auditLogResult = execSafe(
+    `"${tsNodeBin}" "${auditLogScript}" init --pipeline-id="${pipelineId}" --feature="${args.feature}"`,
+    15000,
+  );
+  if (auditLogResult.exitCode !== 0) {
+    console.log(`  ⚠️ Audit log init skipped: ${(auditLogResult.stderr || auditLogResult.stdout).substring(0, 100)}`);
+  } else {
+    console.log('  ✅ Audit log initialized');
+  }
 
   // 5. Print summary report
   printSummary(args, preFlight, matches);

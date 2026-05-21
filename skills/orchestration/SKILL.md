@@ -20,6 +20,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Provenance Tracker** | `provenance-tracker.ts` | File-level checkpoint lifecycle tracking |
 | **Implementor Workflow** | `skills/implementor-workflow/SKILL.md` | Decoupled workflow for Implementor |
 | **Fixer Workflow** | `skills/fixer-workflow/SKILL.md` | Decoupled workflow for Fixer |
+| **Finder Workflow** | `skills/finder-workflow/SKILL.md` | Decoupled workflow for Finder — exploration methodology, hazard detection, evidence gathering |
 | **QA Workflow** | `skills/qa-workflow/SKILL.md` | Decoupled workflow for QA |
 | **Verifier Workflow** | `skills/verifier-workflow/SKILL.md` | Decoupled workflow for Verifier |
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
@@ -887,7 +888,7 @@ ts-node skills/scripts/orchestration/update-calibration.ts --agent=implementor -
 ts-node skills/scripts/orchestration/update-calibration.ts --read
 
 # Record a failure pattern
-ts-node skills/scripts/orchestration/update-calibration.ts --agent=foxer --success=false --failure-pattern="Missing barrel export"
+ts-node skills/scripts/orchestration/update-calibration.ts --agent=fixer --success=false --failure-pattern="Missing barrel export"
 ```
 
 The script handles file creation, counter increments, and validation.
@@ -1895,6 +1896,38 @@ For efficient lookups, the journal is indexed by:
 - Pipeline type
 - Failed gates
 - Key decisions (extracted from `keyDecisions` field)
+
+### Lessons Injection Protocol
+
+The Orchestrator MUST inject relevant past lessons into PlanDescriber and Implementor hand-offs to prevent repeated mistakes.
+
+#### Protocol Steps
+
+1. **Before dispatching PlanDescriber or Implementor**, read `.opencode/lessons/learned.yaml`
+2. **Filter lessons** that are relevant to the current feature using token similarity matching (same logic as `pipeline-init.ts`)
+3. **Include relevant lessons** in the hand-off message as a "Lessons From Previous Pipelines" section:
+
+```markdown
+### Lessons From Previous Pipelines
+The following lessons from past pipelines are relevant to this task:
+
+| Lesson | Source Feature | Category | Severity |
+|--------|---------------|----------|----------|
+| <lesson text> | <feature name> | <category> | <severity> |
+```
+
+4. **Mark lessons as injected**: After the pipeline completes (or during teardown), update lessons that were injected by changing `injected: false` to `injected: true`
+5. **Skip already-injected lessons** — if a lesson already has `injected: true`, don't re-inject it unless the current feature similarity is > 80%
+
+#### When to Inject
+
+| Agent         | Inject Lessons? | Reason                                       |
+|---------------|-----------------|----------------------------------------------|
+| PlanDescriber | ✅ Always       | Lessons about plan omissions, edge cases     |
+| Implementor   | ✅ Always       | Lessons about implementation errors, barrel exports |
+| Fixer         | ✅ When retrying | Lessons about similar failure patterns       |
+| QA            | ⏭️ Skip         | QA gets lessons via test requirements        |
+| Verifier      | ⏭️ Skip         | Verifier checks plan only                    |
 
 ---
 
