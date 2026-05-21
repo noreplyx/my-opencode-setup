@@ -223,7 +223,7 @@ function parseFrontmatter(content: string): Record<string, unknown> {
 
     // Check for list item
     const listItemMatch = trimmed.match(/^-\s+(.+)$/);
-    if (listItemMatch && currentArrayKey) {
+    if (listItemMatch && currentArrayKey && currentArray) {
       const val = parseScalar(listItemMatch[1]);
       if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
         // Inline object like: - key: value

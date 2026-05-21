@@ -420,7 +420,7 @@ function generateProvenanceView(
               ? '❌'
               : '⚠️';
 
-        lines.push(`  ${icon} Agent: ${entryAgent || entryStep}`);
+        lines.push(`  ${icon} Agent: ${entryAgent}`);
         lines.push(`     Result: ${entryResult}`);
         lines.push(`     Summary: ${entrySummary}`);
 

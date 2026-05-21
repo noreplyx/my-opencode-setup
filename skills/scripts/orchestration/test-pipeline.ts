@@ -934,7 +934,7 @@ function testMergeCoordinatorOutput(): void {
     const invalidOutput = {
       status: 'failed',
       agentOutputs: {
-        mergeCoordinator: {},
+        mergeCoordinator: {} as Record<string, unknown>,
       },
     };
     assert.strictEqual(invalidOutput.agentOutputs.mergeCoordinator.resultSummary, undefined, 'Missing resultSummary should be detected');

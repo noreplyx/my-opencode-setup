@@ -7,7 +7,7 @@
  *   - skills/shared-agent-workflow/SKILL.md (output contract format reference)
  *
  * IMPORTANT: If you add or modify a type here, also update the corresponding
- * agent instruction files (*.md) in agents/subagent/ and skills/*/SKILL.md
+ * agent instruction files in agents/subagent/ and skills SKILL.md files
  * to keep the output contract documentation in sync.
  */
 

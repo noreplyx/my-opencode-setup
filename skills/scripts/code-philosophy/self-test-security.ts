@@ -53,7 +53,7 @@ function runTsNode(script: string, args: string[], verbose: boolean): { stdout: 
   };
 
   try {
-    const stdout = execSync(cmd, options);
+    const stdout = execSync(cmd, options).toString();
     return { stdout, stderr: '', exitCode: 0 };
   } catch (err: any) {
     const stderr = err.stderr || '';

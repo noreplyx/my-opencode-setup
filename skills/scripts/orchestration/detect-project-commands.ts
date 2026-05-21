@@ -578,13 +578,13 @@ function detectTestCommand(dirPath: string, pkg: Record<string, unknown> | null)
       label: 'karma.conf.js',
     },
     {
-      check: fileExists(path.join(dirPath, 'pytest.ini')) ||
+      check: !!(fileExists(path.join(dirPath, 'pytest.ini')) ||
              fileExists(path.join(dirPath, 'pyproject.toml')) &&
              (() => {
                const content = readJsonFile(path.join(dirPath, 'pyproject.toml'));
                return content && 'tool' in (content as Record<string, unknown>) &&
                       'pytest' in ((content as Record<string, unknown>).tool as Record<string, unknown> || {});
-             })(),
+             })()),
       command: 'python -m pytest',
       label: 'pytest config',
     },

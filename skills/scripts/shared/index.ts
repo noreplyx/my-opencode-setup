@@ -5,73 +5,34 @@
  * 
  * Usage from any skill script:
  *   import { Logger } from '../shared/logger';
- *   import { readFile, formatReport } from '../shared/utils';
- *   import type { CheckResult, CheckReport, AgentContextFile } from '../shared/types';
+ *   import { readFile } from '../shared/utils';
+ *   import type { AgentOutputContract } from '../shared/types';
  */
 
 export { Logger } from './logger';
 export type { LogLevel } from './logger';
 export { 
   readFile, writeFile, exists, globFiles, grepFiles,
-  timestamp, formatReport, askYesNo, listFilesRecursive, log 
+  timestamp, askYesNo, listFilesRecursive, log 
 } from './utils';
 export type {
-  // ── Agent Identity ──
-  AgentName, AgentMode, AgentMetadata,
+  // ── Core Output Contract ──
+  AgentOutputContract, AgentOutputEntry,
 
-  // ── Pipeline State ──
-  PipelineType, PipelineStatus, PipelineResult,
-  PipelineIdentity, PipelineState,
-
-  // ── Circuit Breaker ──
-  CircuitBreakerState, CircuitBreakerGate, CircuitBreakerConfig,
-  DEFAULT_CIRCUIT_BREAKER,
-
-  // ── Git ──
-  GitState,
-
-  // ── Errors ──
-  ErrorCategory, AgentError,
-
-  // ── Decisions ──
-  AgentDecision,
-
-  // ── Base Output Contract ──
-  AgentTaskResult, BaseAgentOutput, AgentOutputContract,
+  // ── Reproduction & Debugging ──
+  ReproductionCommand, ErrorReproductionPacket,
+  DryRunManifest, CheckpointRequest,
 
   // ── Per-Agent Outputs ──
   FinderOutput, PlanDescriberOutput,
-  WiringManifest, SecuritySelfReview, ImplementorOutput,
-  RootCauseAnalysis, FixerOutput,
-  QAOutput, SuggestedCheckpoint, VerifierOutput,
-  MergeCoordinatorOutput, WiringSummary, IntegratorOutput,
-  BrowserTesterOutput, DocumentorOutput,
+  ImplementorOutput, SecuritySelfReviewReport,
+  RootCauseAnalysis, SecurityFixDetails, CrossSessionMatch,
+  FixerOutput, SecurityTestCoverageReport,
+  QAOutput, SuggestedCheckpoint, SecurityTestCoverageGate,
+  VerifierOutput, MergeCoordinatorOutput,
+  IntegratorOutput, BrowserTesterOutput, DocumentorOutput,
 
-  // ── Agent History ──
-  AgentHistoryEntry,
-
-  // ── Visual Data ──
-  VisualData, VisualCoverageData, VisualBugSeverity,
-  VisualCheckpointResult, VisualDrift, VisualDecision, VisualFileImpact,
-
-  // ── Context File ──
-  AgentContextFile, ValidationResult,
-
-  // ── Security ──
-  SecurityFinding, SecurityScanReport,
-
-  // ── Retrospective ──
-  AgentPerformance, PipelineRetrospective,
-
-  // ── Pre-Flight ──
-  CheckStatus, PreFlightCheckResult, PreFlightReport,
-
-  // ── Debugging & Reproducibility ──
-  ErrorReproduction, ReproductionCommand, DryRunOutput,
-  BugReport, BugReproductionSteps, PipelineCheckpoint,
-  DiagnosticResult, ReplayRequest, DebugEscalation,
-} from './types';
-export type {
-  SkillContext, CheckResult, CheckReport, FileChange,
-  ScaffoldOptions, VerificationPoint, PlanCheckpoint, PlanManifest,
+  // ── Agent Context ──
+  AgentContext, AgentContextHistoryEntry,
+  CircuitBreakerState, GitState, ChainOfCustodyEntry,
 } from './types';

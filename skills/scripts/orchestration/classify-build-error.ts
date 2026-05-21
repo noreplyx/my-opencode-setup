@@ -374,8 +374,8 @@ function verifyBuildOutput(output: string): BuildOutputVerification {
       outputLength: { status: outputLengthStatus, actual: actualLength },
       exitCodeConsistency: {
         status: exitCodeConsistencyStatus,
-        exitCodeClaimed: exitCodeReportedClaimed,
-        exitCodeActual: exitCodeReportedActual,
+        exitCodeClaimed: exitCodeReportedClaimed ?? -1,
+        exitCodeActual: exitCodeReportedActual ?? -1,
       },
       timestampFreshness: { status: timestampFreshnessStatus, ageMs: maxAgeMs },
     },

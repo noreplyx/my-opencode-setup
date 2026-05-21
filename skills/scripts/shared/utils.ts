@@ -91,26 +91,6 @@ export function timestamp(): string {
 }
 
 /**
- * Format check results as markdown report
- */
-export function formatReport(report: CheckReport): string {
-  let md = `## ${report.skillName} Check Report\n\n`;
-  md += `**Date**: ${report.timestamp}\n`;
-  md += `**Summary**: ${report.summary}\n\n`;
-  md += `### Results: ${report.passed}/${report.totalChecks} passed\n\n`;
-  md += `| # | Check | Status | Details |\n`;
-  md += `|---|-------|--------|---------|\n`;
-  
-  report.results.forEach((r, i) => {
-    const icon = r.passed ? '✅' : '❌';
-    md += `| ${i + 1} | ${r.name} | ${icon} | ${r.details} |\n`;
-  });
-  
-  md += '\n';
-  return md;
-}
-
-/**
  * Ask user a yes/no question
  */
 export async function askYesNo(question: string): Promise<boolean> {

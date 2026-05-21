@@ -1092,7 +1092,7 @@ function printRegressionReport(report: RegressionReport, verbose: boolean): void
       console.log(`  Pipeline "${r.evidence.pipelineId}" (${r.evidence.date}), Agent "${r.evidence.agentName}"`);
       console.log(`    Claim: "${r.evidence.claim}"`);
       if (r.evidence.source) console.log(`    File: ${r.evidence.source}`);
-      console.log(`    ${r.detail}`);
+      console.log(`    ${r.recheckResult}`);
       console.log(`    → Action: Update journal entry or flag for re-verification`);
       console.log();
     }
