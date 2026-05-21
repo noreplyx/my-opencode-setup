@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Journal Lookup — Cross-Session Learning for the Orchestration System
  *

@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Pipeline Teardown & Finalization
  *
@@ -1145,7 +1145,7 @@ function updateCalibration(rootDir: string, ctx: AgentContextData, args: CliArgs
         encoding: 'utf-8',
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 15000,
-      });
+      shell: true,});
     } catch (err: any) {
       const stderr = err.stderr || err.message || 'unknown error';
       console.warn(`⚠️  Calibration update failed for ${agentName}: ${stderr.trim()}`);
@@ -1166,7 +1166,7 @@ function updateCalibration(rootDir: string, ctx: AgentContextData, args: CliArgs
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 15000,
-    });
+      shell: true,});
   } catch (err: any) {
     const stderr = err.stderr || err.message || 'unknown error';
     console.warn(`⚠️  Orchestrator calibration update failed: ${stderr.trim()}`);
@@ -1780,7 +1780,7 @@ function main(): void {
           encoding: 'utf-8',
           stdio: ['ignore', 'pipe', 'pipe'],
           timeout: 15000,
-        });
+      shell: true,});
       }
     } catch (err: any) {
       const stderr = err.stderr || err.message || 'unknown error';

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx ts-node
+#!/usr/bin/env node
 /**
  * Historical Evidence Regression Scanner
  *
@@ -466,7 +466,7 @@ function reverifyEvidence(evidence: HistoricalEvidence, baseDir: string): Regres
       encoding: 'utf-8',
       timeout: 30000,
       stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim();
+      shell: true,}).trim();
 
     // Exact match
     if (stdout === evidence.originalResult.trim() || stdout.includes(evidence.originalResult.trim())) {

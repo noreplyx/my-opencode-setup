@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Shared TypeScript types for orchestration scripts and shared-agent-workflow.
  *

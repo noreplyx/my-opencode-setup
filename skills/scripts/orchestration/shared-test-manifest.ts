@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Shared Test Manifest Creator — QA + Browser Tester Coordination
  *

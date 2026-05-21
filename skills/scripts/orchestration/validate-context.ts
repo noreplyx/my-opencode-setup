@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * agent-context.md Validator
  * 

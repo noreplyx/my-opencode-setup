@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Parallelism Checker (for Orchestration)
  *
@@ -149,10 +149,41 @@ function tryExec(command: string): string | null {
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 10000,
-    });
+      shell: true,});
   } catch {
     return null;
   }
+
+/**
+ * Pure Node.js import scanner — reads a file and extracts all import/require sources.
+ * OS-agnostic replacement for shell grep -n -E (from|require|import).
+ */
+function scanFileImportsNode(filePath: string): { stdout: string; stderr: string; exitCode: number } {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { stdout: "", stderr: "File not found", exitCode: 1 };
+    }
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const lines = fileContent.split('\n');
+    const importRe = /(?:from\s+['"]|require\s*\(\s*['"]|import\s*\()/;
+    let output = '';
+    let matchCount = 0;
+    for (let j = 0; j < lines.length; j++) {
+      if (importRe.test(lines[j])) {
+        matchCount++;
+        output += `${j + 1}: ${lines[j]}\n`;
+      }
+    }
+    return {
+      stdout: output.trimEnd(),
+      stderr: '',
+      exitCode: matchCount > 0 ? 0 : 1,
+    };
+  } catch (err) {
+    const e = err as Error;
+    return { stdout: "", stderr: e.message || String(e), exitCode: 2 };
+  }
+}
 }
 
 /**
@@ -170,14 +201,12 @@ function scanFileForImports(
   }
 
   // Use grep first, fall back to ripgrep
-  let grepOut = tryExec(`grep -n -E "(from\\s+['\"]|require\\s*\\(\\s*['\"]|import\\s*\\()" "${filePath}"`);
+  const scanResult = scanFileImportsNode(filePath);
+  let grepOut: string | null = scanResult.stdout;
 
-  if (grepOut === null) {
-    // fallback to ripgrep
-    grepOut = tryExec(`rg -n --no-heading -E "(from\\s+['\"]|require\\s*\\(\\s*['\"]|import\\s*\\()" "${filePath}"`);
+  if (grepOut === '') {
+    grepOut = null;
   }
-
-  if (grepOut === null || grepOut.trim() === '') {
     return imports;
   }
 

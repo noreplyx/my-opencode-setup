@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * E2E Pipeline Test Harness
  *
@@ -264,7 +264,7 @@ function testFixerOutput(): void {
         execSync(`${tsNode} "${validatorScript}" --file="${correctPath}"`, {
           stdio: 'pipe',
           cwd: path.resolve(__dirname, '..', '..', '..'),
-        });
+      shell: true,});
       } catch {
         assert.fail('Correct format should pass validation (exit 0)');
       }
@@ -274,7 +274,7 @@ function testFixerOutput(): void {
         execSync(`${tsNode} "${validatorScript}" --file="${wrongPath}"`, {
           stdio: 'pipe',
           cwd: path.resolve(__dirname, '..', '..', '..'),
-        });
+      shell: true,});
         assert.fail('Old format should fail validation (exit non-zero)');
       } catch {
         // Expected
@@ -747,7 +747,7 @@ function testOutputContract(): void {
           execSync(`${tsNode} "${validatorScript}" --file="${validPath}" --agent="${type}"`, {
             stdio: 'pipe',
             cwd: path.resolve(__dirname, '..', '..', '..'),
-          });
+      shell: true,});
         } catch {
           assert.fail(`Valid ${type} output should pass validator (exit 0)`);
         }
@@ -757,7 +757,7 @@ function testOutputContract(): void {
           execSync(`${tsNode} "${validatorScript}" --file="${invalidPath}" --agent="${type}"`, {
             stdio: 'pipe',
             cwd: path.resolve(__dirname, '..', '..', '..'),
-          });
+      shell: true,});
           assert.fail(`Invalid ${type} output should fail validator (exit non-zero)`);
         } catch {
           // Expected

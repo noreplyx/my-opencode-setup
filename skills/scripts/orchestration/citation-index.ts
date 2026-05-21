@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Citation Index — Cross-Session Citation Index Builder & Query Engine
  *

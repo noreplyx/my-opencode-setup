@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Pipeline Initialization Script
  *
@@ -102,7 +102,7 @@ function execSafe(command: string, timeout = 30000): { stdout: string; stderr: s
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout,
-    });
+      shell: true,});
     return { stdout: result.trim(), stderr: '', exitCode: 0 };
   } catch (err: any) {
     return {

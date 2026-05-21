@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Parallel Security Scan Aggregator
  *
@@ -165,13 +165,25 @@ function runCommand(
  * Test if a command / binary is available on the system PATH.
  */
 function isCommandAvailable(command: string): boolean {
-  try {
-    const result = require('child_process').execSync(`which ${command}`, {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    return result.trim().length > 0;
-  } catch {
+  // Cross-platform PATH check (replaces Unix `which` / Windows `where`)
+  const pathEnv = process.env.PATH || '';
+  const pathDirs = pathEnv.split(path.delimiter);
+  const isWindows = process.platform === 'win32';
+  const extensions = isWindows
+    ? ['', '.cmd', '.exe', '.bat', '.ps1']
+    : [''];
+  for (const dir of pathDirs) {
+    for (const ext of extensions) {
+      const fullPath = path.join(dir, command + ext);
+      try {
+        fs.accessSync(fullPath, fs.constants.X_OK);
+        return true;
+      } catch {
+        continue;
+      }
+    }
+  }
+  return false;
     return false;
   }
 }

@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Provenance Tracker
  *
@@ -173,7 +173,7 @@ function gitBlameRange(filePath: string, lines: string): string[] {
     try {
       const result = child_process.execSync(
         `git blame -L ${line},${line} --porcelain "${filePath}" 2>/dev/null | head -1`,
-        { encoding: 'utf-8', timeout: 5000 },
+        { encoding: 'utf-8', shell: true, timeout: 5000 },
       );
       const sha = result.trim().split(' ')[0];
       if (sha && sha.length >= 7) {

@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Parallel Dispatch (P1 Orchestration Improvement)
  *
@@ -240,7 +240,7 @@ function runCheckParallelism(manifestPath: string): ParallelismReport {
         encoding: 'utf-8',
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 30000,
-      },
+      shell: true,},
     );
 
     // The script currently outputs human-readable text. We need to extract

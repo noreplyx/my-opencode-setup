@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Pipeline Replay
  * 
@@ -79,7 +80,7 @@ function findCheckpoints(baseDir: string, pipelineId: string): Array<{ sha: stri
     const execSync = require('child_process').execSync;
     const logOutput = execSync(
       `git log --oneline --grep="pipeline-checkpoint: [^/]*/" -100`,
-      { cwd: baseDir, encoding: 'utf-8' }
+      { cwd: baseDir, encoding: 'utf-8', shell: true }
     ).trim();
     
     if (!logOutput) return result;

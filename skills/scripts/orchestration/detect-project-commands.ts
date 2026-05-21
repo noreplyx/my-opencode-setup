@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * detect-project-commands.ts
  *
@@ -152,6 +152,33 @@ function fileExists(filePath: string): boolean {
   }
 }
 
+
+/**
+ * Cross-platform check if a command exists on the system PATH.
+ * OS-agnostic replacement for `which` (Unix) / `where` (Windows).
+ */
+function commandExistsInPath(command: string): boolean {
+  const pathEnv = process.env.PATH || '';
+  const pathDirs = pathEnv.split(path.delimiter);
+  const isWindows = process.platform === 'win32';
+  const extensions = isWindows
+    ? ['', '.cmd', '.exe', '.bat', '.ps1']
+    : [''];
+  
+  for (const dir of pathDirs) {
+    for (const ext of extensions) {
+      const fullPath = path.join(dir, command + ext);
+      try {
+        fs.accessSync(fullPath, fs.constants.X_OK);
+        return true;
+      } catch {
+        continue;
+      }
+    }
+  }
+  return false;
+}
+
 function commandExists(command: string): boolean {
   try {
     // Check if the command is a relative path to node_modules
@@ -170,22 +197,13 @@ function commandExists(command: string): boolean {
       const binDir = path.join(process.cwd(), 'node_modules', '.bin');
       const toolPath = path.join(binDir, tool);
       if (fileExists(toolPath)) return true;
-      // Check via which
-      try {
-        execSync(`which ${tool} 2>/dev/null`, { stdio: 'pipe' });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    // Standard command check via which
-    try {
-      execSync(`which ${baseCmd} 2>/dev/null`, { stdio: 'pipe' });
-      return true;
-    } catch {
+      // Check via PATH (cross-platform)
+      if (commandExistsInPath(tool)) return true;
       return false;
     }
+
+    // Standard command check via PATH (cross-platform)
+    return commandExistsInPath(baseCmd);
   } catch {
     return false;
   }

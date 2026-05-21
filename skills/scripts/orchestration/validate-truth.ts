@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Truthfulness Validator
  *
@@ -241,6 +241,7 @@ function execSafe(
   try {
     const result = execSync(command, {
       encoding: 'utf-8',
+      shell: true,
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout,
     });
@@ -462,7 +463,7 @@ function verifyBuildPassed(
   const buildPassed = extractAgentOutputsField(parsed, agentName, 'buildPassed');
   if (buildPassed !== true) return true; // not claiming passed, nothing to verify
   // Re-run build and check
-  const buildResult = execSafe('npm run build 2>&1 | tail -5', 60000);
+  const buildResult = execSafe(process.platform === 'win32' ? 'cmd /c "npm run build 2>&1 | tail -5"' : 'npm run build 2>&1 | tail -5', 60000);
   return buildResult.exitCode === 0;
 }
 
@@ -491,8 +492,9 @@ function verifyGrepEvidence(
     let grepResult: { stdout: string; stderr: string; exitCode: number };
     if (evidence.method === 'grep') {
       // Try exact grep first
-      grepResult = execSafe(
-        `grep -n "${escapeRegexForShell(evidence.excerpt.length > 0 ? evidence.excerpt : evidence.claim)}" "${sourcePath}" 2>/dev/null || true`,
+      grepResult = grepInFile(
+        sourcePath,
+        evidence.excerpt.length > 0 ? evidence.excerpt : evidence.claim,
       );
 
       // Fall back to fuzzy matching if exact grep fails and fuzzy requested
@@ -532,8 +534,8 @@ function verifyGrepEvidence(
         }
       }
     } else {
-      grepResult = execSafe(
-        `head -50 "${sourcePath}" 2>/dev/null || true`,
+      grepResult = readFileLines(
+        sourcePath, 50,
       );
     }
 
@@ -650,8 +652,61 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function escapeRegexForShell(s: string): string {
-  return s.replace(/["\\$`]/g, '\\$&');
+/**
+ * Pure Node.js grep — find pattern in file, return matching lines.
+ * OS-agnostic replacement for shell `grep -n`.
+ */
+function grepInFile(
+  filePath: string,
+  pattern: string,
+  caseSensitive: boolean = true,
+): { stdout: string; stderr: string; exitCode: number } {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { stdout: '', stderr: 'File not found', exitCode: 1 };
+    }
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.split('\n');
+    let matchCount = 0;
+    let output = '';
+    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const flags = caseSensitive ? 'g' : 'gi';
+    const re = new RegExp(escaped, flags);
+    for (let i = 0; i < lines.length; i++) {
+      if (re.test(lines[i])) {
+        matchCount++;
+        output += `${i + 1}: ${lines[i]}\n`;
+      }
+    }
+    return {
+      stdout: output.trimEnd(),
+      stderr: '',
+      exitCode: matchCount > 0 ? 0 : 1,
+    };
+  } catch (err: any) {
+    return { stdout: '', stderr: err.message || String(err), exitCode: 2 };
+  }
+}
+
+/**
+ * Pure Node.js head — read first N lines of a file.
+ * OS-agnostic replacement for shell \`head -n\`.
+ */
+function readFileLines(
+  filePath: string,
+  maxLines: number = 50,
+): { stdout: string; stderr: string; exitCode: number } {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { stdout: '', stderr: 'File not found', exitCode: 1 };
+    }
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.split('\n');
+    const selected = lines.slice(0, maxLines).join('\n');
+    return { stdout: selected, stderr: '', exitCode: 0 };
+  } catch (err: any) {
+    return { stdout: '', stderr: err.message || String(err), exitCode: 2 };
+  }
 }
 
 // ── Staleness Detection and Refresh ──
@@ -731,15 +786,16 @@ function refreshStaleEvidence(
           actualResult: 'source file not found (stale)',
           reportedResult: evidence.result,
           excerpt: '',
-          currentContentHash: null as any,
+          currentContentHash: undefined,
           qualityScore: computeEvidenceQuality(evidence),
         });
         continue;
       }
       const currentHash = computeFileHash(sourcePath);
-      const grepResult = execSafe(
-        `grep -n "${escapeRegexForShell(evidence.excerpt.length > 0 ? evidence.excerpt : evidence.claim)}" "${sourcePath}" 2>/dev/null || true`,
-      );
+      const grepResult = grepInFile(
+          sourcePath,
+          evidence.excerpt.length > 0 ? evidence.excerpt : evidence.claim,
+        );
       const found = grepResult.stdout.length > 0;
       refreshed.push({
         claim: evidence.claim,

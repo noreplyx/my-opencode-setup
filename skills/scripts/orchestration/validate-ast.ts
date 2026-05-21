@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 /**
  * validate-ast.ts — AST-Based Semantic Evidence Validator
@@ -1590,7 +1590,8 @@ function reverifyEvidence(
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 10000,
-      });
+      
+        shell: true,});
 
       // Command succeeded → evidence likely still holds
       // Even if file changed, the claim is still verifiable
