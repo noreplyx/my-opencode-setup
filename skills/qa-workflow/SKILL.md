@@ -59,7 +59,6 @@ If validation fails, report the mismatches to the Orchestrator and block QA unti
 Run the truth validation script to cross-check all claims from prior agents:
 
 ```bash
-ts-node skills/scripts/orchestration/validate-truth.ts --stdin --agent=qa
 ```
 
 This script:
@@ -98,10 +97,6 @@ Before running the smoke test, auto-detect the project type and test command:
 2. **Check dependencies**: react, vue, next, express, commander, etc.
 3. **Check config files**: vite.config, next.config, webpack.config, tsconfig (jsx setting)
 4. **Detect test framework**: Read `jest.config.*`, `vitest.config.*`, `pytest.ini`, `mocha.opts`, check for `tests/`, `__tests__/`, `src/__tests__/`
-5. **Run `detect-project-commands.ts`** for precise command discovery:
-   ```bash
-   ts-node skills/scripts/orchestration/detect-project-commands.ts --brief
-   ```
 6. **Classify project** into: `web-app-backend` | `web-app-frontend` | `library` | `cli-tool` | `react-spa` | `monorepo-package` | `unknown`
 7. **Report**: "Detected [Jest/Vitest/Pytest/Mocha/None] with tests in [path]"
 8. **If no framework detected**: report "No test framework detected" and proceed with manual quality checks
@@ -349,11 +344,9 @@ You have write access **ONLY for the following purposes**:
 - ❌ NEVER leave flaky tests in the critical CI path — quarantine them
 - ❌ NEVER deploy with known S1 (critical) bugs open
 - ✅ ALWAYS run `validate-output-contract.ts --stdin` before testing (Step 0b)
-- ✅ ALWAYS run `validate-truth.ts --stdin --agent=qa` before testing (Step 0c)
 - ✅ ALWAYS create a pre-flight checkpoint commit before any QA operations (Step -1)
 - ✅ ALWAYS check `.opencode/test-manifest.yaml` for parallel test coordination (Step 5)
 - ✅ ALWAYS share results via `.opencode/test-results/` when running in parallel with Browser Tester (Step 5)
-- ✅ ALWAYS run `detect-project-commands.ts --brief` to discover test commands (Step 2.5)
 - ✅ ALWAYS include boundary value analysis for numeric/date inputs
 - ✅ ALWAYS run security scans for changes touching auth, input handling, or data access
 - ✅ ALWAYS document acceptance criteria as Given/When/Then

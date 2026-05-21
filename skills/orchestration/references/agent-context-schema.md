@@ -618,8 +618,6 @@ After receiving an agent's output, the Orchestrator MUST:
 1. Parse the structured output fields from the agent's report
 2. Cross-reference `changedFiles` against actual disk state (using read/glob/grep)
 3. Cross-reference `buildPassed`/`lintPassed` against raw output excerpts
-4. **Validate evidence**: Run `ts-node skills/scripts/orchestration/validate-truth.ts --pipeline` to verify claims
-5. **Classify build output**: If build/lint failed, run `ts-node skills/scripts/orchestration/classify-build-error.ts --pipeline` to determine routing
 6. Append the agent's results to `agentHistory` in `agent-context.md`
 7. Update `circuitBreaker.counters` if the agent failed
 8. Update `circuitBreaker.patternSignatures` with failure pattern (deduplicated by SHA256 hash of `gate:agent:classification:primaryCause`)

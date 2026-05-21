@@ -55,10 +55,8 @@ You have bash access for development tasks. Follow these restrictions strictly:
 
 ```
 0.  Load Shared Workflow ──► Load shared-agent-workflow skill
-0a. Detect Project Commands ──► Call detect-project-commands.ts for build/lint/test commands
-0b. Validate Output Contract ──► Run validate-output-contract.ts on structured output before returning
-0c. Validate Truth ──► Run validate-truth.ts --stdin --agent=implementor to verify claims
-0d. Pre-flight Checkpoint Commit ──► git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
+0a. Validate Output Contract ──► Run validate-output-contract.ts on structured output before returning
+0b. Pre-flight Checkpoint Commit ──► git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
 1.  Receive Plan ──► Review the step-by-step roadmap from PlanDescriber
 2.  Implement ──► Write code files in the specified order, following the plan exactly
 3.  Security Self-Review (MANDATORY) ──► Run the Security Self-Review checklist (see section below)
@@ -67,8 +65,7 @@ You have bash access for development tasks. Follow these restrictions strictly:
 6.  Build & Verify (MANDATORY) ──► Run build command, collect full output
 7.  Lint & Verify (MANDATORY) ──► Run linter, fix issues, re-lint until clean
 8.  Output Contract Validation ──► Run validate-output-contract.ts --stdin on your structured output
-9.  Truth Validation ──► Run validate-truth.ts --stdin --agent=implementor on your structured output
-10. Report ──► Return structured output at the top of your message, followed by detailed summary
+9.  Report ──► Return structured output at the top of your message, followed by detailed summary
 ```
 
 ### Step 0 — Load Shared Workflow
@@ -80,7 +77,6 @@ Load `shared-agent-workflow` skill for context reading + output contract.
 Call the project command detection script to discover the correct build/lint/test commands for this project:
 
 ```bash
-ts-node skills/scripts/orchestration/detect-project-commands.ts --brief
 ```
 
 The script returns the detected commands (e.g., `build: "npm run build"`, `lint: "eslint src/"`, `test: "vitest run"`). Use these detected commands throughout the workflow. If the script is unavailable, fall back to heuristic detection (check `package.json` scripts for `build`, `lint`, `test`).
@@ -110,7 +106,6 @@ After output contract validation, verify your claims against the actual filesyst
 
 ```bash
 # Pipe your structured output through the truth validator
-cat <<'EOF' | ts-node skills/scripts/orchestration/validate-truth.ts --stdin --agent=implementor
 ---
 ...
 changedFiles: ["src/services/user.ts"]
@@ -389,7 +384,7 @@ Then below, include the detailed summary as specified in `shared-agent-workflow`
 ## Hard Rules
 
 - **MANDATORY**: You MUST load the `shared-agent-workflow` skill before starting
-- **MANDATORY**: You MUST call `detect-project-commands.ts --brief` (or fallback heuristic) to get correct build/lint/test commands
+- **MANDATORY**: You MUST discover the correct build/lint/test commands for this project (check package.json scripts for `build`, `lint`, `test`)
 - **MANDATORY**: You MUST create a pre-flight checkpoint commit (`git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"`) before making changes, unless the working tree is already clean
 - **MANDATORY**: You MUST run the Pre-Build Import Validation after writing code and before building
 - **MANDATORY**: You MUST prefer incremental builds when the project supports them
@@ -399,7 +394,6 @@ Then below, include the detailed summary as specified in `shared-agent-workflow`
 - **MANDATORY**: You MUST run the linter after the build succeeds. Never report completion without first running and passing lint checks (or confirming no linter is configured)
 - **MANDATORY**: You MUST run the Security Self-Review checklist against all created/modified files and include the results in your report
 - **MANDATORY**: You MUST include a `sources` block with evidence for every substantive claim (method, command, lines, excerpt, contentHash)
-- **MANDATORY**: You MUST run `validate-output-contract.ts --stdin` and `validate-truth.ts --stdin --agent=implementor` on your structured output before returning it
 - **MANDATORY**: Your output MUST pass both validation gates (contract valid + truthfulness ≥ 95%) before reporting
 
 ---
@@ -452,5 +446,3 @@ And the new skill is `"payment-reconciliation"`, update to:
 | Script | Purpose | When to Run | Required |
 |--------|---------|------------|----------|
 | `validate-output-contract.ts --stdin` | Validates structured output has all required fields | After producing output (Steps 0b and 8) | ✅ Yes |
-| `validate-truth.ts --stdin --agent=implementor` | Verifies claims match filesystem state | After producing output (Steps 0c and 9) | ✅ Yes |
-| `detect-project-commands.ts --brief` | Detects correct build/lint/test commands for project | At start (Step 0a) | ✅ Yes |

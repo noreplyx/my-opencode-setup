@@ -74,7 +74,7 @@ Run the supply chain scanner to check for:
 
 ```bash
 # Run supply chain integrity check
-ts-node skills/scripts/code-philosophy/check-supply-chain.ts --dir=./
+
 ```
 
 If install scripts are detected (HIGH severity), the scan fails.
@@ -232,8 +232,5 @@ If the Security Scan fails (High/Critical vulnerabilities):
 
 | Tool | Purpose | Location |
 |------|---------|----------|
-| `check-security.ts` | SAST scanner (prototype pollution, path traversal, command injection, SSRF, NoSQL injection, ReDoS, Zip Slip) | `skills/scripts/code-philosophy/check-security.ts` |
-| `check-supply-chain.ts` | Supply chain integrity (install scripts, typosquatting, SBOM, package age) | `skills/scripts/code-philosophy/check-supply-chain.ts` |
-| `self-test-security.ts` | Self-test for security tools (7 tests, verifies tools work) | `skills/scripts/code-philosophy/self-test-security.ts` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |

@@ -26,11 +26,10 @@ You have bash access for debugging and verification tasks. Follow these restrict
 - **Build tools**: `npm run build`, `tsc`, `tsc --incremental`, `webpack`, `vite build`, etc.
 - **Testing**: `npm test`, `jest`, `vitest`, `pytest`, etc.
 - **Linting**: `eslint`, `prettier`, `tsc --noEmit`, etc.
-- **Diagnostic tools**: `ts-node skills/scripts/orchestration/classify-build-error.ts`, `validate-ast.ts`, `check-consistency.ts`, `provenance-tracker.ts`, `citation-index.ts` (scripts listed in Diagnostics Protocol)
+- **Diagnostic tools**: `provenance-tracker.ts`, `citation-index.ts`, `validate-output-contract.ts`
 - **Git blame/operations**: `git blame`, `git log`, `git diff`, `git add -A`, `git commit` (no force push)
 - **Package management**: `npm install`, `pip install` (only packages explicitly needed for the fix)
 - **Read-only inspection**: `cat`, `head`, `tail`, `ls`, `find` for investigation
-- **Project command detection**: `ts-node skills/scripts/orchestration/detect-project-commands.ts --brief`
 
 ### ❌ Prohibited Bash Operations
 - **NEVER run**: `rm -rf`, `del /F /S`, or any destructive delete commands on existing code
@@ -69,12 +68,9 @@ Use `--no-verify` to bypass pre-commit hooks (this is a pipeline marker, not a p
 
 Load `shared-agent-workflow` skill for context reading + output contract.
 
-### Step 0b: Run `detect-project-commands.ts --brief` (R5)
-
 Before running any build/lint/test commands, auto-detect the correct project commands:
 
 ```bash
-ts-node skills/scripts/orchestration/detect-project-commands.ts --brief
 ```
 
 This outputs a JSON object with the project's build, lint, and test commands so you don't need to guess or manually read `package.json`. Fall back to reading `package.json` manually if the script is unavailable.
@@ -117,13 +113,10 @@ After reading the bug report but BEFORE applying any fix, run these automated di
 
 ```bash
 # 1. BUILD DIAGNOSTIC (if build error)
-ts-node skills/scripts/orchestration/classify-build-error.ts --dir=./
 
 # 2. AST ANALYSIS (if file-level error)
-ts-node skills/scripts/orchestration/validate-ast.ts --file=<affected-file>
 
 # 3. CONSISTENCY CHECK (always)
-ts-node skills/scripts/orchestration/check-consistency.ts --dir=./
 
 # 4. GIT BLAME (to identify which agent introduced the issue)
 git blame <affected-file> -L <line>,+10
@@ -145,12 +138,10 @@ Collect ALL diagnostic results before reasoning. Include them in your structured
 ```yaml
 diagnostics:
   - type: "build"
-    tool: "classify-build-error.ts"
     passed: true
     findings: ["Build error classified as: type-mismatch"]
     recommendations: ["Check type definitions in src/types/user.ts"]
   - type: "consistency"
-    tool: "check-consistency.ts"
     passed: false
     findings: ["Import path 'User' not found in src/types/user.ts"]
     recommendations: ["Rename export or update import"]
@@ -223,7 +214,6 @@ Pipe your structured YAML output via stdin. The script exits with code 0 if vali
 After the output contract passes, validate that every claim is true:
 
 ```bash
-ts-node skills/scripts/orchestration/validate-truth.ts --stdin --agent=fixer
 ```
 
 Pipe your structured YAML output via stdin. The script re-verifies every evidence claim against the actual filesystem. If the truthfulness score is < 95%, fix the claims before reporting.
@@ -269,23 +259,18 @@ The diagnostics protocol consists of 6 tools to run in sequence:
 
 ### Tool 1: Build Diagnostic
 ```bash
-ts-node skills/scripts/orchestration/classify-build-error.ts --dir=./
 ```
 - Run ONLY if the bug involves a build failure
 - Classifies the error into import-error, type-error, syntax-error, config-error, dependency-error
 - Outputs recommendations for which agent should fix it
 
 ### Tool 2: AST Analysis
-```bash
-ts-node skills/scripts/orchestration/validate-ast.ts --file=<affected-file>
-```
 - Run ONLY if the bug is localized to a specific file
 - Validates the AST structure of the affected file against expected patterns
 - Detects missing function bodies, invalid node structures
 
 ### Tool 3: Consistency Check
 ```bash
-ts-node skills/scripts/orchestration/check-consistency.ts --dir=./
 ```
 - Run ALWAYS — even if the bug seems isolated
 - Checks import resolution, export availability, cross-file type consistency
@@ -323,12 +308,10 @@ Collect ALL diagnostic results and include them in your structured output:
 ```yaml
 diagnostics:
   - type: "build"
-    tool: "classify-build-error.ts"
     passed: true
     findings: ["Build error classified as: type-mismatch"]
     recommendations: ["Check type definitions in src/types/user.ts"]
   - type: "consistency"
-    tool: "check-consistency.ts"
     passed: false
     findings: ["Import path 'User' not found in src/types/user.ts"]
     recommendations: ["Rename export or update import"]
@@ -523,7 +506,7 @@ sources:
     contentHash: "f6e5d4c3b2a1..."
   - claim: "Diagnostic: consistency check found no issues"
     method: "run"
-    command: "ts-node skills/scripts/orchestration/check-consistency.ts --dir=./"
+    command: ""
     lines: []
     excerpt: "All imports resolved correctly"
     contentHash: null
@@ -559,7 +542,6 @@ agentOutputs:
           status: "unaffected"
 diagnostics:
   - type: "consistency"
-    tool: "check-consistency.ts"
     passed: true
     findings: ["All imports resolved correctly"]
     recommendations: []
@@ -632,7 +614,6 @@ Below the structured block, include the detailed fixer report (root cause analys
 
 Before reporting, verify:
 - [ ] Step -1 checkpoint commit was created
-- [ ] Step 0b `detect-project-commands.ts --brief` was run
 - [ ] Cross-session error matching was checked (Step 3)
 - [ ] Automated diagnostics were run (Step 4) — all 6 tools
 - [ ] Root cause was diagnosed (Step 5) — classification recorded
@@ -641,7 +622,6 @@ Before reporting, verify:
 - [ ] Post-fix regression tests passed (Step 8)
 - [ ] Self-check against bug report completed (Step 9)
 - [ ] Output contract validated via `validate-output-contract.ts --stdin` (Step 10)
-- [ ] Truthfulness validated via `validate-truth.ts --stdin --agent=fixer` (Step 11)
 - [ ] `sources` block included for every claim
 - [ ] `status` field set correctly (completed/failed/partial)
 - [ ] `changedFiles` reflects actual modifications
@@ -650,7 +630,6 @@ Before reporting, verify:
 ## Hard Rules
 
 - ✅ You MUST run Step -1 (pre-flight checkpoint commit) before making any changes
-- ✅ You MUST run Step 0b (`detect-project-commands.ts --brief`) before running build/lint/test
 - ✅ You MUST run automated diagnostics before reasoning about root cause
 - ✅ You MUST run provenance tracker to identify which agent introduced the bug
 - ✅ You MUST emit reproduction command for build/lint/test failures
@@ -661,7 +640,6 @@ Before reporting, verify:
 - ✅ You MUST run existing tests after every fix (Post-Fix Regression Check)
 - ✅ You MUST return full build + lint + test output in your report
 - ✅ You MUST validate output contract after producing output (`validate-output-contract.ts --stdin`)
-- ✅ You MUST validate truthfulness after output contract (`validate-truth.ts --stdin --agent=fixer`)
 - ✅ You MUST include a `sources` block with evidential provenance for every claim
 - ✅ After 3 failed attempts, escalate to Debug (not PlanDescriber)
 - ❌ NEVER add features not in the original plan
@@ -705,12 +683,7 @@ Before reporting, verify:
 
 | Script | Purpose | When to Run |
 |--------|---------|-------------|
-| `detect-project-commands.ts --brief` | Auto-detect build/lint/test commands | Step 0b (before any command) |
-| `classify-build-error.ts --dir=./` | Classify build errors by type | Step 4.1 (if build error) |
-| `validate-ast.ts --file=<path>` | Validate file AST structure | Step 4.2 (if file-level error) |
-| `check-consistency.ts --dir=./` | Check cross-file consistency | Step 4.3 (always) |
 | `provenance-tracker.ts --blame --file=<path>` | Trace which agent introduced the bug | Step 4.5 (always) |
 | `check-evidence-regression.ts` | Check test evidence degradation | Step 4.6 (if test regression) |
 | `citation-index.ts --checkpoint=<id>` | Search past checkpoint failures | Step 3 (cross-session matching) |
 | `validate-output-contract.ts --stdin` | Validate structured output format | Step 10 (after output produced) |
-| `validate-truth.ts --stdin --agent=fixer` | Validate claims against filesystem | Step 11 (after contract validation) |

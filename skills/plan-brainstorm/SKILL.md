@@ -324,7 +324,6 @@ Load these when you need specialized guidance:
 |---|---|---|
 | `generate-manifest.ts` | plan-describe | Generate a `plan-manifest.json` from brainstormed decisions |
 | `verify-manifest.ts` | plan-verification | Verify implementation matches the agreed plan |
-| `check-consistency.ts` | orchestration | Check project consistency after implementation |
 
 ### Workflow
 

@@ -502,9 +502,7 @@ function runPreFlight(): PreFlightReport {
   const journalReadmePath = path.resolve('.opencode/journal/README.md');
   const journalStructureOk = fs.existsSync(journalReadmePath);
 
-  // Check security self-test
-  const selfTestResult = execSafe(`"${getTsNodePath()}" skills/scripts/code-philosophy/self-test-security.ts 2>&1`, 30000);
-  const securityToolsOk = selfTestResult.exitCode === 0;
+  const securityToolsOk = false; // security self-test removed (its tools are language-specific)
 
   // Check for stale agent-context.md
   const contextPath = path.resolve('agent-context.md');

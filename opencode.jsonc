@@ -6,5 +6,15 @@
   },
   "plugin": [
     "@franlol/opencode-md-table-formatter@latest"
-  ]
+  ],
+  "mcp": {
+    "searxng": {
+      "type": "local",
+      "command": ["bunx", "-y", "mcp-searxng"],
+      "environment": {
+        "SEARXNG_URL": "http://localhost:8080"
+      },
+      "enabled": true
+    }
+  }
 }

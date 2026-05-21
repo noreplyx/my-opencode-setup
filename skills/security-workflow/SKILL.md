@@ -140,31 +140,6 @@ Invalid reasons (these fail the gate):
 - `too_difficult`
 - `not_important`
 
-## 4. Parallel Security Scan Protocol
-
-To run all six security scans in parallel against the codebase, use the parallel security scan script:
-
-```bash
-# Run all 6 scans in parallel (dependency, secrets, anti-patterns, supply chain, SBOM, git history)
-ts-node skills/scripts/orchestration/parallel-security-scan.ts --dir=./
-```
-
-This script executes the following scans concurrently:
-
-| Scan | Description | Blocking? |
-|------|-------------|-----------|
-| Dependency Vulnerability | `npm audit --audit-level=high` | Yes — fails on High/Critical |
-| Hardcoded Secrets | Regex scan for secret patterns | No — informational |
-| Security Anti-Patterns | SAST-style pattern detection | No — informational |
-| Supply Chain Integrity | Install scripts, typosquatting, package age | Yes — fails on install scripts |
-| SBOM Generation | CycloneDX bill of materials | No — informational |
-| Git History Secrets | Secret scan of commit diffs | No — informational |
-
-Results are aggregated into a single Security Scan Report (see Section 7 for output format).
-
-### Fallback
-If `parallel-security-scan.ts` is unavailable, run scans sequentially using the individual commands documented in the `security-scan` skill.
-
 ## 5. Security Vulnerability Severity Classification
 
 When a vulnerability is found, classify it by severity and respond according to the table below:

@@ -10,3 +10,4 @@ bun.lock
 dist/
 agent-context.md
 manifest.yaml
+searxng/core-config

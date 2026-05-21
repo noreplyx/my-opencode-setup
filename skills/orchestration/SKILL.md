@@ -10,9 +10,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | Improvement | Script/Skill | Purpose |
 |-------------|-------------|---------|
 | **Pipeline State Machine** | `validate-transition.ts` | Enforces valid agent step transitions |
-| **Build Command Detection** | `detect-project-commands.ts` | Auto-discovers build/lint/test commands |
 | **Parallel Dispatch** | `parallel-dispatch.ts` | Native parallel dispatch with phase grouping |
-| **Parallel Security Scan** | `parallel-security-scan.ts` | Runs 6 security scans in parallel |
 | **Citation Index** | `citation-index.ts` | Cross-session checkpoint failure patterns |
 | **Shared Test Manifest** | `shared-test-manifest.ts` | QA + Browser Tester coordination |
 | **Unified Error Taxonomy** | `unified-pipeline-error-schema.ts` | Typed PipelineError with 30 error codes |
@@ -255,10 +253,8 @@ After EVERY agent returns its output (before updating agent-context.md), the Orc
 ts-node skills/scripts/orchestration/validate-output-contract.ts --file=<agent-output-file>
 
 # Step 2: Validate truthfulness of claims (re-verify against filesystem)
-ts-node skills/scripts/orchestration/validate-truth.ts --file=<agent-output-file>
 
 # Step 3: Score evidence quality
-ts-node skills/scripts/orchestration/validate-truth.ts --quality-report --file=<agent-output-file>
 ```
 
 #### Gate Rules
@@ -273,8 +269,6 @@ If an agent submits evidence quality < 70 for 3 consecutive attempts:
 1. First low quality: Warn agent with specific feedback
 2. Second low quality: Cycle back with explicit evidence template
 3. Third low quality: Open circuit breaker → escalate to Orchestrator
-
-> **v2.0 Enhancement**: The `validate-truth.ts` script now supports stale evidence detection (`--stale-detection`), auto-refresh (`--refresh-stale`), and evidence quality scoring (`--quality-report`). Run `validate-truth.ts --pipeline --quality-report` for the full pipeline evidence quality assessment.
 
 ### Pipeline Teardown (Automated)
 
@@ -308,7 +302,6 @@ Every implementation MUST pass through these mandatory validation gates:
 
 **Build Gate Protocol:**
 - The Implementor MUST run the build command after writing code
-- If the build fails, the Orchestrator MUST run `ts-node skills/scripts/orchestration/classify-build-error.ts --output="<build-output>"` to classify the error type and route to the correct agent:
   - `import-error` → route to **Integrator** (fix import paths)
   - `type-error` → route to **Fixer** (fix type signatures)
   - `syntax-error` → route to **Implementor** (fix syntax)
@@ -334,30 +327,12 @@ Every implementation MUST pass through these mandatory validation gates:
 
 **Security Scan Protocol:**
 - After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)
-- Scan includes: `npm audit --audit-level=high`, secrets scan (rg), anti-pattern scan (rg), SAST scan (check-security.ts), supply chain integrity (check-supply-chain.ts), SBOM generation, git history secret scan
+- Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
 - SAST findings (path traversal, command injection, etc.) → FAIL for Critical, WARN for High/Medium
 - The Security Scan MUST NOT modify any files
-
-### Parallel Security Scan (NEW)
-The security scan now runs all 6 scan types in parallel using the `parallel-security-scan.ts` script:
-
-```bash
-ts-node skills/scripts/orchestration/parallel-security-scan.ts --dir=./
-```
-
-This runs concurrently:
-1. npm audit — dependency vulnerability scan
-2. Secrets detection — hardcoded credentials search
-3. Anti-pattern scan — eval, innerHTML, dangerous patterns
-4. SAST scan — deep static analysis (check-security.ts)
-5. Supply chain scan — install scripts, typosquatting (check-supply-chain.ts)
-6. Git history scan — secrets committed to git
-
-Aggregates results and produces a unified security report with a single pass/fail/warn verdict.
-The total wall-clock time is roughly the slowest single scan (not the sum of all 6).
 
 #### Re-Audit on Dependency Change (NEW)
 If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` during the pipeline:
@@ -908,7 +883,6 @@ During an active pipeline, the Orchestrator uses calibration data BEFORE dispatc
 Before every parallel dispatch decision, the Orchestrator MUST run the parallelism check script as step 0:
 
 ```bash
-ts-node skills/scripts/orchestration/check-parallelism.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json --dir=./
 ```
 
 The script's output (SINGLE_FILE, PARALLEL, SEQUENTIAL, HYBRID) is the primary decision driver. Fall back to the manual decision tree only if the script is unavailable.
@@ -932,7 +906,6 @@ Before deciding whether to dispatch tasks in parallel, the Orchestrator runs an 
 ### Automated Script
 Use the parallelism detection script to get an automated recommendation:
 ```bash
-ts-node skills/scripts/orchestration/check-parallelism.ts --manifest=plan-manifests/<feature>/v1-manifest.json --dir=./
 ```
 
 This script reads the manifest, scans files for cross-references using grep/rg, builds a dependency graph using Kahn's algorithm, detects shared state patterns, and outputs a recommendation:
@@ -978,8 +951,6 @@ When all 3 return, check:
 - Controller methods match service method signatures
 
 ### Automated Dispatch Manifest Generation (NEW)
-After check-parallelism.ts produces a recommendation, use parallel-dispatch.ts to generate dispatch manifests:
-
 ```bash
 ts-node skills/scripts/orchestration/parallel-dispatch.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json --pipeline-id=<id>
 ```
@@ -1206,7 +1177,6 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Browser Testing | `playwright-cli` | Browser automation |
 | Documentation | `api-documentation` | README, API docs, inline comments, ADRs |
 | Pre-Flight | `smart-finder` | Cross-session journal search + proactive hazard detection |
-| Parallel Dispatch | `parallel-dispatch` + `check-parallelism` | Phase-based parallel implementor dispatch |
 
 ### Agent Health Monitoring (NEW)
 
@@ -1311,7 +1281,6 @@ When the Verifier achieves 100% compliance on Pass 1 + Pass 2, or when explicitl
 - **Import Style Consistency**: Check that imports are grouped consistently (external first, then internal) and use consistent module resolution
 - **Error Handling Pattern Consistency**: Verify that error handling is consistent across similar files (e.g., all repository methods use `try/catch` with `logger.error`)
 - **Export Pattern Consistency**: Check that exports use a consistent style (named exports preferred, no mixed default/named in the same module)
-- **Run check-consistency.ts**: Execute `ts-node skills/scripts/orchestration/check-consistency.ts --dir=./` and report findings
 
 ### Pass 4 — Completeness Check
 - **File Completeness**: Compare the list of files the plan said would be created/modified against actual git diff
@@ -2104,26 +2073,13 @@ This skill includes executable scripts for project initialization, consistency c
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `init-project.ts` | Scaffolds new projects with proper structure, configs, and boilerplate | `ts-node <skills-dir>/scripts/orchestration/init-project.ts --name=<project-name> --dir=<output-dir> --type=lib\|app\|monorepo` |
-| `check-consistency.ts` | Checks project for import/export style and naming convention consistency | `ts-node <skills-dir>/scripts/orchestration/check-consistency.ts --dir=<project-dir>` |
 | `validate-output-contract.ts` | Validates subagent output against structured output contract schemas | `ts-node <skills-dir>/scripts/orchestration/validate-output-contract.ts --file=<path> \| --pipeline \| --agent=<name>` |
 | `update-calibration.ts` | Reads and updates the agent calibration database (`agents.yaml`) | `ts-node <skills-dir>/scripts/orchestration/update-calibration.ts --agent=<name> --success=true\|false [options]` |
-| `check-parallelism.ts` | Analyzes plan manifest for parallel dispatch opportunities | `ts-node <skills-dir>/scripts/orchestration/check-parallelism.ts --manifest=<path> --dir=<project-dir>` |
 | `test-pipeline.ts` | E2E test harness exercising all orchestration components | `ts-node <skills-dir>/scripts/orchestration/test-pipeline.ts [--test=<name>]` |
-
-### Project Scaffolding
-```bash
-# Scaffold a new library project
-ts-node skills/scripts/orchestration/init-project.ts --name=my-lib --dir=./ --type=lib
-
-# Scaffold a new application
-ts-node skills/scripts/orchestration/init-project.ts --name=my-app --dir=./ --type=app
-```
 
 ### Consistency Checks
 Run after implementation to ensure code style consistency:
 ```bash
-ts-node skills/scripts/orchestration/check-consistency.ts --dir=./
 ```
 
 ### Output Contract Validation
@@ -2149,7 +2105,6 @@ ts-node skills/scripts/orchestration/update-calibration.ts --read
 ### Parallelism Analysis
 Before parallel dispatch decisions:
 ```bash
-ts-node skills/scripts/orchestration/check-parallelism.ts --manifest=plan-manifests/my-feature/v1-manifest.json --dir=./
 ```
 
 ### Pipeline Testing
@@ -2546,12 +2501,10 @@ Every subagent's output MUST include an `evidence` array (at the agentOutputs le
 After every agent completes, the Orchestrator MUST run the Truthfulness Validator:
 
 ```bash
-ts-node skills/scripts/orchestration/validate-truth.ts --file=<agent-output-path> --agent=<agent-name>
 ```
 
 Or for a full pipeline audit:
 ```bash
-ts-node skills/scripts/orchestration/validate-truth.ts --pipeline
 ```
 
 If any evidence is refuted (claim does not match reality), the pipeline should:
@@ -2886,26 +2839,6 @@ contractVerification:
 - ✅ ALWAYS include @contract/@exports/@depends in every new file from parallel dispatch
 - ✅ ALWAYS use semver ranges (@^1.0, @~1.0, @1.0.0) for dependency versions
 - ✅ ALWAYS report contract mismatches as blocking issues (prevent proceeding to Build Gate)
-
-### Automation in check-parallelism.ts
-
-The `check-parallelism.ts` script now also extracts and validates @contract annotations. Run with:
-
-```bash
-ts-node skills/scripts/orchestration/check-parallelism.ts \
-  --manifest=plan-manifests/<feature>/v1-manifest.json \
-  --dir=./ \
-  --verify-contracts  # NEW: also checks @contract annotations
-```
-
-If contracts are missing or mismatched, the script outputs a recommendation with specific files:
-```
-❌ Contract Mismatch: src/controllers/user.controller.ts depends on 
-   src/types/user.types.ts@^1.0 but actual version is 1.0 — matched ✓
-   
-❌ Missing Contract: src/services/user.service.ts has no @contract annotation
-   → All parallel files must have @contract headers
-```
 
 ## Orchestration Workflow Update
 

@@ -104,17 +104,11 @@ This skill ships with automated check scripts:
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `check-solid.ts` | Scans for SRP, OCP, and DIP violations | `ts-node skills/scripts/code-philosophy/check-solid.ts --dir=<project-dir>` |
-| `check-clean-code.ts` | Detects long functions, magic numbers, TODOs | `ts-node skills/scripts/code-philosophy/check-clean-code.ts --dir=<project-dir>` |
-| `check-security.ts` | Scans for hardcoded secrets, SQL injection | `ts-node skills/scripts/code-philosophy/check-security.ts --dir=<project-dir>` |
 
 ### Workflow Integration
 
 ```bash
 # Run validation after implementation
-ts-node skills/scripts/code-philosophy/check-solid.ts --dir=./
-ts-node skills/scripts/code-philosophy/check-clean-code.ts --dir=./
-ts-node skills/scripts/code-philosophy/check-security.ts --dir=./
 ```
 
 These scripts exit with code 1 if high-severity issues are found, making them suitable for CI/CD pipelines.

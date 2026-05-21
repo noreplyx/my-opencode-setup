@@ -3,6 +3,7 @@ description: Explores codebase and searches for necessary information to support
 mode: subagent
 temperature: 0.3
 tools:
+  searxng: true
   write: false
   edit: false
   bash: false
