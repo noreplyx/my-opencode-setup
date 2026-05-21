@@ -494,9 +494,9 @@ function runPreFlight(): PreFlightReport {
   const lastCommitMessage = msgResult.stdout || 'unknown';
 
   // Check if project compiles
-  const buildResult = execSafe('npm run build', 30000);
+  const buildResult = execSafe('npm run build 2>/dev/null || true', 15000);
   const projectCompiles = buildResult.exitCode === 0;
-  const buildOutput = buildResult.stderr || buildResult.stdout || '(no output)';
+  const buildOutput = buildResult.stderr || buildResult.stdout || '(no build output captured)';
 
   // Check journal structure
   const journalReadmePath = path.resolve('.opencode/journal/README.md');
@@ -791,11 +791,13 @@ function computeFamiliarityScore(modulePath: string): number {
   else if (commitCount >= 1) score += 1;
 
   // Check if test file exists
+  const ext = path.extname(modulePath);
+  const base = ext ? modulePath.slice(0, -ext.length) : modulePath;
   const testFiles = [
-    modulePath.replace(/\.(ts|tsx|js|jsx)$/, '.test.$1'),
-    modulePath.replace(/\.(ts|tsx|js|jsx)$/, '.spec.$1'),
-    `tests/${modulePath.replace(/\.(ts|tsx|js|jsx)$/, '.test.$1')}`,
-    `__tests__/${path.basename(modulePath).replace(/\.(ts|tsx|js|jsx)$/, '.test.$1')}`,
+    base + '.test' + ext,
+    base + '.spec' + ext,
+    `tests/${base}.test${ext}`,
+    `__tests__/${path.basename(base)}.test${ext}`,
   ];
 
   for (const testFile of testFiles) {

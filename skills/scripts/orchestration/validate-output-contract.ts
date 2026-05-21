@@ -317,9 +317,9 @@ const SCHEMAS: AgentSchema[] = [
       if (!changed || changed.length === 0) {
         issues.push({ type: 'warning', message: 'changedFiles is empty — BrowserTester should report test scripts' });
       } else {
-        const hasTestScript = changed.some(f => f.includes('.spec.') || f.includes('.test.'));
+        const hasTestScript = changed.some(f => /[\/]tests?[\/]/.test(f) || f.includes('spec.') || f.includes('test.'));
         if (!hasTestScript) {
-          issues.push({ type: 'warning', message: 'changedFiles should contain test script files (e.g., tests/path/to/test-script.spec.ts)' });
+          issues.push({ type: 'warning', message: 'changedFiles should contain test script files' });
         }
       }
       return issues;

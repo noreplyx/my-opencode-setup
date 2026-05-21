@@ -693,8 +693,8 @@ function testOutputContract(): void {
           decisions: [
             { what: 'Add edge case for empty email', why: 'Missing validation', by_who: 'qa' },
           ],
-          changedFiles: ['tests/user.test.ts'],
-          artifacts: ['tests/user.test.ts'],
+          changedFiles: ['tests/user.test'],
+          artifacts: ['tests/user.test'],
         },
         invalid: {
           status: 'completed',

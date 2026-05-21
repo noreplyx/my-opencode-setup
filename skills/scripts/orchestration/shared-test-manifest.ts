@@ -709,17 +709,17 @@ function generateFromManifest(manifestPath: string, feature: string, outPath: st
 
 function deriveTestFile(target: string, subdir: string): string {
   // Convert checkpoint targets to test file paths
-  // e.g., "src/services/user.ts" -> "tests/unit/user-service.test.ts"
-  // e.g., "agents/subagent/finder.md" -> "tests/integration/finder.test.ts"
-  const basename = path.basename(target, path.extname(target));
+  // Uses whatever file extension the target has (e.g., .ts, .py, .go, .rs)
+  const fileExt = path.extname(target);
+  const basename = path.basename(target, fileExt);
 
   let testDir: string;
-  let testSuffix = '.test.ts';
+  let testSuffix = '.test' + (fileExt || '');
 
   switch (subdir) {
     case 'e2e':
       testDir = 'tests/e2e';
-      testSuffix = '.spec.ts';
+      testSuffix = '.spec' + (fileExt || '');
       break;
     case 'integration':
       testDir = 'tests/integration';
@@ -1228,28 +1228,23 @@ function generateTestPlan(args: CliArgs): void {
     }
 
     // Look for existing test files
-    const existingTestFiles = findExistingTests(resolvedPath, fileName, fileDir);
-
-    // Determine file content patterns to suggest tests
-    const hasFunctions = /(function |=>|export (default |const |function ))/.test(content);
-    const hasClasses = /class \w+/.test(content);
+    const existingTestFiles = findExistingTests(resolvedPath, fileName, fileDir, fileExt);
 
     if (existingTestFiles.length > 0) {
       suggestions.push(...existingTestFiles);
     } else {
       // Suggest test files based on content analysis
       if (testType === 'ui') {
-        suggestions.push(`tests/e2e/${fileName}.spec.ts`);
-        suggestions.push(`tests/unit/${fileName}.test.ts`);
+        suggestions.push(`tests/e2e/${fileName}.spec${fileExt}`);
+        suggestions.push(`tests/unit/${fileName}.test${fileExt}`);
       } else if (testType === 'integration') {
-        suggestions.push(`tests/integration/${fileName}.test.ts`);
-        if (hasFunctions) suggestions.push(`tests/unit/${fileName}.test.ts`);
+        suggestions.push(`tests/integration/${fileName}.test${fileExt}`);
+
       } else if (testType === 'security-regression') {
-        suggestions.push(`tests/security/${fileName}-sqli.test.ts`);
-        suggestions.push(`tests/security/${fileName}-auth.test.ts`);
+        suggestions.push(`tests/security/${fileName}-sqli.test${fileExt}`);
+        suggestions.push(`tests/security/${fileName}-auth.test${fileExt}`);
       } else {
-        if (hasFunctions) suggestions.push(`tests/unit/${fileName}.test.ts`);
-        if (hasClasses) suggestions.push(`tests/unit/${fileName}.test.ts`);
+        suggestions.push(`tests/unit/${fileName}.test${fileExt}`);
       }
     }
 
@@ -1292,19 +1287,17 @@ function findExistingTests(filePath: string, fileName: string, fileDir: string):
   for (const dir of searchDirs) {
     // Common naming patterns
     const patterns = [
-      path.join(dir, `${fileName}.test.ts`),
-      path.join(dir, `${fileName}.spec.ts`),
-      path.join(dir, `${fileName}.test.tsx`),
-      path.join(dir, `${fileName}.spec.tsx`),
-      path.join(dir, `${fileName}-test.ts`),
-      path.join(dir, `${fileName}-spec.ts`),
+      path.join(dir, `${fileName}.test${fileExt}`),
+      path.join(dir, `${fileName}.spec${fileExt}`),
+      path.join(dir, `${fileName}-test${fileExt}`),
+      path.join(dir, `${fileName}-spec${fileExt}`),
     ];
 
     // Also check with the directory prefix
     const dirPrefix = fileDir.replace(/\//g, '-');
     if (dirPrefix && dirPrefix !== '.') {
-      patterns.push(path.join(dir, `${dirPrefix}-${fileName}.test.ts`));
-      patterns.push(path.join(dir, `${dirPrefix}-${fileName}.spec.ts`));
+      patterns.push(path.join(dir, `${dirPrefix}-${fileName}.test${fileExt}`));
+      patterns.push(path.join(dir, `${dirPrefix}-${fileName}.spec${fileExt}`));
     }
 
     for (const pattern of patterns) {

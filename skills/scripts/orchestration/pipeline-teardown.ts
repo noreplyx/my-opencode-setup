@@ -1367,14 +1367,14 @@ function extractFileReferences(text: string): string[] {
   const refs: string[] = [];
 
   // Match patterns like: created/modified/added/deleted <path>
-  const actionFilePattern = /\b(?:created|modified|added|deleted|updated|changed|removed)\s+([\w./-]+\.(?:ts|tsx|js|jsx|json|yaml|yml|md|css|scss|html|py|go|rs|java))\b/gi;
+  const actionFilePattern = /\b(?:created|modified|added|deleted|updated|changed|removed)\s+([\w./-]+\.[a-zA-Z]{1,6})\b/gi;
   let match: RegExpExecArray | null;
   while ((match = actionFilePattern.exec(text)) !== null) {
     refs.push(match[1]);
   }
 
   // Match standalone file paths
-  const pathPattern = /\b([\w./-]+\/(?:[\w.-]+\.(?:ts|tsx|js|jsx|json|yaml|yml|md|css|scss|html|py|go|rs|java)))\b/g;
+  const pathPattern = /\b([\w./-]+\/(?:[\w.-]+\.[a-zA-Z]{1,6}))\b/g;
   while ((match = pathPattern.exec(text)) !== null) {
     refs.push(match[1]);
   }

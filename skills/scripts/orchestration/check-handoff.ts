@@ -498,7 +498,7 @@ function createChecklist(agentName: string): HandoffChecklistItem[] {
         field: 'targetFiles',
         description: 'Which files to create/modify',
         mandatory: true,
-        checkFn: (text) => /(?:\.ts|\.tsx|\.js|\.jsx|file|create|modify|update)/i.test(text),
+        checkFn: (text) => /(?:\.\w{1,6}|file|create|modify|update)/i.test(text),
       },
       {
         field: 'definitionOfDone',
