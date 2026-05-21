@@ -3,7 +3,7 @@
  * Parallel Dispatch (P1 Orchestration Improvement)
  *
  * A native parallel dispatch wrapper for the OpenCode Orchestrator system.
- * Reads a parallelism report (from check-parallelism.ts) or a plan manifest,
+ * Reads a plan manifest and produces dispatch manifests
  * produces dispatch manifests at .opencode/dispatch/<pipelineId>/phase-<N>.json,
  * and supports --plan and --verify modes for analysis and consistency checking.
  *
@@ -19,7 +19,7 @@
  *   0 = Success (dispatch manifests written / plan printed / verify passed)
  *   1 = Input error (missing args, parse failure)
  *   2 = Inconsistency found (verify mode)
- *   3 = check-parallelism.ts invocation failed
+ *   3 = (unused)
  */
 
 import * as fs from 'fs';
@@ -30,7 +30,7 @@ import { execSync } from 'child_process';
 // Types
 // =========================================================================
 
-/** Phase as returned by check-parallelism.ts */
+/** Phase grouping from parallelism analysis */
 interface ParallelismPhase {
   label: string;
   files: string[];
@@ -38,7 +38,7 @@ interface ParallelismPhase {
   reason: string;
 }
 
-/** Full output of check-parallelism.ts --format=json */
+/** Full output of parallelism analysis (deprecated) */
 interface ParallelismReport {
   recommendation: 'SINGLE_FILE' | 'PARALLEL' | 'SEQUENTIAL' | 'HYBRID';
   phases: ParallelismPhase[];
@@ -221,53 +221,18 @@ function readReport(reportPath: string): ParallelismReport {
 }
 
 // =========================================================================
-// check-parallelism.ts invocation
+// Parallelism analysis (uses manifest synthesis)
 // =========================================================================
 
 function runCheckParallelism(manifestPath: string): ParallelismReport {
-  const scriptPath = path.resolve(__dirname, 'check-parallelism.ts');
+  // check-parallelism.ts was removed (language-specific).
+  // Use manifest-based synthesis instead.
   const projectDir = path.resolve(__dirname, '../../..');
-
-  if (!fs.existsSync(scriptPath)) {
-    console.error(`❌ check-parallelism.ts not found at: ${scriptPath}`);
-    process.exit(3);
-  }
-
-  try {
-    const stdout = execSync(
-      `ts-node "${scriptPath}" --manifest="${manifestPath}" --dir="${projectDir}" --format=json`,
-      {
-        encoding: 'utf-8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 30000,
-      shell: true,},
-    );
-
-    // The script currently outputs human-readable text. We need to extract
-    // the JSON if check-parallelism.ts supports --format=json. If not,
-    // we'll parse directly from the manifest.
-    try {
-      return JSON.parse(stdout.trim()) as ParallelismReport;
-    } catch {
-      // check-parallelism.ts doesn't support --format=json yet;
-      // synthesize a report from the manifest directly
-      console.error('[parallel-dispatch] check-parallelism.ts returned non-JSON output; synthesizing report from manifest');
-      return synthesizeReportFromManifest(manifestPath, projectDir);
-    }
-  } catch (err) {
-    // If check-parallelism.ts fails (e.g., no existing files to scan),
-    // synthesize from manifest directly
-    console.error('[parallel-dispatch] check-parallelism.ts invocation failed; synthesizing report from manifest');
-    if (err instanceof Error && err.message) {
-      console.error(`  Cause: ${err.message}`);
-    }
-    return synthesizeReportFromManifest(manifestPath, projectDir);
-  }
+  return synthesizeReportFromManifest(manifestPath, projectDir);
 }
 
 /**
- * Synthesize a parallelism report directly from the manifest structure
- * when check-parallelism.ts is unavailable or fails.
+ * Synthesize a parallelism report directly from the manifest structure.
  */
 function synthesizeReportFromManifest(manifestPath: string, _baseDir: string): ParallelismReport {
   const manifest = readManifest(manifestPath);
@@ -876,7 +841,7 @@ function main(): void {
     }
   }
 
-  // Run check-parallelism.ts to get the report
+  // Get parallelism report from manifest synthesis
   report = runCheckParallelism(manifestPath);
 
   // Build dispatch manifests
