@@ -6,9 +6,9 @@
  * defined in the orchestration system.
  *
  * Usage:
- *   ts-node validate-output-contract.ts --file=<path>
- *   ts-node validate-output-contract.ts --agent=<finder|implementor|fixer|plandescriber|verifier|qa|browser-tester>
- *   ts-node validate-output-contract.ts --pipeline
+ *   [runtime] validate-output-contract.ts --file=<path>
+ *   [runtime] validate-output-contract.ts --agent=<finder|implementor|fixer|plandescriber|verifier|qa|browser-tester>
+ *   [runtime] validate-output-contract.ts --pipeline
  *
  * Exit codes:
  *   0 = valid
@@ -289,9 +289,9 @@ const SCHEMAS: AgentSchema[] = [
       if (!changed || changed.length === 0) {
         issues.push({ type: 'warning', message: 'changedFiles is empty — QA should report test files created/modified' });
       } else {
-        const hasTestFile = changed.some(f => f.includes('test') || f.includes('spec') || f.includes('fixture'));
+        const hasTestFile = changed.some(f => /(test|spec|fixture)/i.test(f));
         if (!hasTestFile) {
-          issues.push({ type: 'warning', message: 'changedFiles should contain test file paths (e.g., tests/path/to/test-file.ts)' });
+          issues.push({ type: 'warning', message: 'changedFiles should contain test file paths (e.g., tests/path/to/test-file)' });
         }
       }
       const decs = parsed.decisions as Array<Record<string, unknown>> | undefined;
@@ -317,7 +317,7 @@ const SCHEMAS: AgentSchema[] = [
       if (!changed || changed.length === 0) {
         issues.push({ type: 'warning', message: 'changedFiles is empty — BrowserTester should report test scripts' });
       } else {
-        const hasTestScript = changed.some(f => /[\/]tests?[\/]/.test(f) || f.includes('spec.') || f.includes('test.'));
+        const hasTestScript = changed.some(f => /[\/]tests?[\/]/.test(f) || /\.(spec|test)./i.test(f));
         if (!hasTestScript) {
           issues.push({ type: 'warning', message: 'changedFiles should contain test script files' });
         }
@@ -1270,9 +1270,9 @@ function main(): void {
   // ── No arguments ──
   console.log(`
 Usage:
-  ts-node validate-output-contract.ts --file=<path> [--agent=<name>]
-  ts-node validate-output-contract.ts --agent=<name>          (pipe YAML via stdin)
-  ts-node validate-output-contract.ts --pipeline              (validates agent-context.md)
+  [runtime] validate-output-contract.ts --file=<path> [--agent=<name>]
+  [runtime] validate-output-contract.ts --agent=<name>          (pipe YAML via stdin)
+  [runtime] validate-output-contract.ts --pipeline              (validates agent-context.md)
 
   v2.0 — New fields validated: pipelineError, sources, rollback, diagnostics, checkpointResults
 

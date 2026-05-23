@@ -7,7 +7,7 @@
  * them to .opencode/lessons/learned.yaml.
  *
  * Usage:
- *   ts-node populate-lessons-from-journal.ts
+ *   [runtime] populate-lessons-from-journal.ts
  *
  * Exit codes:
  *   0 = Success (lessons populated/appended)

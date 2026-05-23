@@ -7,7 +7,7 @@
  * the project journal for cross-session learning.
  *
  * Usage:
- *   ts-node pipeline-init.ts --feature=<name> --pipeline-type=<type> \
+ *   pipeline-init.ts --feature=<name> --pipeline-type=<type> \
  *     [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>]
  *
  * Exit codes:
@@ -84,16 +84,13 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
-function getTsNodePath(): string {
-  const candidates = [
-    path.resolve(__dirname, '..', '..', '..', '..', 'node_modules', '.bin', 'ts-node'),
-    path.join(process.cwd(), 'node_modules', '.bin', 'ts-node'),
-    '/home/oat/.config/opencode/node_modules/.bin/ts-node',
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
+function getScriptRunner(): string {
+  // Language-agnostic: use process.argv[0] (the runtime that started this script).
+  // Works with node, python3, deno, bun, and any runtime.
+  if (process.argv[0]) {
+    return process.argv[0];
   }
-  return 'ts-node'; // fallback to PATH-based
+  return 'node'; // ultimate fallback
 }
 
 function execSafe(command: string, timeout = 30000): { stdout: string; stderr: string; exitCode: number } {
@@ -122,14 +119,14 @@ function parseArgs(): PipelineArgs {
   const confidenceArg = args.find(a => a.startsWith('--confidence='))?.split('=')[1];
 
   if (!feature) {
-    console.error('❌ Missing required argument: --feature=<name>');
-    console.error('Usage: ts-node pipeline-init.ts --feature=<name> --pipeline-type=<type> [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>]');
+    console.error('âŒ Missing required argument: --feature=<name>');
+    console.error('Usage: ' + process.argv[0] + ' pipeline-init.ts --feature=<name> --pipeline-type=<type> [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>]');
     process.exit(1);
   }
 
   if (!pipelineType) {
-    console.error('❌ Missing required argument: --pipeline-type=<type>');
-    console.error('Usage: ts-node pipeline-init.ts --feature=<name> --pipeline-type=<type> [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>]');
+    console.error('âŒ Missing required argument: --pipeline-type=<type>');
+    console.error('Usage: ' + process.argv[0] + ' pipeline-init.ts --feature=<name> --pipeline-type=<type> [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>]');
     process.exit(1);
   }
 
@@ -146,8 +143,8 @@ function parseArgs(): PipelineArgs {
 
   const validTypes = ['full', 'quick', 'fixer-only', 'parallel-feature', 'tdd', 'security-fix', 'ui-bug', 'documentation', 'micro-pipeline', 'refactor', 'research'];
   if (pipelineType && !validTypes.includes(pipelineType)) {
-    console.warn(`⚠️  Unknown pipeline type "${pipelineType}". Valid types: ${validTypes.join(', ')}`);
-    // Don't exit — let it proceed with the unknown type
+    console.warn(`âš ï¸  Unknown pipeline type "${pipelineType}". Valid types: ${validTypes.join(', ')}`);
+    // Don't exit â€” let it proceed with the unknown type
   }
 
   return { feature, pipelineType, pipelineComplexity, confidence, skipReadiness, forceClean };
@@ -231,7 +228,7 @@ function parseJournalYaml(filePath: string): JournalEntry[] {
     // Detect list items inside arrays
     const listMatch = line.trim().match(/^-\s+(.+):\s*(.*)/);
     if (listMatch && indent > 4) {
-      // Object within array — check if we're inside a specific array
+      // Object within array â€” check if we're inside a specific array
       const objKey = listMatch[1].trim();
       const objValue = listMatch[2].trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
 
@@ -294,7 +291,7 @@ function parseJournalYaml(filePath: string): JournalEntry[] {
         currentEntry[key] = [];
         currentObjectArray = [];
       } else {
-        // Nested object — store as is, parse sub-keys later
+        // Nested object â€” store as is, parse sub-keys later
         currentEntry[key] = {};
         currentObjectKey = key;
         currentObjectIndent = indent;
@@ -476,7 +473,7 @@ function runPreFlight(): PreFlightReport {
     .split('\n')
     .filter(line => line.trim().length > 0)
     .map(line => {
-      // Format: "M  src/file.ts" or "?? newfile.ts"
+      // Format: "M  src/file.ext" or "?? newfile.ext"
       const parts = line.trim().split(/\s+/);
       return parts.length >= 2 ? parts.slice(1).join(' ') : line.trim();
     });
@@ -494,7 +491,9 @@ function runPreFlight(): PreFlightReport {
   const lastCommitMessage = msgResult.stdout || 'unknown';
 
   // Check if project compiles
-  const buildResult = execSafe('npm run build 2>/dev/null || true', 15000);
+  // Build command is configurable via BUILD_COMMAND env var
+  const buildCmd = process.env.BUILD_COMMAND || 'npm run build'; // Configurable via env var, defaults to npm
+  const buildResult = execSafe(buildCmd + ' 2>/dev/null || true', 15000);
   const projectCompiles = buildResult.exitCode === 0;
   const buildOutput = buildResult.stderr || buildResult.stdout || '(no build output captured)';
 
@@ -664,9 +663,9 @@ function printSummary(
   preFlight: PreFlightReport,
   matches: MatchResult[],
 ): void {
-  const separator = '━'.repeat(29 + args.feature.length + args.pipelineType.length);
+  const separator = 'â”'.repeat(29 + args.feature.length + args.pipelineType.length);
 
-  console.log(`🔍 Pipeline Init: ${args.feature} (${args.pipelineType})`);
+  console.log(`ðŸ” Pipeline Init: ${args.feature} (${args.pipelineType})`);
   console.log(separator);
   console.log('');
 
@@ -674,34 +673,34 @@ function printSummary(
   console.log('Pre-Flight:');
 
   if (preFlight.projectCompiles) {
-    console.log('  ✅ Project compiles successfully');
+    console.log('  âœ… Project compiles successfully');
   } else {
-    console.log('  ❌ Project does not compile');
-    console.log(`  └─ Build output: ${preFlight.buildOutput.slice(0, 200)}`);
+    console.log('  âŒ Project does not compile');
+    console.log(`  â””â”€ Build output: ${preFlight.buildOutput.slice(0, 200)}`);
   }
 
   if (preFlight.dirtyFiles.length > 0) {
-    console.log(`  ⚠️  ${preFlight.dirtyFiles.length} dirty file(s) (${preFlight.dirtyFiles.join(', ')})`);
+    console.log(`  âš ï¸  ${preFlight.dirtyFiles.length} dirty file(s) (${preFlight.dirtyFiles.join(', ')})`);
   } else {
-    console.log('  ✅ No dirty files');
+    console.log('  âœ… No dirty files');
   }
 
   if (preFlight.staleContextFound) {
-    console.log(`  ⚠️  Stale context found (status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge})`);
+    console.log(`  âš ï¸  Stale context found (status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge})`);
   } else {
-    console.log('  ✅ No stale context found');
+    console.log('  âœ… No stale context found');
   }
 
   if (preFlight.journalStructureOk) {
-    console.log('  ✅ Journal structure OK');
+    console.log('  âœ… Journal structure OK');
   } else {
-    console.log('  ⚠️  Journal README.md not found — journal may not be initialized');
+    console.log('  âš ï¸  Journal README.md not found â€” journal may not be initialized');
   }
 
   if (preFlight.securityToolsOk) {
-    console.log('  ✅ Security self-test passed');
+    console.log('  âœ… Security self-test passed');
   } else {
-    console.log('  ⚠️  Security self-test failed');
+    console.log('  âš ï¸  Security self-test failed');
   }
 
   console.log('');
@@ -716,18 +715,18 @@ function printSummary(
   console.log('Cross-Session Learning:');
 
   if (matches.length === 0) {
-    console.log('  📖 No past entries found matching this feature');
+    console.log('  ðŸ“– No past entries found matching this feature');
   } else {
     for (const match of matches) {
       const entry = match.entry;
       const failedGates = entry.failedGates && entry.failedGates.length > 0
-        ? ` — failed gates: ${entry.failedGates.join(', ')}`
+        ? ` â€” failed gates: ${entry.failedGates.join(', ')}`
         : '';
       const cbEvents = entry.circuitBreakerEvents && entry.circuitBreakerEvents.length > 0
-        ? ` — circuit breaker: ${entry.circuitBreakerEvents.map(e => `${e.gate} (${e.attempts} attempts, ${e.resolution})`).join(', ')}`
+        ? ` â€” circuit breaker: ${entry.circuitBreakerEvents.map(e => `${e.gate} (${e.attempts} attempts, ${e.resolution})`).join(', ')}`
         : '';
 
-      console.log(`  📖 Found past entry matching "${entry.feature}" (${match.similarity}% similar):`);
+      console.log(`  ðŸ“– Found past entry matching "${entry.feature}" (${match.similarity}% similar):`);
       console.log(`     - Result: ${entry.result}${failedGates}${cbEvents}`);
 
       if (entry.notes) {
@@ -766,8 +765,8 @@ function printSummary(
 
   // Created section
   console.log('Created:');
-  console.log('  ✅ agent-context.md');
-  console.log('  ✅ .opencode/pipeline-logs/');
+  console.log('  âœ… agent-context.md');
+  console.log('  âœ… .opencode/pipeline-logs/');
 
   console.log('');
   console.log(`Ready to proceed. Next: Run pre-flight checks and begin pipeline`);
@@ -825,7 +824,7 @@ function main(): void {
   // 2. Run pre-flight checks
   const preFlight = runPreFlight();
 
-  // 2a. Stale pipeline detection — exit code 2 if stale context found (unless --force-clean)
+  // 2a. Stale pipeline detection â€” exit code 2 if stale context found (unless --force-clean)
   if (preFlight.staleContextFound) {
     if (args.forceClean) {
       // Archive stale context automatically
@@ -838,11 +837,11 @@ function main(): void {
       if (fs.existsSync(contextPathStale)) {
         fs.renameSync(contextPathStale, path.join(staleDir, 'agent-context.md'));
       }
-      console.log(`  ✅ Archived stale agent-context.md to .opencode/pipeline-logs/stale-${stalePipelineId}/`);
+      console.log(`  âœ… Archived stale agent-context.md to .opencode/pipeline-logs/stale-${stalePipelineId}/`);
     } else {
       console.log('');
-      console.log('⚠️  STALE PIPELINE DETECTED');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('âš ï¸  STALE PIPELINE DETECTED');
+      console.log('â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”');
       console.log(`An agent-context.md exists with status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge}`);
       console.log('This may be an abandoned pipeline from a previous session.');
       console.log('');
@@ -856,22 +855,22 @@ function main(): void {
     }
   }
 
-  // 2b. Agent readiness check — verify required agents have correct permissions
+  // 2b. Agent readiness check â€” verify required agents have correct permissions
   if (args.pipelineType !== 'documentation' && !args.skipReadiness) {
     const readinessResult = execSafe(
-      `ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType} 2>&1`,
+      `${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType} 2>&1`,
       15000,
     );
     
     if (readinessResult.exitCode !== 0) {
       console.log('');
-      console.log('⚠️  AGENT READINESS CHECK FAILED');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('âš ï¸  AGENT READINESS CHECK FAILED');
+      console.log('â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”');
       console.log(readinessResult.stderr || readinessResult.stdout);
       console.log('');
       console.log('Some agents required for this pipeline are not properly configured.');
       console.log('Run the check manually for details:');
-      console.log(`  ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType}`);
+      console.log(`  ${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType}`);
       console.log('');
       console.log('To fix: Ensure all required agent config files exist with correct permissions.');
       process.exit(3);
@@ -892,17 +891,17 @@ function main(): void {
   const contextPath = path.resolve('agent-context.md');
   fs.writeFileSync(contextPath, contextContent, 'utf-8');
 
-  // 4a. Initialize audit log (non-fatal — warning only on failure)
-  const tsNodeBin = getTsNodePath();
+  // 4a. Initialize audit log (non-fatal â€” warning only on failure)
+  const tsNodeBin = getScriptRunner();
   const auditLogScript = path.resolve(__dirname, 'audit-log.ts');
   const auditLogResult = execSafe(
     `"${tsNodeBin}" "${auditLogScript}" init --pipeline-id="${pipelineId}" --feature="${args.feature}"`,
     15000,
   );
   if (auditLogResult.exitCode !== 0) {
-    console.log(`  ⚠️ Audit log init skipped: ${(auditLogResult.stderr || auditLogResult.stdout).substring(0, 100)}`);
+    console.log(`  âš ï¸ Audit log init skipped: ${(auditLogResult.stderr || auditLogResult.stdout).substring(0, 100)}`);
   } else {
-    console.log('  ✅ Audit log initialized');
+    console.log('  âœ… Audit log initialized');
   }
 
   // 5. Print summary report

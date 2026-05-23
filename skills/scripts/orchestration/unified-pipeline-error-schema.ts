@@ -8,13 +8,13 @@
  * typed system.
  *
  * Usage (CLI):
- *   ts-node unified-pipeline-error-schema.ts --lookup=IMP-001
- *   ts-node unified-pipeline-error-schema.ts --validate
- *   ts-node unified-pipeline-error-schema.ts --list
- *   ts-node unified-pipeline-error-schema.ts --list --category=implementation
- *   ts-node unified-pipeline-error-schema.ts --report --file=agent-output.yaml
- *   ts-node unified-pipeline-error-schema.ts --export=json
- *   ts-node unified-pipeline-error-schema.ts --classify="..." --fixer-classification=implementation-error
+ *   [runtime] unified-pipeline-error-schema.ts --lookup=IMP-001
+ *   [runtime] unified-pipeline-error-schema.ts --validate
+ *   [runtime] unified-pipeline-error-schema.ts --list
+ *   [runtime] unified-pipeline-error-schema.ts --list --category=implementation
+ *   [runtime] unified-pipeline-error-schema.ts --report --file=agent-output.yaml
+ *   [runtime] unified-pipeline-error-schema.ts --export=json
+ *   [runtime] unified-pipeline-error-schema.ts --classify="..." --fixer-classification=implementation-error
  *
  * Usage (module):
  *   import { createPipelineError, lookupErrorCode, ... } from './unified-pipeline-error-schema';
@@ -217,7 +217,7 @@ export const ERROR_CODE_REGISTRY: ErrorCodeDefinition[] = [
     category: 'environment',
     defaultSeverity: 'blocking',
     title: 'Missing dependency',
-    description: 'Required npm package not installed',
+    description: 'Required dependency package not installed',
   },
 
   // Security errors (SEC-0xx)
@@ -499,7 +499,7 @@ export function classifyError(rootCause: string, classification: string): string
     'environment-issue': {
       'ENV-001': ['tool', 'command', 'not available', 'not found'],
       'ENV-002': ['version', 'node', 'engine'],
-      'ENV-003': ['dependency', 'package', 'npm', 'install', 'missing'],
+      'ENV-003': ['dependency', 'package', 'install', 'missing'],
     },
   };
 
@@ -688,12 +688,12 @@ function parseArgs(args: string[]): Record<string, string | boolean | undefined>
 function printUsage(): void {
   console.log(`
 Usage:
-  ts-node unified-pipeline-error-schema.ts --lookup=<error-code>
-  ts-node unified-pipeline-error-schema.ts --validate
-  ts-node unified-pipeline-error-schema.ts --list [--category=<category>]
-  ts-node unified-pipeline-error-schema.ts --report --file=<agent-output.yaml>
-  ts-node unified-pipeline-error-schema.ts --export=json
-  ts-node unified-pipeline-error-schema.ts --classify="<root-cause>" --fixer-classification=<classification>
+  [runtime] unified-pipeline-error-schema.ts --lookup=<error-code>
+  [runtime] unified-pipeline-error-schema.ts --validate
+  [runtime] unified-pipeline-error-schema.ts --list [--category=<category>]
+  [runtime] unified-pipeline-error-schema.ts --report --file=<agent-output.yaml>
+  [runtime] unified-pipeline-error-schema.ts --export=json
+  [runtime] unified-pipeline-error-schema.ts --classify="<root-cause>" --fixer-classification=<classification>
 
 Options:
   --lookup=<code>              Look up an error code (e.g., IMP-001)

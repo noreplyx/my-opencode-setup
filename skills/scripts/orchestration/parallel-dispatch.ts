@@ -8,12 +8,12 @@
  * and supports --plan and --verify modes for analysis and consistency checking.
  *
  * Usage:
- *   ts-node parallel-dispatch.ts --manifest=plan-manifests/feature/v1-manifest.json --pipeline-id=pip_001
- *   ts-node parallel-dispatch.ts --report=parallelism-report.json --pipeline-id=pip_001
- *   ts-node parallel-dispatch.ts --manifest=... --pipeline-id=... --dry-run
- *   ts-node parallel-dispatch.ts --manifest=... --pipeline-id=... --agent=implementor
- *   ts-node parallel-dispatch.ts --manifest=... --plan
- *   ts-node parallel-dispatch.ts --manifest=... --verify
+ *   [runtime] parallel-dispatch.ts --manifest=plan-manifests/feature/v1-manifest.json --pipeline-id=pip_001
+ *   [runtime] parallel-dispatch.ts --report=parallelism-report.json --pipeline-id=pip_001
+ *   [runtime] parallel-dispatch.ts --manifest=... --pipeline-id=... --dry-run
+ *   [runtime] parallel-dispatch.ts --manifest=... --pipeline-id=... --agent=implementor
+ *   [runtime] parallel-dispatch.ts --manifest=... --plan
+ *   [runtime] parallel-dispatch.ts --manifest=... --verify
  *
  * Exit codes:
  *   0 = Success (dispatch manifests written / plan printed / verify passed)
@@ -146,10 +146,10 @@ function parseArgs(): CliArgs {
 
   if (!pipelineIdArg && !planMode && !verifyMode) {
     console.error('❌ Missing required argument: --pipeline-id=<id>');
-    console.error('Usage: ts-node parallel-dispatch.ts --manifest=<path> --pipeline-id=<id> [--dry-run] [--agent=<type>]');
-    console.error('       ts-node parallel-dispatch.ts --report=<path> --pipeline-id=<id>');
-    console.error('       ts-node parallel-dispatch.ts --manifest=<path> --plan');
-    console.error('       ts-node parallel-dispatch.ts --manifest=<path> --verify');
+    console.error('Usage: [runtime] parallel-dispatch.ts --manifest=<path> --pipeline-id=<id> [--dry-run] [--agent=<type>]');
+    console.error('       [runtime] parallel-dispatch.ts --report=<path> --pipeline-id=<id>');
+    console.error('       [runtime] parallel-dispatch.ts --manifest=<path> --plan');
+    console.error('       [runtime] parallel-dispatch.ts --manifest=<path> --verify');
     process.exit(1);
   }
 
@@ -225,7 +225,7 @@ function readReport(reportPath: string): ParallelismReport {
 // =========================================================================
 
 function runCheckParallelism(manifestPath: string): ParallelismReport {
-  // check-parallelism.ts was removed (language-specific).
+  // Dependency scanning is manifest-based (language-agnostic).
   // Use manifest-based synthesis instead.
   const projectDir = path.resolve(__dirname, '../../..');
   return synthesizeReportFromManifest(manifestPath, projectDir);

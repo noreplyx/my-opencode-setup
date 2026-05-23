@@ -7,11 +7,11 @@
  * mid-pipeline because it lacks write access" type bugs.
  *
  * Usage:
- *   ts-node check-agent-readiness.ts --agents=implementor,verifier,qa
- *   ts-node check-agent-readiness.ts --pipeline-type=full
- *   ts-node check-agent-readiness.ts --file=agent-context.md
- *   ts-node check-agent-readiness.ts --agents=implementor --format=json
- *   ts-node check-agent-readiness.ts --agents=implementor --fix --apply
+ *   [runtime] check-agent-readiness.ts --agents=implementor,verifier,qa
+ *   [runtime] check-agent-readiness.ts --pipeline-type=full
+ *   [runtime] check-agent-readiness.ts --file=agent-context.md
+ *   [runtime] check-agent-readiness.ts --agents=implementor --format=json
+ *   [runtime] check-agent-readiness.ts --agents=implementor --fix --apply
  *
  * Exit codes:
  *   0 = all agents ready

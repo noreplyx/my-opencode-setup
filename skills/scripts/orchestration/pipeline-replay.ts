@@ -5,7 +5,7 @@
  * Re-runs a pipeline from archived logs and git checkpoints.
  * Enables post-mortem analysis and selective re-execution.
  * 
- * Usage: ts-node skills/scripts/orchestration/pipeline-replay.ts \
+ * Usage: [runtime] skills/scripts/orchestration/pipeline-replay.ts \
  *   --pipeline-id=<id> [--from-step=<agent>] [--to-step=<agent>] [--modify-plan=<path>]
  * 
  * Modes:
@@ -41,7 +41,7 @@ function parseArgs(): ReplayConfig {
 
   const pipelineId = get('--pipeline-id=');
   if (!pipelineId) {
-    console.error('Usage: ts-node pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]');
+    console.error('Usage: [runtime] pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]');
     process.exit(1);
   }
 

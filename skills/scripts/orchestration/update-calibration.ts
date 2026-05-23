@@ -3,12 +3,12 @@
  * Agent Calibration Database Updater
  *
  * Usage:
- *   ts-node update-calibration.ts --agent=<name> --success=true|false [--effectiveness=good|ok|poor] [--failure-pattern="description"] [--build-retries=N] [--lint-retries=N] [--checkpoints=N] [--domain=<domain-name>]
- *   ts-node update-calibration.ts --agent=orchestrator --success=true|false [--task-type=<type>] [--pipeline-duration-min=N] [--circuit-breaker-activation] [--failure-pattern="description"] [--handoff-quality=<1-10>] [--evidence-compliance=<0-100>] [--evidence-quality-avg=<0-100>] [--evidence-staleness-scan=<boolean>]
- *   ts-node update-calibration.ts --agent=<name> --evidence-quality=<0-100> --evidence-compliance=<0-100> --citation-precision=<0-100> --staleness-rate=<0-100> --evidence-count=<number>
- *   ts-node update-calibration.ts --read [--domain=<domain-name>]
- *   ts-node update-calibration.ts --read-evidence-metrics --agent=<name>
- *   ts-node update-calibration.ts --evidence-dashboard
+ *   [runtime] update-calibration.ts --agent=<name> --success=true|false [--effectiveness=good|ok|poor] [--failure-pattern="description"] [--build-retries=N] [--lint-retries=N] [--checkpoints=N] [--domain=<domain-name>]
+ *   [runtime] update-calibration.ts --agent=orchestrator --success=true|false [--task-type=<type>] [--pipeline-duration-min=N] [--circuit-breaker-activation] [--failure-pattern="description"] [--handoff-quality=<1-10>] [--evidence-compliance=<0-100>] [--evidence-quality-avg=<0-100>] [--evidence-staleness-scan=<boolean>]
+ *   [runtime] update-calibration.ts --agent=<name> --evidence-quality=<0-100> --evidence-compliance=<0-100> --citation-precision=<0-100> --staleness-rate=<0-100> --evidence-count=<number>
+ *   [runtime] update-calibration.ts --read [--domain=<domain-name>]
+ *   [runtime] update-calibration.ts --read-evidence-metrics --agent=<name>
+ *   [runtime] update-calibration.ts --evidence-dashboard
  *
  * Manages .opencode/calibration/agents.yaml — the per-agent success tracking database.
  * NEW: Domain-specific breakdown, handoff quality tracking, evidence compliance, evidence quality metrics.
@@ -1543,10 +1543,10 @@ function main(): void {
     console.error('❌ --agent is required (use --read to view without updating)');
     console.error('');
     console.error('Usage:');
-    console.error('  ts-node update-calibration.ts --agent=<name> --success=true|false [options]');
-    console.error('  ts-node update-calibration.ts --read [--domain=<domain-name>]');
-    console.error('  ts-node update-calibration.ts --read-evidence-metrics --agent=<name>');
-    console.error('  ts-node update-calibration.ts --evidence-dashboard');
+    console.error('  [runtime] update-calibration.ts --agent=<name> --success=true|false [options]');
+    console.error('  [runtime] update-calibration.ts --read [--domain=<domain-name>]');
+    console.error('  [runtime] update-calibration.ts --read-evidence-metrics --agent=<name>');
+    console.error('  [runtime] update-calibration.ts --evidence-dashboard');
     process.exit(1);
   }
 

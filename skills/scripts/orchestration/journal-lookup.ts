@@ -2,8 +2,8 @@
 /**
  * Journal Lookup — Cross-Session Learning for the Orchestration System
  *
- * Usage: ts-node journal-lookup.ts --feature=<feature-name>
- *        ts-node journal-lookup.ts --feature=<feature-name> --journal-path=<path>
+ * Usage: [runtime] journal-lookup.ts --feature=<feature-name>
+ *        [runtime] journal-lookup.ts --feature=<feature-name> --journal-path=<path>
  *
  * Reads the project journal (.opencode/journal/journal.yaml), finds entries
  * semantically related to the given feature name, and produces a human-readable
@@ -75,8 +75,8 @@ function parseArgs(): { feature: string; journalPath: string } {
 
   if (!featureArg) {
     console.error('❌ Missing required argument: --feature=<feature-name>');
-    console.error('Usage: ts-node journal-lookup.ts --feature=<feature-name>');
-    console.error('       ts-node journal-lookup.ts --feature=<feature-name> --journal-path=<path>');
+    console.error('Usage: [runtime] journal-lookup.ts --feature=<feature-name>');
+    console.error('       [runtime] journal-lookup.ts --feature=<feature-name> --journal-path=<path>');
     process.exit(2);
   }
 

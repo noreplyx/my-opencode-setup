@@ -7,11 +7,11 @@
  * is legal according to a formal state transition matrix.
  *
  * Usage:
- *   ts-node validate-transition.ts --from=<step> --to=<step>
- *   ts-node validate-transition.ts --pipeline
- *   ts-node validate-transition.ts --manifest=<path>
- *   ts-node validate-transition.ts --list
- *   ts-node validate-transition.ts --export=json|yaml
+ *   [runtime] validate-transition.ts --from=<step> --to=<step>
+ *   [runtime] validate-transition.ts --pipeline
+ *   [runtime] validate-transition.ts --manifest=<path>
+ *   [runtime] validate-transition.ts --list
+ *   [runtime] validate-transition.ts --export=json|yaml
  *
  * Exit codes:
  *   0 = valid transition
@@ -782,11 +782,11 @@ function parseYamlScalar(value: string): unknown {
 function printUsage(): void {
   const usage = `
 Usage:
-  ts-node validate-transition.ts --from=<step> --to=<step>     Validate a single transition
-  ts-node validate-transition.ts --pipeline                     Validate agent-context.md transitions
-  ts-node validate-transition.ts --manifest=<path>              Validate plan-manifest.json checkpoints
-  ts-node validate-transition.ts --list                         Print state transition matrix as table
-  ts-node validate-transition.ts --export=json|yaml             Export matrix in JSON or YAML format
+  [runtime] validate-transition.ts --from=<step> --to=<step>     Validate a single transition
+  [runtime] validate-transition.ts --pipeline                     Validate agent-context.md transitions
+  [runtime] validate-transition.ts --manifest=<path>              Validate plan-manifest.json checkpoints
+  [runtime] validate-transition.ts --list                         Print state transition matrix as table
+  [runtime] validate-transition.ts --export=json|yaml             Export matrix in JSON or YAML format
 
 Exit codes:
   0 = valid transition (or successful export/list)

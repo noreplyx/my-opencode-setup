@@ -7,11 +7,11 @@
  * structured evidence template generation, and completeness scoring.
  *
  * Usage:
- *   ts-node check-handoff.ts --agent=<name> --context="<handoff-text>"
- *   ts-node check-handoff.ts --agent=<name> --validate-evidence-chain --pipeline
- *   ts-node check-handoff.ts --agent=<name> --generate-template --pipeline [--output=<file>]
- *   ts-node check-handoff.ts --agent=<name> --completeness-score --pipeline
- *   ts-node check-handoff.ts --agent=<name>                (pipe hand-off via stdin)
+ *   [runtime] check-handoff.ts --agent=<name> --context="<handoff-text>"
+ *   [runtime] check-handoff.ts --agent=<name> --validate-evidence-chain --pipeline
+ *   [runtime] check-handoff.ts --agent=<name> --generate-template --pipeline [--output=<file>]
+ *   [runtime] check-handoff.ts --agent=<name> --completeness-score --pipeline
+ *   [runtime] check-handoff.ts --agent=<name>                (pipe hand-off via stdin)
  *
  * Exit codes:
  *   0 = Hand-off is complete (or operation succeeded)
@@ -584,7 +584,7 @@ function createChecklist(agentName: string): HandoffChecklistItem[] {
         field: 'parallelFileList',
         description: 'List of files created by parallel Implementors',
         mandatory: true,
-        checkFn: (text) => /(?:created by|files:|new files|parallel)/i.test(text) && text.includes('.ts'),
+        checkFn: (text) => /(?:created by|files:|new files|parallel)/i.test(text) && /\.\w+['"`]/.test(text),
       },
       {
         field: 'wiringConventions',
@@ -598,7 +598,7 @@ function createChecklist(agentName: string): HandoffChecklistItem[] {
         field: 'changedFilesList',
         description: 'List of changed files to document',
         mandatory: true,
-        checkFn: (text) => /(?:changed|modified|created|diff|files:)/i.test(text) && text.includes('.ts'),
+        checkFn: (text) => /(?:changed|modified|created|diff|files:)/i.test(text) && /\.\w+['"`]/.test(text),
       },
       {
         field: 'documentationScope',
@@ -1029,21 +1029,21 @@ function main(): void {
 
   console.log(`
 Usage:
-  ts-node check-handoff.ts --agent=<name> --context="<handoff-text>"
-  ts-node check-handoff.ts --agent=<name>                (pipe hand-off text via stdin)
-  ts-node check-handoff.ts --agent=<name> --pipeline     (reads from agent-context.md)
+  [runtime] check-handoff.ts --agent=<name> --context="<handoff-text>"
+  [runtime] check-handoff.ts --agent=<name>                (pipe hand-off text via stdin)
+  [runtime] check-handoff.ts --agent=<name> --pipeline     (reads from agent-context.md)
 
   Evidence Chain:
-  ts-node check-handoff.ts --agent=<name> --validate-evidence-chain --pipeline
-  ts-node check-handoff.ts --agent=<name> --validate-evidence-chain
+  [runtime] check-handoff.ts --agent=<name> --validate-evidence-chain --pipeline
+  [runtime] check-handoff.ts --agent=<name> --validate-evidence-chain
 
   Template Generation:
-  ts-node check-handoff.ts --agent=<name> --generate-template --pipeline [--output=<file>]
-  ts-node check-handoff.ts --agent=<name> --generate-template [--output=<file>]
+  [runtime] check-handoff.ts --agent=<name> --generate-template --pipeline [--output=<file>]
+  [runtime] check-handoff.ts --agent=<name> --generate-template [--output=<file>]
 
   Completeness Score:
-  ts-node check-handoff.ts --agent=<name> --completeness-score --pipeline
-  ts-node check-handoff.ts --agent=<name> --completeness-score
+  [runtime] check-handoff.ts --agent=<name> --completeness-score --pipeline
+  [runtime] check-handoff.ts --agent=<name> --completeness-score
 
 Agents: finder, plandescriber, implementor, fixer, qa, verifier, integrator, documentor, merge-coordinator, acceptance-gate
 Flags: --verbose, --all, --output=<path>

@@ -5,7 +5,7 @@
  * Creates a git checkpoint commit after every agent step.
  * Enables git-driven debugging: git log, git diff, git bisect through pipeline steps.
  * 
- * Usage: ts-node skills/scripts/orchestration/pipeline-checkpoint.ts \
+ * Usage: [runtime] skills/scripts/orchestration/pipeline-checkpoint.ts \
  *   --pipeline-id=<id> --step=<agent-name> --session-id=<ses_xxx> --feature=<feature>
  * 
  * Environment:
@@ -44,7 +44,7 @@ function parseArgs(): CheckpointArgs {
   const message = get('--message=');
 
   if (!pipelineId || !step || !sessionId || !feature) {
-    console.error('Usage: ts-node pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name> [--message=<text>]');
+    console.error('Usage: [runtime] pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name> [--message=<text>]');
     process.exit(1);
   }
 

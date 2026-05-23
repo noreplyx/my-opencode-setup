@@ -6,11 +6,11 @@
  * and re-verifies them against the current filesystem to detect stale/invalidated evidence.
  *
  * Usage:
- *   ts-node check-evidence-regression.ts --days=30              # Check last 30 days
- *   ts-node check-evidence-regression.ts --pipeline=<id>        # Check specific pipeline
- *   ts-node check-evidence-regression.ts --all                   # Check all historical evidence
- *   ts-node check-evidence-regression.ts --days=30 --verbose    # Detailed output
- *   ts-node check-evidence-regression.ts --days=30 --fix        # Auto-fix stale entries
+ *   [runtime] check-evidence-regression.ts --days=30              # Check last 30 days
+ *   [runtime] check-evidence-regression.ts --pipeline=<id>        # Check specific pipeline
+ *   [runtime] check-evidence-regression.ts --all                   # Check all historical evidence
+ *   [runtime] check-evidence-regression.ts --days=30 --verbose    # Detailed output
+ *   [runtime] check-evidence-regression.ts --days=30 --fix        # Auto-fix stale entries
  *
  * Exit codes:
  *   0 = all evidence still valid

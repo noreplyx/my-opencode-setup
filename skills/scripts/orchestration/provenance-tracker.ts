@@ -6,16 +6,16 @@
  * Each checkpoint accumulates provenance data as it passes through agent steps.
  *
  * Usage modes:
- *   ts-node provenance-tracker.ts --init --manifest=<path> --agent=plandescriber --session=ses_abc
- *   ts-node provenance-tracker.ts --implement --manifest=<path> --agent=implementor --session=ses_def \
+ *   [runtime] provenance-tracker.ts --init --manifest=<path> --agent=plandescriber --session=ses_abc
+ *   [runtime] provenance-tracker.ts --implement --manifest=<path> --agent=implementor --session=ses_def \
  *     --file=src/services/user.ts --lines=42-55 --claim="Created validateEmail"
- *   ts-node provenance-tracker.ts --verify --manifest=<path> --checkpoint=CP-003 \
+ *   [runtime] provenance-tracker.ts --verify --manifest=<path> --checkpoint=CP-003 \
  *     --verdict=fail --evidence="grep ..." --result=not_found
- *   ts-node provenance-tracker.ts --fix --manifest=<path> --checkpoint=CP-003 \
+ *   [runtime] provenance-tracker.ts --fix --manifest=<path> --checkpoint=CP-003 \
  *     --agent=fixer --session=ses_ghi --file=src/services/user.ts --lines=42-58
- *   ts-node provenance-tracker.ts --view --manifest=<path> --checkpoint=CP-003
- *   ts-node provenance-tracker.ts --report --manifest=<path>
- *   ts-node provenance-tracker.ts --blame --manifest=<path>
+ *   [runtime] provenance-tracker.ts --view --manifest=<path> --checkpoint=CP-003
+ *   [runtime] provenance-tracker.ts --report --manifest=<path>
+ *   [runtime] provenance-tracker.ts --blame --manifest=<path>
  *
  * Output modes:
  *   Default: pretty-printed text (tree for --report, JSON for --view)
@@ -126,11 +126,11 @@ const MODE_HELP: Record<RunMode, string> = {
 };
 
 function usage(exitCode: number): never {
-  console.error('Usage: ts-node provenance-tracker.ts <mode> [options]');
+  console.error('Usage: [runtime] provenance-tracker.ts <mode> [options]');
   console.error('');
   console.error('Modes:');
   for (const [, help] of Object.entries(MODE_HELP)) {
-    console.error(`  ts-node provenance-tracker.ts ${help}`);
+    console.error(`  [runtime] provenance-tracker.ts ${help}`);
   }
   console.error('');
   console.error('Global options:');

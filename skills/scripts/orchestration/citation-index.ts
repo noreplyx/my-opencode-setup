@@ -7,12 +7,12 @@
  * the index shows what went wrong in all previous pipelines that hit that checkpoint.
  *
  * Usage:
- *   ts-node citation-index.ts --build
- *   ts-node citation-index.ts --checkpoint=CP-003
- *   ts-node citation-index.ts --manifest=plan-manifests/user-profile/v1-manifest.json
- *   ts-node citation-index.ts --feature=user-profile
- *   ts-node citation-index.ts --stats
- *   ts-node citation-index.ts --rebuild
+ *   [runtime] citation-index.ts --build
+ *   [runtime] citation-index.ts --checkpoint=CP-003
+ *   [runtime] citation-index.ts --manifest=plan-manifests/user-profile/v1-manifest.json
+ *   [runtime] citation-index.ts --feature=user-profile
+ *   [runtime] citation-index.ts --stats
+ *   [runtime] citation-index.ts --rebuild
  *
  * Exit codes:
  *   0 = Success (index built / query matched)
@@ -164,12 +164,12 @@ function parseArgs(): { mode: string; value?: string } {
   }
 
   console.error('Usage:');
-  console.error('  ts-node citation-index.ts --build');
-  console.error('  ts-node citation-index.ts --checkpoint=CP-003');
-  console.error('  ts-node citation-index.ts --manifest=<path-to-manifest.json>');
-  console.error('  ts-node citation-index.ts --feature=user-profile');
-  console.error('  ts-node citation-index.ts --stats');
-  console.error('  ts-node citation-index.ts --rebuild');
+  console.error('  [runtime] citation-index.ts --build');
+  console.error('  [runtime] citation-index.ts --checkpoint=CP-003');
+  console.error('  [runtime] citation-index.ts --manifest=<path-to-manifest.json>');
+  console.error('  [runtime] citation-index.ts --feature=user-profile');
+  console.error('  [runtime] citation-index.ts --stats');
+  console.error('  [runtime] citation-index.ts --rebuild');
   process.exit(1);
 }
 

@@ -5,7 +5,7 @@
  * Validates that agent-context.md conforms to the formal schema defined in shared/types.ts.
  * Called by every agent at step 0 before reading context.
  * 
- * Usage: ts-node skills/scripts/orchestration/validate-context.ts [--context=agent-context.md]
+ * Usage: [runtime] skills/scripts/orchestration/validate-context.ts [--context=agent-context.md]
  * 
  * Returns: JSON with valid (boolean), errors (string[]), warnings (string[])
  * Exit code: 0 = valid, 1 = invalid

@@ -7,13 +7,13 @@
  * condition where "QA passed but Browser Tester was never run."
  *
  * Usage:
- *   ts-node shared-test-manifest.ts --generate --manifest=<path> --feature=<name> --out=<path>
- *   ts-node shared-test-manifest.ts --status
- *   ts-node shared-test-manifest.ts --complete --test-type=<type> --test-file=<path> --result=pass|fail
- *   ts-node shared-test-manifest.ts --start --agent=<name>
- *   ts-node shared-test-manifest.ts --wait --timeout=<ms>
- *   ts-node shared-test-manifest.ts --plan --files=<csv> --feature=<name>
- *   ts-node shared-test-manifest.ts --clean
+ *   [runtime] shared-test-manifest.ts --generate --manifest=<path> --feature=<name> --out=<path>
+ *   [runtime] shared-test-manifest.ts --status
+ *   [runtime] shared-test-manifest.ts --complete --test-type=<type> --test-file=<path> --result=pass|fail
+ *   [runtime] shared-test-manifest.ts --start --agent=<name>
+ *   [runtime] shared-test-manifest.ts --wait --timeout=<ms>
+ *   [runtime] shared-test-manifest.ts --plan --files=<csv> --feature=<name>
+ *   [runtime] shared-test-manifest.ts --clean
  *
  * Exit codes:
  *   0 = Success
@@ -153,9 +153,9 @@ const DECISION_RULES: DecisionRule[] = [
 
 const DEFAULT_SHARED_SETUP: SharedSetup[] = [
   {
-    command: 'npm run dev',
+    command: process.env.DEV_COMMAND || 'npm run dev',
     port: 3000,
-    healthCheck: '/api/health',
+    healthCheck: process.env.HEALTH_CHECK_PATH || '/api/health',
     required: true,
   },
 ];
@@ -252,25 +252,25 @@ function printUsage(): void {
   console.log('');
   console.log('Usage:');
   console.log('  Generate test manifest from plan manifest:');
-  console.log('    ts-node shared-test-manifest.ts --generate --manifest=<path> --feature=<name> [--out=<path>]');
+  console.log('    [runtime] shared-test-manifest.ts --generate --manifest=<path> --feature=<name> [--out=<path>]');
   console.log('');
   console.log('  Check status:');
-  console.log('    ts-node shared-test-manifest.ts --status [--format=json]');
+  console.log('    [runtime] shared-test-manifest.ts --status [--format=json]');
   console.log('');
   console.log('  Mark a test completed:');
-  console.log('    ts-node shared-test-manifest.ts --complete --test-type=<type> --test-file=<path> --result=pass|fail');
+  console.log('    [runtime] shared-test-manifest.ts --complete --test-type=<type> --test-file=<path> --result=pass|fail');
   console.log('');
   console.log('  Mark all tests started for an agent:');
-  console.log('    ts-node shared-test-manifest.ts --start --agent=qa|browser-tester');
+  console.log('    [runtime] shared-test-manifest.ts --start --agent=qa|browser-tester');
   console.log('');
   console.log('  Wait for all tests to complete:');
-  console.log('    ts-node shared-test-manifest.ts --wait [--timeout=300000]');
+  console.log('    [runtime] shared-test-manifest.ts --wait [--timeout=300000]');
   console.log('');
   console.log('  Generate test plan from changed files:');
-  console.log('    ts-node shared-test-manifest.ts --plan --files=file1.ts,file2.ts --feature=<name>');
+  console.log('    [runtime] shared-test-manifest.ts --plan --files=file1.ts,file2.ts --feature=<name>');
   console.log('');
   console.log('  Clean up test manifest:');
-  console.log('    ts-node shared-test-manifest.ts --clean');
+  console.log('    [runtime] shared-test-manifest.ts --clean');
   console.log('');
   console.log('Options:');
   console.log('  --format=json     Output in JSON format (default: yaml)');

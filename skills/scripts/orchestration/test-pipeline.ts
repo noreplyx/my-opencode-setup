@@ -3,14 +3,17 @@
  * E2E Pipeline Test Harness
  *
  * Usage:
- *   ts-node skills/scripts/orchestration/test-pipeline.ts              # Run all tests
- *   ts-node skills/scripts/orchestration/test-pipeline.ts --test=context   # Run specific test
+ *   [runtime] skills/scripts/orchestration/test-pipeline.ts              # Run all tests
+ *   [runtime] skills/scripts/orchestration/test-pipeline.ts --test=context   # Run specific test
  *
  * Available tests: context-lifecycle, fixer-output, calibration, stale-context, output-contract
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+
+// Language-agnostic: detect script extension at runtime
+const SCRIPT_EXT = __filename.endsWith('.ts') ? 'ts' : 'js';
 import * as assert from 'assert';
 
 // ── Test Runner ──────────────────────────────────────────────────────────────
@@ -204,7 +207,7 @@ function testFixerOutput(): void {
         fixApplied: 'Added duplicate email check before insert',
         fixConfidence: 8,
         crossModuleCheck: [
-          { module: 'src/controllers/user.ts', status: 'unaffected' },
+          { module: 'src/controllers/user', status: 'unaffected' },
         ],
       },
       buildPassed: true,
@@ -240,13 +243,13 @@ function testFixerOutput(): void {
       '..',
       'scripts',
       'tools',
-      'validate-output-contract.ts',
+      `validate-output-contract.${SCRIPT_EXT}`,
     );
     const toolsValidatorPath = path.join(
       __dirname,
       '..',
       'tools',
-      'validate-output-contract.ts',
+      `validate-output-contract.${SCRIPT_EXT}`,
     );
 
     const validatorScript = fs.existsSync(validatorPath)
@@ -257,11 +260,12 @@ function testFixerOutput(): void {
 
     if (validatorScript) {
       const { execSync } = require('child_process') as typeof import('child_process');
-      const tsNode = path.join(__dirname, '..', '..', '..', 'node_modules', '.bin', 'ts-node');
+      // Language-agnostic script runner
+  const scriptRunner = process.argv[0] || 'node';
 
       // Correct format should pass (exit 0)
       try {
-        execSync(`${tsNode} "${validatorScript}" --file="${correctPath}"`, {
+        execSync(`${scriptRunner} "${validatorScript}" --file="${correctPath}"`, {
           stdio: 'pipe',
           cwd: path.resolve(__dirname, '..', '..', '..'),
       shell: true,});
@@ -271,7 +275,7 @@ function testFixerOutput(): void {
 
       // Old format should fail (exit non-zero)
       try {
-        execSync(`${tsNode} "${validatorScript}" --file="${wrongPath}"`, {
+        execSync(`${scriptRunner} "${validatorScript}" --file="${wrongPath}"`, {
           stdio: 'pipe',
           cwd: path.resolve(__dirname, '..', '..', '..'),
       shell: true,});
@@ -618,8 +622,8 @@ function testOutputContract(): void {
           buildOutput: 'Build succeeded',
           lintOutput: 'Lint passed',
           selfReview: { confidence: 90, preCheckPassed: true, scopeGuardFlags: [] },
-          changedFiles: ['src/services/user.ts'],
-          artifacts: ['src/services/user.ts'],
+          changedFiles: ['src/services/user.{ext}'],
+          artifacts: ['src/services/user.{ext}'],
         },
         invalid: {
           status: 'partial',
@@ -641,10 +645,10 @@ function testOutputContract(): void {
             fixApplied: 'Added duplicate email check before insert',
             fixConfidence: 8,
             crossModuleCheck: [
-              { module: 'src/controllers/user.ts', status: 'unaffected' },
+              { module: 'src/controllers/user', status: 'unaffected' },
             ],
           },
-          changedFiles: ['src/services/user.ts'],
+          changedFiles: ['src/services/user.{ext}'],
         },
         invalid: {
           status: 'completed',
@@ -734,9 +738,10 @@ function testOutputContract(): void {
     const validatorScript = validatorPaths.find(p => fs.existsSync(p));
 
     if (validatorScript) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line
       const { execSync } = require('child_process') as typeof import('child_process');
-      const tsNode = path.join(__dirname, '..', '..', '..', 'node_modules', '.bin', 'ts-node');
+      // Language-agnostic script runner
+  const scriptRunner = process.argv[0] || 'node';
 
       for (const { type } of agentsWithContracts) {
         const validPath = path.join(tmpDir, `${type}-valid.json`);
@@ -744,7 +749,7 @@ function testOutputContract(): void {
 
         // Valid should pass (exit 0)
         try {
-          execSync(`${tsNode} "${validatorScript}" --file="${validPath}" --agent="${type}"`, {
+          execSync(`${scriptRunner} "${validatorScript}" --file="${validPath}" --agent="${type}"`, {
             stdio: 'pipe',
             cwd: path.resolve(__dirname, '..', '..', '..'),
       shell: true,});
@@ -754,7 +759,7 @@ function testOutputContract(): void {
 
         // Invalid should fail (exit non-zero)
         try {
-          execSync(`${tsNode} "${validatorScript}" --file="${invalidPath}" --agent="${type}"`, {
+          execSync(`${scriptRunner} "${validatorScript}" --file="${invalidPath}" --agent="${type}"`, {
             stdio: 'pipe',
             cwd: path.resolve(__dirname, '..', '..', '..'),
       shell: true,});

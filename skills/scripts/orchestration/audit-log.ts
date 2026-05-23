@@ -6,11 +6,11 @@
  * Uses a SHA-256 hash chain for integrity verification.
  *
  * Usage:
- *   ts-node audit-log.ts init --pipeline-id=<id> --feature=<name> [--dir=<project-dir>]
- *   ts-node audit-log.ts append --pipeline-id=<id> --agent=<name> --action=<type> \
+ *   [runtime] audit-log.ts init --pipeline-id=<id> --feature=<name> [--dir=<project-dir>]
+ *   [runtime] audit-log.ts append --pipeline-id=<id> --agent=<name> --action=<type> \
  *     --details=<json> [--file-hashes=<json>] [--dir=<project-dir>]
- *   ts-node audit-log.ts verify --pipeline-id=<id> [--dir=<project-dir>]
- *   ts-node audit-log.ts report --pipeline-id=<id> [--dir=<project-dir>] [--since=<iso-timestamp>]
+ *   [runtime] audit-log.ts verify --pipeline-id=<id> [--dir=<project-dir>]
+ *   [runtime] audit-log.ts report --pipeline-id=<id> [--dir=<project-dir>] [--since=<iso-timestamp>]
  *
  * Exit codes:
  *   0 = Success
@@ -32,8 +32,8 @@ const VALID_ACTIONS = [
   'file_write',
   'file_modify',
   'file_delete',
-  'npm_install',
-  'npm_update',
+  'package_install',
+  'package_update',
   'build',
   'lint',
   'security_scan',
@@ -99,11 +99,11 @@ function showUsageAndExit(exitCode = 0): void {
 Audit Log — Tamper-evident append-only audit log
 
 Usage:
-  ts-node audit-log.ts init --pipeline-id=<id> --feature=<name> [--dir=<project-dir>]
-  ts-node audit-log.ts append --pipeline-id=<id> --agent=<name> --action=<type> \\
+  [runtime] audit-log.ts init --pipeline-id=<id> --feature=<name> [--dir=<project-dir>]
+  [runtime] audit-log.ts append --pipeline-id=<id> --agent=<name> --action=<type> \\
     --details=<json> [--file-hashes=<json>] [--dir=<project-dir>]
-  ts-node audit-log.ts verify --pipeline-id=<id> [--dir=<project-dir>]
-  ts-node audit-log.ts report --pipeline-id=<id> [--dir=<project-dir>] [--since=<iso-timestamp>]
+  [runtime] audit-log.ts verify --pipeline-id=<id> [--dir=<project-dir>]
+  [runtime] audit-log.ts report --pipeline-id=<id> [--dir=<project-dir>] [--since=<iso-timestamp>]
 
 Commands:
   init     Create a new audit log with genesis entry
@@ -112,7 +112,7 @@ Commands:
   report   Print a human-readable audit trail
 
 Valid actions:
-  file_write, file_modify, file_delete, npm_install, npm_update, build,
+  file_write, file_modify, file_delete, package_install, package_update, build,
   lint, security_scan, qa_test, git_commit, config_change
   `.trim());
   process.exit(exitCode);

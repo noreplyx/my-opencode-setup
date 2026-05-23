@@ -53,8 +53,7 @@ You are the **Orchestrator**. Your role is to:
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
 - **Security Scan Skill**: Load the `security-scan` skill when running the Security Scan gate after the Build Gate. This skill now provides 6 scan types: dependency vulnerability scanning (npm audit), hardcoded secrets detection, security anti-pattern checks (eval, innerHTML, SQL injection), **supply chain integrity** (install scripts, typosquatting, package age), **SBOM generation**, and **git history secret scanning**. Runs before QA and after build verification.
-- **SAST Scanner**: After the Security Scan gate passes, optionally run the SAST scanner at `skills/scripts/code-philosophy/check-security.ts` for deep static analysis covering prototype pollution, path traversal, command injection, SSRF, NoSQL injection, insecure deserialization, open redirect, ReDoS, and Zip Slip.
-- **Supply Chain Scanner**: Run `skills/scripts/code-philosophy/check-supply-chain.ts` to check for install scripts, typosquatting, stale/deprecated packages, and dependency count warnings.
+- **SAST & Supply Chain Scanners**: The `security-scan` skill includes SAST-style checks (anti-pattern scanning) and supply chain integrity checks (install scripts, typosquatting, package age). Load and run the security-scan skill after the Build Gate passes.
 - **Merge Coordinator**: Dispatch the `merge-coordinator` subagent after parallel Implementor dispatch to verify cross-file consistency before the Build Gate.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 
@@ -111,7 +110,7 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | Supply Chain Security | Security Scan Protocol |
 | Agent Action Audit Trail | Agent Action Audit Trail |
 | Output Contract Validation | Output Verification |
-| Security Tool Self-Test | self-test-security.ts |
+| Security Tool Self-Test | security-scan skill |
 | Dry-Run Mode | shared-agent-workflow skill (Step 0b) |
 | Reproduction Command | shared-agent-workflow skill (Step 0c) |
 | Error Reproduction Packets | shared-agent-workflow skill (Step 4) |
@@ -129,9 +128,6 @@ Before dispatching PlanDescriber or Implementor, read `.opencode/lessons/learned
 
 | Tool | Purpose | Location | Run Command |
 |------|---------|----------|-------------|
-| **SAST Scanner** | AST-based static analysis | `skills/scripts/code-philosophy/check-security.ts` | `ts-node skills/scripts/code-philosophy/check-security.ts --dir=./` |
-| **Supply Chain Scanner** | Install script detection, typosquatting | `skills/scripts/code-philosophy/check-supply-chain.ts` | `ts-node skills/scripts/code-philosophy/check-supply-chain.ts --dir=./` |
-| **Security Self-Test** | 7-test suite validating security tools | `skills/scripts/code-philosophy/self-test-security.ts` | `ts-node skills/scripts/code-philosophy/self-test-security.ts` |
 | **Output Contract Validator** | Verify agent claims match reality | `skills/scripts/orchestration/validate-output-contract.ts` | `ts-node skills/scripts/orchestration/validate-output-contract.ts --agent-context=agent-context.md` |
 | **Agent Audit Log** | Tamper-evident hash-chained audit trail | `skills/scripts/orchestration/audit-log.ts` | See SKILL.md "Agent Action Audit Trail" section |
 | **Context Validator** | Validate agent-context.md schema | `skills/scripts/orchestration/validate-context.ts` | `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` |
