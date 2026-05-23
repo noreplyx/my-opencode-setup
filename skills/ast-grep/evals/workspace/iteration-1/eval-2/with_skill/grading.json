@@ -1,0 +1,9 @@
+{
+  "expectations": [
+    {"text": "Creates a valid YAML rule file", "passed": true, "evidence": "Created find-subscribe-in-methods.yml — valid YAML with id, language, rule fields"},
+    {"text": "The rule uses relational rules (has/inside) or pattern", "passed": true, "evidence": "Uses kind: method_definition (atomic) + has (relational) + pattern (atomic)"},
+    {"text": "Runs ast-grep scan with the rule file", "passed": true, "evidence": "ast-grep scan --rule find-subscribe-in-methods.yml search-sample.ts"},
+    {"text": "The output correctly identifies subscribe calls in the file", "passed": true, "evidence": "Found 2 matches: loadUsers() at line 26 and deleteUser() at line 45"}
+  ],
+  "summary": {"passed": 4, "failed": 0, "total": 4, "pass_rate": 1.0}
+}

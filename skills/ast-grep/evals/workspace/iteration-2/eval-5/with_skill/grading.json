@@ -1,0 +1,12 @@
+{
+  "eval_id": 5,
+  "eval_name": "json-import-search",
+  "configuration": "with_skill",
+  "run_number": 1,
+  "expectations": [
+    {"text": "Uses --json flag for JSON output", "passed": true, "evidence": "--json flag used in commands.sh"},
+    {"text": "Uses meta-variables in the pattern (e.g., $MODULE or $PATH)", "passed": true, "evidence": "Pattern uses $$$ and $MODULE meta-variables"},
+    {"text": "The pattern correctly matches imports from the specified paths", "passed": true, "evidence": "9 matching imports found across fixture files (3 from each path)"},
+    {"text": "Output is valid JSON", "passed": true, "evidence": "Python json.load() confirms valid JSON"}
+  ]
+}

@@ -13,7 +13,8 @@ The Finder Workflow skill defines the standardized codebase exploration methodol
 
 1. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
 2. Load the `security-workflow` skill (Section 2 — Security Checkpoint Auto-Detection) for proactive security hazard detection during exploration.
-3. Load the `code-philosophy` skill (and `backend-code-philosophy` / `frontend-code-philosophy` if applicable) for code quality and architecture pattern awareness.
+3. Load the `ast-grep` skill for AST-based structural code search when text-based grep is insufficient (e.g., finding specific function calls with certain argument patterns, nested code structures, or multi-line constructs).
+4. Load the `code-philosophy` skill (and `backend-code-philosophy` / `frontend-code-philosophy` if applicable) for code quality and architecture pattern awareness.
 
 ## Core Responsibilities
 
@@ -123,6 +124,81 @@ grep("config|settings", "src/config/")
 grep("export function deprecated", "src/")
 grep("TODO|FIXME|HACK|XXX|@deprecated", "src/")
 ```
+
+
+### Step 4a: Structural Search with ast-grep
+
+When grep cannot precisely match a pattern (e.g., nested structures, specific argument counts, multi-line constructs), use ast-grep instead. ast-grep matches AST nodes, not text, so it handles whitespace, formatting, and nesting correctly.
+
+**Pattern A — Find all function calls with specific argument patterns:**
+```
+ast-grep -p '$FUNC($ARG)' -l ts src/
+```
+
+**Pattern B — Find all methods that contain a specific call pattern (e.g., .subscribe()):**
+```
+ast-grep scan --inline-rules '
+id: find-pattern
+language: TypeScript
+rule:
+  kind: method_definition
+  has:
+    pattern: $_.subscribe($$$)
+    stopBy: end
+' src/
+```
+
+**Pattern C — Find all imports from a specific module:**
+```
+ast-grep -p 'import { $$$ } from "$MODULE"' -l ts --json src/
+```
+
+**Pattern D — Find all async functions without await:**
+```
+ast-grep scan --inline-rules '
+id: async-no-await
+language: TypeScript
+rule:
+  kind: function_declaration
+  has:
+    field: async
+  not:
+    has:
+      pattern: await $_
+      stopBy: end
+' src/
+```
+
+**Pattern E — Find all console.log/error/warn calls (any method):**
+```
+ast-grep -p 'console.$_($$$_)' -l ts src/
+```
+
+**Pattern F — Find all arrow functions with single-expression body (implicit return):**
+```
+ast-grep scan --inline-rules '
+id: implicit-return-arrows
+language: TypeScript
+rule:
+  kind: arrow_function
+  not:
+    has:
+      field: body
+      kind: statement_block
+' src/
+```
+**When to use ast-grep vs grep:**
+| Use Case | Tool | Reason |
+|----------|------|--------|
+| Simple keyword/identifier search | grep | Fast, simple |
+| Cross-line patterns | grep -P | Multi-line text matching |
+| Function calls with specific arguments | ast-grep | AST-aware, ignores whitespace |
+| Nested code structures | ast-grep | Matches by syntax tree |
+| Code rewrites/refactoring | ast-grep | Built-in rewrite + transform |
+| Finding all X inside Y | ast-grep | Relational rules (has/inside) |
+| Import/export analysis | ast-grep | Precise AST matching |
+| Count occurrences | grep -c | Fast line counting |
+
 
 ### Step 5: Proactive Hazard Detection
 

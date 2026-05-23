@@ -1,0 +1,157 @@
+AST-GREP EVALUATION: Find console.log/error/warn calls
+======================================================
+
+Date: 2026-05-23
+Target file: /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+Working directory: /home/oat/.config/opencode/skills/ast-grep/evals
+
+================================================================================
+COMMAND 1: Meta-variable pattern search (primary)
+================================================================================
+
+Command:
+  ast-grep run --pattern 'console.$METHOD($$$)' --lang ts --context 1 \
+    /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+
+Output:
+  /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts:33:      error: (err) => {
+  /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts:34:        console.error('Failed to load users:', err);
+  /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts:35:        this.loading = false;
+
+Explanation:
+  - Pattern: console.$METHOD($$$)
+    - $METHOD is a single-node meta-variable that matches the method name (log, error, warn)
+    - $$$ is a multi-node meta-variable that matches zero or more arguments inside the parentheses
+  - This correctly matched the single console.error() call in the file.
+  - With --context 1, it shows one line of surrounding context.
+
+================================================================================
+COMMAND 2: Verify no console.log calls exist
+================================================================================
+
+Command:
+  ast-grep run --pattern 'console.log($$$)' --lang ts \
+    /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+
+Output:
+  (no output)
+
+Explanation:
+  - The file does not contain any console.log() calls.
+  - Empty output confirms zero matches.
+
+================================================================================
+COMMAND 3: JSON output format for console.error
+================================================================================
+
+Command:
+  ast-grep run --pattern 'console.error($$$)' --lang ts --json=pretty \
+    /home/audit/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+
+Output:
+  [
+    {
+      "text": "console.error('Failed to load users:', err)",
+      "range": {
+        "byteOffset": {
+          "start": 714,
+          "end": 757
+        },
+        "start": {
+          "line": 33,
+          "column": 8
+        },
+        "end": {
+          "line": 33,
+          "column": 51
+        }
+      },
+      "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts",
+      "lines": "        console.error('Failed to load users:', err);",
+      "charCount": {
+        "leading": 8,
+        "trailing": 1
+      },
+      "language": "TypeScript"
+    }
+  ]
+
+Explanation:
+  - JSON output provides structured match details:
+    - Exact matched text
+    - Byte offsets and line/column ranges
+    - File path
+    - Leading/trailing character counts
+    - Detected language (TypeScript)
+
+================================================================================
+COMMAND 4: JSON with meta-variable extraction
+================================================================================
+
+Command:
+  ast-grep run --pattern 'console.$METHOD($$$)' --lang ts --json=pretty \
+    /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+
+Output:
+  [
+    {
+      "text": "console.error('Failed to load users:', err)",
+      "range": { ... },
+      "file": "...",
+      "lines": "        console.error('Failed to load users:', err);",
+      "charCount": { "leading": 8, "trailing": 1 },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "METHOD": {
+            "text": "error",
+            "range": {
+              "byteOffset": { "start": 722, "end": 727 },
+              "start": { "line": 33, "column": 16 },
+              "end": { "line": 33, "column": 21 }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    }
+  ]
+
+Explanation:
+  - The metaVariable section shows $METHOD resolved to "error".
+  - This confirms ast-grep correctly captures sub-parts of the matched AST node.
+
+================================================================================
+COMMAND 5: Wildcard anonymous meta-variable
+================================================================================
+
+Command:
+  ast-grep run --pattern 'console.$_($$$)' --lang ts --json=pretty \
+    /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+
+Output:
+  (same single match as above, without metaVariables since $_ is anonymous)
+
+Explanation:
+  - $_ is an anonymous/wildcard meta-variable that matches any method name
+    but does not capture it for extraction.
+  - Confirms only one console.* call exists in the file.
+
+================================================================================
+SUMMARY
+================================================================================
+
+Total console.* calls found in search-sample.ts: 1
+  - console.error('Failed to load users:', err) at line 33 (0-indexed: line 33, column 8)
+  - No console.log() calls found
+  - No console.warn() calls found
+
+The file search-sample.ts has only one console.* call: a console.error() on line 34
+(1-indexed) / line 33 (0-indexed) inside the error callback of an HTTP subscription.
+
+Pattern used (recommended for general use):
+  console.$METHOD($$$)
+  - $METHOD matches the method name (log, error, warn, etc.)
+  - $$$ matches any arguments inside the parentheses
+  - With --lang ts for TypeScript parsing

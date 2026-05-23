@@ -1,0 +1,79 @@
+ast-grep stdin mode evaluation
+================================
+Task: Find all console.log calls in piped code using ast-grep's --stdin mode
+
+Pattern:
+  console.log($$$ARGS)
+
+Command:
+  echo "const x = 1; console.log(x); const y = 2; console.log(y, 'done');" | \
+    ast-grep run --stdin --lang ts -p 'console.log($$$ARGS)' --json=compact
+
+Explanation:
+  - --stdin        : Enables reading source code from standard input instead of files
+  - --lang ts      : Sets language to TypeScript/JavaScript (tree-sitter grammar)
+  - -p             : AST pattern to match
+  - 'console.log($$$ARGS)' : Pattern matches console.log calls with any arguments.
+                     $$$ARGS is a multi-argument meta-variable that captures all
+                     arguments passed to console.log, including multiple comma-separated args.
+  - --json=compact : Outputs results as a single-line JSON array (machine-friendly)
+
+Results (JSON):
+[
+  {
+    "text": "console.log(x)",
+    "range": {
+      "byteOffset": { "start": 13, "end": 27 },
+      "start": { "line": 0, "column": 13 },
+      "end": { "line": 0, "column": 27 }
+    },
+    "file": "STDIN",
+    "lines": "const x = 1; console.log(x); const y = 2; console.log(y, 'done');",
+    "charCount": { "leading": 13, "trailing": 38 },
+    "language": "TypeScript",
+    "metaVariables": {
+      "single": {},
+      "multi": {
+        "ARGS": [
+          {
+            "text": "x",
+            "range": {
+              "byteOffset": { "start": 25, "end": 26 },
+              "start": { "line": 0, "column": 25 },
+              "end": { "line": 0, "column": 26 }
+            }
+          }
+        ]
+      },
+      "transformed": {}
+    }
+  },
+  {
+    "text": "console.log(y, 'done')",
+    "range": {
+      "byteOffset": { "start": 42, "end": 64 },
+      "start": { "line": 0, "column": 42 },
+      "end": { "line": 0, "column": 64 }
+    },
+    "file": "STDIN",
+    "lines": "const x = 1; console.log(x); const y = 2; console.log(y, 'done');",
+    "charCount": { "leading": 42, "trailing": 1 },
+    "language": "TypeScript",
+    "metaVariables": {
+      "single": {},
+      "multi": {
+        "ARGS": [
+          { "text": "y", "range": { "byteOffset": { "start": 54, "end": 55 }, "start": { "line": 0, "column": 54 }, "end": { "line": 0, "column": 55 } } },
+          { "text": ",", "range": { "byteOffset": { "start": 55, "end": 56 }, "start": { "line": 0, "column": 55 }, "end": { "line": 0, "column": 56 } } },
+          { "text": "'done'", "range": { "byteOffset": { "start": 57, "end": 63 }, "start": { "line": 0, "column": 57 }, "end": { "line": 0, "column": 63 } } }
+        ]
+      },
+      "transformed": {}
+    }
+  }
+]
+
+Summary:
+  2 matches found in STDIN input:
+    1. console.log(x)                       — at column 13
+    2. console.log(y, 'done')               — at column 42

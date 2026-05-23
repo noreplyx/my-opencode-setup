@@ -1,0 +1,110 @@
+================================================================================
+ast-grep Evaluation: kind vs pattern — Implicit Return Arrow Functions
+================================================================================
+
+Rule: implicit-return-arrow-fn
+Target: /home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts
+
+================================================================================
+EXPLANATION: Why PATTERN was chosen over KIND
+================================================================================
+
+The skill's guidance (Section: "The Expanded Three-Question Framework") states:
+  - Use `pattern` when you care about the *content* of the code
+  - Use `kind` when you care about the *type* of AST node
+  - Combine with `all: [{kind: ...}, {pattern: ...}]` to narrow a node type by
+    content
+
+In this task, we need to find:
+  1. Arrow functions (this is a *type* concern)
+  2. That are assigned to a `const` or `let` declaration (this is a *structural
+     relationship* concern)
+  3. That have a single expression body, NOT a block body (this is a *content
+     shape* concern)
+
+If we used `kind: arrow_function` alone, it would match ALL arrow functions
+in the file — including inline callbacks inside .map(), .filter(), event
+emitters, subscribe handlers, etc. (lines 24, 57, 61, 75-76 of the target).
+We would then need complex `inside`/`has` constraints to filter to only
+those assigned to a variable declaration, making the rule harder to read
+and maintain.
+
+Instead, we use `pattern`:
+  - `const $NAME = $PARAMS => $BODY`
+  - `let $NAME = $PARAMS => $BODY`
+
+The `=>` token is syntactically unique to arrow functions in TypeScript —
+there is no ambiguity risk. The pattern directly and readably expresses
+the entire structural relationship (const/let declaration + arrow function
+initializer) in a single line.
+
+We then add a `not` clause to exclude block-body arrows (where `$BODY` would
+be `{ $$$ }`), which ensures only implicit returns are matched.
+
+Decision: PATTERN is the correct choice here because:
+  1. The constraint is more about structural content (assignment pattern)
+     than about the node type alone
+  2. The pattern is self-documenting — it looks like the code it matches
+  3. A `kind`-based approach would require extra relational rules that add
+     complexity without benefit
+
+================================================================================
+SCAN RESULTS
+================================================================================
+
+5 matches found, 0 false positives, 0 false negatives.
+
+Match 1 — Line 10 (CORRECT MATCH):
+  const add = (a: number, b: number) => a + b;
+  -> Single expression body (implicit return of a + b)
+  -> Assigned to const
+
+Match 2 — Line 11 (CORRECT MATCH):
+  const greet = (name: string) => `Hello, ${name}!`;
+  -> Single expression body (implicit return of template literal)
+  -> Assigned to const
+
+Match 3 — Line 18 (CORRECT MATCH):
+  const double = (n: number) => n * 2;
+  -> Single expression body (implicit return of n * 2)
+  -> Assigned to const
+
+Match 4 — Line 19 (CORRECT MATCH):
+  const square = (n: number) => n ** 2;
+  -> Single expression body (implicit return of n ** 2)
+  -> Assigned to const
+
+Match 5 — Line 20 (CORRECT MATCH):
+  const formatName = (first: string, last: string) => `${first} ${last}`.trim();
+  -> Single expression body (implicit return of trimmed string)
+  -> Assigned to const
+
+================================================================================
+VERIFICATION: Non-matches (correctly excluded)
+================================================================================
+
+Line 12 — const multiply = (x, y) => { ... return result; }
+  EXCLUDED (block body with explicit return)
+
+Line 23 — const process = (items) => { return ... }
+  EXCLUDED (block body with explicit return)
+
+Line 26 — const handleError = (err) => { console.error(...); return null; }
+  EXCLUDED (block body with multiple statements)
+
+Line 57 — map((response) => { ... })
+  EXCLUDED (not assigned to const/let — it is an inline callback argument)
+
+Line 61 — catchError((err) => { ... })
+  EXCLUDED (not assigned to const/let — it is an inline callback argument)
+
+Line 75-76 — subscribe({ next: () => ..., error: (err) => ... })
+  EXCLUDED (not assigned to const/let — these are property values in an object)
+
+================================================================================
+CONCLUSION
+================================================================================
+
+Pattern-based approach correctly identified all 5 implicit-return arrow
+functions assigned to const/let and correctly excluded all 7 non-matching
+arrow functions. Zero false positives, zero false negatives.

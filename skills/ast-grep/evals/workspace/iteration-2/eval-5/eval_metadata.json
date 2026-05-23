@@ -1,0 +1,6 @@
+{
+  "eval_id": 5,
+  "eval_name": "json-import-search",
+  "prompt": "Use ast-grep to find all imports from '../../core' or '../../shared' or '../../common' in all TypeScript files under the current directory. Use JSON output so you can pipe results to another tool. Explain the meta-variables used.",
+  "assertions": []
+}

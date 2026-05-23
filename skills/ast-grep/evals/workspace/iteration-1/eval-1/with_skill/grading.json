@@ -1,0 +1,9 @@
+{
+  "expectations": [
+    {"text": "Uses ast-grep -p or ast-grep scan to search for console calls", "passed": true, "evidence": "Command: ast-grep -p 'console.$_($$$)' -l ts search-sample.ts — used ast-grep run with pattern and language flag"},
+    {"text": "The search finds console.error call", "passed": true, "evidence": "Found console.error('Failed to load users:', err) on line 34"},
+    {"text": "The output demonstrates understanding of meta-variables (using $ or $$$)", "passed": true, "evidence": "Used $_ (non-capturing) for method name and $$$ (multi) for arguments"},
+    {"text": "The output shows the matched code results", "passed": true, "evidence": "Output shows matched lines with 2 lines of context (-C 2)"}
+  ],
+  "summary": {"passed": 4, "failed": 0, "total": 4, "pass_rate": 1.0}
+}

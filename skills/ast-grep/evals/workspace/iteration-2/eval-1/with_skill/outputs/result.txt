@@ -1,0 +1,164 @@
+================================================================================
+ ast-grep Evaluation Result
+================================================================================
+ Task: Find all console.log/error/warn calls in search-sample.ts using ast-grep
+ File: /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
+ Date: 2026-05-23
+================================================================================
+
+1. SKILL LOADED
+--------------------------------------------------------------------------------
+  Loaded: /home/oat/.config/opencode/skills/ast-grep/SKILL.md
+  Version: ast-grep 0.42.3 (resolved from the skill metadata)
+  Used pattern reference: Chapter 1 — Pattern Basics (ad-hoc search via `run`)
+
+2. TARGET FILE
+--------------------------------------------------------------------------------
+  File: files/search-sample.ts
+  Length: 65 lines
+  Contents (lines 1-65):
+
+   1: // Sample TypeScript file for ast-grep testing
+   2: 
+   3: import { Component, OnInit } from '@angular/core';
+   4: import { HttpClient } from '@angular/common/http';
+   5: 
+   6: interface User {
+   7:   id: number;
+   8:   name: string;
+   9:   email: string;
+  10: }
+  11: 
+  12: @Component({
+  13:   selector: 'app-user-list',
+  14:   templateUrl: './user-list.component.html',
+  15: })
+  16: export class UserListComponent implements OnInit {
+  17:   users: User[] = [];
+  18:   loading = false;
+  19: 
+  20:   constructor(private http: HttpClient) {}
+  21: 
+  22:   ngOnInit(): void {
+  23:     this.loadUsers();
+  24:   }
+  25: 
+  26:   loadUsers(): void {
+  27:     this.loading = true;
+  28:     this.http.get<User[]>('/api/users').subscribe({
+  29:       next: (data) => {
+  30:         this.users = data;
+  31:         this.loading = false;
+  32:       },
+  33:       error: (err) => {
+  34:         console.error('Failed to load users:', err);
+  35:         this.loading = false;
+  36:       },
+  37:     });
+  38:   }
+  39:   ... (remaining lines omitted for brevity)
+  65: }
+
+3. PATTERN USED
+--------------------------------------------------------------------------------
+  We used three different approaches following the skill's decision flow:
+
+  A) Ad-hoc pattern search (ast-grep run) — One pattern per console method
+  ---------------------------------------------------------------------------
+     Pattern A1:  console.log($$$)
+       Meaning:   Match calls to console.log with zero or more arguments ($$$ = multi meta-variable)
+       Result:    No matches found in this file
+
+     Pattern A2:  console.error($$$)
+       Meaning:   Match calls to console.error with zero or more arguments
+       Result:    1 match found (see Section 4)
+
+     Pattern A3:  console.warn($$$)
+       Meaning:   Match calls to console.warn with zero or more arguments
+       Result:    No matches found in this file
+
+  B) Combined ad-hoc pattern (run with wildcard meta-variable)
+  ---------------------------------------------------------------------------
+     Pattern:  console.$_METHOD($$$)
+     Meaning:  Match any method call on console with zero or more arguments.
+               $_ = non-capturing meta-variable for the method name.
+               $$$ = multi meta-variable for arguments.
+     Result:   Same 1 match (see Section 4).
+
+4. MATCH RESULTS
+--------------------------------------------------------------------------------
+
+  ---- Result from: ast-grep -p 'console.log($$$)' -l ts files/search-sample.ts ----
+    → No matches (returned exit code 1, empty output)
+
+  ---- Result from: ast-grep -p 'console.error($$$)' -l ts files/search-sample.ts ----
+    files/search-sample.ts:34:        console.error('Failed to load users:', err);
+
+  ---- Result from: ast-grep -p 'console.warn($$$)' -l ts files/search-sample.ts ----
+    → No matches (returned exit code 1, empty output)
+
+  ---- Result from: ast-grep -p 'console.$_METHOD($$$)' -l ts files/search-sample.ts --json ----
+    [
+    {
+      "text": "console.error('Failed to load users:', err)",
+      "range": {
+        "byteOffset": {
+          "start": 714,
+          "end": 757
+        },
+        "start": {
+          "line": 33,
+          "column": 8
+        },
+        "end": {
+          "line": 33,
+          "column": 51
+        }
+      },
+      "file": "files/search-sample.ts",
+      "lines": "        console.error('Failed to load users:', err);",
+      "charCount": {
+        "leading": 8,
+        "trailing": 1
+      },
+      "language": "TypeScript"
+    }
+    ]
+
+5. ANALYSIS
+--------------------------------------------------------------------------------
+  The target file contains exactly ONE console call:
+    - console.error('Failed to load users:', err)  at line 34, column 9
+
+  It has NO console.log() calls and NO console.warn() calls.
+
+  This matches what we can verify visually from the source file — the only console
+  output line is in the HTTP error handler callback at line 34.
+
+  Key learning from the skill:
+  - $$$ (multi meta-variable) correctly matches zero or more arguments. This was
+    essential because console.error has two arguments: a string and a variable.
+  - $_METHOD (non-capturing meta-variable) allowed matching any method name
+    (log/error/warn) in a single pass without capturing the method name.
+  - The `--json` flag provided structured output including byte offsets, line/column
+    ranges, and leading/trailing character counts — useful for scripting.
+
+6. COMMANDS EXECUTED (for reproducibility)
+--------------------------------------------------------------------------------
+  # Working directory: /home/oat/.config/opencode/skills/ast-grep/evals
+
+  # 1) Search for console.log specifically
+  ast-grep -p 'console.log($$$)' -l ts files/search-sample.ts --color never
+
+  # 2) Search for console.error specifically
+  ast-grep -p 'console.error($$$)' -l ts files/search-sample.ts --color never
+
+  # 3) Search for console.warn specifically
+  ast-grep -p 'console.warn($$$)' -l ts files/search-sample.ts --color never
+
+  # 4) Combined search (any console method) with JSON output
+  ast-grep -p 'console.$_METHOD($$$)' -l ts files/search-sample.ts --json --color never
+
+================================================================================
+END OF RESULT
+================================================================================

@@ -1,0 +1,90 @@
+{
+  "skill_name": "ast-grep",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "In the file evals/files/search-sample.ts, find all console.log/error/warn calls using ast-grep. Show me the pattern you used and the results.",
+      "expected_output": "Uses ast-grep to find console.error calls in the TypeScript file",
+      "files": ["evals/files/search-sample.ts"],
+      "expectations": [
+        "Uses ast-grep -p or ast-grep scan to search for console calls",
+        "The search finds console.error call",
+        "The output demonstrates understanding of meta-variables (using $ or $$$)",
+        "The output shows the matched code results"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create an ast-grep YAML rule to find all methods in the file evals/files/search-sample.ts that use `.subscribe()` calls (RxJS pattern). Write the rule, save it to a file, and run it with ast-grep scan. Show the output.",
+      "expected_output": "A YAML rule file and ast-grep scan output showing subscribe calls",
+      "files": ["evals/files/search-sample.ts"],
+      "expectations": [
+        "Creates a valid YAML rule file",
+        "The rule uses relational rules (has/inside) or pattern",
+        "Runs ast-grep scan with the rule file",
+        "The output correctly identifies subscribe calls in the file"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Using the file evals/files/search-sample.ts, replace all occurrences of `console.error(...)` with `this.logger.error(...)` using ast-grep's rewrite capability. Show the diff/result.",
+      "expected_output": "Uses ast-grep rewrite to transform console.error to this.logger.error",
+      "files": ["evals/files/search-sample.ts"],
+      "expectations": [
+        "Uses ast-grep rewrite (--rewrite flag or YAML fix) to perform the replacement",
+        "The rewrite uses meta-variables to capture the console.error arguments",
+        "The output shows the original and transformed code",
+        "The transformation preserves the arguments passed to console.error"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Create an ast-grep rule that finds all arrow functions (=>) assigned to a const/let variable that have only a single expression in the body (implicit return). Use this on the file evals/files/codemod-target.ts. Save the rule and run it. EXPLAIN whether you use `kind: arrow_function` or a `pattern` and why.",
+      "expected_output": "A YAML rule that correctly identifies implicit-return arrow functions, with explanation of kind vs pattern tradeoff",
+      "files": ["evals/files/codemod-target.ts"],
+      "expectations": [
+        "The rule uses kind: arrow_function OR pattern, with a clear explanation of the tradeoff",
+        "Uses a composite rule (all/any/not) to filter for single-expression bodies",
+        "Creates a valid rule file and runs ast-grep scan",
+        "Correctly identifies only implicit-return arrows (add, greet, double, square, formatName) and NOT block-bodied arrows (multiply, process, handleError)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Use ast-grep to find all imports from '../../core' or '../../shared' or '../../common' in all TypeScript files under the current directory. Use JSON output so you can pipe results to another tool. Explain the meta-variables used.",
+      "expected_output": "Uses ast-grep with JSON output and meta-variables to find imports",
+      "files": [],
+      "expectations": [
+        "Uses --json flag for JSON output",
+        "Uses meta-variables in the pattern (e.g., $MODULE or $PATH)",
+        "The pattern correctly matches imports from the specified paths",
+        "Output is valid JSON"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Use ast-grep's stdin mode to find all `console.log` calls in this piped code sample: `const x = 1; console.log(x); const y = 2; console.log(y, 'done');`. Show the pattern, command, and results using JSON output.",
+      "expected_output": "Uses ast-grep --stdin with --json to find console.log calls from piped input",
+      "files": [],
+      "expectations": [
+        "Uses --stdin flag correctly",
+        "Uses --json for structured output",
+        "Uses meta-variables ($$$ or $ARG) to capture arguments",
+        "Specifies --lang since stdin has no file extension",
+        "Correctly identifies both console.log calls"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "In the file evals/files/codemod-target.ts, find ALL arrow function expressions (not just those assigned to variables) using ast-grep. Then count how many there are. Explain what approach you used and why (kind vs pattern).",
+      "expected_output": "Correctly uses kind: arrow_function to find all arrow expressions, explaining why kind is better than pattern for this task",
+      "files": ["evals/files/codemod-target.ts"],
+      "expectations": [
+        "Uses kind: arrow_function (not pattern) to find arrow expressions",
+        "Explains why kind is the right choice vs pattern for this task",
+        "The output correctly counts all arrow expressions in the file",
+        "Shows understanding that inline callbacks (like .filter(n => n > 0)) are also arrow_function nodes"
+      ]
+    }
+  ]
+}

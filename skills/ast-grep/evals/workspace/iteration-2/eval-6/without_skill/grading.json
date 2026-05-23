@@ -1,0 +1,13 @@
+{
+  "eval_id": 6,
+  "eval_name": "stdin-pipe-search",
+  "configuration": "without_skill",
+  "run_number": 1,
+  "expectations": [
+    {"text": "Uses --stdin flag correctly", "passed": true, "evidence": "Command uses | ast-grep run --stdin --lang ts"},
+    {"text": "Uses --json for structured output", "passed": true, "evidence": "--json=compact flag used"},
+    {"text": "Uses meta-variables ($$$ or $ARG) to capture arguments", "passed": true, "evidence": "Uses $$$ARGS and explains its role"},
+    {"text": "Specifies --lang since stdin has no file extension", "passed": true, "evidence": "--lang ts specified"},
+    {"text": "Correctly identifies both console.log calls", "passed": true, "evidence": "Both calls found in JSON output"}
+  ]
+}

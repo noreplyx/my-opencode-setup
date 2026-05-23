@@ -1,0 +1,13 @@
+id: rxjs-subscribe-in-methods
+language: TypeScript
+severity: warning
+message: "Method contains a .subscribe() call"
+rule:
+  all:
+    - kind: method_definition
+    - has:
+        pattern: $_.subscribe($$$)
+        stopBy: end
+    - has:
+        field: name
+        kind: property_identifier

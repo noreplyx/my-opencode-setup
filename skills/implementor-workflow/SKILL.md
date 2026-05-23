@@ -17,6 +17,7 @@ description: Workflow protocol for the Implementor subagent. Provides step-by-st
 ## Mandatory Setup
 
 1. **Load `shared-agent-workflow`** — Apply the standardized Read Context protocol, output contract format, and error taxonomy.
+2. **Load `ast-grep`** for AST-based structural code search during implementation (useful for verifying code structure, checking for duplicate patterns, or finding similar existing implementations).
 2. **Load `code-philosophy`** (and backend/frontend variants if applicable) for code quality self-checks.
 
 ---

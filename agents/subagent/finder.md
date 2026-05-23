@@ -24,6 +24,7 @@ permission:
     "backend-code-philosophy": "allow"
     "finder-workflow": "allow"
     "frontend-code-philosophy": "allow"
+    "ast-grep": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.1.0"

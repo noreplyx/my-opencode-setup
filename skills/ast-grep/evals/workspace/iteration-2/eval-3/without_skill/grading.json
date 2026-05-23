@@ -1,0 +1,12 @@
+{
+  "eval_id": 3,
+  "eval_name": "rewrite-console-to-logger",
+  "configuration": "without_skill",
+  "run_number": 1,
+  "expectations": [
+    {"text": "Uses ast-grep rewrite (--rewrite flag or YAML fix) to perform the replacement", "passed": true, "evidence": "Uses YAML rule with fix: this.logger.error($$$ARGS)"},
+    {"text": "The rewrite uses meta-variables to capture the console.error arguments", "passed": true, "evidence": "Uses $$$ARGS multi meta-variable"},
+    {"text": "The output shows the original and transformed code", "passed": true, "evidence": "Diff shows the transformation"},
+    {"text": "The transformation preserves the arguments passed to console.error", "passed": true, "evidence": "Arguments preserved in transformed output"}
+  ]
+}

@@ -22,6 +22,7 @@ permission:
   skill:
     "*": "deny"
     "accessibility": "allow"
+    "ast-grep": "allow"
     "quality-assurance": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"

@@ -1,0 +1,64 @@
+ast-grep Stdin Mode Evaluation Results
+=======================================
+
+Task: Find all console.log calls in piped code using ast-grep stdin mode
+Code Sample: const x = 1; console.log(x); const y = 2; console.log(y, 'done');
+Language: JavaScript (js)
+Working Directory: /home/oat/.config/opencode/skills/ast-grep/evals
+
+Pattern Used:
+  console.log($$$)
+  ($$$ is the multi meta-variable that matches zero or more AST nodes — needed because console.log(x)
+   has one argument and console.log(y, "done") has two)
+
+Command:
+  echo 'const x = 1; console.log(x); const y = 2; console.log(y, "done");' | \
+    ast-grep --stdin --json -p 'console.log($$$)' -l js
+
+Flags Breakdown:
+  --stdin       : Required for pipe mode; reads code from standard input
+  --json        : Outputs structured JSON (not plain text) for composability
+  -p '...'      : The AST pattern to match
+  -l js         : Language specification (mandatory with --stdin; no file extension to infer from)
+
+Results (JSON):
+[
+  {
+    "text": "console.log(x)",
+    "range": {
+      "byteOffset": { "start": 13, "end": 27 },
+      "start": { "line": 0, "column": 13 },
+      "end": { "line": 0, "column": 27 }
+    },
+    "file": "STDIN",
+    "lines": "const x = 1; console.log(x); const y = 2; console.log(y, \"done\");",
+    "charCount": { "leading": 13, "trailing": 38 },
+    "language": "JavaScript"
+  },
+  {
+    "text": "console.log(y, \"done\")",
+    "range": {
+      "byteOffset": { "start": 42, "end": 64 },
+      "start": { "line": 0, "column": 42 },
+      "end": { "line": 0, "column": 64 }
+    },
+    "file": "STDIN",
+    "lines": "const x = 1; console.log(x); const y = 2; console.log(y, \"done\");",
+    "charCount": { "leading": 42, "trailing": 1 },
+    "language": "JavaScript"
+  }
+]
+
+Summary:
+  - 2 matches found (both console.log calls in the piped code)
+  - Match 1: console.log(x) — 1 argument, captured by $$$
+  - Match 2: console.log(y, "done") — 2 arguments, also captured by $$$
+  - Using $$$ (multi meta-variable) was necessary because $ARG (single meta-variable) would
+    only match a single argument and would miss the second call
+
+Key Takeaways (from skill):
+  - --stdin requires BOTH the --stdin flag AND non-tty (piped) execution
+  - --lang is mandatory with --stdin (no file extension to infer)
+  - --json works with --stdin for structured output
+  - Single meta-variable $ARG would NOT match console.log(y, "done") because it has two AST nodes
+  - Multi meta-variable $$$ is the correct choice for matching variable number of arguments

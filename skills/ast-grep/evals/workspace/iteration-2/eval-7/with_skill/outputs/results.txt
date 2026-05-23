@@ -1,0 +1,806 @@
+================================================================================
+ ast-grep Evaluation: Find ALL Arrow Function Expressions
+================================================================================
+
+File examined:
+  /home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts
+
+Working directory:
+  /home/oat/.config/opencode/skills/ast-grep/evals
+
+Date: 2026-05-23
+Tool: ast-grep v0.42.3
+
+================================================================================
+ APPROACH DECISION: kind vs pattern
+================================================================================
+
+Per the ast-grep SKILL.md Three-Question Framework (Section 1):
+
+  "pattern → when you care about the content of the code: console.log($ARG)"
+  "kind → when you care about the type of AST node: all arrow_function nodes"
+
+The task was to find ALL arrow function expressions — this is purely about node
+TYPE, not about specific CODE CONTENT. Therefore, kind was the correct choice.
+
+The YAML rule used:
+
+    id: find-arrow-fns
+    language: TypeScript
+    rule:
+      kind: arrow_function
+
+Why pattern would have been WRONG (and missed matches):
+  A pattern like `($$$) => $$$` requires the arrow function to have parenthesized
+  parameters. It MISSES parentheseless arrow functions like:
+    - n => n > 0
+    - n => n * 2
+  Indeed, the pattern approach found only 12 of 14 matches — missing these two.
+
+  A pattern like `$_ => $$$` could potentially catch the no-paren case, but would
+  also have other edge-case gaps and would need TWO patterns (one with parens,
+  one without). kind is simpler, more correct, and covers ALL arrow functions.
+
+================================================================================
+ COMMAND USED
+================================================================================
+
+  ast-grep scan --rule rule.yml --json codemod-target.ts
+
+Where rule.yml contains:
+  id: find-arrow-fns
+  language: TypeScript
+  rule:
+    kind: arrow_function
+
+================================================================================
+ RESULTS: 14 Arrow Functions Found
+================================================================================
+
+  [ 1] line 10: (a: number, b: number) => a + b
+                 (variable: add, implicit return)
+
+  [ 2] line 11: (name: string) => `Hello, ${name}!`
+                 (variable: greet, implicit return)
+
+  [ 3] line 12: (x: number, y: number) => {
+                  const result = x * y;
+                  return result;
+                }
+                (variable: multiply, block body)
+
+  [ 4] line 18: (n: number) => n * 2
+                 (variable: double, implicit return)
+
+  [ 5] line 19: (n: number) => n ** 2
+                 (variable: square, implicit return)
+
+  [ 6] line 20: (first: string, last: string) => `${first} ${last}`.trim()
+                 (variable: formatName, chained method call)
+
+  [ 7] line 23: (items: number[]) => {
+                  return items.filter(n => n > 0).map(n => n * 2);
+                }
+                (variable: process, block body; also contains arrow functions [8] and [9])
+
+  [ 8] line 24: n => n > 0
+                 (inline in .filter(), NO parentheses — only kind catches this)
+
+  [ 9] line 24: n => n * 2
+                 (inline in .map(), NO parentheses — only kind catches this)
+
+  [10] line 26: (err: Error) => {
+                  console.error('Caught:', err.message);
+                  return null;
+                }
+                (variable: handleError, block body)
+
+  [11] line 57: (response) => {
+                  this.cache.set(id, response);
+                  return response;
+                }
+                (inline in .pipe(map(...)), block body)
+
+  [12] line 61: (err) => {
+                  console.error('Failed to load item:', err);
+                  return of(null);
+                }
+                (inline in .pipe(catchError(...)), block body)
+
+  [13] line 75: () => console.log('Saved successfully')
+                 (inline in subscribe({ next: ... }), implicit return)
+
+  [14] line 76: (err: Error) => console.error('Save failed:', err)
+                 (inline in subscribe({ error: ... }), implicit return, Error type)
+
+================================================================================
+ COMPARISON: kind vs pattern
+================================================================================
+
+  Method                       Matches   Missed
+  ------                       -------   ------
+  kind: arrow_function          14        0   (perfect — catches ALL arrow fns)
+  pattern: '($$$) => $$$'       12        2   (missed n => n > 0, n => n * 2)
+
+The two missed by pattern are parentheseless arrow functions used as inline
+callbacks inside .filter() and .map(). The kind approach correctly catches them
+because tree-sitter recognizes them as arrow_function AST nodes regardless of
+parameter parentheses.
+
+================================================================================
+ RAW JSON OUTPUT
+================================================================================
+[
+{
+  "text": "(a: number, b: number) => a + b",
+  "range": {
+    "byteOffset": {
+      "start": 401,
+      "end": 432
+    },
+    "start": {
+      "line": 9,
+      "column": 12
+    },
+    "end": {
+      "line": 9,
+      "column": 43
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const add = (a: number, b: number) => a + b;",
+  "charCount": {
+    "leading": 12,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(a: number, b: number) => a + b",
+      "range": {
+        "byteOffset": {
+          "start": 401,
+          "end": 432
+        },
+        "start": {
+          "line": 9,
+          "column": 12
+        },
+        "end": {
+          "line": 9,
+          "column": 43
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(name: string) => `Hello, ${name}!`",
+  "range": {
+    "byteOffset": {
+      "start": 448,
+      "end": 483
+    },
+    "start": {
+      "line": 10,
+      "column": 14
+    },
+    "end": {
+      "line": 10,
+      "column": 49
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const greet = (name: string) => `Hello, ${name}!`;",
+  "charCount": {
+    "leading": 14,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(name: string) => `Hello, ${name}!`",
+      "range": {
+        "byteOffset": {
+          "start": 448,
+          "end": 483
+        },
+        "start": {
+          "line": 10,
+          "column": 14
+        },
+        "end": {
+          "line": 10,
+          "column": 49
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(x: number, y: number) => {\n  const result = x * y;\n  return result;\n}",
+  "range": {
+    "byteOffset": {
+      "start": 502,
+      "end": 572
+    },
+    "start": {
+      "line": 11,
+      "column": 17
+    },
+    "end": {
+      "line": 14,
+      "column": 1
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const multiply = (x: number, y: number) => {\n  const result = x * y;\n  return result;\n};",
+  "charCount": {
+    "leading": 17,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(x: number, y: number) => {\n  const result = x * y;\n  return result;\n}",
+      "range": {
+        "byteOffset": {
+          "start": 502,
+          "end": 572
+        },
+        "start": {
+          "line": 11,
+          "column": 17
+        },
+        "end": {
+          "line": 14,
+          "column": 1
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(n: number) => n * 2",
+  "range": {
+    "byteOffset": {
+      "start": 648,
+      "end": 668
+    },
+    "start": {
+      "line": 17,
+      "column": 15
+    },
+    "end": {
+      "line": 17,
+      "column": 35
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const double = (n: number) => n * 2;",
+  "charCount": {
+    "leading": 15,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(n: number) => n * 2",
+      "range": {
+        "byteOffset": {
+          "start": 648,
+          "end": 668
+        },
+        "start": {
+          "line": 17,
+          "column": 15
+        },
+        "end": {
+          "line": 17,
+          "column": 35
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(n: number) => n ** 2",
+  "range": {
+    "byteOffset": {
+      "start": 685,
+      "end": 706
+    },
+    "start": {
+      "line": 18,
+      "column": 15
+    },
+    "end": {
+      "line": 18,
+      "column": 36
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const square = (n: number) => n ** 2;",
+  "charCount": {
+    "leading": 15,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(n: number) => n ** 2",
+      "range": {
+        "byteOffset": {
+          "start": 685,
+          "end": 706
+        },
+        "start": {
+          "line": 18,
+          "column": 15
+        },
+        "end": {
+          "line": 18,
+          "column": 36
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(first: string, last: string) => `${first} ${last}`.trim()",
+  "range": {
+    "byteOffset": {
+      "start": 727,
+      "end": 785
+    },
+    "start": {
+      "line": 19,
+      "column": 19
+    },
+    "end": {
+      "line": 19,
+      "column": 77
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const formatName = (first: string, last: string) => `${first} ${last}`.trim();",
+  "charCount": {
+    "leading": 19,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(first: string, last: string) => `${first} ${last}`.trim()",
+      "range": {
+        "byteOffset": {
+          "start": 727,
+          "end": 785
+        },
+        "start": {
+          "line": 19,
+          "column": 19
+        },
+        "end": {
+          "line": 19,
+          "column": 77
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(items: number[]) => {\n  return items.filter(n => n > 0).map(n => n * 2);\n}",
+  "range": {
+    "byteOffset": {
+      "start": 893,
+      "end": 968
+    },
+    "start": {
+      "line": 22,
+      "column": 16
+    },
+    "end": {
+      "line": 24,
+      "column": 1
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const process = (items: number[]) => {\n  return items.filter(n => n > 0).map(n => n * 2);\n};",
+  "charCount": {
+    "leading": 16,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(items: number[]) => {\n  return items.filter(n => n > 0).map(n => n * 2);\n}",
+      "range": {
+        "byteOffset": {
+          "start": 893,
+          "end": 968
+        },
+        "start": {
+          "line": 22,
+          "column": 16
+        },
+        "end": {
+          "line": 24,
+          "column": 1
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "n => n > 0",
+  "range": {
+    "byteOffset": {
+      "start": 938,
+      "end": 948
+    },
+    "start": {
+      "line": 23,
+      "column": 22
+    },
+    "end": {
+      "line": 23,
+      "column": 32
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "  return items.filter(n => n > 0).map(n => n * 2);",
+  "charCount": {
+    "leading": 22,
+    "trailing": 18
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "n => n > 0",
+      "range": {
+        "byteOffset": {
+          "start": 938,
+          "end": 948
+        },
+        "start": {
+          "line": 23,
+          "column": 22
+        },
+        "end": {
+          "line": 23,
+          "column": 32
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "n => n * 2",
+  "range": {
+    "byteOffset": {
+      "start": 954,
+      "end": 964
+    },
+    "start": {
+      "line": 23,
+      "column": 38
+    },
+    "end": {
+      "line": 23,
+      "column": 48
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "  return items.filter(n => n > 0).map(n => n * 2);",
+  "charCount": {
+    "leading": 38,
+    "trailing": 2
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "n => n * 2",
+      "range": {
+        "byteOffset": {
+          "start": 954,
+          "end": 964
+        },
+        "start": {
+          "line": 23,
+          "column": 38
+        },
+        "end": {
+          "line": 23,
+          "column": 48
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(err: Error) => {\n  console.error('Caught:', err.message);\n  return null;\n}",
+  "range": {
+    "byteOffset": {
+      "start": 990,
+      "end": 1065
+    },
+    "start": {
+      "line": 25,
+      "column": 20
+    },
+    "end": {
+      "line": 28,
+      "column": 1
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "const handleError = (err: Error) => {\n  console.error('Caught:', err.message);\n  return null;\n};",
+  "charCount": {
+    "leading": 20,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(err: Error) => {\n  console.error('Caught:', err.message);\n  return null;\n}",
+      "range": {
+        "byteOffset": {
+          "start": 990,
+          "end": 1065
+        },
+        "start": {
+          "line": 25,
+          "column": 20
+        },
+        "end": {
+          "line": 28,
+          "column": 1
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(response) => {\n        this.cache.set(id, response);\n        return response;\n      }",
+  "range": {
+    "byteOffset": {
+      "start": 1829,
+      "end": 1915
+    },
+    "start": {
+      "line": 56,
+      "column": 10
+    },
+    "end": {
+      "line": 59,
+      "column": 7
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "      map((response) => {\n        this.cache.set(id, response);\n        return response;\n      }),",
+  "charCount": {
+    "leading": 10,
+    "trailing": 2
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(response) => {\n        this.cache.set(id, response);\n        return response;\n      }",
+      "range": {
+        "byteOffset": {
+          "start": 1829,
+          "end": 1915
+        },
+        "start": {
+          "line": 56,
+          "column": 10
+        },
+        "end": {
+          "line": 59,
+          "column": 7
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(err) => {\n        console.error('Failed to load item:', err);\n        return of(null);\n      }",
+  "range": {
+    "byteOffset": {
+      "start": 1935,
+      "end": 2030
+    },
+    "start": {
+      "line": 60,
+      "column": 17
+    },
+    "end": {
+      "line": 63,
+      "column": 7
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "      catchError((err) => {\n        console.error('Failed to load item:', err);\n        return of(null);\n      })",
+  "charCount": {
+    "leading": 17,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(err) => {\n        console.error('Failed to load item:', err);\n        return of(null);\n      }",
+      "range": {
+        "byteOffset": {
+          "start": 1935,
+          "end": 2030
+        },
+        "start": {
+          "line": 60,
+          "column": 17
+        },
+        "end": {
+          "line": 63,
+          "column": 7
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "() => console.log('Saved successfully')",
+  "range": {
+    "byteOffset": {
+      "start": 2235,
+      "end": 2274
+    },
+    "start": {
+      "line": 74,
+      "column": 12
+    },
+    "end": {
+      "line": 74,
+      "column": 51
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "      next: () => console.log('Saved successfully'),",
+  "charCount": {
+    "leading": 12,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "() => console.log('Saved successfully')",
+      "range": {
+        "byteOffset": {
+          "start": 2235,
+          "end": 2274
+        },
+        "start": {
+          "line": 74,
+          "column": 12
+        },
+        "end": {
+          "line": 74,
+          "column": 51
+        }
+      },
+      "style": "primary"
+    }
+  ]
+},
+{
+  "text": "(err: Error) => console.error('Save failed:', err)",
+  "range": {
+    "byteOffset": {
+      "start": 2289,
+      "end": 2339
+    },
+    "start": {
+      "line": 75,
+      "column": 13
+    },
+    "end": {
+      "line": 75,
+      "column": 63
+    }
+  },
+  "file": "/home/oat/.config/opencode/skills/ast-grep/evals/files/codemod-target.ts",
+  "lines": "      error: (err: Error) => console.error('Save failed:', err),",
+  "charCount": {
+    "leading": 13,
+    "trailing": 1
+  },
+  "language": "TypeScript",
+  "ruleId": "find-arrow-fns",
+  "severity": "hint",
+  "note": null,
+  "message": "",
+  "labels": [
+    {
+      "text": "(err: Error) => console.error('Save failed:', err)",
+      "range": {
+        "byteOffset": {
+          "start": 2289,
+          "end": 2339
+        },
+        "start": {
+          "line": 75,
+          "column": 13
+        },
+        "end": {
+          "line": 75,
+          "column": 63
+        }
+      },
+      "style": "primary"
+    }
+  ]
+}
+]

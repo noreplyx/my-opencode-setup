@@ -1,0 +1,17 @@
+--- a/search-sample.ts (original)
++++ b/search-sample.ts (transformed)
+@@ -28,11 +28,11 @@
+   loadUsers(): void {
+     this.loading = true;
+     this.http.get<User[]>('/api/users').subscribe({
+       next: (data) => {
+         this.users = data;
+         this.loading = false;
+       },
+       error: (err) => {
+-        console.error('Failed to load users:', err);
++        this.logger.error('Failed to load users:', err);
+         this.loading = false;
+       },
+     });
+   }

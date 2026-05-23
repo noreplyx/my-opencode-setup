@@ -1,0 +1,6 @@
+{
+  "eval_id": 7,
+  "eval_name": "kind-vs-pattern-arrow",
+  "prompt": "In the file evals/files/codemod-target.ts, find ALL arrow function expressions (not just those assigned to variables) using ast-grep. Then count how many there are. Explain what approach you used and why (kind vs pattern).",
+  "assertions": []
+}

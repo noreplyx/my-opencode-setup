@@ -1,0 +1,9 @@
+id: find-arrow-implicit-return
+language: TypeScript
+message: "Arrow function with implicit return"
+rule:
+  kind: arrow_function
+  not:
+    has:
+      field: body
+      kind: statement_block

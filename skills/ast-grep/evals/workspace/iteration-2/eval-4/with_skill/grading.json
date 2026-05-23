@@ -1,0 +1,12 @@
+{
+  "eval_id": 4,
+  "eval_name": "find-arrow-implicit-return",
+  "configuration": "with_skill",
+  "run_number": 2,
+  "expectations": [
+    {"text": "The rule explains whether it uses kind: arrow_function or pattern and why", "passed": true, "evidence": "Explained choice of pattern over kind: content-based task (const/let + implicit return), not type-based"},
+    {"text": "Uses a composite rule (all/any/not) to filter for single-expression bodies", "passed": true, "evidence": "Uses pattern with not: clause excluding block-bodied arrows"},
+    {"text": "Creates a valid rule file and runs ast-grep scan", "passed": true, "evidence": "Valid YAML rule created and scanned against codemod-target.ts"},
+    {"text": "Correctly identifies only implicit-return arrows and NOT block-bodied arrows", "passed": true, "evidence": "Found exactly 5 (add, greet, double, square, formatName); excluded multiply, process, handleError"}
+  ]
+}

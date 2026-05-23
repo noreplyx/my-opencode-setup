@@ -1,0 +1,36 @@
+# Rule: implicit-return-arrow-fn
+#
+# Design decision: PATTERN-based (not kind-based)
+#
+# Why pattern over kind:
+#   - `kind: arrow_function` matches ALL arrow function nodes in the AST,
+#     regardless of context — including inline callbacks in .map(), .filter(),
+#     event handlers, etc. To filter to only those assigned to const/let,
+#     we would need additional `inside` or `has` constraints, making the rule
+#     more complex and harder to read.
+#
+#   - `pattern` (e.g., `const $NAME = $PARAMS => $BODY`) directly expresses
+#     the structural relationship we care about: a variable declaration with
+#     an arrow function initializer. Since `=>` is syntax unique to arrow
+#     functions in TypeScript, there is no ambiguity risk.
+#
+#   - The pattern form is self-documenting — the rule body looks like the
+#     code it matches.
+#
+# Rule matches: const/let declarations where the initializer is an arrow
+# function with a single-expression body (implicit return).
+#
+# It excludes block-body arrow functions via the `not` clause.
+
+id: implicit-return-arrow-fn
+language: TypeScript
+severity: info
+message: "Arrow function with implicit return assigned to const/let: `$NAME`"
+rule:
+  any:
+    - pattern: const $NAME = $PARAMS => $BODY
+    - pattern: let $NAME = $PARAMS => $BODY
+  not:
+    any:
+      - pattern: const $NAME = $PARAMS => { $$$ }
+      - pattern: let $NAME = $PARAMS => { $$$ }

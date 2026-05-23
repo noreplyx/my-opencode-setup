@@ -1,0 +1,12 @@
+Eval 4: Arrow Functions with Implicit Return — ast-grep (with skill)
+Rule: kind: arrow_function + not has: statement_block
+
+Results: 2 matches
+
+Match 1: line 41 — const user = this.users.find((u) => u.id === id)
+Match 2: line 49 — this.users = this.users.filter((u) => u.id !== id)
+
+Rule Design:
+  - kind: arrow_function — match arrow function AST nodes
+  - not: has: field: body, kind: statement_block — exclude arrows with { } body (implicit return = expression body)
+  - This correctly identifies single-expression arrow functions

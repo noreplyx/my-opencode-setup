@@ -1,0 +1,9 @@
+{
+  "expectations": [
+    {"text": "Uses kind: arrow_function in the rule", "passed": true, "evidence": "Rule uses kind: arrow_function as root criterion"},
+    {"text": "Uses a composite rule (all/any/not) to filter for single-expression bodies", "passed": true, "evidence": "Uses not: has: field: body, kind: statement_block — composite rule to exclude block-body arrows"},
+    {"text": "Creates a valid rule file", "passed": true, "evidence": "Created find-arrow-implicit-return.yml — valid YAML"},
+    {"text": "Demonstrates understanding of AST-node-based matching vs text matching", "passed": true, "evidence": "Uses kind-based matching (arrow_function) and field-based filtering (field: body) — pure AST matching, not text"}
+  ],
+  "summary": {"passed": 4, "failed": 0, "total": 4, "pass_rate": 1.0}
+}

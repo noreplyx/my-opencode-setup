@@ -9,6 +9,8 @@ This skill defines the complete debugging and fix workflow for the **Fixer** sub
 
 ## Mandatory Setup
 
+Load the `ast-grep` skill for AST-based structural code search during debugging — useful for finding all callers of a buggy function, verifying argument patterns, and checking that no similar bug patterns remain elsewhere.
+
 Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
 
 ## Core Responsibilities

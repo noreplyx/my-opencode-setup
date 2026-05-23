@@ -1,0 +1,430 @@
+{
+  "command": "sg -p 'import { $$$ } from $MODULE' --json -l ts fixtures/",
+  "filtered_with": "python3 inline filter matching module paths starting with ../../core/, ../../shared/, or ../../common/",
+  "total_matches": 9,
+  "results": [
+    {
+      "text": "import { DataService } from '../../core/data.service';",
+      "range": {
+        "byteOffset": {
+          "start": 23,
+          "end": 77
+        },
+        "start": {
+          "line": 1,
+          "column": 0
+        },
+        "end": {
+          "line": 1,
+          "column": 54
+        }
+      },
+      "file": "fixtures/nested/deeper.test.ts",
+      "lines": "import { DataService } from '../../core/data.service';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../core/data.service'",
+            "range": {
+              "byteOffset": {
+                "start": 51,
+                "end": 76
+              },
+              "start": {
+                "line": 1,
+                "column": 28
+              },
+              "end": {
+                "line": 1,
+                "column": 53
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { CacheHelper } from '../../shared/cache-helper';",
+      "range": {
+        "byteOffset": {
+          "start": 78,
+          "end": 134
+        },
+        "start": {
+          "line": 2,
+          "column": 0
+        },
+        "end": {
+          "line": 2,
+          "column": 56
+        }
+      },
+      "file": "fixtures/nested/deeper.test.ts",
+      "lines": "import { CacheHelper } from '../../shared/cache-helper';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../shared/cache-helper'",
+            "range": {
+              "byteOffset": {
+                "start": 106,
+                "end": 133
+              },
+              "start": {
+                "line": 2,
+                "column": 28
+              },
+              "end": {
+                "line": 2,
+                "column": 55
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { ErrorHandler } from '../../common/error-handler';",
+      "range": {
+        "byteOffset": {
+          "start": 135,
+          "end": 193
+        },
+        "start": {
+          "line": 3,
+          "column": 0
+        },
+        "end": {
+          "line": 3,
+          "column": 58
+        }
+      },
+      "file": "fixtures/nested/deeper.test.ts",
+      "lines": "import { ErrorHandler } from '../../common/error-handler';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../common/error-handler'",
+            "range": {
+              "byteOffset": {
+                "start": 164,
+                "end": 192
+              },
+              "start": {
+                "line": 3,
+                "column": 29
+              },
+              "end": {
+                "line": 3,
+                "column": 57
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { UserService } from '../../core/user.service';",
+      "range": {
+        "byteOffset": {
+          "start": 164,
+          "end": 218
+        },
+        "start": {
+          "line": 4,
+          "column": 0
+        },
+        "end": {
+          "line": 4,
+          "column": 54
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { UserService } from '../../core/user.service';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../core/user.service'",
+            "range": {
+              "byteOffset": {
+                "start": 192,
+                "end": 217
+              },
+              "start": {
+                "line": 4,
+                "column": 28
+              },
+              "end": {
+                "line": 4,
+                "column": 53
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { formatDate } from '../../shared/utils/date-utils';",
+      "range": {
+        "byteOffset": {
+          "start": 219,
+          "end": 278
+        },
+        "start": {
+          "line": 5,
+          "column": 0
+        },
+        "end": {
+          "line": 5,
+          "column": 59
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { formatDate } from '../../shared/utils/date-utils';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../shared/utils/date-utils'",
+            "range": {
+              "byteOffset": {
+                "start": 246,
+                "end": 277
+              },
+              "start": {
+                "line": 5,
+                "column": 27
+              },
+              "end": {
+                "line": 5,
+                "column": 58
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { API_BASE_URL } from '../../common/constants';",
+      "range": {
+        "byteOffset": {
+          "start": 279,
+          "end": 333
+        },
+        "start": {
+          "line": 6,
+          "column": 0
+        },
+        "end": {
+          "line": 6,
+          "column": 54
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { API_BASE_URL } from '../../common/constants';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../common/constants'",
+            "range": {
+              "byteOffset": {
+                "start": 308,
+                "end": 332
+              },
+              "start": {
+                "line": 6,
+                "column": 29
+              },
+              "end": {
+                "line": 6,
+                "column": 53
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { AuthGuard } from '../../core/guards/auth.guard';",
+      "range": {
+        "byteOffset": {
+          "start": 334,
+          "end": 391
+        },
+        "start": {
+          "line": 7,
+          "column": 0
+        },
+        "end": {
+          "line": 7,
+          "column": 57
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { AuthGuard } from '../../core/guards/auth.guard';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../core/guards/auth.guard'",
+            "range": {
+              "byteOffset": {
+                "start": 360,
+                "end": 390
+              },
+              "start": {
+                "line": 7,
+                "column": 26
+              },
+              "end": {
+                "line": 7,
+                "column": 56
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { Logger } from '../../shared/logger';",
+      "range": {
+        "byteOffset": {
+          "start": 392,
+          "end": 437
+        },
+        "start": {
+          "line": 8,
+          "column": 0
+        },
+        "end": {
+          "line": 8,
+          "column": 45
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { Logger } from '../../shared/logger';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../shared/logger'",
+            "range": {
+              "byteOffset": {
+                "start": 415,
+                "end": 436
+              },
+              "start": {
+                "line": 8,
+                "column": 23
+              },
+              "end": {
+                "line": 8,
+                "column": 44
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    },
+    {
+      "text": "import { PaginationModel } from '../../common/models/pagination';",
+      "range": {
+        "byteOffset": {
+          "start": 489,
+          "end": 554
+        },
+        "start": {
+          "line": 10,
+          "column": 0
+        },
+        "end": {
+          "line": 10,
+          "column": 65
+        }
+      },
+      "file": "fixtures/import-test-file.ts",
+      "lines": "import { PaginationModel } from '../../common/models/pagination';",
+      "charCount": {
+        "leading": 0,
+        "trailing": 0
+      },
+      "language": "TypeScript",
+      "metaVariables": {
+        "single": {
+          "MODULE": {
+            "text": "'../../common/models/pagination'",
+            "range": {
+              "byteOffset": {
+                "start": 521,
+                "end": 553
+              },
+              "start": {
+                "line": 10,
+                "column": 32
+              },
+              "end": {
+                "line": 10,
+                "column": 64
+              }
+            }
+          }
+        },
+        "multi": {},
+        "transformed": {}
+      }
+    }
+  ]
+}

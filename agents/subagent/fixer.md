@@ -23,6 +23,7 @@ permission:
   skill:
     "*": "deny"
     "backend-code-philosophy": "allow"
+    "ast-grep": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
     "plan-verification": "allow"

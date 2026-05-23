@@ -1,0 +1,6 @@
+id: replace-console-error
+language: ts
+rule:
+  kind: call_expression
+  pattern: console.error($$$ARGS)
+rewrite: this.logger.error($$$ARGS)

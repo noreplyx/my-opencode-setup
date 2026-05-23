@@ -1,0 +1,17 @@
+Eval 2: Subscribe Method Finder — ast-grep (with skill)
+Rule: find-subscribe-in-methods (kind: method_definition + has pattern)
+
+Results:
+2 matches found:
+
+Match 1: loadUsers() at line 26
+  Pattern: this.http.get(...).subscribe({...})
+
+Match 2: deleteUser(id) at line 45
+  Pattern: this.http.delete(...).subscribe(() => {...})
+
+Rule Design:
+  - kind: method_definition — target class method AST nodes
+  - has: — method must contain descendant matching sub-rule
+  - pattern: $_.subscribe($$$) — any .subscribe() call
+  - stopBy: end — search entire method body, not just immediate children

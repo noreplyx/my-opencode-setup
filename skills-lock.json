@@ -96,6 +96,12 @@
       "sourceType": "github",
       "skillPath": "skills/skill-creator/SKILL.md",
       "computedHash": "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
+    },
+    "ast-grep": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/ast-grep/SKILL.md",
+      "computedHash": "e449700c0440d9c81d7fa3f5c020a1a3d30c1eb9e70ae53725b8699b75bd548a"
     }
   }
 }

@@ -1,0 +1,6 @@
+{
+  "eval_id": 3,
+  "eval_name": "rewrite-console-to-logger",
+  "prompt": "Using the file evals/files/search-sample.ts, replace all occurrences of console.error(...) with this.logger.error(...) using ast-grep's rewrite capability. Show the diff/result.",
+  "assertions": []
+}

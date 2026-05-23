@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "eval_name": "find-console-calls",
+  "prompt": "In the file evals/files/search-sample.ts, find all console.log/error/warn calls using ast-grep. Show me the pattern you used and the results.",
+  "assertions": [
+    {"text": "Uses ast-grep -p or ast-grep scan to search for console calls", "passed": false, "evidence": ""},
+    {"text": "The search finds console.error call", "passed": false, "evidence": ""},
+    {"text": "The output demonstrates understanding of meta-variables (using $ or $$$)", "passed": false, "evidence": ""},
+    {"text": "The output shows the matched code results", "passed": false, "evidence": ""}
+  ]
+}

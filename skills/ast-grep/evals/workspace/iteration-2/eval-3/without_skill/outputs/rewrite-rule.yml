@@ -1,0 +1,7 @@
+# Rule: Replace console.error(...) with this.logger.error(...)
+# Target: search-sample.ts
+id: replace-console-error
+language: TypeScript
+rule:
+  pattern: console.error($$$ARGS)
+fix: this.logger.error($$$ARGS)

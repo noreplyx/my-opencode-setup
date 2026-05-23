@@ -1,0 +1,6 @@
+{
+  "eval_id": 6,
+  "eval_name": "stdin-pipe-search",
+  "prompt": "Use ast-grep's stdin mode to find all console.log calls in this piped code sample: const x = 1; console.log(x); const y = 2; console.log(y, 'done');. Show the pattern, command, and results using JSON output.",
+  "assertions": []
+}

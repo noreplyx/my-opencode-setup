@@ -1,0 +1,21 @@
+================================================================
+Eval 1: Find Console Calls — ast-grep (with skill)
+Target File: search-sample.ts
+================================================================
+
+Command: ast-grep -p 'console.$_($$$)' -l ts -C 2 search-sample.ts
+
+Results:
+search-sample.ts:32:      },
+search-sample.ts:33:      error: (err) => {
+search-sample.ts:34:        console.error('Failed to load users:', err);
+search-sample.ts:35:        this.loading = false;
+search-sample.ts:36:      },
+
+SUMMARY: 1 match found
+  - console.error on line 34
+
+Pattern Explanation:
+  - console.$_  : $_ is a non-capturing single meta-variable matching any method name (log, error, warn, etc.)
+  - ($$$)       : $$$ is a multi meta-variable matching zero or more arguments
+  - -C 2        : Show 2 lines of context around each match
