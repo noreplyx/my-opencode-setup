@@ -1,7 +1,6 @@
 {
   "type": "module",
   "dependencies": {
-    "@mailshieldai/opencode-canvas": "^0.1.2",
     "@opencode-ai/plugin": "1.15.7",
     "agent-skills-eval": "^0.1.1",
     "dotenv": "^17.4.2",
