@@ -1,6 +1,6 @@
 ---
 name: security-workflow
-description: Shared security workflow for all subagents. Provides security self-review checklist, auto-detection tables for security anti-patterns, security regression test generation mapping, security test coverage gate, vulnerability severity classification, common anti-pattern fixes, and parallel security scan protocol. Load this skill when performing any security-sensitive task: implementation, fixing, verification, or QA testing.
+description: Shared security workflow for all subagents. Provides security self-review checklist, auto-detection tables for security anti-patterns, security regression test generation mapping, security test coverage gate, vulnerability severity classification, common anti-pattern fixes, semgrep SAST integration, and parallel security scan protocol. Load this skill when performing any security-sensitive task: implementation, fixing, verification, or QA testing.
 ---
 
 # Security Workflow Skill
@@ -259,7 +259,7 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 | Fixer | When fixing security-related bugs | Section 1 (Self-Review — re-run after fix), Section 5 (Severity), Section 6 (Anti-Pattern Fixes) |
 | Verifier | Pass 2b — security checkpoint detection and security test coverage gate | Section 2 (Auto-Detection Table), Section 3 (Test Generation Table — for coverage reconciliation) |
 | QA | Security regression test generation | Section 3 (Test Generation Table + Coverage Gate output format) |
-| Security Scanner | Running parallel security scans | Section 4 (Parallel Scan Protocol), Section 7 (Report Format) |
+| Security Scanner | Running parallel security scans (npm audit, semgrep, secrets) | Section 4 (Parallel Scan Protocol), Section 7 (Report Format) |
 | Orchestrator | Pipeline decisions on security findings, security test coverage gate enforcement | Section 5 (Severity Classification), Section 3 (Coverage Gate rules) |
 
 ## Hard Rules
@@ -272,13 +272,13 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 - ✅ Section 3 (Security Test Coverage Gate) MUST be verified by Verifier during its Pass 2b check
 - ✅ Section 4 (Parallel Scan) is the PREFERRED method for running security scans
 - ✅ Section 5 (Severity Classification) MUST be used to determine pipeline blocking decisions
-- ❌ This skill MUST NOT be treated as a replacement for the `security-scan` skill — it complements it (security-scan handles tool execution, this skill handles knowledge and workflows)
+- ❌ This skill MUST NOT be treated as a replacement for the `security-scan` or `semgrep-scan` skills — it complements them (security-scan/semgrep-scan handle tool execution, this skill handles knowledge and workflows)
 
 ## Related Skills
 
 | Skill | Relationship |
 |-------|-------------|
-| `security-scan` | Tool execution (dependency scan, secrets scan, supply chain) — this skill provides the knowledge layer |
+| `security-scan` / `semgrep-scan` | Tool execution (dependency scan, secrets scan, SAST/semgrep, supply chain) — this skill provides the knowledge layer |
 | `code-philosophy` | General coding standards — this skill provides the security-specific subset |
 | `backend-code-philosophy` | Backend-specific coding philosophy — security is part of that |
 | `shared-agent-workflow` | Startup protocol and output contract — this skill is loaded AFTER shared-agent-workflow |

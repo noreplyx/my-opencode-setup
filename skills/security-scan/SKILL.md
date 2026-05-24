@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, and common security anti-patterns.
+description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, and common security anti-patterns. For deep SAST static analysis, load the semgrep-scan skill.
 ---
 
 # Security Scan Skill
@@ -125,7 +125,7 @@ git log -p --all -- ':(exclude)package-lock.json' ':(exclude)pnpm-lock.yaml' ':(
 7. **Generate SBOM (NEW)**
 8. **Run supply chain integrity check (NEW)**
 9. **Run git history secret scan (NEW)**
-10. **Run SAST scan (NEW)**
+10. **Run SAST scan (NEW)** — For deep static analysis, load the `semgrep-scan` skill and run `semgrep --config p/security-audit --error .`
 11. **Report findings** — Use the standard report format below
 
 ### Lockfile Warnings

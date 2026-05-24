@@ -1,0 +1,47 @@
+{
+  "expectations": [
+    {
+      "text": "Runs semgrep scan with --config p/owasp-top-ten",
+      "passed": true,
+      "evidence": "Command executed: 'semgrep scan --config p/owasp-top-ten /home/oat/.config/opencode' — confirmed in scan output"
+    },
+    {
+      "text": "Output format is terminal/colorized (no --json or --sarif flag)",
+      "passed": true,
+      "evidence": "Primary output is terminal/colorized format. However, executor also ran a separate JSON scan ('semgrep scan --config p/owasp-top-ten --json') which was not requested"
+    },
+    {
+      "text": "Uses --error flag for strict mode",
+      "passed": false,
+      "evidence": "Neither the primary scan command nor the secondary JSON scan used --error. Exit code would be 0 even with findings"
+    },
+    {
+      "text": "Reports findings in a structured format",
+      "passed": true,
+      "evidence": "scan_summary.md provides a structured human-readable report with tables for metrics and commands"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 1,
+    "total": 4,
+    "pass_rate": 0.75
+  },
+  "claims": [
+    {
+      "claim": "Used only terminal output format",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Executor ran an extra JSON scan command without being asked, producing 36KB JSON output file"
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Uses --error flag for strict mode",
+        "reason": "Without the skill, the executor did not know to use --error for strict CI-style mode. The skill explicitly instructs using --error."
+      }
+    ],
+    "overall": "Without the skill, the executor forgot --error and added an unnecessary JSON scan. The skill adds discipline."
+  }
+}

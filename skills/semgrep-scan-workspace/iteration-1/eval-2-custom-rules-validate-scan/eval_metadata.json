@@ -1,0 +1,31 @@
+{
+  "eval_id": 2,
+  "eval_name": "custom-rules-validate-scan",
+  "prompt": "I have a custom semgrep rule file at .semgrep/my-rules.yaml. Please validate it and then scan the src/ directory with it. I want JSON output saved to results.json for my CI pipeline.",
+  "assertions": [
+    {
+      "text": "Runs semgrep validate on .semgrep/my-rules.yaml first",
+      "expected": true
+    },
+    {
+      "text": "Then runs semgrep scan with --config .semgrep/my-rules.yaml",
+      "expected": true
+    },
+    {
+      "text": "Uses --json for structured output",
+      "expected": true
+    },
+    {
+      "text": "Uses --output or --json-output to save to results.json",
+      "expected": true
+    },
+    {
+      "text": "Uses --error for strict mode",
+      "expected": true
+    },
+    {
+      "text": "Targets only src/ directory",
+      "expected": true
+    }
+  ]
+}

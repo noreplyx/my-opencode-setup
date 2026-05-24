@@ -26,6 +26,7 @@ permission:
     "frontend-code-philosophy": "allow"
     "ast-grep": "allow"
     "security-workflow": "allow"
+    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.1.0"
 lastModified: "2026-05-21"

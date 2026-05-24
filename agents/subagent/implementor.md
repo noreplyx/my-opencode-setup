@@ -29,6 +29,7 @@ permission:
     "frontend-code-philosophy": "allow"
     "playwright-cli": "allow"
     "security-workflow": "allow"
+    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 reasoningEffort: "none"
 textVerbosity: "low"

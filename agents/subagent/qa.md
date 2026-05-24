@@ -23,6 +23,7 @@ permission:
     "*": "deny"
     "accessibility": "allow"
     "ast-grep": "allow"
+    "security-scan": "allow"
     "quality-assurance": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"

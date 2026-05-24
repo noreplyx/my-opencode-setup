@@ -51,7 +51,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
-| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No |
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No |
 | **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No | No |
 | **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes — document verified code | Yes (accuracy check) | Yes |
 | **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) | Yes |
@@ -103,7 +103,7 @@ The default orchestration workflow follows this sequence:
    ┌──────┴──────┐
    ▼ SECURITY    ▼ (MANDATORY)
    │  SCAN GATE  │
-   │  Load security-scan skill │
+   │  Load security-scan or semgrep-scan skill │
    │  Run npm audit + secrets  │
    │  scan + anti-pattern scan │
    └──────┬──────┘
@@ -327,7 +327,8 @@ Every implementation MUST pass through these mandatory validation gates:
 
 **Security Scan Protocol:**
 - After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)
-- Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
+  - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
+  - **Semgrep SAST scan**: Run `semgrep --config p/security-audit --error .` for deep static analysis (load `semgrep-scan` skill)
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
@@ -1171,7 +1172,7 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` or `security-workflow` | Dependency scanning + shared security patterns |
+| Security Scan | `security-scan` or `semgrep-scan` or `security-workflow` | Dependency scanning, SAST (semgrep) + shared security patterns |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
@@ -1911,7 +1912,7 @@ When multiple skills are loaded and provide conflicting guidance, use this prior
 | Priority | Skill | Domain | When It Overrides |
 |----------|-------|--------|-------------------|
 | 1 (Highest) | `accessibility` | Accessibility | UI components, forms, interactive elements |
-| 2 | `security-scan` | Security | Auth, input handling, data access |
+| 2 | `security-scan` / `semgrep-scan` | Security | Auth, input handling, data access, SAST scanning |
 | 3 | `backend-code-philosophy` | Backend | Server-side code |
 | 4 | `frontend-code-philosophy` | Frontend | Client-side code |
 | 5 | `plan-describe` | Roadmapping | Planning phases |

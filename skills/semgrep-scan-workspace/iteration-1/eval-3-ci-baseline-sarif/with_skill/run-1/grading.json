@@ -1,0 +1,53 @@
+{
+  "expectations": [
+    {
+      "text": "Uses --baseline-commit origin/main for incremental scanning",
+      "passed": true,
+      "evidence": "Terminal output confirms: 'Scanning 0 files tracked by git with 1059 Code rules' and 'Skipping baseline scan, because there are no current findings.' The --baseline-commit flag is documented in the command summary"
+    },
+    {
+      "text": "Uses --config p/default for comprehensive rules",
+      "passed": true,
+      "evidence": "Command uses '--config p/default'. Terminal confirms 1059 Code rules loaded from community registry"
+    },
+    {
+      "text": "Uses --sarif for SARIF format output",
+      "passed": true,
+      "evidence": "Command uses '--sarif' and '--sarif-output outputs/results.sarif'. SARIF file generated at 2,075,615 bytes with valid v2.1.0 JSON"
+    },
+    {
+      "text": "Uses --error for strict CI mode",
+      "passed": true,
+      "evidence": "Command includes '--error' flag. Exit code 0 (no findings, passed cleanly)"
+    },
+    {
+      "text": "Mentions SARIF can be uploaded to GitHub Advanced Security",
+      "passed": true,
+      "evidence": "Executor summary explicitly states: 'Valid SARIF v2.1.0 — ready for GitHub Advanced Security upload'"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "claims": [
+    {
+      "claim": "Followed the skill's Recipe 5+6 (SARIF + baseline combination)",
+      "type": "process",
+      "verified": true,
+      "evidence": "Executor states: 'Following Recipe 5+6 from the skill (SARIF + baseline combination)'"
+    },
+    {
+      "claim": "SARIF output is valid",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Executor validated SARIF with Python JSON parser. File is valid SARIF v2.1.0 with 1059 rules defined"
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "All 5 assertions pass. Skill correctly guided combination of baseline scanning with SARIF output for CI/GitHub Advanced Security."
+  }
+}

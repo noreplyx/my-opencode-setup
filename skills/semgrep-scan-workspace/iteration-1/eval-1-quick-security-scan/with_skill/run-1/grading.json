@@ -1,0 +1,48 @@
+{
+  "expectations": [
+    {
+      "text": "Runs semgrep scan with --config p/owasp-top-ten",
+      "passed": true,
+      "evidence": "Command executed: 'semgrep --config p/owasp-top-ten --error .' — confirmed in scan output showing 544 Code rules for OWASP Top Ten pack"
+    },
+    {
+      "text": "Output format is terminal/colorized (no --json or --sarif flag)",
+      "passed": true,
+      "evidence": "Output file scan-terminal-output.txt contains colorized terminal output format (Scan Status table, Scan Summary with emoji) — no --json or --sarif flags used"
+    },
+    {
+      "text": "Uses --error flag for strict mode",
+      "passed": true,
+      "evidence": "Command explicitly includes '--error' flag as shown in command: 'semgrep --config p/owasp-top-ten --error .'"
+    },
+    {
+      "text": "Reports findings in a structured format",
+      "passed": true,
+      "evidence": "Scan summary reports 'Findings: 0 (0 blocking)', 'Rules run: 248', 'Targets scanned: 254', 'Parsed lines: ~100.0%' in a clear structured format"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  },
+  "claims": [
+    {
+      "claim": "Followed the skill's workflow (understand target → choose rules → output → strict mode)",
+      "type": "process",
+      "verified": true,
+      "evidence": "Executor checked project layout (package.json), chose p/owasp-top-ten, used terminal output, applied --error"
+    },
+    {
+      "claim": "Skill's Recipe 1 (Quick Security Scan) was used",
+      "type": "process",
+      "verified": true,
+      "evidence": "Command matches Recipe 1: 'semgrep --config p/security-audit --error .' pattern — used p/owasp-top-ten instead"
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [],
+    "overall": "All assertions pass. Skill correctly guided the executor to use terminal output (no JSON/SARIF), --error flag, and structured report format."
+  }
+}

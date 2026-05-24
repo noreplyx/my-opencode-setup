@@ -47,7 +47,7 @@
       "source": "local",
       "sourceType": "local",
       "skillPath": "skills/orchestration/SKILL.md",
-      "computedHash": "90f758b3c6fc99389be8173717956521ac1043bed6f378e599c56b05d5aeb999"
+      "computedHash": "842405ea8a71cdff3fdd6a64cdbafbd5e08f715fafae3a9c837832506d3e7e25"
     },
     "plan-brainstorm": {
       "source": "local",
@@ -102,6 +102,24 @@
       "sourceType": "local",
       "skillPath": "skills/ast-grep/SKILL.md",
       "computedHash": "e449700c0440d9c81d7fa3f5c020a1a3d30c1eb9e70ae53725b8699b75bd548a"
+    },
+    "semgrep-scan": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/semgrep-scan/SKILL.md",
+      "computedHash": "8225ee92610fdab7076595322d7f6451c95dbae52d9ccb4b1ce02a55726c6069"
+    },
+    "security-scan": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/security-scan/SKILL.md",
+      "computedHash": "af69277c30c436b69a0f35c95fc23cc670334ec606163b01a14c5bbbd1fb9ca6"
+    },
+    "security-workflow": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": "skills/security-workflow/SKILL.md",
+      "computedHash": "f5d07e342ce5c9ffd15b6223b2c3562f48db70b37384edca8961272345ff0098"
     }
   }
 }

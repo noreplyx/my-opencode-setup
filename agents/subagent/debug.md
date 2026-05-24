@@ -26,6 +26,7 @@ permission:
     "plan-verification": "allow"
     "code-philosophy": "allow"
     "security-workflow": "allow"
+    "security-scan": "allow"
 agentVersion: "2.1.0"
 lastModified: "2026-05-21"
 ---
