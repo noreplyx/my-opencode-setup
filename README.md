@@ -163,3 +163,75 @@ Use the `skill-creator` skill (loaded by the Orchestrator) to create, modify, or
 - `opencode.jsonc` — Main platform config (server port, plugins)
 - `.gitignore` — Files excluded from version control
 - `package.json` — Dependencies (includes `@playwright/cli` for browser automation)
+
+## Improvements & New Capabilities
+
+This section documents improvements implemented on top of the base system.
+
+### Comprehensive Test Suite (7 test files, 150+ tests)
+
+| Test File | Tests | Covers |
+|-----------|-------|--------|
+| `tests/pipeline-init.test.ts` | 8 | Pre-flight checks, journal parsing, similarity matching, context generation |
+| `tests/audit-log.test.ts` | 8 | SHA-256 hash chain integrity, YAML serialization, tamper detection |
+| `tests/update-calibration.test.ts` | 47 | Agent calibration database, success tracking, domain breakdowns |
+| `tests/validate-output-contract.test.ts` | 42 | Agent output schema validation, YAML frontmatter parsing, type checking |
+| `tests/validate-context.test.ts` | 4 | Context file schema validation |
+| `tests/shared-utils.test.ts` | 21 | Logger, file I/O utilities, pattern matching |
+| `tests/pipeline-teardown.test.ts` | 20 | Retrospective calculation, journal formatting, lesson extraction |
+
+**Run**: `./tests/run-tests.sh` or `npx ts-node tests/<name>.test.ts`
+
+### 8 New Orchestration Scripts
+
+| Script | Purpose | Location |
+|--------|---------|----------|
+| **plan-quality-score.ts** | Verifier→PlanDescriber feedback loop — computes plan quality from Verifier results, auto-escalates when PlanDescriber drops below 70% | `skills/scripts/orchestration/plan-quality-score.ts` |
+| **security-self-review-gate.ts** | Enforces the security self-review gate for Implementor — blocks pipeline if security review fails | `skills/scripts/orchestration/security-self-review-gate.ts` |
+| **monitor-pipeline.ts** | Pipeline health monitoring — tracks gates, durations, pass rates, dashboard, stuck pipeline alerts | `skills/scripts/orchestration/monitor-pipeline.ts` |
+| **cost-tracker.ts** | Pipeline cost estimation — tracks agent output tokens, estimates API costs, cleanup old records | `skills/scripts/orchestration/cost-tracker.ts` |
+| **dependency-check.ts** | Pre-flight dependency verification — checks tool availability, validates script references in SKILL.md | `skills/scripts/orchestration/dependency-check.ts` |
+| **auto-rollback.ts** | Automated rollback on consecutive failures — checks out pre-pipeline git state, creates rollback records | `skills/scripts/orchestration/auto-rollback.ts` |
+| **pipeline-visualizer.ts** | Generates Mermaid.js pipeline flowcharts from agent history — color-coded by pass/fail/partial | `skills/scripts/orchestration/pipeline-visualizer.ts` |
+| **skill-drift-detector.ts** | Detects skill drift by comparing SHA-256 hashes against `skills-lock.json` — alerts on tampered/stale skills | `skills/scripts/orchestration/skill-drift-detector.ts` |
+
+### Key Architectural Improvements
+
+| Improvement | Description |
+|-------------|-------------|
+| **Verifier→PlanDescriber feedback** | Plan quality scores auto-escalate to PlanDescriber skill updates when quality < 70% |
+| **Security self-review gate enforcement** | BLOCK files prevent pipeline progression if Implementor's security review fails |
+| **Pipeline monitoring dashboard** | Aggregate view of all pipelines, per-gate pass rates, stuck pipeline alerts |
+| **Cost tracking** | Token and cost estimation per agent per pipeline, cleanup of stale records |
+| **Pre-flight dependency validation** | Checks required tools (ts-node, tsc, node) and script references BEFORE pipeline starts |
+| **Automated rollback** | Detects N consecutive failures, auto-restores pre-pipeline git state |
+| **Pipeline visualization** | Auto-generated Mermaid.js diagrams from agent history |
+| **Skill drift detection** | SHA-256 hash comparison alerts on tampered or stale agent skills |
+
+### Quick Reference
+
+```bash
+# Tests
+./tests/run-tests.sh                          # Run all tests
+npx ts-node tests/audit-log.test.ts           # Run single test
+
+# Plan Quality (Verifier→PlanDescriber feedback)
+npx ts-node skills/scripts/orchestration/plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=85 --plan-omissions=1
+npx ts-node skills/scripts/orchestration/plan-quality-score.ts --query-plan-describer   # Exits 2 if < 70%
+
+# Security Gate
+npx ts-node skills/scripts/orchestration/security-self-review-gate.ts --check-context=agent-context.md
+npx ts-node skills/scripts/orchestration/security-self-review-gate.ts --enforce --pipeline-id=<id>
+
+# Monitoring & Cost
+npx ts-node skills/scripts/orchestration/monitor-pipeline.ts --dashboard
+npx ts-node skills/scripts/orchestration/cost-tracker.ts --report --pipeline-id=<id>
+
+# Pre-flight & Rollback
+npx ts-node skills/scripts/orchestration/dependency-check.ts --verify
+npx ts-node skills/scripts/orchestration/auto-rollback.ts --check --pipeline-id=<id> --threshold=3
+
+# Visualization & Drift
+npx ts-node skills/scripts/orchestration/pipeline-visualizer.ts --from-context=agent-context.md
+npx ts-node skills/scripts/orchestration/skill-drift-detector.ts --check
+```
