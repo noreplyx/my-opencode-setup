@@ -116,3 +116,82 @@ These scripts exit with code 1 if high-severity issues are found, making them su
 > **For detailed examples and patterns**, see the reference files:
 > - `references/coding-standards.md` — Full SOLID, Clean Code, Architecture, and Best Practices with code examples
 > - `references/quality-and-testing.md` — Security, Performance, Logging, Error Handling, Refactoring, and Testing
+
+## Code Quality Self-Review Checklist (MANDATORY)
+
+This checklist is the canonical quality standard for ALL agents that write code. Every Implementor must run this checklist against every created/modified file and report results.
+
+### Enforcement
+
+This checklist is enforced at two points:
+1. **Implementor's Quality Self-Review** (Step 3a in implementor-workflow) — self-check before build
+2. **Verifier's Pass 6: Quality Drift Detection** — independent validation after implementation
+
+### The Checklist
+
+#### ❌ BLOCKING Items (MUST pass — failure blocks the pipeline)
+
+| # | Check | Verification Method | What To Look For |
+|---|-------|---------------------|------------------|
+| B1 | **Error Handling Completeness** | `grep` for `try {` / `catch` / `.catch(` near DB, network, filesystem calls | Every `async` call that touches external systems must have error handling |
+| B2 | **Input Validation** | `grep` for zod/joi/class-validator schemas or `if (!x) throw` guards | Every public function accepting external data must validate before use |
+| B3 | **Logging Presence** | `grep` for `logger.info\|logger.error\|console.log\|console.error` | Every public method should log success (info) or failure (error) |
+| B4 | **Type Safety** | `grep` for `: any\|as any\|<any>` | No `any` types, no implicit `any` returns — every function must have explicit return type |
+| B5 | **No Direct DB in Controllers** | `grep` for `db\.\|prisma\.\|\.query(\|\.execute(` in controller/service files | Database access must be behind repository/DAO layer |
+| B6 | **Config from Environment** | Manual scan for hardcoded secrets, URLs, credentials | All configuration must come from `process.env` or config objects |
+| B7 | **No Dangerous APIs** | `grep` for `eval(\|innerHTML\|dangerouslySetInnerHTML\|child_process.exec` | These APIs require strict justification and sanitization |
+| B8 | **Parameterized Queries** | `grep` for `` `${` `` or `+` concatenation in DB query strings | Never concatenate user input into SQL/NoSQL queries |
+| B9 | **DTOs/Interface Definitions** | `grep` for `interface\|type\|z.object\|Joi.object` near API boundaries | Data shapes entering/exiting the system must have type definitions |
+| B10 | **No TODO/FIXME/HACK** | `grep` for `TODO\|FIXME\|HACK\|XXX\|TEMP\|WORKAROUND` | No unfinished work markers in code submitted for review |
+| B11 | **No Dead Code** | Manual scan for commented-out code, unused imports, unreachable branches | Dead code is the #1 source of maintenance confusion |
+| B12 | **Error Messages Are Actionable** | Manual scan of error messages | "An error occurred" is not acceptable — "Invalid email format: must contain @" is acceptable |
+
+#### ⚠️ WARNING Items (should pass — non-blocking but reported)
+
+| # | Check | Verification Method | What To Look For |
+|---|-------|---------------------|------------------|
+| W1 | **Single Responsibility** | Manual review — functions > 30 lines should be split | Each function does exactly one thing |
+| W2 | **Naming Reveals Intent** | Manual review — no `data`, `info`, `temp`, `x`, `foo`, `bar` | Names should answer "what" and "why", not "how" |
+| W3 | **No Magic Values** | Manual scan for unexplained string/number literals | Extract to named constants (`const MAX_RETRIES = 3` not `if (retries > 3)`) |
+| W4 | **Separation of Concerns** | Manual review — controllers handle HTTP, services handle business logic | No HTTP concerns (req, res) in service layer |
+| W5 | **Idempotency Consideration** | Manual review for POST/PUT endpoints | Write operations should consider idempotency (upsert, unique constraints, idempotency keys) |
+
+### Scoring
+
+The quality self-review produces a score used by the pipeline Code Quality Gate:
+
+```yaml
+qualitySelfReview:
+  passed: true | false                    # false if any blocking item fails
+  blockingItemsPassed: 12
+  blockingItemsTotal: 12
+  warningItemsPassed: 5
+  warningItemsTotal: 5
+  failures:
+    - file: "src/services/user.ts"
+      check: "Error Handling Completeness"  # From checklist above
+      detail: "db.query() in createUser has no try/catch"
+      severity: "blocking"                   # blocking | warning
+      fixed: true | false
+  qualityAdditions:                          # Quality improvements beyond the plan
+    - "Added try/catch to UserService.createUser for database errors"
+    - "Added zod schema validation for createUser input"
+    - "Extracted DB queries into new UserRepository class"
+    - "Added logger.info/error calls to all public methods"
+    - "Created CreateUserDto interface with validation"
+  planFeedback:                              # Fed back to PlanDescriber for future plans
+    - "Plan omitted error handling for createUser — checkpoint added in report"
+    - "Plan specified direct DB access — extracted to repository pattern"
+```
+
+### How to Integrate
+
+- **Implementors**: Run this checklist after the Security Self-Review and before the Pre-Build Import Validation
+- **Verifiers**: Run this checklist during Pass 6 (Quality Drift Detection) to independently validate quality
+- **Fixers**: Re-run this checklist after applying any fix that modifies functionality
+
+## References
+
+For detailed guidance on each checklist item, see:
+- `references/coding-standards.md` — SOLID principles, Clean Code & Readability, Best Practices
+- `references/quality-and-testing.md` — Security, Performance, Logging, Error Handling, Refactoring Guide

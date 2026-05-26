@@ -15,6 +15,7 @@ This skill enables a Verifier agent to systematically check that code produced b
 4. **Security Test Coverage Cross-Check** (Pass 2.6) — Cross-reference QA's security regression tests against independently detected security patterns
 5. **Checkpoint Suggestion Pass** (corrective) — When behavioral checks fail, suggest missing checkpoints for PlanDescriber
 6. **Plan Drift Detection Pass** (architectural) — Verify overall implementation matches plan's architectural intent
+7. **Quality Drift Detection Pass** (NEW) — Verify code quality meets minimum standards regardless of what the plan specified
 
 ---
 
@@ -200,6 +201,15 @@ Beyond individual checkpoint compliance, check if the overall implementation app
    - "Plan says 'use zod for validation' but implementation uses manual if/else guards"
 4. Report drift as a non-blocking **warning** unless it contradicts a specific checkpoint
 
+### Pass 6: Quality Drift Detection
+
+After all evidence is anchored, run an independent quality scan on every modified file:
+
+1. For each file in `changedFiles`, run the 10 Quality Drift checks listed above
+2. Score: percentage of blocking checks passed
+3. If score < 80% → set overall verdict to FAIL with quality drift reason
+4. Include quality drift output in structured output
+
 ---
 
 ## Compliance Scoring
@@ -281,6 +291,13 @@ After verification, output a report in this format. **You MUST include all secti
 
 ### Drift Detection
 None detected ✅ / ⚠️ Drift found: [description]
+
+### Quality Drift
+**Score**: N% — ✅ PASS / ❌ FAIL
+| Check | File | Verdict | Detail |
+|-------|------|---------|--------|
+| Error Handling Completeness | src/services/user.ts | ✅ Pass | try/catch present in all async functions |
+| Direct DB in Controllers | src/controllers/user.ts | ❌ Fail | db.query() called directly in controller |
 
 ### Verdict
 **✅ PASS** / **⚠️ PARTIAL** / **❌ FAIL**
@@ -504,6 +521,90 @@ evidence:
 - ✅ ALWAYS include the raw output excerpt (even for failures — show what was found instead)
 - ✅ ALWAYS include line numbers in the excerpt when using read method
 - ✅ ALWAYS include exit code for acceptance criteria evidence
+
+### Pass 6: Quality Drift Detection (NEW — MANDATORY)
+
+After all plan checkpoints are verified, perform a quality drift scan on every modified/created file. Quality drift occurs when code passes all plan checkpoints but uses poor practices that the plan didn't explicitly forbid.
+
+#### Why This Matters
+
+The plan tells Implementors WHAT to build. But Implementors can achieve 100% plan compliance with code that has:
+- No error handling (if the plan didn't require it)
+- Direct DB access in controllers (if the plan didn't say "use repository")
+- No input validation (if the plan didn't mandate it)
+- No logging (if the plan didn't specify it)
+- Hardcoded config values (if the plan didn't mention env vars)
+
+Pass 6 catches these quality gaps and reports them as **enforceable deviations** — not just warnings.
+
+#### Quality Drift Checks
+
+For each modified/created file, run these checks:
+
+| # | Check | How to Verify | Severity | Blocking? |
+|---|-------|--------------|----------|-----------|
+| 1 | **Error Handling Completeness** — Every async function should have try/catch or `.catch()` | `grep` for `async` function, then check if `try {` or `.catch(` exists within 10 lines | Critical | ❌ Yes |
+| 2 | **Input Validation** — Public API functions should validate inputs | `grep` for `export function\|export async function`, check for validation (zod, if-guard) | Critical | ❌ Yes |
+| 3 | **No Direct DB in Controllers** — Controllers/services should not call `db.query()` directly | `grep` for `db\.\|prisma\.\|\.query(\|\.execute(` — should be in repository files | Critical | ❌ Yes |
+| 4 | **Logging Presence** — Service-level functions should log | `grep` for `logger\.\|console\.log\|console.error` | High | ⚠️ No |
+| 5 | **No `any` Types** — TypeScript code should not use `any` | `grep` for `: any\|as any\|<any>` | High | ⚠️ No |
+| 6 | **Config from Env** — Secrets/URLs should come from env vars | `grep` for hardcoded passwords, API keys, DB URLs | Critical | ❌ Yes |
+| 7 | **No Magic Numbers/Strings** — No unexplained constants | Manual scan of string/number literals | Medium | ⚠️ No |
+| 8 | **No TODO/FIXME/HACK** — No unfinished work placeholders | `grep` for `TODO\|FIXME\|HACK\|XXX\|TEMP` | High | ❌ Yes |
+| 9 | **No Eval/InnerHTML/Dangerous APIs** — Security anti-patterns | `grep` for `eval(\|innerHTML\|dangerouslySetInnerHTML` | Critical | ❌ Yes |
+| 10 | **DTOs/Interfaces Defined** — Public data shapes have types | `grep` for `interface\|type\|z.object\|Joi.object` near API boundaries | High | ⚠️ No |
+
+#### Quality Drift Scoring
+
+```
+Quality Drift Score = (BlockingPassed / BlockingTotal) × 100
+```
+
+| Score | Verdict | Action |
+|-------|---------|--------|
+| 100% | ✅ No quality drift | Proceed |
+| 50-99% | ⚠️ Quality drift detected | Blocking items MUST be fixed. Non-blocking items reported as warnings. Pass score < 80% → cycle to Fixer |
+| < 50% | ❌ Critical quality drift | Block pipeline. Cycle to Fixer for quality remediation |
+
+#### Quality Drift Output
+
+Include in the Verifier's structured output:
+
+```yaml
+qualityDrift:
+  score: 100
+  blockingPassed: 6
+  blockingTotal: 6
+  warningItems:
+    - check: "Logging Presence"
+      file: "src/controllers/user.ts"
+      detail: "UserController.createUser has no logging"
+      severity: "high"
+  qualityWarnings:
+    - "Use `import type` for type-only imports to reduce bundle size"
+    - "Consider extracting email-sending logic from UserService into separate EmailService"
+```
+
+#### Integration with Overall Verdict
+
+If Quality Drift score < 80% → the overall Verifier verdict is **FAIL** even if plan checkpoint compliance is 100%. The Verifier MUST report:
+
+```
+Overall: Plan Compliance 100% | Quality Drift 66% → ❌ FAIL (quality drift below threshold)
+```
+
+This ensures that a plan-compliant but poorly written implementation is caught before reaching the Documentor.
+
+#### Output Schema Update for Verifier
+
+Add to the Verifier's role-specific output fields table in the agent config:
+
+| Field | Description |
+|-------|-------------|
+| `qualityDrift.score` | Quality drift compliance percentage |
+| `qualityDrift.blockingPassed` | Number of blocking quality checks passed |
+| `qualityDrift.blockingTotal` | Total blocking quality checks |
+| `qualityDrift.qualityWarnings` | Non-blocking quality improvement suggestions |
 
 ### Hard Rules Update (Security Test Coverage)
 

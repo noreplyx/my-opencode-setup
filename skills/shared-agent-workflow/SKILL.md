@@ -141,7 +141,7 @@ Below the frontmatter, include the detailed report in markdown.
 
 | Agent           | Additional Fields in Structured Output                                          |
 |-----------------|----------------------------------------------------------------------------------|
-| **Implementor** | `selfReview` (confidence, securityItemsPassed, wiringManifest), `securitySelfReview` (passed, failures) |
+| **Implementor** | `selfReview` (confidence, securityItemsPassed, wiringManifest), `securitySelfReview` (passed, failures), `qualitySelfReview` (passed, blockingItemsPassed, blockingItemsTotal, warningItemsPassed, warningItemsTotal, failures[], qualityAdditions[], planFeedback[]) |
 | **Fixer**       | `rootCauseAnalysis` (classification, primaryCause, fixApplied, fixConfidence, crossModuleCheck), `securityFixDetails` (vulnerabilityType, severity, cwe, fixApplied, selfReviewPassed, regressionTestsCreated), `crossSessionMatch` (pipelineId, previousRootCause, previousFix) |
 | **QA**          | `projectType`, `smokeTestPassed`, `testFramework`, `coverage`, `securityTestsGenerated`, `securityTestCoverage` (patternsDetected, testsGenerated, coverage, gatePassed, missingTests) |
 | **Verifier**    | `complianceScore`, `weightedScore`, `suggestedCheckpoints`, `securityTestCoverageGate` (securityPatternsDetected, securityTestsGenerated, coverage, gatePassed, missingTestPatterns) |
@@ -151,6 +151,51 @@ Below the frontmatter, include the detailed report in markdown.
 | **Finder**      | `explorationCache` (used, lastCommitSha) |
 | **BrowserTester** | `urlsVisited`, `bugsFound`, `testScriptsCreated` |
 | **Documentor**  | `docsCreated`, `docsUpdated` |
+
+### Quality Attestation (NEW)
+
+Every agent that writes code MUST include a quality attestation block in their structured output. This ensures quality is tracked across the pipeline and feeds back into future plan generation.
+
+#### Implementor Quality Attestation
+
+```yaml
+qualitySelfReview:
+  passed: true                               # false if any blocking item fails
+  blockingItemsPassed: 12
+  blockingItemsTotal: 12
+  warningItemsPassed: 5
+  warningItemsTotal: 5
+  qualityAdditions:                          # Quality improvements beyond the plan
+    - "Added try/catch to UserService.createUser"
+    - "Added zod schema validation for createUser input"
+    - "Extracted DB queries into UserRepository"
+  planFeedback:                              # Fed back to PlanDescriber
+    - "Plan omitted error handling for createUser"
+    - "Plan specified direct DB access — extracted to repository pattern"
+```
+
+#### Verifier Quality Drift Attestation
+
+```yaml
+qualityDrift:
+  score: 100
+  blockingPassed: 6
+  blockingTotal: 6
+  qualityWarnings:
+    - check: "Logging Presence"
+      file: "src/controllers/user.ts"
+      detail: "UserController.createUser has no logging"
+      severity: "high"
+```
+
+#### Where Attestations Are Used
+
+| Attestation | Produced By | Consumed By | Purpose |
+|-------------|-------------|-------------|---------|
+| `qualitySelfReview` | Implementor | Orchestrator, Code Quality Gate | Ensures code meets minimum quality before build |
+| `qualityAdditions` | Implementor | PlanDescriber (via journal) | Improves future plans by noting what was missing |
+| `planFeedback` | Implementor | PlanDescriber (via lessons) | Trains PlanDescriber to include quality checkpoints |
+| `qualityDrift` | Verifier | Orchestrator, Fixer | Catches quality gaps that pass plan verification |
 
 ## Step 2: Pipeline Heartbeat
 
@@ -202,6 +247,8 @@ Before reporting back, verify your structured output contains:
 - [ ] `changedFiles` (list of files you modified/created)
 - [ ] `artifacts` (list of produced outputs)
 - [ ] `warnings` (any issues you encountered)
+- [ ] `qualitySelfReview` (Implementor only) — passed, blockingItemsPassed, blockingItemsTotal, qualityAdditions
+- [ ] `qualityDrift` (Verifier only) — score, blockingPassed, blockingTotal, qualityWarnings
 
 If any required field is missing, add it before reporting.
 

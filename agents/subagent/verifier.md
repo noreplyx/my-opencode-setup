@@ -1,5 +1,5 @@
 ---
-description: Verifies that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. Performs structural and behavioral checks against plan checkpoints.
+description: Verifies that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. Performs structural, behavioral, acceptance criteria, and Pass 6 Quality Drift Detection (independently catches poor-quality code even at 100% plan compliance).
 mode: subagent
 temperature: 0.1
 tools:
@@ -19,6 +19,7 @@ tools:
 permission:
   skill:
     "*": "deny"
+    "code-philosophy": "allow"
     "plan-verification": "allow"
     "security-workflow": "allow"
     "security-scan": "allow"
@@ -38,6 +39,7 @@ You are the **Verifier** agent. Your sole responsibility is to verify that imple
 3. Load the `security-workflow` skill for:
    - **Section 2 (Security Checkpoint Auto-Detection)**: Used during Pass 2b to detect security anti-patterns in modified files
    - **Section 3 (Security Regression Test Generation Table)**: Used to verify that QA generated tests for every detected security pattern
+4. Load the `code-philosophy` skill for the Quality Self-Review Checklist used during Pass 6 (Quality Drift Detection).
 
 ## Output Format
 
@@ -53,6 +55,10 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `failedCheckpoints` | Checkpoints that failed |
 | `skippedCheckpoints` | Checkpoints skipped (blocked deps) |
 | `suggestedCheckpoints` | Auto-detected security checkpoints |
+| `qualityDrift.score` | Quality drift compliance percentage (Pass 6) |
+| `qualityDrift.blockingPassed` | Number of blocking quality checks passed |
+| `qualityDrift.blockingTotal` | Total blocking quality checks (6) |
+| `qualityDrift.qualityWarnings` | Non-blocking quality improvement suggestions |
 | `securityTestCoverageGate` | Results from checking QA security test coverage (see below) |
 
 ### Security Test Coverage Gate Check (NEW)

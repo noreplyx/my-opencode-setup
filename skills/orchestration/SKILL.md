@@ -47,7 +47,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Finder** | Codebase exploration, research, information gathering. **Smart Finder**: Also reports proactive hazard detection (dead code, deprecated APIs, security anti-patterns). Returns structured knowledge graph. | 0.3 | Start of pipeline — gather context | Yes (self-checks findings) | Yes |
 | **Orchestrator** | Brainstorming, task assignment, coordination | 0.1 | Always — primary user interface | Yes (pipeline retrospective) | Yes |
 | **PlanDescriber** | Detailed implementation roadmaps + plan-manifest.json with confidence score | High | After brainstorm or direct feature request | Yes (confidence scoring) | Yes |
-| **Implementor** | Write code following the plan. **Self-Reviewing Implementor**: Pre-implementation validation, self-review pass before reporting, scope guard. | None | After plan is ready | Yes (mandatory self-review) | Yes |
+| **Implementor** | Write code following the plan with quality best practices. **Self-Reviewing Implementor**: Pre-implementation validation, security self-review, QUALITY SELF-REVIEW (17 items — new), build & lint verification. Reports quality additions back to PlanDescriber. | None | After plan is ready | Yes (mandatory self-review + quality self-review) | Yes |
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
@@ -69,7 +69,9 @@ The default orchestration workflow follows this sequence:
 3. PLAN DESCRIBER ──► Create detailed, step-by-step implementation roadmap
           │              └── Also produces plan-manifest.json for verification
           │
-4. IMPLEMENTOR ──► Write code strictly following the plan (can dispatch multiple Implementors in parallel)
+4. IMPLEMENTOR ──► Write code following the plan with quality best practices
+                   └── Runs Quality Self-Review (17 items, mandatory)
+                   (can dispatch multiple Implementors in parallel)
           │
    ┌──────┴──────┐
    ▼ MERGE COORDINATOR ▼ (runs after parallel dispatch)
@@ -99,6 +101,17 @@ The default orchestration workflow follows this sequence:
    │   tsc --noEmit, etc.)        │
    └──────┬──────┘
           │ (lint fails → Implementor fixes, re-lints)
+          ▼
+   ┌──────┴──────────┐
+   ▼ CODE QUALITY     ▼ (NEW — MANDATORY)
+   │  GATE            │
+   │  Implementor runs │
+   │  17-item Quality  │
+   │  Self-Review      │
+   │  Report results in │
+   │  structured output│
+   └──────┬──────────┘
+          │ (blocking quality failures → Implementor fixes)
           ▼
    ┌──────┴──────┐
    ▼ SECURITY    ▼ (MANDATORY)
@@ -173,7 +186,7 @@ The default orchestration workflow follows this sequence:
 8. ORCHESTRATOR ──► Run pipeline-teardown (write journal entry, update calibration, archive logs),
                      review all results, generate Session Resume Report, report to user
 ```### When to Skip Steps
-- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → Security Scan → QA.
+- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → Build → Lint → Code Quality Gate → Security Scan → QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer for the fix, then QA + Verifier.
 - **Trivial config changes**: Skip all gates — just delegate to Implementor.
@@ -295,6 +308,7 @@ Every implementation MUST pass through these mandatory validation gates:
 |------------------|---------------|---------------------------------------------------------|-------------------------------------------------|
 | **Build Gate**   | Implementor   | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Lint Gate**    | Implementor   | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
+| **Code Quality Gate** | Implementor | 17-item quality self-review: error handling completeness, input validation, logging, type safety, no direct DB in controllers, no magic values, SOLID adherence, naming, config from env, separation of concerns, no dead code, parameterized queries, DTOs/schemas, idempotency, no TODO/FIXME, bundle awareness | Implementor fixes blocking failures before proceeding; non-blocking warnings reported to Orchestrator |
 | **Security Scan**| Orchestrator  | npm audit for High/Critical vulns, secrets scan, anti-pattern scan | Report to user; may fix, except, or block       |
 | **Smoke Test**   | QA            | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer      |
 | **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover ≥ 80% of detected security patterns | Coverage < 50% → cycle back to QA; 50-79% → warn and proceed with Verifier flagging
@@ -324,6 +338,17 @@ Every implementation MUST pass through these mandatory validation gates:
 - The Orchestrator MUST inspect the lint output to confirm no errors before proceeding to QA
 - If the project has no linter configured, the Implementor should report "No linter configured" and proceed
 - The Implementor's report MUST include lint output alongside build output so the Orchestrator can confirm both gates passed
+
+**Code Quality Gate Protocol (NEW):**
+- After build + lint pass, the Implementor runs the mandatory 17-item Quality Self-Review Checklist
+- The checklist is defined in `implementor-workflow/SKILL.md` (Quality Self-Review Checklist section)
+- The checklist covers: Error Handling, Input Validation, Logging, Type Safety, No Direct DB in Controllers, No Magic Values, Single Responsibility, Naming, Config from Env, Separation of Concerns, No Dead Code, Error Messages, Parameterized Queries, DTOs/Schemas, Idempotency, No TODO/FIXME, Bundle/Dependency Awareness
+- 12 blocking checks must ALL pass; 5 warning checks are non-blocking
+- The Implementor reports qualitySelfReview results in its structured output
+- If any blocking check fails → Implementor MUST fix before proceeding
+- Warning check failures → reported to Orchestrator as quality warnings
+- The Orchestrator reviews the qualitySelfReview report before proceeding to Security Scan
+- The Verifier's Pass 6 (Quality Drift Detection) independently validates quality after implementation
 
 **Security Scan Protocol:**
 - After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)

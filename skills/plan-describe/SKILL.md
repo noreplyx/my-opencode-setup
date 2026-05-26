@@ -47,7 +47,46 @@ For each phase and the overall feature, clearly define what "done" means. This p
 | **Per-Phase Done** | All files in the phase created, tests pass for that phase, lint clean |
 | **Feature Done** | All phases complete, all checkpoints in plan-manifest pass, smoke test passes, no regressions |
 
-### 5. Plan Manifest Generation
+### 5. Quality Checkpoint Rules (MANDATORY)
+
+Every plan manifest MUST include quality checkpoints that enforce best practices, not just file/existence checks. The following checkpoints are MANDATORY for every new/modified file:
+
+#### Mandatory Checkpoints Per File
+
+| Checkpoint Type | Verification Kind | Applies To | Notes |
+|----------------|-------------------|------------|-------|
+| Input validation | `validatesInput` | Every public API method (routes, controllers, service methods accepting external data) | Must specify which method and what it validates |
+| Error handling | `handlesError` | Every error-prone operation (DB queries, network calls, filesystem ops, external API calls) | Must specify what error scenario (e.g., "database failure in createUser") |
+| Logging | `logsAtLevel` | Every public method in services, controllers, and middleware | At minimum: `info` on success path, `error` on failure |
+| Type definition | `typeExists` or `exportExists` | Every feature that introduces data shapes | Create DTOs, interfaces, or schemas BEFORE implementation |
+| Repository/DAO layer | `exportExists` or `classExists` | Every feature that accesses a database | Plans MUST NOT specify direct DB access — require a repository pattern |
+
+#### Hard Rules
+
+- ❌ NEVER produce a manifest with only structural checkpoints. EVERY manifest MUST have at least:
+  - 2 `validatesInput` checkpoints per modified file
+  - 2 `handlesError` checkpoints per modified file  
+  - 1 `logsAtLevel` checkpoint per modified file
+  - 1 `typeExists` or `exportExists` for DTOs/interfaces per feature
+- ❌ NEVER specify direct DB access in the roadmap — always route through a repository/DAO layer
+- ✅ ALWAYS include acceptance criteria (`acceptanceCriteria`) for every POST/PUT/DELETE endpoint
+- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits
+
+#### Quality Minimum Threshold
+
+Before submitting a plan manifest, verify:
+
+| Check | Minimum | 
+|-------|---------|
+| Total checkpoints per modified file | ≥ 5 |
+| Behavioral checkpoints (validatesInput + handlesError) per file | ≥ 4 |
+| Acceptance criteria checkpoints per feature | ≥ 2 |
+| logAtLevel checkpoints per file | ≥ 1 |
+| Type/interface checkpoints per feature | ≥ 1 |
+
+If any file in the plan has fewer checkpoints than the minimum, add more.
+
+### 6. Plan Manifest Generation
 After completing the roadmap, produce a machine-readable `plan-manifest.json` file in the `plan-manifests/` directory.
 
 #### Why a Plan Manifest?
@@ -141,7 +180,7 @@ When incrementing the manifest version, always document the diff in the `changes
 - ✅ Place all manifests under `plan-manifests/` directory (create it if it doesn't exist).
 - ✅ Use only the verification kinds listed above.
 - ❌ NEVER produce a plan manifest with only structural checkpoints — every manifest MUST include at least 2 behavioral checkpoints (`handlesError`, `validatesInput`, or `logsAtLevel`) per file being modified.
-- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits.
+- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits, and error scenarios for every error-prone operation
 
 ## Full Roadmap Example
 
@@ -232,6 +271,11 @@ Before finalizing a roadmap, verify:
 - [ ] Edge cases are documented for non-trivial logic
 - [ ] Test commands are specified (build, lint, test, type-check)
 - [ ] A plan-manifest.json is always produced alongside the roadmap
+- [ ] Every modified file has ≥ 5 total checkpoints in the manifest
+- [ ] Every modified file has ≥ 4 behavioral checkpoints (validatesInput + handlesError)
+- [ ] Every modified file has ≥ 1 logsAtLevel checkpoint
+- [ ] The plan specifies a repository/DAO layer, not direct DB access
+- [ ] DTOs/interfaces are defined as separate checkpoints
 
 ## Hard Rules
 - ❌ NEVER skip the Plan Analysis phase — always decompose the plan first
@@ -240,6 +284,10 @@ Before finalizing a roadmap, verify:
 - ✅ ALWAYS include a Definition of Done for each phase
 - ✅ ALWAYS reference specific file paths and line numbers for modifications to existing files
 - ✅ ALWAYS specify exact commands for build, lint, and test verification
+- ✅ MANDATORY: Every plan manifest MUST include at least 4 behavioral checkpoints (validatesInput + handlesError) per modified file — this ensures the plan specifies quality standards, not just file structure
+- ✅ MANDATORY: Every plan manifest MUST include at least 1 logsAtLevel checkpoint per modified file — logging is not optional
+- ✅ MANDATORY: Every plan manifest MUST include at least 1 typeExists or exportExists checkpoint for DTOs/interfaces — data shapes must be defined before implementation
+- ❌ NEVER specify code that directly accesses a database in a controller or service — require a repository/DAO abstraction layer
 
 ---
 

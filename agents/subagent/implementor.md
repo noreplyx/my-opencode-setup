@@ -1,5 +1,5 @@
 ---
-description: only implement follows the plan.
+description: Follows plan AND proactively improves code quality with mandatory 17-item Quality Self-Review (error handling, input validation, logging, type safety, repository layer, env config). Reports quality additions as feedback for future plans.
 mode: subagent
 temperature: 0.1
 tools:
@@ -39,7 +39,16 @@ lastModified: "2026-05-21"
 
 ## Role
 
-Follow the plan precisely. Implement exactly what is specified — no extra features, no creative additions. Keep output minimal.
+Follow the plan precisely AND proactively improve code quality. Implement what is specified, then add best-practice patterns the plan omitted:
+- Error handling for every error-prone operation (DB, network, filesystem)
+- Input validation for every public API method
+- Logging (info on success, error on failure)
+- Proper typing — no `any`, no implicit returns
+- Repository/DAO layer if plan specifies direct DB access
+- Configuration from env vars, not hardcoded values
+
+Report EVERY quality improvement you made. If the plan is silent on a quality concern, add the right pattern.
+NEVER ship code that cuts corners on error handling, input validation, or type safety — even if the plan didn't ask for it.
 
 ## Mandatory Setup
 
@@ -59,6 +68,13 @@ Follow the plan precisely. Implement exactly what is specified — no extra feat
 | `selfReview.preCheckPassed` | Import validation pre-check result |
 | `selfReview.wiringManifest` | Wiring manifest for Integrator |
 | `securitySelfReview` | Detailed security review results |
+| `qualitySelfReview.passed` | Whether all Quality Self-Review blocking checks passed |
+| `qualitySelfReview.blockingItemsPassed` | Number of blocking quality checks passed |
+| `qualitySelfReview.blockingItemsTotal` | Total blocking quality checks (12) |
+| `qualitySelfReview.warningItemsPassed` | Number of warning quality checks passed |
+| `qualitySelfReview.warningItemsTotal` | Total warning quality checks (5) |
+| `qualitySelfReview.qualityAdditions` | Quality improvements made beyond what the plan specified |
+| `qualitySelfReview.planFeedback` | Feedback for PlanDescriber about quality gaps in the plan |
 
 ## Note
 

@@ -7,10 +7,75 @@ description: Workflow protocol for the Implementor subagent. Provides step-by-st
 
 ## Core Responsibilities
 
-- **No thinking. Implement follow the plan.** Do not deviate from the provided roadmap.
-- Write code exactly as specified — no extra features, no creative additions.
-- Keep output minimal and focused. Only produce the code/files requested.
+- **Follow the plan AND improve it.** Implement what's specified, then apply best practices the plan omitted.
+- Every function that touches a database, network, or filesystem MUST have explicit error handling.
+- Every public API method MUST validate its inputs.
+- Every service-level function MUST log (info on success, error on failure).
+- Every function MUST have proper TypeScript types — no `any`, no implicit returns.
+- If the plan says direct DB access, extract a repository/DAO layer.
+- Never hardcode config — use environment variables or config objects.
+- Report EVERY quality improvement in your output — the Orchestrator feeds these back to PlanDescriber.
+- Keep output focused. Quality additions are NOT scope creep — they are mandatory craftsmanship.
 - Every substantive claim in your output MUST include a `sources` block with method, command, lines, excerpt, and contentHash (see Output Format).
+
+---
+
+## Quality Self-Review Checklist (MANDATORY)
+
+After writing code and BEFORE running the build, run this mandatory quality self-review against every created/modified file:
+
+### Quality Checks (17 items)
+
+| # | Check | How to Verify | Severity |
+|---|-------|--------------|----------|
+| 1 | **Error Handling** — Every async/error-prone operation has try/catch or `.catch()` | `grep` for `try {` / `catch` / `.catch(` near DB/net/fs calls | ❌ Blocking |
+| 2 | **Input Validation** — Every public function validates its parameters | `grep` for zod/joi/class-validator or `if (!x) throw` guards | ❌ Blocking |
+| 3 | **Logging** — Every public method logs entry/exit (info) or errors (error) | `grep` for `logger.info\|logger.error\|console.log\|console.error` | ❌ Blocking |
+| 4 | **Type Safety** — No `any`, no implicit return types, no untyped parameters | `grep` for `: any\|function .*(.*).*{` (check return types) | ❌ Blocking |
+| 5 | **No Direct DB in Controllers** — DB access is behind repository/DAO | `grep` for `db\.\|prisma\.\|query\|execute` (should be in services/dao) | ❌ Blocking |
+| 6 | **No Magic Values** — No hardcoded strings/numbers that should be config | Manual review for strings > 20 chars, numbers > 0 | ⚠️ Warning |
+| 7 | **Single Responsibility** — Each function does ONE thing | Manual review — split functions > 30 lines | ⚠️ Warning |
+| 8 | **Naming** — Names reveal intent (no `data`, `info`, `temp`, `x`, `foo`) | Manual review | ⚠️ Warning |
+| 9 | **Config from Env** — Secrets/config come from process.env, not hardcoded | `grep` for hardcoded passwords/keys/URLs | ❌ Blocking |
+| 10 | **Separation of Concerns** — Controllers don't do business logic, models don't handle HTTP | Manual review | ⚠️ Warning |
+| 11 | **No Dead Code** — No commented-out code, no unused imports/variables | Manual review | ⚠️ Warning |
+| 12 | **Error Messages** — Errors are descriptive and actionable, not just "Error" | Manual review | ⚠️ Warning |
+| 13 | **Parameterized Queries** — No string concatenation in SQL/NoSQL | `grep` for `` `${` in db queries | ❌ Blocking |
+| 14 | **DTOs/Validation Schemas** — Create DTOs/schemas for API request/response shapes | Check for exported interfaces/types/schemas | ❌ Blocking |
+| 15 | **Idempotency Consideration** — For write operations, consider idempotency (upsert, unique constraints) | Manual review for POST/PUT endpoints | ⚠️ Warning |
+| 16 | **No TODO/FIXME/HACK** — No unfinished work left in code | `grep` for `TODO\|FIXME\|HACK\|XXX` | ❌ Blocking |
+| 17 | **Bundle Size / Dependency Awareness** — No unnecessary dependencies; tree-shakeable imports | Review new imports in package.json or import statements | ⚠️ Warning |
+
+### Scoring
+
+| Condition | Action |
+|-----------|--------|
+| All ❌ Blocking checks pass (12/12) | Proceed. Include `qualitySelfReview: { passed: true, blockingItems: 12/12, warningItems: 5/5 }` |
+| Any ❌ Blocking fails | **FIX before reporting** — do NOT proceed to build |
+| Any ⚠️ Warning fails | Flag in output as `warnings` — non-blocking but noted |
+
+### Output Format for Quality Self-Review
+
+```yaml
+qualitySelfReview:
+  passed: true | false
+  blockingItemsPassed: 12
+  blockingItemsTotal: 12
+  warningItemsPassed: 5
+  warningItemsTotal: 5
+  failures:
+    - file: "src/services/user.ts"
+      check: "Error Handling"
+      detail: "db.query() in createUser has no try/catch"
+      severity: "blocking"
+      fixed: true | false
+  qualityAdditions:
+    - "Added try/catch to UserService.createUser"
+    - "Added zod schema validation for createUser input"
+    - "Added input validation to CreateUserDto"
+    - "Extracted DB queries into UserRepository"
+    - "Added logger.info/error calls to all public methods"
+```
 
 ---
 
@@ -61,6 +126,7 @@ You have bash access for development tasks. Follow these restrictions strictly:
 1.  Receive Plan ──► Review the step-by-step roadmap from PlanDescriber
 2.  Implement ──► Write code files in the specified order, following the plan exactly
 3.  Security Self-Review (MANDATORY) ──► Run the Security Self-Review checklist (see section below)
+3a. Quality Self-Review (MANDATORY) ──► Run the Quality Self-Review checklist (see section below)
 4.  Pre-Build Import Validation (MANDATORY) ──► Lightweight pre-check before full build
 5.  Incremental Build ──► Prefer incremental builds (tsc --incremental, Vite, etc.)
 6.  Build & Verify (MANDATORY) ──► Run build command, collect full output
@@ -155,7 +221,11 @@ Write code files in the specified order, following the plan exactly. Do not devi
 
 ### Step 3 — Security Self-Review (MANDATORY)
 
-After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 — the canonical 17-item checklist) before proceeding to Pre-Build Import Validation.
+After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 — the canonical 17-item checklist) before proceeding to Quality Self-Review.
+
+### Step 3a — Quality Self-Review (MANDATORY)
+
+After Security Self-Review and BEFORE running the build, run the Quality Self-Review checklist (see the **Quality Self-Review Checklist** section above) against every created/modified file. All ❌ Blocking checks MUST pass before proceeding to Pre-Build Import Validation. Include `qualitySelfReview` in your structured output.
 
 ### Step 4 — Pre-Build Import Validation (MANDATORY)
 
