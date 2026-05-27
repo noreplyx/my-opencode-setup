@@ -1,4 +1,4 @@
----
+﻿---
 name: ast-grep
 description: >-
   Use this skill for ALL structural code search, linting, and rewriting tasks using ast-grep (sg).
@@ -17,6 +17,7 @@ description: >-
   Also triggers when the user says "find all imports from X", "change all X to Y", or
   "find arrow functions that...". If the task involves any structural understanding of code
   beyond simple keyword matching, load this skill.
+
 ---
 
 # ast-grep Skill
@@ -171,7 +172,7 @@ A rule matches if ALL fields match (implicit AND). See `references/rule-referenc
 
 **`kind` vs `pattern` cheat sheet:**
 - `kind` → find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
-- `pattern` → find specific **content**: `console.log($ARG)`, `import { $$$ } from "lodash"`
+- `pattern` → find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
 - Both → `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
 
 Common kind names: `call_expression`, `function_declaration`, `method_definition`, `arrow_function`, `class_declaration`, `variable_declaration`, `identifier`, `import_statement`, `return_statement`, `binary_expression`. See `references/recipes.md` for per-language lists.
@@ -349,7 +350,7 @@ ast-grep test -i   # interactive review
 ### JSON Output
 
 ```bash
-ast-grep -p 'import { $$$ } from "$MODULE"' --json | jq '.[].metaVariables.single.MODULE.text'
+ast-grep -p 'import { $$$$$ } from "$MODULE"' --json | jq '.[].metaVariables.single.MODULE.text'
 echo 'code' | ast-grep --stdin --json -p 'console.log($$$)' -l ts | jq .
 ```
 
@@ -445,3 +446,63 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 - `references/pattern-syntax.md` — Meta-variable syntax, pattern object forms, strictness levels
 - `references/transforms.md` — Transform operations (replace, substring, convert, rewrite), chaining
 - `references/recipes.md` — Common patterns for TS/JS, Python, Rust; multi-step codemods; kind name tables by language
+
+---
+
+## Agent Tool Protocol
+
+### Purpose
+ast-grep (sg) is an **on-demand structural code tool** for subagents — NOT a pipeline gate. The rules it enforces (no-console, missing return types, no-any-type, etc.) are already covered by ESLint, TypeScript strict mode, and the semgrep SAST scan. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform.
+
+### When Subagents Should Use ast-grep
+
+| Agent | Typical Task | ast-grep Role |
+|-------|-------------|---------------|
+| **Finder** | Codebase exploration | Structural pattern discovery: "Find all classes that implement interface X", "Find all function declarations with specific decorators" |
+| **PlanDescriber** | Pattern analysis before planning | "Find all service/repository patterns to understand conventions" — AST-aware search reveals structural consistency |
+| **Implementor** | Writing new code | "Find existing patterns to follow", "Rename function X to Y across all call sites" (codemod) |
+| **Fixer** | Debugging & fixing | "Find all try/catch blocks without error logging", "Find all places where deprecated API is called" |
+| **QA** | Test verification | "Find all test files that use pattern P" |
+
+### When NOT to Use ast-grep
+
+- **Simple keyword search** → use grep/
+g (ast-grep is overkill for text matching)
+- **Already enforced by the Lint Gate** → ESLint already catches 
+o-console, 
+o-explicit-any, explicit-function-return-type, 
+o-empty
+- **Already covered by semgrep SAST** → semgrep already catches AST-level security patterns
+- **Already covered by TypeScript strict mode** → strict, 
+oImplicitReturns, strictNullChecks
+
+### Quick Commands for Subagents
+
+| Task | Command |
+|------|---------|
+| Find all function calls matching a pattern | sg -p 'console.log()' -l ts |
+| Find all arrow functions | sg -p 'ARG => ' -l ts |
+| Find imports from a specific module | sg -p 'import { $$$ } from "lodash"' -l ts |
+| Refactor: rename function across all files | sg -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U |
+| Find empty catch blocks | sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: {}}}" |
+| Find classes with specific decorators | sg -p '@Injectable() class  { $ }' -l ts |
+
+### Loading the Skill
+
+Subagents load this skill explicitly when they need to perform structural code analysis:
+
+`
+skill("ast-grep")
+`
+
+The Orchestrator does NOT auto-load this skill during pipeline execution. It is triggered by subagent task requirements.
+
+### Full Reference
+
+See the sections above for complete coverage of:
+- Pattern basics (st-grep run)
+- YAML rules (st-grep scan)
+- Rewriting code with ix and 	ransform
+- JSON output and stdin piping
+- Debugging and project setup
+- All language-kind tables and recipe patterns
