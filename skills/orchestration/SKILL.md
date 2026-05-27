@@ -51,7 +51,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
-| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No |
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **semgrep SAST scan** (auto-loads semgrep-scan skill). Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No |
 | **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No | No |
 | **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes — document verified code | Yes (accuracy check) | Yes |
 | **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) | Yes |
@@ -112,16 +112,33 @@ The default orchestration workflow follows this sequence:
    │  structured output│
    └──────┬──────────┘
           │ (blocking quality failures → Implementor fixes)
-          ▼
-   ┌──────┴──────┐
-   ▼ SECURITY    ▼ (MANDATORY)
-   │  SCAN GATE  │
-   │  Load security-scan or semgrep-scan skill │
-   │  Run npm audit + secrets  │
-   │  scan + anti-pattern scan │
-   └──────┬──────┘
-          │ (High/Critical vulns → report to Orchestrator)
-          ▼
+           ▼
+    ┌──────────────────┐
+    │  SECURITY SCAN   │
+    │  GATE (MANDATORY)│
+    │  Auto-loads:     │
+    │  semgrep-scan    │
+    │  skill           │
+    └────────┬─────────┘
+             │
+    ┌────────┴─────────┐
+    ▼ SEMGREP SAST     ▼ (MANDATORY sub-gate)
+    │  semgrep --config │
+    │  p/security-audit │
+    │  --error .        │
+    └────────┬─────────┘
+             │ (exit code 1 → FAIL gate, block pipeline)
+             ▼
+    ┌────────┴─────────┐
+    ▼ DEPENDENCY +     ▼
+    │  SECRETS SCAN    │
+    │  npm audit +     │
+    │  anti-patterns + │
+    │  SBOM + supply   │
+    │  chain           │
+    └──────┬──────┘
+           │ (High/Critical vulns → report to Orchestrator)
+           ▼
 5. QA ──► Test, validate, report results
           │
    ┌──────┴──────┐
@@ -309,7 +326,7 @@ Every implementation MUST pass through these mandatory validation gates:
 | **Build Gate**   | Implementor   | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Lint Gate**    | Implementor   | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
 | **Code Quality Gate** | Implementor | 17-item quality self-review: error handling completeness, input validation, logging, type safety, no direct DB in controllers, no magic values, SOLID adherence, naming, config from env, separation of concerns, no dead code, parameterized queries, DTOs/schemas, idempotency, no TODO/FIXME, bundle awareness | Implementor fixes blocking failures before proceeding; non-blocking warnings reported to Orchestrator |
-| **Security Scan**| Orchestrator  | npm audit for High/Critical vulns, secrets scan, anti-pattern scan | Report to user; may fix, except, or block       |
+| **Security Scan**| Orchestrator  | semgrep SAST scan (auto-loads semgrep-scan skill) + npm audit for High/Critical vulns, secrets scan, anti-pattern scan | Report to user; may fix, except, or block       |
 | **Smoke Test**   | QA            | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer      |
 | **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover ≥ 80% of detected security patterns | Coverage < 50% → cycle back to QA; 50-79% → warn and proceed with Verifier flagging
 | **Plan Verify**  | Verifier      | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% → cycle to Fixer; 3 attempts → PlanDescriber |
@@ -352,8 +369,8 @@ Every implementation MUST pass through these mandatory validation gates:
 
 **Security Scan Protocol:**
 - After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)
-  - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
-  - **Semgrep SAST scan**: Run `semgrep --config p/security-audit --error .` for deep static analysis (load `semgrep-scan` skill)
+  - Scan includes: **semgrep SAST scan** (auto-loads semgrep-scan skill), npm audit, secrets scan, anti-pattern scan, git history secret scan
+  - **Semgrep SAST scan (MANDATORY)**: The Orchestrator MUST load the semgrep-scan skill and run semgrep --config p/security-audit --error .. This runs automatically during every pipeline — no user prompt required.
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
@@ -387,7 +404,7 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 **Integration with Pipeline:**
 ```
-Build Gate → Lint Gate → Security Scan → QA (smoke + security regression) → SECURITY TEST COVERAGE GATE → Acceptance Gate → Verifier
+Build Gate → Lint Gate → Security Scan (with mandatory Semgrep SAST sub-gate) → QA (smoke + security regression) → SECURITY TEST COVERAGE GATE → Acceptance Gate → Verifier
 ```
 
 **Enforcement:**
@@ -1197,7 +1214,7 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` or `semgrep-scan` or `security-workflow` | Dependency scanning, SAST (semgrep) + shared security patterns |
+| Security Scan | security-scan (auto-loads semgrep-scan skill) | SAST via semgrep + dependency scanning + secrets + shared security patterns |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
@@ -2355,7 +2372,7 @@ circuitBreaker:
 Acceptance criteria (`type: "acceptance"` checkpoints in the plan manifest) add a new gate to the pipeline:
 
 ```
-Build Gate → Lint Gate → Security Scan → QA → ACCEPTANCE GATE → SECURITY TEST COVERAGE GATE → Verifier → Documentor
+Build Gate → Lint Gate → Security Scan (with mandatory Semgrep SAST sub-gate) → QA → ACCEPTANCE GATE → SECURITY TEST COVERAGE GATE → Verifier → Documentor
 ```
 
 ### Acceptance Gate Protocol

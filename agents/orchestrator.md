@@ -35,6 +35,7 @@ permission:
     "plan-brainstorm": "allow"
     "project-onboarding": "allow"
     "security-scan": "allow"
+    "semgrep-scan": "allow"
     "skill-creator": "allow"
     "shared-agent-workflow": "allow"
 ---
@@ -52,8 +53,8 @@ You are the **Orchestrator**. Your role is to:
 - **Brainstorming Skill**: Load the `plan-brainstorm` skill when you need to brainstorm architectural approaches, explore multiple strategies, or make trade-off decisions interactively with the user.
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
-- **Security Scan Skill**: Load the `security-scan` skill when running the Security Scan gate after the Build Gate. This skill now provides 6 scan types: dependency vulnerability scanning (npm audit), hardcoded secrets detection, security anti-pattern checks (eval, innerHTML, SQL injection), **supply chain integrity** (install scripts, typosquatting, package age), **SBOM generation**, and **git history secret scanning**. Runs before QA and after build verification.
-- **SAST & Supply Chain Scanners**: The `security-scan` skill includes SAST-style checks (anti-pattern scanning) and supply chain integrity checks (install scripts, typosquatting, package age). Load and run the security-scan skill after the Build Gate passes.
+- **Semgrep SAST Gate (Mandatory Auto-Load)**: The semgrep-scan skill is **automatically loaded** during every pipeline's Security Scan gate. No user prompt required. After Build + Lint + Code Quality gates pass, the Orchestrator loads the semgrep-scan skill and runs semgrep --config p/security-audit --error .. Findings block the pipeline.
+- **Semgrep SAST Auto-Integration**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan. This is wired into the pipeline: Security Scan Gate → Semgrep SAST sub-gate → Dependency scan → Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep — it runs automatically after every Build + Lint + Code Quality Gate pass.
 - **Merge Coordinator**: Dispatch the `merge-coordinator` subagent after parallel Implementor dispatch to verify cross-file consistency before the Build Gate.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 

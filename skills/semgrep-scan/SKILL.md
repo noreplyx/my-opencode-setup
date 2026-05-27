@@ -1,13 +1,15 @@
 ---
 name: semgrep-scan
-description: "Run Semgrep scans on projects for static analysis security testing (SAST). Use this skill whenever the user asks to scan code for security vulnerabilities, run semgrep, perform SAST scanning, check for code security issues, validate custom semgrep rules, or when integrating security scanning into a CI pipeline. Supports auto-detected rules, language-specific packs (p/python, p/javascript, p/java, etc.), security-focused rule packs (p/owasp-top-ten, p/command-injection, p/secrets), custom .yaml rule files, and rule validation with semgrep validate."
+description: "Run Semgrep scans on projects for static analysis security testing (SAST). This skill triggers automatically as a mandatory step within the orchestration pipeline Security Scan gate ó it does NOT require the user to explicitly request semgrep. During any pipeline, after Build Gate + Lint Gate pass, the Orchestrator loads this skill and runs semgrep SAST scanning automatically. Also use when the user manually asks to scan code for security vulnerabilities, run semgrep, perform SAST scanning, check for code security issues, validate custom semgrep rules, or when integrating security scanning into a CI pipeline. Supports auto-detected rules, language-specific packs (p/python, p/javascript, p/java, etc.), security-focused rule packs (p/owasp-top-ten, p/command-injection, p/secrets), custom .yaml rule files, and rule validation with semgrep validate."
 ---
 
 # Semgrep Scan Skill
 
 ## Purpose
 
-Run Semgrep static analysis on project code to detect security vulnerabilities, enforce coding standards, and find bug patterns. This skill focuses on making `semgrep scan` fast, efficient, and flexible ‚Äî with smart defaults that work well locally and in CI environments.
+Run Semgrep static analysis on project code to detect security vulnerabilities, enforce coding standards, and find bug patterns. This skill focuses on making `semgrep scan` fast, efficient, and flexible ó with smart defaults that work well locally and in CI environments.
+
+This skill is **automatically loaded by the Orchestrator** during every pipeline's Security Scan gate (after Build + Lint + Code Quality gates pass). It runs as a mandatory SAST sub-scan alongside dependency and secrets scanning.
 
 ## Quick Start
 
@@ -24,13 +26,15 @@ semgrep --config path/to/my-rules.yaml --error src/
 
 ## When to Use This Skill
 
-Use this skill when:
+This skill is **automatically triggered** during every pipeline as part of the Security Scan gate. It also triggers when:
+
 - The user wants to **run semgrep** on a project or specific files
 - The user wants to **validate** custom semgrep rules (`.yaml` rule files)
 - The user is setting up **CI security scanning** with semgrep
 - The user wants to **scan new/modified code** against a baseline (`--baseline-commit`)
 - The user needs **output in specific formats** (JSON, SARIF, terminal)
 - The user asks about **SAST**, **static analysis**, or **code security scanning**
+- The Orchestrator is running a **pipeline** and needs to perform SAST scanning after the Build Gate passes
 
 ## Scan Workflow
 
@@ -85,9 +89,9 @@ semgrep --config p/owasp-top-ten --config p/secrets --config .semgrep/rules.yaml
 | `--emacs` | Emacs single-line format | Editor integration |
 
 **Smart defaults:**
-- Terminal available ‚Üí colorized output
-- CI environment (no TTY) ‚Üí JSON for machine parsing
-- SARIF requested ‚Üí use `--sarif` (also pipe to `--sarif-output` for file)
+- Terminal available ? colorized output
+- CI environment (no TTY) ? JSON for machine parsing
+- SARIF requested ? use `--sarif` (also pipe to `--sarif-output` for file)
 - For quick review, use `--json` and pipe to `jq` for filtering
 
 ### Step 4: Strict Mode (CI Integration)
@@ -105,7 +109,7 @@ semgrep --config p/security-audit --error src/ --severity ERROR
 Exit codes:
 | Code | Meaning |
 |------|---------|
-| 0    | OK ‚Äî no findings |
+| 0    | OK ó no findings |
 | 1    | Findings detected (with `--error`) |
 | 2    | Fatal error |
 | 3-8  | Configuration errors |
@@ -186,13 +190,13 @@ When the user needs help interpreting results, structure the report like this:
 ### Detailed Findings
 
 #### ERROR: Path Traversal (3 occurrences)
-- `src/routes/files.ts:45` ‚Äî Possible user input in `path.join`
+- `src/routes/files.ts:45` ó Possible user input in `path.join`
   - **Fix**: Validate/sanitize user input before using in path operations
-- `src/utils/upload.ts:102` ‚Äî Possible user input in `path.resolve`
+- `src/utils/upload.ts:102` ó Possible user input in `path.resolve`
   - **Fix**: Use allowlist of approved paths
 
 #### WARNING: Hardcoded Secret (2 occurrences)
-- `src/config/defaults.ts:15` ‚Äî Possible hardcoded API key
+- `src/config/defaults.ts:15` ó Possible hardcoded API key
   - **Fix**: Move to environment variable or secrets manager
 
 ### Recommendations
@@ -232,7 +236,7 @@ Validation checks:
 - Pattern validity per language
 - Metavariable consistency
 
-Validate new rules **before** running scans with them ‚Äî this catches syntax errors early.
+Validate new rules **before** running scans with them ó this catches syntax errors early.
 
 ## Common Scan Recipes
 
@@ -276,26 +280,66 @@ semgrep --config p/security-audit --baseline-commit origin/main --json --output 
 semgrep validate .semgrep/rules.yaml && semgrep --config .semgrep/rules.yaml --error src/
 ```
 
-## Integration with Pipeline
+## Integration with Pipeline (Automatic)
 
-This skill can be used as a standalone scanning skill or integrated into the orchestration pipeline. When used as part of a pipeline:
+This skill is **automatically loaded by the Orchestrator** during every pipeline as part of the **Semgrep SAST Gate** ó a mandatory sub-gate of the Security Scan gate. No user prompt is required.
 
-1. **Build Gate passes** ‚Üí Run semgrep scan
-2. **Scan with `--error`** to block on findings
-3. **Report results** to the Orchestrator
-4. **Orchestrator decides** whether to fix findings, file exceptions, or block
+### Automatic Triggering
+
+The Orchestrator loads and invokes this skill automatically at this point in the pipeline:
+
+```
+Build Gate ? Lint Gate ? Code Quality Gate ? SECURITY SCAN ? QA
+                                                   ¶
+                                            +-------------+
+                                            ? SEMGREP SAST ?
+                                            ¶  GATE        ¶
+                                            ¶  (auto-loaded)¶
+                                            +-------------+
+                                                   ¶
+                                            +-------------+
+                                            ? DEPENDENCY  ?
+                                            ¶  + SECRETS   ¶
+                                            ¶  SCANNING    ¶
+                                            +-------------+
+```
+
+**How the Orchestrator triggers it:**
+1. After Build + Lint + Code Quality gates pass, the Orchestrator loads the `semgrep-scan` skill via its system prompt's `available_skills`
+2. The Orchestrator runs: `semgrep --config p/security-audit --error .`
+3. The Orchestrator parses the semgrep output and includes findings in the combined Security Scan report
+4. If semgrep exits with code 1 (findings detected with `--error`), the **Semgrep SAST Gate FAILS** ó the pipeline is blocked
+5. The Orchestrator reports findings to the user and decides to fix, except, or block
+
+### Pipeline Behavior
+
+| Semgrep Exit Code | Meaning | Pipeline Action |
+|-------------------|---------|-----------------|
+| 0 | No findings | ? PASS ó proceed to dependency scan |
+| 1 | Findings detected | ? FAIL ó block pipeline, report to Orchestrator |
+| 2 | Fatal error | ?? WARN ó log error, continue (tool may not be installed) |
+| 3-8 | Config error | ?? WARN ó report to Orchestrator |
+
+### Pipeline Scan Defaults
+
+When automatically triggered during a pipeline, the semgrep scan uses these defaults:
+- **Config**: `p/security-audit` (security-focused)
+- **Mode**: `--error` (strict ó fail on any finding)
+- **Target**: The workspace root (`.`)
+- **Exclusions**: `node_modules/`, `dist/`, `build/`, `tests/`, `*.test.*`, `*.spec.*` (automatic via `.semgrepignore` / `.gitignore`)
 
 ## Hard Rules
 
-- ‚úÖ Always use `--error` for CI/strict mode ‚Äî fails the pipeline on findings
-- ‚úÖ Read-only operation ‚Äî NEVER use `--autofix` (data loss risk)
-- ‚úÖ Validate custom rules BEFORE running them in a scan
-- ‚úÖ Use `.semgrepignore` or `--exclude` to skip irrelevant files (node_modules, dist, build)
-- ‚úÖ Use `--baseline-commit` for incremental scans to reduce noise
-- ‚ùå NEVER use `--autofix` ‚Äî this skill is for scanning only
-- ‚ùå NEVER modify project files during scanning
-- ‚ùå NEVER run scans without a `--config` flag (will use default config; always be explicit)
-- ‚ùå DO NOT scan minified, generated, or vendored files unless explicitly requested
+- ? Always use `--error` for CI/strict mode ó fails the pipeline on findings
+- ? The Orchestrator loads this skill automatically during every pipeline ó no user prompt required
+- ? Read-only operation ó NEVER use `--autofix` (data loss risk)
+- ? Validate custom rules BEFORE running them in a scan
+- ? Use `.semgrepignore` or `--exclude` to skip irrelevant files (node_modules, dist, build)
+- ? Use `--baseline-commit` for incremental scans to reduce noise
+- ? NEVER use `--autofix` ó this skill is for scanning only
+- ? NEVER modify project files during scanning
+- ? NEVER run scans without a `--config` flag (will use default config; always be explicit)
+- ? DO NOT scan minified, generated, or vendored files unless explicitly requested
 
 ## Key References
 
