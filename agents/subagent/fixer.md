@@ -26,6 +26,7 @@ permission:
     "ast-grep": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+    "fixer-workflow": "allow"
     "plan-verification": "allow"
     "quality-assurance": "allow"
     "security-workflow": "allow"

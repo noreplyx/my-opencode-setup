@@ -27,6 +27,7 @@ permission:
     "backend-code-philosophy": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+    "implementor-workflow": "allow"
     "playwright-cli": "allow"
     "security-workflow": "allow"
     "security-scan": "allow"
