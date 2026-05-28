@@ -15,6 +15,11 @@
         "SEARXNG_URL": "http://localhost:8080"
       },
       "enabled": true
+    },
+    "clickup": {
+      "type": "local",
+      "command": ["bunx", "-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
+      "enabled": true
     }
   }
 }
