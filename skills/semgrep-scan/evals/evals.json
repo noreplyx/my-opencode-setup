@@ -3,10 +3,12 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Run a quick security scan on this project using semgrep. I want to check for vulnerabilities with the owasp top ten rules and see results in the terminal.",
-      "expected_output": "Semgrep scan runs with --config p/owasp-top-ten, outputs colorized terminal results",
+      "prompt": "Run a quick security scan on this project using semgrep (via podman container). I want to check for vulnerabilities with the owasp top ten rules and see results in the terminal.",
+      "expected_output": "Runs semgrep inside podman container with --config p/owasp-top-ten, colorized terminal output, uses -v mount for project directory",
       "files": [],
       "expectations": [
+        "Uses podman run with docker.io/semgrep/semgrep:latest image",
+        "Mounts project directory with -v \"${PWD}:/src:Z\"",
         "Runs semgrep scan with --config p/owasp-top-ten",
         "Output format is terminal/colorized (no --json or --sarif flag)",
         "Uses --error flag for strict mode",
@@ -15,29 +17,32 @@
     },
     {
       "id": 2,
-      "prompt": "I have a custom semgrep rule file at .semgrep/my-rules.yaml. Please validate it and then scan the src/ directory with it. I want JSON output saved to results.json for my CI pipeline.",
-      "expected_output": "First validates the rule file, then scans with JSON output saved to results.json",
+      "prompt": "I have a custom semgrep rule file at .semgrep/my-rules.yaml. Please validate it and then scan the src/ directory with it using the semgrep podman container. I want JSON output saved to results.json for my CI pipeline.",
+      "expected_output": "First validates the rule file via container, then scans with JSON output saved to results.json",
       "files": [],
       "expectations": [
-        "Runs semgrep validate on .semgrep/my-rules.yaml first",
-        "Then runs semgrep scan with --config .semgrep/my-rules.yaml",
+        "Runs semgrep via podman container",
+        "Validates the custom rule file: semgrep validate /src/.semgrep/my-rules.yaml (with /src/ prefix)",
+        "Then runs semgrep scan with --config /src/.semgrep/my-rules.yaml",
         "Uses --json for structured output",
-        "Uses --output or --json-output to save to results.json",
+        "Writes output to /src/results.json (with /src/ prefix for output path)",
         "Uses --error for strict mode",
-        "Targets only src/ directory"
+        "Targets only /src/src/ directory"
       ]
     },
     {
       "id": 3,
-      "prompt": "We're setting up CI security scanning. I need to scan only the changes since we branched from origin/main, using the default rule pack. Output SARIF format so we can upload to GitHub Advanced Security.",
-      "expected_output": "Incremental scan with --baseline-commit origin/main, --config p/default, SARIF output",
+      "prompt": "We're setting up CI security scanning with semgrep via podman. I need to scan only the changes since we branched from origin/main, using the default rule pack. Output SARIF format so we can upload to GitHub Advanced Security.",
+      "expected_output": "Incremental scan with --baseline-commit origin/main, --config p/default, SARIF output, using podman container with -w /src for git support",
       "files": [],
       "expectations": [
+        "Uses podman with -w /src flag (required for git/baseline support)",
         "Uses --baseline-commit origin/main for incremental scanning",
         "Uses --config p/default for comprehensive rules",
         "Uses --sarif for SARIF format output",
         "Uses --error for strict CI mode",
-        "Mentions SARIF can be uploaded to GitHub Advanced Security"
+        "Mentions SARIF can be uploaded to GitHub Advanced Security",
+        "Uses docker.io/semgrep/semgrep:latest image"
       ]
     }
   ]
