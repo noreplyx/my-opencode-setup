@@ -1,0 +1,11 @@
+{
+  "eval_id": 5,
+  "eval_name": "sbom-generation",
+  "prompt": "We need to generate an SPDX SBOM of all our project dependencies for compliance reporting. Can osv-scanner do that? Our project has multiple lockfiles (package-lock.json, Cargo.lock, go.mod).",
+  "expectations": [
+    "Uses --all-packages and --format spdx-2-3 or cyclonedx-1-5",
+    "Explains where to save the SBOM output",
+    "Notes that SPDX output does not include vulnerability data",
+    "Mentions CycloneDX as alternative with vulnerability support"
+  ]
+}

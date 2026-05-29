@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "license-compliance-check",
+  "prompt": "I need to check if all our dependencies have approved licenses. We only allow MIT, Apache-2.0, and BSD-3-Clause licenses. Can you use osv-scanner to check our project at /home/user/project?",
+  "expectations": [
+    "Uses --licenses flag with the SPDX allowlist",
+    "Correctly specifies SPDX identifiers",
+    "Runs via Podman container",
+    "Explains how to interpret license summary output"
+  ]
+}

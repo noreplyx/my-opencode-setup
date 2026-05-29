@@ -1,0 +1,75 @@
+--- a/skills/security-scan/SKILL.md
++++ b/skills/security-scan/SKILL.md
+@@ -1,14 +1,14 @@
+ ---
+ name: security-scan
+-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, SAST via semgrep, gitleaks secret scanning, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill and the gitleaks-scan skill as mandatory sub-scans.
++description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities (via osv-scanner), hardcoded secrets, SAST via semgrep, gitleaks secret scanning, SBOM generation, supply chain checks, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill, gitleaks-scan skill, and osv-scanner skill as mandatory sub-scans.
+ ---
+ 
+ # Security Scan Skill
+ 
+ ## Purpose
+ 
+-The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early � before they reach production.
++The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early — before they reach production.
+ 
+-This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill and the `gitleaks-scan` skill** as mandatory sub-scans. No user prompt is required to run semgrep or gitleaks.
++This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill, the `gitleaks-scan` skill, and the `osv-scanner` skill** as mandatory sub-scans. No user prompt is required to run any of these tools.
+ 
+ ## Scan Types
+ 
+@@ -73,17 +73,38 @@
+ 
+ ### 2. Dependency Vulnerability Scan
+ 
+-Run the appropriate tool based on project language:
++The **OSV-Scanner Dependency Vulnerability Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `osv-scanner` skill** and runs dependency vulnerability scanning via Podman container:
+ 
+-| Language    | Command                                      |
+-|-------------|----------------------------------------------|
+-| Node.js     | `npm audit --audit-level=high`               |
+-| Python      | `pip audit` or `safety check`                |
+-| Go          | `govulncheck ./...`                          |
+-| Java/Maven  | `mvn dependency-check:check`                 |
+-| Rust        | `cargo audit`                                |
++```bash
++# Pull if needed
++podman image exists ghcr.io/google/osv-scanner:latest || podman pull ghcr.io/google/osv-scanner:latest
+ 
+-If `npm audit` reports High or Critical vulnerabilities, the scan fails.
++# Run dependency vulnerability scan on the project
++podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest \
++  scan source -r --format json /src
++```
++
++**Why osv-scanner replaces language-specific scanners:**
++- **Unified tool**: Single scanner covers 20+ lockfile formats across all ecosystems (npm, pip, Go, Rust, Maven, RubyGems, NuGet, PHP, Dart, Haskell, etc.)
++- **No per-language installation**: No need for npm, pip, cargo, or maven — runs entirely in Podman
++- **Broader coverage**: Catches vulnerabilities that per-language scanners may miss (different databases, C/C++ commit-level scanning)
++- **Consistent output**: Same JSON/SARIF/HTML format across all projects
++- **Container image scanning**: Can also scan container OS packages (dpkg, APK) for the same project
++
++**Why it's mandatory:**
++- Detects known CVEs in all open-source dependencies using the OSV.dev database
++- Supports 11+ ecosystems with auto-detection of lockfiles
++- Can also perform license compliance checking and SBOM generation
++- Runs after SAST and secret scanning, before anti-pattern scans
++
++**Verdict:**
++| Exit Code | Meaning | Pipeline Action |
++|-----------|---------|-----------------|
++| 0 | No vulnerabilities | ✅ PASS — proceed to next scan |
++| 1 | Vulnerabilities found | ❌ FAIL — block pipeline, report findings |
++| 128 | No packages found | ⚠️ WARN — check if lockfiles exist |
++| 127 | General error | ⚠️ WARN — log, proceed if tool unavailable |
++
++**Hard Rules for osv-scanner:**
++- ✅ The Orchestrator MUST load `osv-scanner` skill during every pipeline
++- ✅ The osv-scanner scan MUST use recursive mode (`-r`) to find all lockfiles
++- ✅ The osv-scanner scan MUST use JSON output format for machine parsing
++- ✅ Always pull the image first: `podman image exists ghcr.io/google/osv-scanner:latest || podman pull ghcr.io/google/osv-scanner:latest`
++- ✅ NEVER modify project files during scanning
++- ✅ NEVER skip the osv-scanner dependency scan — it is mandatory
+ 
+ ### 3. Hardcoded Secrets Scan

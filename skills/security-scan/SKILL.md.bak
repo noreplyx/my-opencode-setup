@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities (via osv-scanner), hardcoded secrets, SAST via semgrep, gitleaks secret scanning, SBOM generation, supply chain checks, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill, the gitleaks-scan skill, and the osv-scanner skill as mandatory sub-scans.
+description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, SAST via semgrep, gitleaks secret scanning, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill and the gitleaks-scan skill as mandatory sub-scans.
 ---
 
 # Security Scan Skill
@@ -9,7 +9,7 @@ description: Use this skill to perform security scanning on project code and dep
 
 The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early � before they reach production.
 
-This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill, the `gitleaks-scan` skill, and the `osv-scanner` skill** as mandatory sub-scans. No user prompt is required to run any of these tools.
+This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill and the `gitleaks-scan` skill** as mandatory sub-scans. No user prompt is required to run semgrep or gitleaks.
 
 ## Scan Types
 
@@ -72,49 +72,19 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:lat
 - ✅ NEVER modify project files during scanning
 - ✅ NEVER skip the gitleaks scan — it is mandatory
 
-### 2. Dependency Vulnerability Scan (OSV-Scanner)
+### 2. Dependency Vulnerability Scan
 
-The **OSV-Scanner Dependency Vulnerability Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `osv-scanner` skill** and runs dependency vulnerability scanning via Podman container:
+Run the appropriate tool based on project language:
 
-```bash
-# Pull if needed
-podman image exists ghcr.io/google/osv-scanner:latest || podman pull ghcr.io/google/osv-scanner:latest
+| Language    | Command                                      |
+|-------------|----------------------------------------------|
+| Node.js     | `npm audit --audit-level=high`               |
+| Python      | `pip audit` or `safety check`                |
+| Go          | `govulncheck ./...`                          |
+| Java/Maven  | `mvn dependency-check:check`                 |
+| Rust        | `cargo audit`                                |
 
-# Run dependency vulnerability scan on the project
-podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest 
-  scan source -r --format json /src
-```
-
-**Why osv-scanner replaces language-specific scanners:**
-- **Unified tool**: Single scanner covers 20+ lockfile formats across all ecosystems (npm, pip, Go, Rust, Maven, RubyGems, NuGet, PHP, Dart, Haskell, etc.)
-- **No per-language installation**: No need for npm, pip, cargo, or maven — runs entirely in Podman
-- **Broader coverage**: Catches vulnerabilities that per-language scanners may miss (different databases, C/C++ commit-level scanning)
-- **Consistent output**: Same JSON/SARIF/HTML format across all projects
-- **Container image scanning**: Can also scan container OS packages (dpkg, APK) for the same project
-
-**Why it is mandatory:**
-- Detects known CVEs in all open-source dependencies using the OSV.dev database
-- Supports 11+ ecosystems with auto-detection of lockfiles
-- Can also perform license compliance checking and SBOM generation
-- Runs after SAST and secret scanning, before anti-pattern scans
-
-**Verdict:**
-| Exit Code | Meaning | Pipeline Action |
-|-----------|---------|-----------------|
-| 0 | No vulnerabilities | ✅ PASS — proceed to next scan |
-| 1 | Vulnerabilities found | ❌ FAIL — block pipeline, report findings |
-| 128 | No packages found | ⚠️ WARN — check if lockfiles exist |
-| 127 | General error | ⚠️ WARN — log, proceed if tool unavailable |
-
-**Hard Rules for osv-scanner:**
-- ✅ The Orchestrator MUST load `osv-scanner` skill during every pipeline
-- ✅ The osv-scanner scan MUST use recursive mode (`-r`) to find all lockfiles
-- ✅ The osv-scanner scan MUST use JSON output format for machine parsing
-- ✅ Always pull the image first: `podman image exists ghcr.io/google/osv-scanner:latest || podman pull ghcr.io/google/osv-scanner:latest`
-- ✅ NEVER modify project files during scanning
-- ✅ NEVER skip the osv-scanner dependency scan — it is mandatory
-
-### 3. Hardcoded Secrets Scan
+If `npm audit` reports High or Critical vulnerabilities, the scan fails.
 
 ### 3. Hardcoded Secrets Scan
 
@@ -288,7 +258,7 @@ When issues are found, the following commands and practices can help resolve the
 | Issue Type | Suggestion |
 |------------|------------|
 | **Semgrep SAST findings** | Review each finding and fix the root cause (validate input, use parameterized queries, etc.) � re-run `semgrep --config p/security-audit --error .` to confirm |
-| **Dependency vulnerabilities** | Use osv-scanner guided remediation: `osv-scanner-docker fix -M package.json -L package-lock.json`. Or update the vulnerable package manually based on the fixed version from the report. |
+| **Dependency vulnerabilities** | Run `npm audit fix` (Node.js), `pip audit --fix` (Python), `cargo audit fix` (Rust), or update the vulnerable package manually. |
 | **Hardcoded secrets** | Move secrets to environment variables (e.g., `process.env.API_KEY`), a `.env` file (ensure it is `.gitignore`d), or a secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault). |
 | **`eval()` usage** | Replace with `JSON.parse()`, `Function()` constructor, or a proper parser. Avoid dynamic code evaluation entirely. |
 | **`innerHTML` / `document.write()`** | Use safe DOM APIs like `textContent`, `innerText`, or `createElement()` + `appendChild()`. For HTML, use a sanitization library like DOMPurify. |
@@ -298,7 +268,7 @@ When issues are found, the following commands and practices can help resolve the
 | **`console.log()` in production** | Remove or replace with a structured logger (e.g., Winston, Pino) that supports log levels and can be disabled in production. |
 | **Install scripts in dependencies** | Review each package with install scripts. Prefer packages without native build steps. Pin versions to avoid unexpected script changes. |
 | **Typosquatting risk** | Verify the package name is correct. Check the package's npm page for legitimacy. Consider using a scoped package from the official organization. |
-| **SBOM generation** | Use osv-scanner with --all-packages --format spdx-2-3 or cyclonedx-1-5 to generate SBOMs. No extra tools needed. |
+| **SBOM generation** | Install cyclonedx-bom: `npm install --save-dev @cyclonedx/bom` and add SBOM generation to CI. |
 | **Secrets in git history** | Use `git filter-branch` or `bfg-repo-cleaner` to remove secrets from history. Rotate any exposed keys immediately. |
 | **Deprecated packages** | Replace with the recommended alternatives listed in the report. |
 
@@ -306,7 +276,8 @@ Remediation is **not** performed automatically by the scan � these suggestions
 
 ## Integration with Pipeline (Automatic)
 
-The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate, Gitleaks secret scan gate, and OSV-Scanner dependency vulnerability gate as mandatory sub-steps**:
+The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate and Gitleaks secret scan gate as mandatory sub-steps**:
+
 ```
 Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
                                                   |
@@ -323,35 +294,30 @@ Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
                                            | (auto-loaded)|
                                            +-------------+
                                                   |
-                                           +------------------+
-                                           |   OSV-SCANNER    |
-                                           | DEPENDENCY VULN  |
-                                           | SCAN GATE        |
-                                           | (auto-loaded)    |
-                                           +------------------+
-                                                  |
                                            +-------------+
-                                           | SBOM +      |
-                                           | SUPPLY CHAIN|
+                                           | DEPENDENCY  |
+                                           | VULN SCAN   |
                                            +-------------+
                                                   |
                                            +-------------+
                                            | SECRETS &   |
                                            | ANTI-PATTERN|
                                            +-------------+
+                                                  |
+                                           +-------------+
+                                           | SBOM +      |
+                                           | SUPPLY CHAIN|
+                                           +-------------+
 ```
 
-**Automatic triggering:**
 **Automatic triggering:**
 1. After Build + Lint + Code Quality gates pass, the Orchestrator loads the `security-scan` skill
 2. The Orchestrator then loads the `semgrep-scan` skill (always as a mandatory sub-step)
 3. The Orchestrator runs `semgrep --config p/security-audit --error .`
 4. The Orchestrator then loads the `gitleaks-scan` skill (always as a mandatory sub-step)
 5. The Orchestrator runs gitleaks via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest git --source=/src --report-format=json --report-path=- --no-banner --verbose`
-6. The Orchestrator then loads the `osv-scanner` skill (always as a mandatory sub-step)
-7. The Orchestrator runs osv-scanner via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest scan source -r --format json /src`
-8. The Orchestrator then proceeds with -> SBOM -> supply chain -> secrets & anti-pattern scans
-9. All findings are combined into a single Security Scan Report
+6. The Orchestrator then proceeds with dependency scan -> secrets scan -> anti-pattern scan -> SBOM -> supply chain -> git history scan
+7. All findings are combined into a single Security Scan Report
 
 If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 - The pipeline is **blocked**
@@ -363,23 +329,21 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 
 ## Hard Rules
 
-- ✅ The Security Scan MUST run after build succeeds
-- ✅ The `semgrep-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ The `gitleaks-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ The `osv-scanner` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode)
-- ✅ OSV-Scanner MUST run with recursive mode and JSON output
-- ✅ Secrets scan MUST be non-blocking (informational only)
-- ✅ The Security Scan MUST NOT modify any files — it is read-only
-- ✅ The Security Scan MUST NOT install additional dependencies
-- ✅ The Security Scan MUST NOT run on test files or fixture data
+- ? The Security Scan MUST run after build succeeds
+- ? The `semgrep-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
+- ? The `gitleaks-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
+- ? Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode)
+- ? Dependency vulnerability scans MUST use `--audit-level=high` or equivalent
+- ? Secrets scan MUST be non-blocking (informational only)
+- ? The Security Scan MUST NOT modify any files � it is read-only
+- ? The Security Scan MUST NOT install additional dependencies
+- ? The Security Scan MUST NOT run on test files or fixture data
 
 ## Related Tools
 
 | Tool | Purpose | Location |
 |------|---------|----------|
 | `semgrep-scan` skill | Deep SAST static analysis (auto-loaded as mandatory sub-scan) | `skills/semgrep-scan/SKILL.md` |
-| `osv-scanner` skill | OSV-Scanner dependency vulnerability scanning (auto-loaded as mandatory sub-scan) | `skills/osv-scanner/SKILL.md` |
 | `gitleaks-scan` skill | Gitleaks secret scanning (auto-loaded as mandatory sub-scan) | `skills/gitleaks-scan/SKILL.md` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |
