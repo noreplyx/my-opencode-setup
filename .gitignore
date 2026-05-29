@@ -1,13 +1,2 @@
-node_modules/
-logs/
-package-lock.json
-plan-manifests/
-analyzer.*
-agent-skills-workspace/
-.env
-bun.lock
-.opencode/
-dist/
-agent-context.md
-manifest.yaml
-searxng/core-config
+# Gitleaks eval generated artifacts - auto-generated scan outputs, not source code
+skills/gitleaks-scan-workspace/

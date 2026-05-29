@@ -1,19 +1,19 @@
 ---
 name: security-scan
-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, SAST via semgrep, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill as a mandatory sub-scan.
+description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities, hardcoded secrets, SAST via semgrep, gitleaks secret scanning, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill and the gitleaks-scan skill as mandatory sub-scans.
 ---
 
 # Security Scan Skill
 
 ## Purpose
 
-The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early ó before they reach production.
+The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early ÔøΩ before they reach production.
 
-This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill** as a mandatory sub-scan. No user prompt is required to run semgrep.
+This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill and the `gitleaks-scan` skill** as mandatory sub-scans. No user prompt is required to run semgrep or gitleaks.
 
 ## Scan Types
 
-### 0. Semgrep SAST Scan (MANDATORY ó Auto-Loaded)
+### 0. Semgrep SAST Scan (MANDATORY ÔøΩ Auto-Loaded)
 
 The **Semgrep SAST Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `semgrep-scan` skill** and runs semgrep static analysis:
 
@@ -30,9 +30,9 @@ semgrep --config p/security-audit --error .
 **Verdict:**
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | No findings | ? PASS ó proceed to next scan |
-| 1 | Findings detected | ? FAIL ó block pipeline, report findings |
-| 2+ | Tool error | ?? WARN ó log, proceed if tool unavailable |
+| 0 | No findings | ? PASS ÔøΩ proceed to next scan |
+| 1 | Findings detected | ? FAIL ÔøΩ block pipeline, report findings |
+| 2+ | Tool error | ?? WARN ÔøΩ log, proceed if tool unavailable |
 
 **Hard Rules for semgrep:**
 - ? The Orchestrator MUST load `semgrep-scan` skill during every pipeline
@@ -41,7 +41,38 @@ semgrep --config p/security-audit --error .
 - ? NEVER modify project files during scanning
 - ? NEVER use `--autofix`
 
-### 1. Dependency Vulnerability Scan
+### 1. Gitleaks Secret Scan (MANDATORY ‚Äî Auto-Loaded)
+
+The **Gitleaks Secret Scan Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `gitleaks-scan` skill** and runs gitleaks secret detection:
+
+```bash
+# Run gitleaks secret scan (always runs, no user prompt needed)
+podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest \
+  git --source=/src --report-format=json --report-path=- --no-banner --verbose
+```
+
+**Why it's mandatory:**
+- Detects hardcoded passwords, API keys, tokens, private keys, and credentials using 170+ curated rules with entropy and regex detection
+- Scans entire git commit history, not just current file contents
+- Catches secrets that basic grep-based scans miss (entropy analysis, base64-encoded tokens, structured patterns)
+- Runs after Semgrep SAST and before dependency scanning to maximize signal
+
+**Verdict:**
+| Exit Code | Meaning | Pipeline Action |
+|-----------|---------|-----------------|
+| 0 | No leaks | ‚úÖ PASS ‚Äî proceed to next scan |
+| 1 | Leaks detected | ‚ùå FAIL ‚Äî block pipeline, report findings |
+| 2+ | Tool error | ‚ö†Ô∏è WARN ‚Äî log, proceed if tool unavailable |
+
+**Hard Rules for gitleaks:**
+- ‚úÖ The Orchestrator MUST load `gitleaks-scan` skill during every pipeline
+- ‚úÖ The gitleaks scan MUST use `git` mode (full history scan)
+- ‚úÖ The gitleaks scan MUST use JSON output format for machine parsing
+- ‚úÖ Always pull the image first: `podman image exists docker.io/zricethezav/gitleaks:latest || podman pull docker.io/zricethezav/gitleaks:latest`
+- ‚úÖ NEVER modify project files during scanning
+- ‚úÖ NEVER skip the gitleaks scan ‚Äî it is mandatory
+
+### 2. Dependency Vulnerability Scan
 
 Run the appropriate tool based on project language:
 
@@ -55,7 +86,7 @@ Run the appropriate tool based on project language:
 
 If `npm audit` reports High or Critical vulnerabilities, the scan fails.
 
-### 2. Hardcoded Secrets Scan
+### 3. Hardcoded Secrets Scan
 
 Search for potential secrets (API keys, tokens, passwords) hardcoded in source code:
 
@@ -67,7 +98,7 @@ rg -n --include="*.ts" --include="*.js" --include="*.py" \
   src/ || true
 ```
 
-This is a **warning-only** scan ó it does NOT fail the gate. It reports findings for manual review.
+This is a **warning-only** scan ÔøΩ it does NOT fail the gate. It reports findings for manual review.
 
 Findings are reported with a **Confidence** level to help prioritize review:
 
@@ -77,7 +108,7 @@ Findings are reported with a **Confidence** level to help prioritize review:
 | **Medium** | Variable names or assignments suggesting secrets | `api_key=`, `password =`, `SECRET_TOKEN=` |
 | **Low** | Generic patterns or strings in comments | `password` in a comment, `secret` in a log message |
 
-### 3. Security Anti-Pattern Scan
+### 4. Security Anti-Pattern Scan
 
 Check for common security anti-patterns in the modified code:
 
@@ -93,7 +124,7 @@ Check for common security anti-patterns in the modified code:
 
 For each finding, report the file and line number.
 
-### 4. Supply Chain Integrity Check
+### 5. Supply Chain Integrity Check
 
 Run the supply chain scanner to check for:
 - **Install Script Detection**: Packages with `hasInstallScript: true` can run arbitrary code during install
@@ -110,7 +141,7 @@ Run the supply chain scanner to check for:
 If install scripts are detected (HIGH severity), the scan fails.
 All other findings are warnings.
 
-### 5. Software Bill of Materials (SBOM) Generation
+### 6. Software Bill of Materials (SBOM) Generation
 
 After the dependency scan passes (or as a non-blocking step), generate an SBOM for the project:
 
@@ -124,12 +155,12 @@ The SBOM is stored at `.opencode/sboms/<pipeline-id>-sbom.json` and contains:
 - Version numbers and license information
 - Dependency relationships
 
-This enables retrospective vulnerability analysis ó if a CVE is disclosed tomorrow,
+This enables retrospective vulnerability analysis ÔøΩ if a CVE is disclosed tomorrow,
 you can check which pipelines were affected by scanning the SBOM archive.
 
 **Non-blocking**: If `@cyclonedx/bom` is not installed, log a warning and proceed.
 
-### 6. Git History Secret Scan
+### 7. Git History Secret Scan
 
 Scan the git commit history for secrets that may have been committed and later removed.
 Secrets in git history persist even after removal from the current file contents:
@@ -146,28 +177,30 @@ git log -p --all -- ':(exclude)package-lock.json' ':(exclude)pnpm-lock.yaml' ':(
 
 ## Scan Workflow
 
-1. **Load `semgrep-scan` skill** ó The Orchestrator loads the `semgrep-scan` skill automatically (no user prompt)
-2. **Run Semgrep SAST Scan (MANDATORY)** ó Execute `semgrep --config p/security-audit --error .` ó if it fails, block the pipeline
-3. **Detect project type** ó Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
-4. **Check for lockfile** ó Verify presence of `package-lock.json`, `yarn.lock`, `requirements.txt`, `Cargo.lock`, etc. If missing, emit a warning but do NOT fail.
-5. **Run dependency scan** ó Execute the appropriate command (if lockfile or package manager config is found; otherwise skip with a warning)
-6. **Parse results** ó Extract vulnerability IDs, severity, package, and description
-7. **Run secrets scan** ó Grep for hardcoded secrets
-8. **Run anti-pattern scan** ó Grep for security anti-patterns in the changed files
-9. **Generate SBOM (NEW)**
-10. **Run supply chain integrity check (NEW)**
-11. **Run git history secret scan (NEW)**
-12. **Report findings** ó Use the standard report format below
+1. **Load `semgrep-scan` skill** ‚Äî The Orchestrator loads the `semgrep-scan` skill automatically (no user prompt)
+2. **Run Semgrep SAST Scan (MANDATORY)** ‚Äî Execute `semgrep --config p/security-audit --error .` ‚Äî if it fails, block the pipeline
+3. **Load `gitleaks-scan` skill** ‚Äî The Orchestrator loads the `gitleaks-scan` skill automatically (no user prompt)
+4. **Run Gitleaks Secret Scan (MANDATORY)** ‚Äî Run gitleaks via podman container on the repo ‚Äî if exit code 1 (leaks detected), block the pipeline
+5. **Detect project type** ‚Äî Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
+6. **Check for lockfile** ‚Äî Verify presence of `package-lock.json`, `yarn.lock`, `requirements.txt`, `Cargo.lock`, etc. If missing, emit a warning but do NOT fail.
+7. **Run dependency scan** ‚Äî Execute the appropriate command (if lockfile or package manager config is found; otherwise skip with a warning)
+8. **Parse results** ‚Äî Extract vulnerability IDs, severity, package, and description
+9. **Run secrets scan** ‚Äî Grep for hardcoded secrets
+10. **Run anti-pattern scan** ‚Äî Grep for security anti-patterns in the changed files
+11. **Generate SBOM**
+12. **Run supply chain integrity check**
+13. **Run git history secret scan**
+14. **Report findings** ‚Äî Use the standard report format below
 
 ### Lockfile Warnings
 
 If the project has no lockfile or package manager configuration, emit the following non-blocking warning:
 
-> ?? **No lockfile found** ó dependency scan skipped. Consider committing `package-lock.json` or equivalent to enable reproducible and auditable builds.
+> ?? **No lockfile found** ÔøΩ dependency scan skipped. Consider committing `package-lock.json` or equivalent to enable reproducible and auditable builds.
 
 If the package manager config exists but the lockfile is missing, emit:
 
-> ?? **Lockfile missing** ó `package.json` found but `package-lock.json` is absent. Run `npm install` to generate it. Dependency scan will proceed without lockfile verification.
+> ?? **Lockfile missing** ÔøΩ `package.json` found but `package-lock.json` is absent. Run `npm install` to generate it. Dependency scan will proceed without lockfile verification.
 
 ## Report Format
 
@@ -213,9 +246,9 @@ If the package manager config exists but the lockfile is missing, emit:
 |------|--------|---------|------------|
 
 ### Verdict
-**? PASS** ó No High/Critical vulnerabilities found
-**? FAIL** ó Semgrep findings or High/Critical vulnerabilities detected ó block pipeline
-**?? WARN** ó Secrets or anti-patterns found (non-blocking, review recommended)
+**? PASS** ÔøΩ No High/Critical vulnerabilities found
+**? FAIL** ÔøΩ Semgrep findings or High/Critical vulnerabilities detected ÔøΩ block pipeline
+**?? WARN** ÔøΩ Secrets or anti-patterns found (non-blocking, review recommended)
 ```
 
 ## Auto-Remediation Suggestions
@@ -224,7 +257,7 @@ When issues are found, the following commands and practices can help resolve the
 
 | Issue Type | Suggestion |
 |------------|------------|
-| **Semgrep SAST findings** | Review each finding and fix the root cause (validate input, use parameterized queries, etc.) ó re-run `semgrep --config p/security-audit --error .` to confirm |
+| **Semgrep SAST findings** | Review each finding and fix the root cause (validate input, use parameterized queries, etc.) ÔøΩ re-run `semgrep --config p/security-audit --error .` to confirm |
 | **Dependency vulnerabilities** | Run `npm audit fix` (Node.js), `pip audit --fix` (Python), `cargo audit fix` (Rust), or update the vulnerable package manually. |
 | **Hardcoded secrets** | Move secrets to environment variables (e.g., `process.env.API_KEY`), a `.env` file (ensure it is `.gitignore`d), or a secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault). |
 | **`eval()` usage** | Replace with `JSON.parse()`, `Function()` constructor, or a proper parser. Avoid dynamic code evaluation entirely. |
@@ -239,42 +272,52 @@ When issues are found, the following commands and practices can help resolve the
 | **Secrets in git history** | Use `git filter-branch` or `bfg-repo-cleaner` to remove secrets from history. Rotate any exposed keys immediately. |
 | **Deprecated packages** | Replace with the recommended alternatives listed in the report. |
 
-Remediation is **not** performed automatically by the scan ó these suggestions are provided for the Orchestrator or developer to act upon.
+Remediation is **not** performed automatically by the scan ÔøΩ these suggestions are provided for the Orchestrator or developer to act upon.
 
 ## Integration with Pipeline (Automatic)
 
-The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate as a mandatory sub-step**:
+The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate and Gitleaks secret scan gate as mandatory sub-steps**:
 
 ```
-Build Gate ? Lint Gate ? Code Quality Gate ? SECURITY SCAN ? QA
-                                                  ¶
+Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
+                                                  |
                                            +-------------+
-                                           ? SEMGREP SAST ?
-                                           ¶  (auto-loaded) ¶
+                                           |   SEMGREP   |
+                                           |   SAST GATE |
+                                           | (auto-loaded)|
                                            +-------------+
-                                                  ¶
+                                                  |
                                            +-------------+
-                                           ? DEPENDENCY  ?
-                                           ¶  VULN SCAN   ¶
+                                           |   GITLEAKS  |
+                                           |   SECRET    |
+                                           |   SCAN GATE |
+                                           | (auto-loaded)|
                                            +-------------+
-                                                  ¶
+                                                  |
                                            +-------------+
-                                           ? SECRETS &   ?
-                                           ¶ ANTI-PATTERN ¶
+                                           | DEPENDENCY  |
+                                           | VULN SCAN   |
                                            +-------------+
-                                                  ¶
+                                                  |
                                            +-------------+
-                                           ? SBOM +      ?
-                                           ¶ SUPPLY CHAIN ¶
+                                           | SECRETS &   |
+                                           | ANTI-PATTERN|
+                                           +-------------+
+                                                  |
+                                           +-------------+
+                                           | SBOM +      |
+                                           | SUPPLY CHAIN|
                                            +-------------+
 ```
 
 **Automatic triggering:**
 1. After Build + Lint + Code Quality gates pass, the Orchestrator loads the `security-scan` skill
-2. The Orchestrator then loads the `semgrep-scan` skill (always ó as a mandatory sub-step)
+2. The Orchestrator then loads the `semgrep-scan` skill (always as a mandatory sub-step)
 3. The Orchestrator runs `semgrep --config p/security-audit --error .`
-4. The Orchestrator then proceeds with dependency scan ? secrets scan ? anti-pattern scan ? SBOM ? supply chain ? git history scan
-5. All findings are combined into a single Security Scan Report
+4. The Orchestrator then loads the `gitleaks-scan` skill (always as a mandatory sub-step)
+5. The Orchestrator runs gitleaks via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest git --source=/src --report-format=json --report-path=- --no-banner --verbose`
+6. The Orchestrator then proceeds with dependency scan -> secrets scan -> anti-pattern scan -> SBOM -> supply chain -> git history scan
+7. All findings are combined into a single Security Scan Report
 
 If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 - The pipeline is **blocked**
@@ -288,10 +331,11 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 
 - ? The Security Scan MUST run after build succeeds
 - ? The `semgrep-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
+- ? The `gitleaks-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
 - ? Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode)
 - ? Dependency vulnerability scans MUST use `--audit-level=high` or equivalent
 - ? Secrets scan MUST be non-blocking (informational only)
-- ? The Security Scan MUST NOT modify any files ó it is read-only
+- ? The Security Scan MUST NOT modify any files ÔøΩ it is read-only
 - ? The Security Scan MUST NOT install additional dependencies
 - ? The Security Scan MUST NOT run on test files or fixture data
 
@@ -300,5 +344,6 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 | Tool | Purpose | Location |
 |------|---------|----------|
 | `semgrep-scan` skill | Deep SAST static analysis (auto-loaded as mandatory sub-scan) | `skills/semgrep-scan/SKILL.md` |
+| `gitleaks-scan` skill | Gitleaks secret scanning (auto-loaded as mandatory sub-scan) | `skills/gitleaks-scan/SKILL.md` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |

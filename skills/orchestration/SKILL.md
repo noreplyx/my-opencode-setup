@@ -23,6 +23,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Verifier Workflow** | `skills/verifier-workflow/SKILL.md` | Decoupled workflow for Verifier |
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
+| **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
 
@@ -111,10 +112,12 @@ The default orchestration workflow follows this sequence:
    │       pattern scan      │
    │  2. ★ Auto-load         │
    │     semgrep-scan skill  │
-   │     → SAST rules (no    │
-   │       user trigger)     │
+   │     → SAST rules        │
+   │  3. ★ Auto-load         │
+   │     gitleaks-scan skill │
+   │     → secret detection  │
    └──────┬──────┘
-          │ (High/Crit vulns or SAST → block pipeline)
+          │ (vulns, SAST, or secrets → block pipeline)
           ▼
 5. QA â”€â”€â–º Test, validate, report results
           â”‚
@@ -336,10 +339,12 @@ Every implementation MUST pass through these mandatory validation gates:
 - After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)
 - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
 - **Additionally, the Orchestrator auto-loads and runs semgrep-scan for SAST analysis** (no user trigger needed)
+- **Orchestrator also auto-loads and runs gitleaks-scan for secret detection** (no user trigger needed)
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
 - SAST findings from semgrep: Critical/High → FAIL the gate; Medium → WARN; Low → INFO
+- Secret findings from gitleaks (exit code 1) → FAIL the gate (block pipeline)
 - The Security Scan MUST NOT modify any files
 
 #### Re-Audit on Dependency Change (NEW)
@@ -369,7 +374,7 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 **Integration with Pipeline:**
 ```
-Build Gate â†’ Lint Gate â†’ Security Scan (security-scan + ★ semgrep-scan) â†’ QA (smoke + security regression) â†’ SECURITY TEST COVERAGE GATE â†’ Acceptance Gate â†’ Verifier
+Build Gate â†’ Lint Gate â†’ Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan) â†’ QA (smoke + security regression) â†’ SECURITY TEST COVERAGE GATE â†’ Acceptance Gate â†’ Verifier
 ```
 
 **Enforcement:**
@@ -1179,7 +1184,7 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` + `semgrep-scan` (auto-loaded) or `security-workflow` | Dependency + SAST scanning (semgrep auto-triggered) |
+| Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` (both auto-loaded) or `security-workflow` | Dependency + SAST + secret scanning (semgrep + gitleaks auto-triggered) |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
@@ -1930,7 +1935,7 @@ When multiple skills are loaded and provide conflicting guidance, use this prior
 ### Conflict Resolution Rules
 1. **Specific overrides general**: `accessibility` overrides `code-philosophy` on UI patterns
 2. **Domain-specific overrides cross-cutting**: `backend-code-philosophy` overrides `code-philosophy` on backend patterns
-3. **Safety-critical overrides convenience**: security-scan + semgrep-scan override code-philosophy on input handling and SAST patterns
+3. **Safety-critical overrides convenience**: security-scan + semgrep-scan + gitleaks-scan override code-philosophy on input handling, SAST patterns, and secret detection
 4. **When equal priority**: Use the skill loaded most recently
 5. **When truly contradictory**: Flag to Orchestrator and ask the user
 
