@@ -24,6 +24,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
 | **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
+| **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning — podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
 
@@ -340,12 +341,77 @@ Every implementation MUST pass through these mandatory validation gates:
 - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
 - **Additionally, the Orchestrator auto-loads and runs semgrep-scan for SAST analysis** (no user trigger needed)
 - **Orchestrator also auto-loads and runs gitleaks-scan for secret detection** (no user trigger needed)
+- **Alternatively**, run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks` — handles podman check, image pull, scan, parsing, and structured JSON report
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
 - SAST findings from semgrep: Critical/High → FAIL the gate; Medium → WARN; Low → INFO
 - Secret findings from gitleaks (exit code 1) → FAIL the gate (block pipeline)
 - The Security Scan MUST NOT modify any files
+
+#### Automated Gitleaks Scan Script (NEW)
+
+The Orchestrator can now run gitleaks via the automated script instead of manually loading and invoking the skill:
+
+```bash
+ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" [options]
+```
+
+**What it does automatically:**
+1. Checks podman availability (exits 2 if missing, with install instructions)
+2. Checks if container image exists locally; pulls it if missing (unless `--no-pull`)
+3. Runs gitleaks in git mode (full history scan) with configurable options
+4. Parses JSON output and classifies findings by severity (critical/high/medium/low)
+5. Returns structured JSON report to stdout for machine consumption
+6. Exits 0 (no leaks), 1 (leaks detected), or 2 (tool error)
+
+**Options:**
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--workspace=<path>` | `$PWD` | Workspace root to scan |
+| `--mode=<mode>` | `git` | Scan mode: git, dir, or stdin |
+| `--verbose` | off | Enable verbose gitleaks output |
+| `--report-format=<fmt>` | `json` | Output format: json, csv, sarif, junit |
+| `--no-banner` | true | Suppress gitleaks banner |
+| `--baseline=<path>` | none | Baseline for incremental scanning |
+| `--config=<path>` | none | Custom .gitleaks.toml config |
+| `--ignore=<path>` | none | .gitleaksignore file path |
+| `--max-target-mb=<N>` | 50 | Max target file size in MB |
+| `--fail-on-leaks` | true | Exit 1 if leaks found (default) |
+| `--no-fail-on-leaks` | false | Exit 0 even if leaks found (informational) |
+| `--timeout=<N>` | 300 | Timeout in seconds |
+| `--image=<name>` | docker.io/zricethezav/gitleaks:latest | Container image |
+| `--no-pull` | false | Skip pulling the container image |
+| `--markdown` | false | Output human-readable markdown report |
+
+**Pipeline integration:**
+```bash
+# Standard call in Security Scan gate:
+result=$(ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose 2>&1)
+exit_code=$?
+if [ $exit_code -eq 1 ]; then
+  echo "❌ Gitleaks secret scan FAILED — pipeline blocked"
+  echo "$result" | jq .findings
+elif [ $exit_code -eq 2 ] || [ $exit_code -eq 255 ]; then
+  echo "⚠️ Gitleaks tool error — review and proceed"
+fi
+```
+
+**Exit code mapping:**
+| Code | Meaning | Pipeline Action |
+|------|---------|-----------------|
+| 0 | No leaks | ✅ PASS — proceed to next scan |
+| 1 | Leaks detected | ❌ FAIL — block pipeline, report findings |
+| 2 | Tool error (podman missing, image pull failed) | ⚠️ WARN — log, proceed if gitleaks unavailable |
+| 124 | Scan timeout | ⚠️ WARN — increase --timeout or reduce scan scope |
+| 255 | Gitleaks crash/error | ⚠️ WARN — log error, proceed if gitleaks unavailable |
+
+**Hard Rules:**
+- ✅ The Orchestrator SHOULD use `pipeline-gitleaks.ts` instead of manually running podman commands
+- ✅ The script MUST be called with `--fail-on-leaks` (default) to properly block on secrets
+- ✅ The output MUST be parsed to extract findings for the combined Security Scan report
+- ✅ NEVER modify project files during scanning — the script is read-only by design
+
 
 #### Re-Audit on Dependency Change (NEW)
 If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` during the pipeline:

@@ -48,7 +48,8 @@ const TOOLS: ToolDef[] = [
   { name: 'eslint',        required: false, binaryName: 'eslint' },
   { name: 'prettier',      required: false, binaryName: 'prettier' },
   { name: 'playwright',    required: false, binaryName: 'playwright' },
-  { name: 'semgrep',       required: false, binaryName: 'semgrep' },
+  { name: "semgrep",       required: false, binaryName: "semgrep" },
+  { name: "podman",        required: false, binaryName: "podman" },
 ];
 
 interface ToolCheckResult {
@@ -347,7 +348,7 @@ Modes:
 
 Tools checked:
   Required: ts-node, typescript (tsc), node
-  Optional: npx, npm, eslint, prettier, playwright, semgrep
+  Optional: npx, npm, eslint, prettier, playwright, semgrep, podman
 
 Exit codes:
    0 = all required checks passed
