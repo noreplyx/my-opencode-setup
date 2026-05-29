@@ -1,0 +1,12 @@
+/src/src/main/java/com/example/DataProcessor.java:14:	MethodArgumentCouldBeFinal:	Parameter 'name' is not assigned and could be declared final
+/src/src/main/java/com/example/DataProcessor.java:19:	MethodNamingConventions:	The instance method name 'ProcessData' doesn't match '[a-z][a-zA-Z0-9]*'
+/src/src/main/java/com/example/DataProcessor.java:19:	MethodArgumentCouldBeFinal:	Parameter 'data' is not assigned and could be declared final
+/src/src/main/java/com/example/DataProcessor.java:26:	LocalVariableCouldBeFinal:	Local variable 'item' could be declared final
+/src/src/main/java/com/example/DataProcessor.java:31:	EmptyCatchBlock:	Avoid empty catch blocks
+/src/src/main/java/com/example/DataProcessor.java:31:	AvoidCatchingGenericException:	Avoid catching Exception in try-catch block
+/src/src/main/java/com/example/DataProcessor.java:39:	ReturnEmptyCollectionRatherThanNull:	Return an empty collection rather than null.
+/src/src/main/java/com/example/DataProcessor.java:50:	MethodArgumentCouldBeFinal:	Parameter 'value' is not assigned and could be declared final
+/src/src/main/java/com/example/DataProcessor.java:51:	UnnecessaryConversionTemporary:	Avoid unnecessary temporaries when converting primitives to Strings
+/src/src/main/java/com/example/DataProcessor.java:55:	MethodArgumentCouldBeFinal:	Parameter 'msg' is not assigned and could be declared final
+/src/src/main/java/com/example/DataProcessor.java:60:	MethodArgumentCouldBeFinal:	Parameter 'path' is not assigned and could be declared final
+/src/src/main/java/com/example/DataProcessor.java:61:	LocalVariableCouldBeFinal:	Local variable 'f' could be declared final

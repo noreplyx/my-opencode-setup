@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-1-without_skill",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Agent uses podman to run PMD CPD",
+      "passed": true,
+      "evidence": "Agent summary: 'podman run --rm -v ... docker.io/pmdcode/pmd:latest cpd ...'"
+    },
+    {
+      "text": "Agent passes --minimum-tokens 50",
+      "passed": true,
+      "evidence": "Agent reports '--minimum-tokens 50' in command."
+    },
+    {
+      "text": "Agent correctly uses PMD 7.x CPD flag --dir",
+      "passed": true,
+      "evidence": "Agent reports '--dir /src' in command."
+    },
+    {
+      "text": "CPD report file is generated and non-empty",
+      "passed": true,
+      "evidence": "cpd-report.txt exists, 43 lines with duplication data."
+    },
+    {
+      "text": "Duplicate code blocks between UserService and ProfileService detected",
+      "passed": true,
+      "evidence": "Report line 2: ProfileService.java:14, line 3: UserService.java:14 — both in group 1."
+    },
+    {
+      "text": "Report mentions at least 2 duplication groups",
+      "passed": true,
+      "evidence": "2 groups found: 16 lines (101 tokens) and 14 lines (99 tokens)."
+    }
+  ]
+}

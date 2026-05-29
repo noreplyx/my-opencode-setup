@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "skill_name": "pmd-scan",
+    "timestamp": "2026-05-29T15:30:00Z",
+    "evals_run": ["java-code-quality-scan", "cpd-duplicate-code-detection", "custom-ruleset-scan"]
+  },
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": "100.0%",
+      "total_assertions": 19,
+      "passed": 19,
+      "failed": 0
+    },
+    "without_skill": {
+      "pass_rate": "94.7%",
+      "total_assertions": 19,
+      "passed": 18,
+      "failed": 1
+    }
+  },
+  "delta": {
+    "pass_rate": "+5.3%",
+    "notes": "With-skill agent correctly detected and adapted to PMD 7.x ruleset format changes (catching legacy ruleset path issues). Baseline agent missed this."
+  },
+  "per_eval": [
+    {
+      "eval_id": 0,
+      "eval_name": "java-code-quality-scan",
+      "with_skill": {"passed": 6, "total": 6, "pass_rate": "100%"},
+      "without_skill": {"passed": 6, "total": 6, "pass_rate": "100%"},
+      "notes": "Both agents produced equivalent results: 11 violations found, text and XML reports generated"
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "cpd-duplicate-code-detection",
+      "with_skill": {"passed": 6, "total": 6, "pass_rate": "100%"},
+      "without_skill": {"passed": 6, "total": 6, "pass_rate": "100%"},
+      "notes": "Both agents correctly used PMD 7.x --dir flag and found 2 duplication groups. With-skill agent initially documented legacy --files flags but adapted correctly at runtime"
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "custom-ruleset-scan",
+      "with_skill": {"passed": 7, "total": 7, "pass_rate": "100%"},
+      "without_skill": {"passed": 6, "total": 6, "pass_rate": "85.7%"},
+      "notes": "With-skill agent detected legacy PMD 6.x ruleset paths and adapted to PMD 7.x format. Baseline agent did not detect the path incompatibility."
+    }
+  ],
+  "notes": [
+    "Key finding: PMD 7.x changed ruleset paths from rulesets/java/* -> category/java/*. Skill was updated post-test to document this.",
+    "Key finding: PMD 7.x CPD changed --files to --dir, and --file to --report-file. Skill was updated post-test.",
+    "Both with-skill and baseline agents ran the containerized PMD successfully without local install."
+  ]
+}

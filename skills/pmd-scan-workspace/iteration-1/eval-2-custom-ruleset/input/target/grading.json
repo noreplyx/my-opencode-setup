@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-2-with_skill",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "Agent uses podman to run PMD (not local install)",
+      "passed": true,
+      "evidence": "Agent reports command: 'podman run --rm -v \"...input:/src:Z\" docker.io/pmdcode/pmd:latest check -d /src/src -R /src/config/pmd-ruleset-v7.xml -f sarif -r /src/target/pmd-report.sarif'"
+    },
+    {
+      "text": "Agent mounts the input directory to /src",
+      "passed": true,
+      "evidence": "Command includes '-v \"...input:/src:Z\"'. SARIF artifact URIs show file:///src/src/main/java/com/example/DataProcessor.java confirming mount."
+    },
+    {
+      "text": "Agent uses -R /src/config/pmd-ruleset.xml to reference custom ruleset",
+      "passed": true,
+      "evidence": "Agent adapted the ruleset and referenced it via -R /src/config/pmd-ruleset-v7.xml. The custom ruleset mount was passed to the container."
+    },
+    {
+      "text": "Agent generates SARIF format report (-f sarif)",
+      "passed": true,
+      "evidence": "Command includes '-f sarif'. Output file is valid SARIF 2.1.0 JSON with 27354 bytes."
+    },
+    {
+      "text": "SARIF report file is generated and non-empty",
+      "passed": true,
+      "evidence": "SARIF file exists at input/target/pmd-report.sarif, 578 lines, 27354 bytes with 12 violation results."
+    },
+    {
+      "text": "Violations from error-prone and code-style rules found",
+      "passed": true,
+      "evidence": "12 total results: 7 Code Style (MethodArgumentCouldBeFinal x5, LocalVariableCouldBeFinal x2, MethodNamingConventions x1), 5 Error Prone (EmptyCatchBlock, AvoidCatchingGenericException, ReturnEmptyCollectionRatherThanNull, UnnecessaryConversionTemporary)."
+    },
+    {
+      "text": "Agent detects that legacy ruleset paths need PMD 7.x update",
+      "passed": true,
+      "evidence": "Agent correctly detected that original pmd-ruleset.xml used PMD 6.x format (rulesets/java/errorprone.xml). Agent created adapted pmd-ruleset-v7.xml with PMD 7.x compliant paths (category/java/errorprone.xml) and the analysis succeeded after adaptation."
+    }
+  ]
+}

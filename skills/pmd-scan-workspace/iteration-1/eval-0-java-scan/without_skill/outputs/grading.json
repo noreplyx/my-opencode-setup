@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-0-without_skill",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Agent uses podman to run the container",
+      "passed": true,
+      "evidence": "Agent reports commands starting with 'podman run --rm -v ... docker.io/pmdcode/pmd:latest check'."
+    },
+    {
+      "text": "Agent correctly passes -d /src for scanning",
+      "passed": true,
+      "evidence": "Both report files show violation paths prefixed with '/src/main/java/com/example/', confirming scan target was /src."
+    },
+    {
+      "text": "Agent uses -R rulesets/java/quickstart.xml",
+      "passed": true,
+      "evidence": "11 violations found span UnusedPrivateField, EmptyCatchBlock, UnusedLocalVariable, EmptyControlStatement, UnusedFormalParameter, UnusedPrivateMethod — all quickstart rules."
+    },
+    {
+      "text": "Agent generates both text and XML report files",
+      "passed": true,
+      "evidence": "Both output files exist: pmd-report.txt (1254 bytes) and pmd-report.xml (4483 bytes)."
+    },
+    {
+      "text": "Report output file exists at the expected path",
+      "passed": true,
+      "evidence": "Files confirmed at without_skill/outputs/pmd-report.txt (1254 bytes) and pmd-report.xml (4483 bytes)."
+    },
+    {
+      "text": "Violations are detected (exit code 4 or report shows violations)",
+      "passed": true,
+      "evidence": "Reports contain 11 distinct violations across multiple categories."
+    }
+  ]
+}

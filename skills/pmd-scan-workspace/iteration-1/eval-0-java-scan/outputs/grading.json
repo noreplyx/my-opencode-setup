@@ -1,0 +1,36 @@
+{
+  "run_id": "eval-0-with_skill",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "Agent uses podman to run the container",
+      "passed": true,
+      "evidence": "Agent reports command: 'podman run --rm -v \"...input/src:/src:Z\" docker.io/pmdcode/pmd:latest check -d /src -R rulesets/java/quickstart.xml -f text -r /output/pmd-report.txt' — uses podman, not local PMD."
+    },
+    {
+      "text": "Agent correctly passes -d /src for scanning",
+      "passed": true,
+      "evidence": "Command uses '-d /src'. Report file paths show /src/main/java/com/example/OrderProcessor.java confirming scan target was /src."
+    },
+    {
+      "text": "Agent uses -R rulesets/java/quickstart.xml",
+      "passed": true,
+      "evidence": "Command includes '-R rulesets/java/quickstart.xml'. Violations found span quickstart rules: UnusedPrivateField, EmptyCatchBlock, UnusedLocalVariable, EmptyControlStatement, UnusedFormalParameter, UnusedPrivateMethod."
+    },
+    {
+      "text": "Agent generates both text and XML report files",
+      "passed": true,
+      "evidence": "Both pmd-report.txt (1254 bytes) and pmd-report.xml (4483 bytes) exist and are non-empty at the outputs/ directory."
+    },
+    {
+      "text": "Report output file exists at the expected path",
+      "passed": true,
+      "evidence": "Files confirmed at outputs/pmd-report.txt (1254 bytes) and outputs/pmd-report.xml (4483 bytes)."
+    },
+    {
+      "text": "Violations are detected (exit code 4 or report shows violations)",
+      "passed": true,
+      "evidence": "Exit code was 4 (violations found). Report shows 11 distinct violations across Best Practices (7), Error Prone (2), and Code Style (1) categories."
+    }
+  ]
+}

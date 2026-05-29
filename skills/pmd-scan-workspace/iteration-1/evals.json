@@ -1,0 +1,35 @@
+{
+  "skill_name": "pmd-scan",
+  "evals": [
+    {
+      "id": 0,
+      "name": "java-code-quality-scan",
+      "prompt": "I have a Java project at /home/oat/.config/opencode/skills/pmd-scan-workspace/iteration-1/eval-0-java-scan/input/src. Please run PMD on it using the PMD quickstart ruleset for Java. I want to find all code quality issues like empty catch blocks, unused variables, unused methods, long methods, and return issues. Mount the project directory to /src in the container and run with podman. Use the docker.io/pmdcode/pmd:latest image. Generate both text and XML output reports.",
+      "expected_output": "PMD scan with podman producing text and XML reports showing violations (empty catch blocks, unused variables, unused methods, empty control statements)",
+      "files": [
+        "eval-0-java-scan/input/src/main/java/com/example/OrderProcessor.java",
+        "eval-0-java-scan/input/src/main/java/com/example/OrderItem.java"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "cpd-duplicate-code-detection",
+      "prompt": "I have Java files in /home/oat/.config/opencode/skills/pmd-scan-workspace/iteration-1/eval-1-cpd-scan/input/src with duplicated code patterns. Run PMD's CPD (Copy/Paste Detector) to find duplicate code blocks across these files. Use the docker.io/pmdcode/pmd:latest container image via podman. Mount the input directory to /src. Use minimum 50 tokens for detection and output in text format. I suspect the formatUserName/formatDisplayName and formatAddress/formatLocation methods are very similar.",
+      "expected_output": "CPD report showing 2+ duplication groups between UserService.java and ProfileService.java, including the title-casing loop duplication (16 lines, ~100 tokens)",
+      "files": [
+        "eval-1-cpd-scan/input/src/main/java/com/example/UserService.java",
+        "eval-1-cpd-scan/input/src/main/java/com/example/ProfileService.java"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "custom-ruleset-scan",
+      "prompt": "I have a custom PMD ruleset file at /home/oat/.config/opencode/skills/pmd-scan-workspace/iteration-1/eval-2-custom-ruleset/input/config/pmd-ruleset.xml and Java code at .../input/src. Run PMD using this custom ruleset via the docker.io/pmdcode/pmd:latest container image with podman. Mount the input directory to /src. Use the custom ruleset configuration. Generate a SARIF format report saved to /src/target/pmd-report.sarif. The custom ruleset focuses on error-prone and code style rules only.",
+      "expected_output": "PMD scan using custom ruleset producing a SARIF report with violations from error-prone and code-style categories (empty catch blocks, method naming, unnecessary conversion, etc.)",
+      "files": [
+        "eval-2-custom-ruleset/input/config/pmd-ruleset.xml",
+        "eval-2-custom-ruleset/input/src/main/java/com/example/DataProcessor.java"
+      ]
+    }
+  ]
+}

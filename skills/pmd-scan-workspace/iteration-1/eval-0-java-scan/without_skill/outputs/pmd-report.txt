@@ -1,0 +1,11 @@
+/src/main/java/com/example/OrderProcessor.java:12:	UnusedPrivateField:	Avoid unused private fields such as 'items'.
+/src/main/java/com/example/OrderProcessor.java:15:	UnusedPrivateField:	Avoid unused private fields such as 'unusedConfig'.
+/src/main/java/com/example/OrderProcessor.java:28:	EmptyCatchBlock:	Avoid empty catch blocks
+/src/main/java/com/example/OrderProcessor.java:33:	UnusedLocalVariable:	Avoid unused local variables such as 'temp'.
+/src/main/java/com/example/OrderProcessor.java:57:	EmptyCatchBlock:	Avoid empty catch blocks
+/src/main/java/com/example/OrderProcessor.java:65:	UnusedLocalVariable:	Avoid unused local variables such as 'summary'.
+/src/main/java/com/example/OrderProcessor.java:76:	EmptyControlStatement:	Empty if statement
+/src/main/java/com/example/OrderProcessor.java:81:	UnusedFormalParameter:	Avoid unused method parameters such as 'orderId'.
+/src/main/java/com/example/OrderProcessor.java:81:	UnusedFormalParameter:	Avoid unused method parameters such as 'total'.
+/src/main/java/com/example/OrderProcessor.java:94:	UnusedPrivateMethod:	Avoid unused private methods such as 'calculateDiscount()'.
+/src/main/java/com/example/OrderProcessor.java:95:	UnusedLocalVariable:	Avoid unused local variables such as 'discount'.

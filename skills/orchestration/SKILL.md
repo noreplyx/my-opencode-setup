@@ -24,6 +24,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
 | **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
+| **PMD Code Quality Scan** | skills/pmd-scan/SKILL.md | MANDATORY — auto-loaded code quality analysis after Lint Gate. Detects unused vars, empty catch blocks, code style issues, duplicate code (CPD). Runs via podman (no local install needed). Violations block the pipeline. |
 | **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning — podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
@@ -55,7 +56,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
-| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No |
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No | MANDATORY — loads `pmd-scan` for code quality analysis after Lint Gate. Violations block the pipeline.
 | **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No | No |
 | **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes â€” document verified code | Yes (accuracy check) | Yes |
 | **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) | Yes |
@@ -103,6 +104,19 @@ The default orchestration workflow follows this sequence:
    â”‚   tsc --noEmit, etc.)        â”‚
    â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
           â”‚ (lint fails â†’ Implementor fixes, re-lints)
+          ▼
+   ┌──────┴──────┐
+   ▼ CODE        ▼ (MANDATORY)
+   │  QUALITY           │
+   │  GATE              │
+   │  1. Load pmd-scan  │
+   │     skill          │
+   │  2. Run PMD check  │
+   │     (rulesets)     │
+   │  3. Run CPD check  │
+   │     (duplicates)   │
+   └──────┬──────┘
+          │ (violations → FAIL the gate; block pipeline)
           ▼
    ┌──────┴──────┐
    ▼ SECURITY    ▼ (MANDATORY)
@@ -306,6 +320,7 @@ Every implementation MUST pass through these mandatory validation gates:
 |------------------|---------------|---------------------------------------------------------|-------------------------------------------------|
 | **Build Gate**   | Implementor   | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Lint Gate**    | Implementor   | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
+| **Code Quality** | Orchestrator | PMD static analysis + CPD duplicate detection for ALL projects via podman (auto-detects Java/Apex/JS/Kotlin/Swift/PLSQL). Loads `pmd-scan` skill. Loads after Lint Gate, before Security Scan. | Violations → FAIL the gate (block pipeline) |
 | **Security Scan**| Orchestrator  | npm audit + secrets + anti-pattern + **auto semgrep SAST** | Report to user; may fix, except, or block       |
 | **Smoke Test**   | QA            | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer      |
 | **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover â‰¥ 80% of detected security patterns | Coverage < 50% â†’ cycle back to QA; 50-79% â†’ warn and proceed with Verifier flagging
@@ -341,6 +356,7 @@ Every implementation MUST pass through these mandatory validation gates:
 - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
 - **Additionally, the Orchestrator auto-loads and runs semgrep-scan for SAST analysis** (no user trigger needed)
 - **Orchestrator also auto-loads and runs gitleaks-scan for secret detection** (no user trigger needed)
+- **Additionally, the Orchestrator auto-loads and runs pmd-scan for code quality analysis** — detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Violations FAIL the pipeline gate.
 - **Alternatively**, run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks` — handles podman check, image pull, scan, parsing, and structured JSON report
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
@@ -440,7 +456,7 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 **Integration with Pipeline:**
 ```
-Build Gate â†’ Lint Gate â†’ Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan) â†’ QA (smoke + security regression) â†’ SECURITY TEST COVERAGE GATE â†’ Acceptance Gate â†’ Verifier
+Build Gate â†’ Lint Gate â†’ Code Quality Gate (pmd-scan ⚡ MANDATORY) → Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan) â†’ QA (smoke + security regression) â†’ SECURITY TEST COVERAGE GATE â†’ Acceptance Gate â†’ Verifier
 ```
 
 **Enforcement:**
@@ -1251,6 +1267,7 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
 | Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` (both auto-loaded) or `security-workflow` | Dependency + SAST + secret scanning (semgrep + gitleaks auto-triggered) |
+| Code Quality Gate | `pmd-scan` | MANDATORY — Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL. Detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Loaded by Orchestrator after Lint Gate, before Security Scan. Violations block the pipeline. |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
@@ -2549,17 +2566,17 @@ The Integrator loads the `integrator` skill which provides full guidance on dete
 
 ### Updated Pipeline Table
 
-| Task Type | Pipeline | Includes Documentor? | Includes Integrator? | Includes Acceptance Gate? |
-|-----------|----------|---------------------|---------------------|--------------------------|
-| **New Feature (known)** | Standard | âœ… Yes | âœ… If parallel dispatch | âœ… Yes |
-| **New Feature (unknown)** | Full | âœ… Yes | âœ… If parallel dispatch | âœ… Yes |
-| **Bug Fix (known cause)** | Fixer â†’ QA â†’ Verifier â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
-| **Bug Fix (unknown cause)** | Finder â†’ Fixer â†’ QA â†’ Verifier â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
-| **Research** | Finder only | âŒ No | âŒ No | âŒ No |
-| **Refactor** | PlanDescriber â†’ Implementor â†’ Security (incl. semgrep) â†’ QA â†’ Verifier â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
-| **Config Change** | Implementor â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
-| **Security Fix** | Implementor â†’ Security Scan (with semgrep) â†’ QA â†’ Verifier â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
-| **UI Bug** | Browser Tester â†’ Fixer â†’ QA â†’ Verifier â†’ Documentor | âœ… Yes | âŒ No | âŒ No |
+| Task Type | Pipeline | Includes Code Quality? | Includes Documentor? | Includes Integrator? | Includes Acceptance Gate? |
+|-----------|----------|----------------------|---------------------|---------------------|--------------------------|
+| **New Feature (known)** | Standard | ✅ Always | âœ… Yes | âœ… If parallel dispatch | âœ… Yes |
+| **New Feature (unknown)** | Full | ✅ Always | âœ… Yes | âœ… If parallel dispatch | âœ… Yes |
+| **Bug Fix (known cause)** | Fixer â†’ QA â†’ Verifier â†’ Documentor | ❌ No | âœ… Yes | âŒ No | âŒ No |
+| **Bug Fix (unknown cause)** | Finder â†’ Fixer â†’ QA â†’ Verifier â†’ Documentor | ❌ No | âœ… Yes | âŒ No | âŒ No |
+| **Research** | Finder only | ❌ No | âŒ No | âŒ No | âŒ No |
+| **Refactor** | PlanDescriber â†’ Implementor â†’ Security (incl. semgrep) â†’ QA â†’ Verifier â†’ Documentor | ✅ Always | âœ… Yes | âŒ No | âŒ No |
+| **Config Change** | Implementor â†’ Documentor | ❌ No | âœ… Yes | âŒ No | âŒ No |
+| **Security Fix** | Implementor â†’ Security Scan (with semgrep) â†’ QA â†’ Verifier â†’ Documentor | ❌ No | âœ… Yes | âŒ No | âŒ No |
+| **UI Bug** | Browser Tester â†’ Fixer â†’ QA â†’ Verifier â†’ Documentor | ❌ No | âœ… Yes | âŒ No | âŒ No |
 
 ---
 
