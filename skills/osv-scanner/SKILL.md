@@ -24,7 +24,7 @@ OSV-Scanner connects your project's list of dependencies to the [OSV.dev](https:
 | Operation | Command |
 |-----------|---------|
 | **Quick source scan** | `osv-scanner-docker scan source -r .` |
-| **Quick container scan** | `osv-scanner-docker scan image alpine:latest` |
+| **Quick container scan** | See "Container Image Scanning" section below for two methods (archive or socket) |
 | **JSON output** | `osv-scanner-docker --format json -L ./package-lock.json` |
 | **Shell wrapper** | Source `scripts/osv-scanner-wrapper.sh` then run `osv-scanner-docker ...` |
 | **First-time setup** | `podman pull ghcr.io/google/osv-scanner:latest` |
@@ -44,10 +44,10 @@ podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner:latest \
 podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner:latest \
   scan source --lockfile=/src/package-lock.json
 
-# Scan a container image (uses docker save under the hood via Podman compatibility)
-podman run --rm -v "${PWD}:/src:Z" \
-  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z \
-  ghcr.io/google/osv-scanner:latest scan image alpine:latest
+# Scan a container image (use archive method — no socket needed)
+podman save --format=docker-archive alpine:latest -o /tmp/alpine.tar && \
+podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
+  ghcr.io/google/osv-scanner:latest scan image --archive /tmp/alpine.tar
 ```
 
 ### Shell Wrapper (Recommended)
@@ -56,11 +56,11 @@ Source the included wrapper to avoid repeating the Podman incantation:
 
 ```bash
 source skills/osv-scanner/scripts/osv-scanner-wrapper.sh
-# Now use like native osv-scanner:
+# Now use like native osv-scanner (for source scanning):
 osv-scanner-docker scan source -r .
 osv-scanner-docker --format json -L ./package-lock.json
-osv-scanner-docker scan image alpine:latest
 osv-scanner-docker --licenses="MIT,Apache-2.0" .
+# For container image scanning, see "Container Image Scanning" section below
 ```
 
 Add to `~/.zshrc` or `~/.bashrc` for persistence:
@@ -113,8 +113,8 @@ Triggers **automatically** during every pipeline Security Scan gate as the depen
 | **Source directory** | `osv-scanner-docker scan source -r .` | Auto-detect all lockfiles |
 | **Specific lockfile** | `osv-scanner-docker scan source -L ./package-lock.json` | Single lockfile scan |
 | **Multiple lockfiles** | `osv-scanner-docker scan source -L ./Cargo.lock -L ./go.mod` | Multi-ecosystem projects |
-| **Container image** | `osv-scanner-docker scan image alpine:latest` | Container vulnerability scan |
-| **Exported image** | `osv-scanner-docker scan image --archive ./img.tar` | Pre-exported image archive |
+| **Container image** | (requires raw `podman run` — see below) | Container vulnerability scan |
+| **Exported image** | (requires raw `podman run` — see below) | Pre-exported image archive |
 | **Git repo** | (auto-detected when scanning source) | C/C++ submodules + vendored code |
 
 Detect the project type:
@@ -157,27 +157,31 @@ osv-scanner-docker scan source -r --format json --output-file /src/results.json 
 
 #### Container Image Scanning
 
-> **Note**: Container image scanning requires either Docker socket access or a pre-exported archive.
+> **Note**: Container image scanning requires either Docker socket access or a pre-exported archive. The wrapper only mounts `$PWD:/src`, so container scanning requires raw `podman run` commands.
 
 ```bash
 # Method 1: Direct image scan (requires docker.sock mounted)
-osv-scanner-docker scan image alpine:latest
-# This requires mounting the docker socket:
-# podman run --rm -v "${PWD}:/src:Z" -v /var/run/docker.sock:/var/run/docker.sock:Z ghcr.io/google/osv-scanner:latest scan image alpine:latest
+# osv-scanner will call `docker save` internally, so mount the socket:
+podman run --rm \
+  -v "${PWD}:/src:Z" \
+  -v /var/run/docker.sock:/var/run/docker.sock:Z \
+  ghcr.io/google/osv-scanner:latest scan image alpine:latest
 
-# Method 2: Scan from exported archive (no Docker/Podman socket needed)
-# Step A: Export the image first
-podman save --format=docker-archive alpine:latest > /tmp/alpine.tar
+# Method 2: Scan from exported archive (recommended — no socket needed)
+# Step A: Export the image first using Podman
+podman save --format=docker-archive alpine:latest -o /tmp/alpine.tar
 
-# Step B: Scan the archive
-podman run --rm -v "${PWD}:/src:Z" -v /tmp:/tmp:Z \
+# Step B: Scan the archive (mount the directory containing the tar)
+podman run --rm \
+  -v /tmp:/tmp:Z \
+  -v "${PWD}:/src:Z" \
   ghcr.io/google/osv-scanner:latest scan image --archive /tmp/alpine.tar
 
-# Method 3: Use the wrapper with socket mount
-OSV_SCANNER_DOCKER_SOCK=1 osv-scanner-docker scan image alpine:latest
-
 # HTML output for container scans (best format for layered analysis)
-osv-scanner-docker scan image --format html alpine:latest
+podman run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:Z \
+  -v "${PWD}:/src:Z" \
+  ghcr.io/google/osv-scanner:latest scan image --format html alpine:latest
 ```
 
 #### License Scanning
@@ -374,7 +378,7 @@ Structure findings reports like this:
 - **Installed**: 4.17.20
 - **Fixed in**: 4.17.21
 - **OSV**: https://osv.dev/GHSA-xxxx-xxxx-xxxx
-- **Fix**: `npm audit fix` or update to lodash@4.17.21
+- **Fix**: Update to lodash@4.17.21 (use `osv-scanner-docker fix` for guided remediation)
 
 ### High Findings
 

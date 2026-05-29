@@ -88,35 +88,31 @@ osv-scanner-docker fix -M /src/package.json -L /src/package-lock.json
 
 ## Container Image Scanning
 
+> **Note**: The wrapper only mounts `$PWD:/src`. Container scanning needs extra mounts or the Docker socket, so use raw `podman run` commands.
+
 ### Scan Image Directly (With Docker Socket)
 ```bash
 podman run --rm \
   -v "${PWD}:/src:Z" \
   -v /var/run/docker.sock:/var/run/docker.sock:Z \
-  ghcr.io/google/osv-scanner:latest \
-  scan image alpine:latest
+  ghcr.io/google/osv-scanner:latest scan image alpine:latest
 ```
 
 ### Scan Image from Exported Archive (Recommended)
 ```bash
-# Export
 podman save --format=docker-archive alpine:latest -o /tmp/alpine.tar
-
-# Scan
 podman run --rm \
   -v /tmp:/tmp:Z \
   -v "${PWD}:/src:Z" \
-  ghcr.io/google/osv-scanner:latest \
-  scan image --archive /tmp/alpine.tar
+  ghcr.io/google/osv-scanner:latest scan image --archive /tmp/alpine.tar
 ```
 
 ### Scan Image with HTML Report
 ```bash
 podman run --rm \
-  -v "${PWD}:/src:Z" \
   -v /var/run/docker.sock:/var/run/docker.sock:Z \
-  ghcr.io/google/osv-scanner:latest \
-  scan image --format html alpine:latest
+  -v "${PWD}:/src:Z" \
+  ghcr.io/google/osv-scanner:latest scan image --format html alpine:latest
 ```
 
 ### Scan Multiple Images (Export Loop)
@@ -126,9 +122,9 @@ for img in alpine:latest debian:bookworm ubuntu:24.04; do
 done
 
 for archive in /tmp/*.tar; do
-  osv-scanner-docker scan image --archive "/src/${archive#/tmp/}" 2>&1 || true
+  podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
+    ghcr.io/google/osv-scanner:latest scan image --archive "$archive"
 done
-# Note: archives need to be under /src mount
 ```
 
 ---
@@ -225,11 +221,10 @@ osv-scanner-docker scan source -r .
 
 # JSON report
 osv-scanner-docker --format json -L ./package-lock.json > report.json
-
-# Container scan (no socket — use archive)
-podman save --format=docker-archive node:20 -o /tmp/node20.tar
-cp /tmp/node20.tar ./
-osv-scanner-docker scan image --archive /src/node20.tar
+# Container scan — use raw podman run (see "Container Image Scanning" section)
+podman save --format=docker-archive node:20 -o /tmp/node20.tar && \
+podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
+  ghcr.io/google/osv-scanner:latest scan image --archive /tmp/node20.tar
 
 # License check
 osv-scanner-docker --licenses="MIT,Apache-2.0" .
