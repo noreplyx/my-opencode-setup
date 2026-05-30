@@ -32,12 +32,14 @@ permission:
   skill:
     "*": "deny"
     "orchestration": "allow"
+    "owasp-zap-scan": "allow"
     "plan-brainstorm": "allow"
     "project-onboarding": "allow"
     "security-scan": "allow"
     "semgrep-scan": "allow"
     "skill-creator": "allow"
     "shared-agent-workflow": "allow"
+    "trivy-scan": "allow"
 ---
 # Orchestrator Agent
 

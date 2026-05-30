@@ -43,18 +43,24 @@
                                                     "skillPath":  "skills/frontend-code-philosophy/SKILL.md",
                                                     "computedHash":  "1271dad3c2dec313c2ec6962f1a4028e27b3ceb0b9c92acc87ab02d663f1e96"
                                                 },
-                   "orchestration":  {
-                                         "source":  "local",
-                                         "sourceType":  "local",
-                                         "skillPath":  "skills/orchestration/SKILL.md",
-                                         "computedHash":  "842405ea8a71cdff3fdd6a64cdbafbd5e08f715fafae3a9c837832506d3e7e25"
-                                     },
-                   "plan-brainstorm":  {
+                    "orchestration":  {
+                                          "source":  "local",
+                                          "sourceType":  "local",
+                                          "skillPath":  "skills/orchestration/SKILL.md",
+                                          "computedHash":  "842405ea8a71cdff3fdd6a64cdbafbd5e08f715fafae3a9c837832506d3e7e25"
+                                      },
+                    "owasp-zap-scan":  {
                                            "source":  "local",
                                            "sourceType":  "local",
-                                           "skillPath":  "skills/plan-brainstorm/SKILL.md",
-                                           "computedHash":  "9504d6d576062d6826d60174c682399c04862d6de1bc956886105d64a998c883"
+                                           "skillPath":  "skills/owasp-zap-scan/SKILL.md",
+                                           "computedHash":  "owasp-zap-v1"
                                        },
+                    "plan-brainstorm":  {
+                                            "source":  "local",
+                                            "sourceType":  "local",
+                                            "skillPath":  "skills/plan-brainstorm/SKILL.md",
+                                            "computedHash":  "9504d6d576062d6826d60174c682399c04862d6de1bc956886105d64a998c883"
+                                        },
                    "plan-describe":  {
                                          "source":  "local",
                                          "sourceType":  "local",
@@ -91,18 +97,24 @@
                                                  "skillPath":  "skills/shared-agent-workflow/SKILL.md",
                                                  "computedHash":  "shared-v1"
                                              },
-                   "skill-creator":  {
-                                         "source":  "anthropics/skills",
-                                         "sourceType":  "github",
-                                         "skillPath":  "skills/skill-creator/SKILL.md",
-                                         "computedHash":  "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
-                                     },
-                   "ast-grep":  {
-                                    "source":  "local",
-                                    "sourceType":  "local",
-                                    "skillPath":  "skills/ast-grep/SKILL.md",
-                                    "computedHash":  "ast-grep-v1"
-                                },
+                    "skill-creator":  {
+                                          "source":  "anthropics/skills",
+                                          "sourceType":  "github",
+                                          "skillPath":  "skills/skill-creator/SKILL.md",
+                                          "computedHash":  "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
+                                      },
+                    "trivy-scan":  {
+                                       "source":  "local",
+                                       "sourceType":  "local",
+                                       "skillPath":  "skills/trivy-scan/SKILL.md",
+                                       "computedHash":  "trivy-v1"
+                                   },
+                    "ast-grep":  {
+                                     "source":  "local",
+                                     "sourceType":  "local",
+                                     "skillPath":  "skills/ast-grep/SKILL.md",
+                                     "computedHash":  "ast-grep-v1"
+                                 },
                    "semgrep-scan":  {
                                         "source":  "local",
                                         "sourceType":  "local",

@@ -9,7 +9,7 @@ description: Use this skill to perform security scanning on project code and dep
 
 The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early � before they reach production.
 
-This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill, the `gitleaks-scan` skill, and the `osv-scanner` skill** as mandatory sub-scans. No user prompt is required to run any of these tools.
+This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill, the `gitleaks-scan` skill, the `trivy-scan` skill, and the `osv-scanner` skill** as mandatory sub-scans. No user prompt is required to run any of these tools.
 
 ## Scan Types
 
@@ -154,8 +154,42 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
 - ✅ NEVER skip the Trivy scan — it is mandatory
 - ✅ Use a persistent cache volume for the vulnerability database to speed up scans
 
+### 2.6. OWASP ZAP DAST Scan (OPTIONAL — Post-Deployment)
 
-### 3. Hardcoded Secrets Scan
+The **OWASP ZAP DAST Gate** is an **optional** scan that runs after the application is deployed to a test/staging environment. Unlike the mandatory sub-scans above, this scan requires a running application target URL and is triggered only when a test deployment URL is available.
+
+```bash
+# Pull if needed
+podman image exists ghcr.io/zaproxy/zaproxy:stable || podman pull ghcr.io/zaproxy/zaproxy:stable
+
+# Run baseline scan (passive, CI-safe)
+podman run --rm --network host -v "${WORKSPACE_ROOT}:/zap/wrk/:Z" \
+  ghcr.io/zaproxy/zaproxy:stable \
+  zap-baseline.py -t <APP_URL> -r /zap/wrk/zap-baseline-report.html
+```
+
+**Why it's optional:**
+- Requires a running application target URL (not available in all pipeline stages)
+- Baseline scans are passive and safe for any environment
+- Full active scans can be run against staging environments for deeper testing
+- API scans support OpenAPI, SOAP, and GraphQL endpoints
+- Catches OWASP Top 10 web vulnerabilities: missing security headers, XSS, SQL injection, CSRF, info disclosure, etc.
+
+**Verdict:**
+| Exit Code | Meaning | Pipeline Action |
+|-----------|---------|-----------------|
+| 0 | Success (no FAILs, or all WARN) | ✅ PASS |
+| 1 | At least 1 FAIL (from config) | ⚠️ WARN — report findings, proceed |
+| 2 | At least 1 WARN, no FAILs | ℹ️ INFO — report findings, proceed |
+| 3 | Tool error | ℹ️ INFO — log, proceed |
+
+**Hard Rules for OWASP ZAP:**
+- ✅ Always use `--network host` when scanning localhost applications
+- ✅ Mount the working directory to `/zap/wrk/` for report output
+- ✅ Use `ghcr.io/zaproxy/zaproxy:stable` for production pipelines
+- ✅ For CI/CD pipelines, prefer **baseline scan** (passive, safe)
+- ✅ NEVER use `zap-full-scan.py` against production targets
+- ⚠️ This scan is OPTIONAL — if no target URL is available, skip it
 
 ### 3. Hardcoded Secrets Scan
 
@@ -349,7 +383,7 @@ Remediation is **not** performed automatically by the scan � these suggestions
 
 ## Integration with Pipeline (Automatic)
 
-The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate, Gitleaks secret scan gate, and OSV-Scanner dependency vulnerability gate as mandatory sub-steps**:
+The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate, Gitleaks secret scan gate, Trivy vulnerability & misconfig gate, and OSV-Scanner dependency vulnerability gate as mandatory sub-steps**:
 ```
 Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
                                                   |
@@ -363,6 +397,13 @@ Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
                                            |   GITLEAKS  |
                                            |   SECRET    |
                                            |   SCAN GATE |
+                                           | (auto-loaded)|
+                                           +-------------+
+                                                  |
+                                           +-------------+
+                                           |   TRIVY     |
+                                           | VULN & MIS-  |
+                                           | CONFIG GATE |
                                            | (auto-loaded)|
                                            +-------------+
                                                   |
@@ -385,16 +426,17 @@ Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
 ```
 
 **Automatic triggering:**
-**Automatic triggering:**
 1. After Build + Lint + Code Quality gates pass, the Orchestrator loads the `security-scan` skill
 2. The Orchestrator then loads the `semgrep-scan` skill (always as a mandatory sub-step)
 3. The Orchestrator runs `semgrep --config p/security-audit --error .`
 4. The Orchestrator then loads the `gitleaks-scan` skill (always as a mandatory sub-step)
 5. The Orchestrator runs gitleaks via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest git --source=/src --report-format=json --report-path=- --no-banner --verbose`
-6. The Orchestrator then loads the `osv-scanner` skill (always as a mandatory sub-step)
-7. The Orchestrator runs osv-scanner via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest scan source -r --format json /src`
-8. The Orchestrator then proceeds with -> SBOM -> supply chain -> secrets & anti-pattern scans
-9. All findings are combined into a single Security Scan Report
+6. The Orchestrator then loads the `trivy-scan` skill (always as a mandatory sub-step)
+7. The Orchestrator runs Trivy via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
+8. The Orchestrator then loads the `osv-scanner` skill (always as a mandatory sub-step)
+9. The Orchestrator runs osv-scanner via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest scan source -r --format json /src`
+10. The Orchestrator then proceeds with -> SBOM -> supply chain -> secrets & anti-pattern scans
+11. All findings are combined into a single Security Scan Report
 
 If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 - The pipeline is **blocked**
@@ -410,6 +452,7 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 - ✅ The `semgrep-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
 - ✅ The `gitleaks-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
 - ✅ The `osv-scanner` skill MUST be loaded as a mandatory sub-scan during every pipeline
+- ✅ The `trivy-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
 - ✅ Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode)
 - ✅ OSV-Scanner MUST run with recursive mode and JSON output
 - ✅ Secrets scan MUST be non-blocking (informational only)
@@ -424,5 +467,7 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 | `semgrep-scan` skill | Deep SAST static analysis (auto-loaded as mandatory sub-scan) | `skills/semgrep-scan/SKILL.md` |
 | `osv-scanner` skill | OSV-Scanner dependency vulnerability scanning (auto-loaded as mandatory sub-scan) | `skills/osv-scanner/SKILL.md` |
 | `gitleaks-scan` skill | Gitleaks secret scanning (auto-loaded as mandatory sub-scan) | `skills/gitleaks-scan/SKILL.md` |
+| `trivy-scan` skill | Trivy vulnerability & misconfiguration scanning (auto-loaded as mandatory sub-scan) | `skills/trivy-scan/SKILL.md` |
+| `owasp-zap-scan` skill | OWASP ZAP DAST web application scanning (optional post-deployment) | `skills/owasp-zap-scan/SKILL.md` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |

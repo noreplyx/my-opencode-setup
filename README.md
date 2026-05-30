@@ -30,7 +30,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan → QA → Verifier → Documentor → Orchestrator (report + journal)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan (semgrep + gitleaks + trivy) → QA → Verifier → Documentor → Orchestrator (report + journal)
                                                   ↓                              ↑
                                             Build Gate + Lint Gate         Fixer (feedback loop)
 ```
@@ -41,7 +41,7 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Secur
 |---|---|---|---|
 | **Build Gate** | Implementor | Code compiles without errors | Fix and rebuild before proceeding |
 | **Lint Gate** | Implementor | Code passes linter/style checks (eslint, prettier, tsc --noEmit) | Fix lint errors before proceeding |
-| **Security Scan** | Orchestrator | npm audit for High/Critical vulns, secrets scan, anti-patterns | Report to user; may fix, except, or block |
+| **Security Scan** | Orchestrator | Semgrep SAST + Gitleaks secrets + Trivy vuln/misconfig + npm audit + anti-patterns | Report to user; may fix, except, or block |
 | **Smoke Test** | QA | App boots/starts without crashing | Critical bug → cycle to Fixer |
 | **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score ≥ 80%) | Score < 80% → cycle to Fixer; 3 attempts → PlanDescriber |
 
@@ -95,7 +95,7 @@ The Project Journal at `.opencode/journal/journal.yaml` provides cross-session m
 
 **Readers**: Finder, PlanDescriber, and Orchestrator all read the journal to understand past work before starting a new session.
 
-## Built-in Skills (14 total)
+## Built-in Skills (17 total)
 
 | Skill | Used By | Description |
 |---|---|---|
@@ -114,6 +114,8 @@ The Project Journal at `.opencode/journal/journal.yaml` provides cross-session m
 | `api-documentation` | Implementor, Documentor | API documentation standards and patterns |
 | `devops-cicd` | Implementor | DevOps and CI/CD pipeline patterns |
 | `playwright-cli` | Browser Tester, Implementor | Browser automation: navigate, click, fill, snapshot, eval, console, network, etc. |
+| `trivy-scan` | Orchestrator | Vulnerability + IaC misconfiguration scanning via Trivy in Podman. Auto-loaded in Security Scan gate. |
+| `owasp-zap-scan` | Orchestrator | OWASP ZAP DAST web application scanning — baseline, full active, and API scans via Podman (optional post-deployment). |
 
 ### Browser Tester Agent
 
@@ -207,6 +209,7 @@ This section documents improvements implemented on top of the base system.
 | **Automated rollback** | Detects N consecutive failures, auto-restores pre-pipeline git state |
 | **Pipeline visualization** | Auto-generated Mermaid.js diagrams from agent history |
 | **Skill drift detection** | SHA-256 hash comparison alerts on tampered or stale agent skills |
+| **Trivy + OWASP ZAP pipeline integration** | Trivy auto-loaded as mandatory sub-scan in Security Gate. OWASP ZAP available as optional post-deployment DAST scan. |
 
 ### Quick Reference
 

@@ -24,6 +24,8 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
 | **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
+| **Trivy Vulnerability & Misconfig Scan** | skills/trivy-scan/SKILL.md | Auto-loaded vulnerability and IaC misconfiguration scanning (no user trigger needed). Scans filesystem for CVEs + IaC misconfigs via podman. |
+| **OWASP ZAP DAST Scan** | skills/owasp-zap-scan/SKILL.md | Post-deployment web application DAST scanning — baseline, full active, and API scans via podman (optional pipeline step). |
 | **PMD Code Quality Scan** | skills/pmd-scan/SKILL.md | MANDATORY — auto-loaded code quality analysis after Lint Gate. Detects unused vars, empty catch blocks, code style issues, duplicate code (CPD). Runs via podman (no local install needed). Violations block the pipeline. |
 | **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning — podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
@@ -56,7 +58,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
-| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No | MANDATORY — loads `pmd-scan` for code quality analysis after Lint Gate. Violations block the pipeline.
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST + gitleaks secrets + trivy vuln/misconfig**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No | MANDATORY — loads `pmd-scan` for code quality analysis after Lint Gate. Violations block the pipeline.
 | **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No | No |
 | **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes â€” document verified code | Yes (accuracy check) | Yes |
 | **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) | Yes |
@@ -118,21 +120,25 @@ The default orchestration workflow follows this sequence:
    └──────┬──────┘
           │ (violations → FAIL the gate; block pipeline)
           ▼
-   ┌──────┴──────┐
-   ▼ SECURITY    ▼ (MANDATORY)
-   │  SCAN GATE           │
-   │  1. Load security-scan  │
-   │     → npm audit,        │
-   │       secrets, anti-    │
-   │       pattern scan      │
-   │  2. ★ Auto-load         │
-   │     semgrep-scan skill  │
-   │     → SAST rules        │
-   │  3. ★ Auto-load         │
-   │     gitleaks-scan skill │
-   │     → secret detection  │
-   └──────┬──────┘
-          │ (vulns, SAST, or secrets → block pipeline)
+    ┌──────┴──────┐
+    ▼ SECURITY    ▼ (MANDATORY)
+    │  SCAN GATE           │
+    │  1. Load security-scan  │
+    │     → npm audit,        │
+    │       secrets, anti-    │
+    │       pattern scan      │
+    │  2. ★ Auto-load         │
+    │     semgrep-scan skill  │
+    │     → SAST rules        │
+    │  3. ★ Auto-load         │
+    │     gitleaks-scan skill │
+    │     → secret detection  │
+    │  4. ★ Auto-load         │
+    │     trivy-scan skill    │
+    │     → vulnerab. + IaC   │
+    │     misconfig scanning  │
+    └──────┬──────┘
+           │ (vulns, SAST, secrets, or misconfigs → block pipeline)
           ▼
 5. QA â”€â”€â–º Test, validate, report results
           â”‚
@@ -321,7 +327,7 @@ Every implementation MUST pass through these mandatory validation gates:
 | **Build Gate**   | Implementor   | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Lint Gate**    | Implementor   | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
 | **Code Quality** | Orchestrator | PMD static analysis + CPD duplicate detection for ALL projects via podman (auto-detects Java/Apex/JS/Kotlin/Swift/PLSQL). Loads `pmd-scan` skill. Loads after Lint Gate, before Security Scan. | Violations → FAIL the gate (block pipeline) |
-| **Security Scan**| Orchestrator  | npm audit + secrets + anti-pattern + **auto semgrep SAST** | Report to user; may fix, except, or block       |
+| **Security Scan**| Orchestrator  | npm audit + secrets + anti-pattern + **auto semgrep SAST + gitleaks secret scan + trivy vuln/misconfig scan** | Report to user; may fix, except, or block       |
 | **Smoke Test**   | QA            | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer      |
 | **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover â‰¥ 80% of detected security patterns | Coverage < 50% â†’ cycle back to QA; 50-79% â†’ warn and proceed with Verifier flagging
 | **Plan Verify**  | Verifier      | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% â†’ cycle to Fixer; 3 attempts â†’ PlanDescriber |
@@ -356,6 +362,8 @@ Every implementation MUST pass through these mandatory validation gates:
 - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
 - **Additionally, the Orchestrator auto-loads and runs semgrep-scan for SAST analysis** (no user trigger needed)
 - **Orchestrator also auto-loads and runs gitleaks-scan for secret detection** (no user trigger needed)
+- **Orchestrator also auto-loads and runs trivy-scan for vulnerability + IaC misconfiguration scanning** (no user trigger needed). Runs via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
+- **For post-deployment DAST, the Orchestrator may optionally load owasp-zap-scan** when a test deployment URL is available
 - **Additionally, the Orchestrator auto-loads and runs pmd-scan for code quality analysis** — detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Violations FAIL the pipeline gate.
 - **Alternatively**, run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks` — handles podman check, image pull, scan, parsing, and structured JSON report
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
@@ -363,6 +371,7 @@ Every implementation MUST pass through these mandatory validation gates:
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
 - SAST findings from semgrep: Critical/High → FAIL the gate; Medium → WARN; Low → INFO
 - Secret findings from gitleaks (exit code 1) → FAIL the gate (block pipeline)
+- Trivy findings at CRITICAL/HIGH severity → FAIL the gate (block pipeline)
 - The Security Scan MUST NOT modify any files
 
 #### Automated Gitleaks Scan Script (NEW)
@@ -456,7 +465,7 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 **Integration with Pipeline:**
 ```
-Build Gate â†’ Lint Gate â†’ Code Quality Gate (pmd-scan ⚡ MANDATORY) → Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan) â†’ QA (smoke + security regression) â†’ SECURITY TEST COVERAGE GATE â†’ Acceptance Gate â†’ Verifier
+Build Gate → Lint Gate → Code Quality Gate (pmd-scan ⚡ MANDATORY) → Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan + ★ trivy-scan) → QA (smoke + security regression) → SECURITY TEST COVERAGE GATE → Acceptance Gate → Verifier
 ```
 
 **Enforcement:**
@@ -1266,7 +1275,8 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` (both auto-loaded) or `security-workflow` | Dependency + SAST + secret scanning (semgrep + gitleaks auto-triggered) |
+| Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` + `trivy-scan` (all auto-loaded) or `security-workflow` | Dependency + SAST + secret + vuln/misconfig scanning (semgrep + gitleaks + trivy auto-triggered) |
+| OWASP ZAP DAST | `owasp-zap-scan` (optional, post-deployment) | Web application DAST scanning — baseline/full/API scans. Requires running app URL. |
 | Code Quality Gate | `pmd-scan` | MANDATORY — Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL. Detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Loaded by Orchestrator after Lint Gate, before Security Scan. Violations block the pipeline. |
 | QA | `quality-assurance` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
@@ -2018,7 +2028,7 @@ When multiple skills are loaded and provide conflicting guidance, use this prior
 ### Conflict Resolution Rules
 1. **Specific overrides general**: `accessibility` overrides `code-philosophy` on UI patterns
 2. **Domain-specific overrides cross-cutting**: `backend-code-philosophy` overrides `code-philosophy` on backend patterns
-3. **Safety-critical overrides convenience**: security-scan + semgrep-scan + gitleaks-scan override code-philosophy on input handling, SAST patterns, and secret detection
+3. **Safety-critical overrides convenience**: security-scan + semgrep-scan + gitleaks-scan + trivy-scan override code-philosophy on input handling, SAST patterns, secret detection, and vulnerability/misconfig scanning
 4. **When equal priority**: Use the skill loaded most recently
 5. **When truly contradictory**: Flag to Orchestrator and ask the user
 
