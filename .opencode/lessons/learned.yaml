@@ -1,0 +1,67 @@
+# Lessons Learned from Pipeline Executions
+# Each entry captures a key insight that should inform future pipeline decisions.
+# Created: 2026-05-30
+#
+# Categories:
+#   system-integrity — Agent types, references, structural completeness
+#   agent-design    — How agents are instructed, primed, or configured
+#   pipeline-design — Pipeline flow, gates, checks, and enforcement
+#   planning        — Plan manifest structure, checkpoint quality
+#   handoff-quality — Communication between agents in the pipeline
+#   testing         — Test infrastructure, coverage, automation
+#   monitoring      — Dashboards, logs, observability, trend tracking
+#
+# Severity:
+#   high   — Must fix before next pipeline of similar type
+#   medium — Should fix; blocks certain quality outcomes
+#   low    — Nice to have; continuous improvement
+
+lessons:
+  - date: "2026-05-19T18:00:00Z"
+    feature: "system-review-improvements"
+    lesson: "Documentor was completely unreferenced before this pipeline — all agent types must be verified against system prompt references"
+    category: "system-integrity"
+    severity: "high"
+    appliedCount: 0
+
+  - date: "2026-05-27T00:00:00Z"
+    feature: "code-quality-revolution"
+    lesson: "The 'no extra features' prime directive was the root cause of poor quality — changing it to 'proactively improve' solves the problem at source"
+    category: "agent-design"
+    severity: "high"
+    appliedCount: 0
+
+  - date: "2026-05-27T00:00:00Z"
+    feature: "code-quality-revolution"
+    lesson: "Quality gates must be enforceable (blocking), not just self-checks — otherwise they get skipped"
+    category: "pipeline-design"
+    severity: "high"
+    appliedCount: 0
+
+  - date: "2026-05-27T00:00:00Z"
+    feature: "code-quality-revolution"
+    lesson: "Plan checkpoints must specify quality standards (error handling, logging, validation) not just file structure — the Verifier can only verify what the plan contains"
+    category: "planning"
+    severity: "medium"
+    appliedCount: 0
+
+  - date: "2026-05-19T18:00:00Z"
+    feature: "system-review-improvements"
+    lesson: "Implementor needs explicit instructions about editing vs appending to existing files — surgical edits (adding rows to tables) require precise instructions"
+    category: "handoff-quality"
+    severity: "medium"
+    appliedCount: 0
+
+  - date: "2026-05-27T00:00:00Z"
+    feature: "code-quality-revolution"
+    lesson: "Add automated integration test that runs a pipeline end-to-end to verify quality gate enforcement"
+    category: "testing"
+    severity: "low"
+    appliedCount: 0
+
+  - date: "2026-05-27T00:00:00Z"
+    feature: "code-quality-revolution"
+    lesson: "Create a quality score trend dashboard from pipeline logs for continuous improvement tracking"
+    category: "monitoring"
+    severity: "low"
+    appliedCount: 0

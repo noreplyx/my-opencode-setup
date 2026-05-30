@@ -1,0 +1,150 @@
+# Agent Calibration Database
+# Auto-generated from pipeline journal data
+# Created: 2026-05-30
+#
+# This file tracks agent effectiveness across completed pipelines.
+# Data is extracted from .opencode/journal/journal.yaml retrospectives.
+# Used by the Orchestrator to inform agent selection and instruction tailoring.
+
+agents:
+  implementor:
+    totalTasks: 7
+    successfulTasks: 7
+    failedTasks: 0
+    avgEffectiveness: "good"
+    buildRetries: 0
+    lintRetries: 0
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns:
+      - "Needs explicit instructions about editing vs appending to existing files"
+      - "Surgical edits (adding rows to tables) require precise instructions"
+    strengths:
+      - "Follows plan checkpoints precisely"
+      - "Can handle parallel multi-file edits with high quality"
+      - "Executes surgical edits successfully when given clear boundaries"
+
+  orchestrator:
+    totalTasks: 3
+    successfulTasks: 3
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Pipeline orchestration and multi-agent coordination"
+      - "Handles full and parallel-full pipeline types"
+      - "Maintains context across agent handoffs"
+
+  plandescriber:
+    totalTasks: 2
+    successfulTasks: 2
+    failedTasks: 0
+    avgEffectiveness: "good"
+    behavioralCheckpointsPerPlan: 4
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Produces structured plan-manifest.json with checkpoints"
+      - "Incorporates quality standards into plan specifications"
+      - "Ensures verifier has sufficient constraints to validate against"
+
+  finder:
+    totalTasks: 0
+    successfulTasks: 0
+    failedTasks: 0
+    avgEffectiveness: "unknown"
+    lastTaskDate: null
+    commonFailurePatterns: []
+    strengths:
+      - "Codebase exploration and evidence gathering"
+      - "File discovery and pattern analysis across multi-repo projects"
+
+  qa:
+    totalTasks: 1
+    successfulTasks: 1
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Bug discovery and test generation"
+      - "Quality gate enforcement verification"
+
+  fixer:
+    totalTasks: 0
+    successfulTasks: 0
+    failedTasks: 0
+    avgEffectiveness: "unknown"
+    lastTaskDate: null
+    commonFailurePatterns: []
+    strengths:
+      - "Root cause diagnosis and targeted fixes"
+      - "Debugging pipeline failures with minimal round trips"
+
+  verifier:
+    totalTasks: 1
+    successfulTasks: 1
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Plan-implementation compliance verification"
+      - "Quality drift detection across parallel file changes"
+      - "Identifies gaps between plan checkpoints and actual output"
+
+  documentor:
+    totalTasks: 1
+    successfulTasks: 1
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-19T18:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Automated documentation creation and maintenance"
+      - "API docs, inline comments, and ADR generation"
+      - "Structured markdown output with proper cross-references"
+
+  mergeCoordinator:
+    totalTasks: 1
+    successfulTasks: 1
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Cross-file import and type signature verification after parallel dispatch"
+      - "Conflict resolution for parallel file modifications"
+
+  integrator:
+    totalTasks: 1
+    successfulTasks: 1
+    failedTasks: 0
+    avgEffectiveness: "good"
+    lastTaskDate: "2026-05-27T00:00:00Z"
+    commonFailurePatterns: []
+    strengths:
+      - "Wires new files into project structure (imports, manifests, configs)"
+      - "Ensures no orphan files remain after pipeline completion"
+
+  browserTester:
+    totalTasks: 0
+    successfulTasks: 0
+    failedTasks: 0
+    avgEffectiveness: "unknown"
+    lastTaskDate: null
+    commonFailurePatterns: []
+    strengths:
+      - "Playwright CLI browser automation and UI testing"
+      - "Cross-browser regression detection"
+
+  debug:
+    totalTasks: 0
+    successfulTasks: 0
+    failedTasks: 0
+    avgEffectiveness: "unknown"
+    lastTaskDate: null
+    commonFailurePatterns: []
+    strengths:
+      - "Deep diagnostic analysis for failed pipelines"
+      - "Circumstantial evidence gathering from logs and artifacts"

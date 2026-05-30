@@ -20,6 +20,7 @@ permission:
   task:
     "*": "deny"
     "subagent/browser-tester": "allow"
+    "subagent/debug": "allow"
     "subagent/documentor": "allow"
     "subagent/fixer": "allow"
     "subagent/finder": "allow"
