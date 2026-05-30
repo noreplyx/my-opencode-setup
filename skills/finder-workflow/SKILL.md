@@ -50,7 +50,7 @@ The Finder follows a structured 8-step workflow:
 Load the `shared-agent-workflow` skill and follow its Read Context protocol:
 1. Check for `agent-context.md` — validate and read it
 2. Extract pipeline state: feature name, prior decisions, what's already been done
-3. Read the Project Journal at `.opencode/journal/journal.yaml` to understand past work and failure patterns
+3. Review prior pipeline outputs from `.opencode/pipeline-logs/` if available
 
 ### Step 2: Understand the Objective
 

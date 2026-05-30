@@ -2,7 +2,7 @@
 /**
  * Historical Evidence Regression Scanner
  *
- * Scans past pipeline journal entries, extracts evidence from archived agent-context.md files,
+ * Scans past pipeline log archives, extracts evidence from archived agent-context.md files,
  * and re-verifies them against the current filesystem to detect stale/invalidated evidence.
  *
  * Usage:
@@ -69,10 +69,6 @@ interface CliArgs {
   dir: string;
 }
 
-interface JournalEntry {
-  date: string;
-  feature: string;
-  pipelineType: string;
 }
 
 // ── CLI Parsing ──
@@ -114,64 +110,7 @@ function parseCliArgs(argv: string[]): CliArgs {
   return args;
 }
 
-// ── Journal Parsing ──
-
-function loadJournalEntries(journalPath: string): JournalEntry[] {
-  if (!fs.existsSync(journalPath)) {
-    console.error(`Journal not found: ${journalPath}`);
-    return [];
-  }
-
-  const content = fs.readFileSync(journalPath, 'utf-8');
-  const entries: JournalEntry[] = [];
-
-  // Parse YAML list format: "- date: ... feature: ... result: ..."
-  const lines = content.split('\n');
-  let current: Partial<JournalEntry> = {};
-
-  for (const line of lines) {
-    const dateMatch = line.match(/^\s*-\s+date:\s+(.+)$/);
-    if (dateMatch) {
-      if (current.date) {
-        // Push previous entry if complete
-        if (current.date && current.feature) {
-          entries.push({
-            date: current.date,
-            feature: current.feature || '',
-            pipelineType: current.pipelineType || '',
-          });
-        }
-      }
-      current = { date: dateMatch[1].trim() };
-      continue;
-    }
-
-    const featureMatch = line.match(/^\s+feature:\s+(.+)$/);
-    if (featureMatch && current) {
-      current.feature = featureMatch[1].trim();
-    }
-
-    const resultMatch = line.match(/^\s+result:\s+(.+)$/);
-    if (resultMatch && current) {
-      // result field may contain pipeline type hint, but we keep it as pipelineType for now
-      current.pipelineType = resultMatch[1].trim();
-    }
-  }
-
-  // Push last entry
-  if (current.date && current.feature) {
-    entries.push({
-      date: current.date,
-      feature: current.feature,
-      pipelineType: current.pipelineType || '',
-    });
-  }
-
-  return entries;
-}
-
-function filterEntriesByTimeWindow(entries: JournalEntry[], days: number): JournalEntry[] {
-  if (days <= 0) return entries;
+// ── Pipeline Log Parsing ──
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffMs = cutoff.getTime();
@@ -590,7 +529,7 @@ function printReport(report: RegressionReport, cliArgs: CliArgs): void {
       console.log(`    Claim: ${entry.evidence.claim}`);
       console.log(`    File: ${entry.evidence.source}`);
       console.log(`    Current: ${entry.recheckResult}`);
-      console.log(`    → Action: Update journal entry or flag for re-verification\n`);
+      console.log(`    → Action: Flag for re-verification\n`);
     }
 
     console.log(`❌ FILE DELETED:`);
@@ -660,42 +599,14 @@ function autoFixStaleEntries(report: RegressionReport, baseDir: string): void {
 function main(): void {
   const cliArgs = parseCliArgs(process.argv);
   const baseDir = cliArgs.dir;
-  const journalPath = path.join(baseDir, '.opencode', 'journal', 'journal.yaml');
-
-  if (!fs.existsSync(journalPath)) {
-    console.error(`Journal not found at ${journalPath}`);
-    process.exit(2);
-  }
-
-  // Load and filter journal entries
-  const allEntries = loadJournalEntries(journalPath);
-
-  let filteredEntries: JournalEntry[];
-  if (cliArgs.pipeline) {
-    // When a specific pipeline is requested, we don't filter by date — load all and match
-    filteredEntries = allEntries;
-  } else if (cliArgs.all) {
-    filteredEntries = allEntries;
-  } else if (cliArgs.days !== null) {
-    filteredEntries = filterEntriesByTimeWindow(allEntries, cliArgs.days);
-  } else {
-    // Default: last 30 days
-    filteredEntries = filterEntriesByTimeWindow(allEntries, 30);
-  }
-
-  if (filteredEntries.length === 0) {
-    console.log('No journal entries found matching the criteria.');
-    process.exit(0);
-  }
-
-  // Collect pipeline IDs from journal entries
   const pipelineLogDir = path.join(baseDir, '.opencode', 'pipeline-logs');
+
   if (!fs.existsSync(pipelineLogDir)) {
     console.error(`Pipeline logs directory not found at ${pipelineLogDir}`);
     process.exit(2);
   }
 
-  // Gather all evidence from matching pipelines
+  // Gather all evidence from pipeline log directories
   const allEvidence: HistoricalEvidence[] = [];
 
   if (cliArgs.pipeline) {
@@ -703,41 +614,14 @@ function main(): void {
     const evidence = loadPipelineLogs(pipelineLogDir, cliArgs.pipeline, cliArgs.pipeline);
     allEvidence.push(...evidence);
   } else {
-    // Load all pipelines referenced in filtered journal entries
-    // Collect unique pipeline IDs from the journal entries
-    // Use the feature name as a heuristic for pipeline directory names
-    const pipelineIds = new Set<string>();
-
-    for (const entry of filteredEntries) {
-      // Try exact match first: feature name as pipeline dir name
-      pipelineIds.add(entry.feature);
-
-      // Also check if feature matches a pipeline dir
-      const featureDir = path.join(pipelineLogDir, entry.feature);
-      if (fs.existsSync(featureDir)) {
-        pipelineIds.add(entry.feature);
-      }
-    }
-
-    // Also check all pipeline dirs for their date stamps
+    // Scan all pipeline dirs
     const pipelineDirs = fs.readdirSync(pipelineLogDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => d.name);
 
-    // Cross-reference existing pipeline dirs with journal entries
-    for (const pipelineId of pipelineIds) {
-      if (pipelineDirs.includes(pipelineId)) {
-        const evidence = loadPipelineLogs(pipelineLogDir, pipelineId, pipelineId);
-        allEvidence.push(...evidence);
-      }
-    }
-
-    // If no evidence found, fall back to scanning all pipeline dirs
-    if (allEvidence.length === 0) {
-      for (const dir of pipelineDirs) {
-        const evidence = loadPipelineLogs(pipelineLogDir, dir, dir);
-        allEvidence.push(...evidence);
-      }
+    for (const dir of pipelineDirs) {
+      const evidence = loadPipelineLogs(pipelineLogDir, dir, dir);
+      allEvidence.push(...evidence);
     }
   }
 

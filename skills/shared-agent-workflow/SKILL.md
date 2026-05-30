@@ -190,7 +190,7 @@ qualityDrift:
 | Attestation | Produced By | Consumed By | Purpose |
 |-------------|-------------|-------------|---------|
 | `qualitySelfReview` | Implementor | Orchestrator, Code Quality Gate | Ensures code meets minimum quality before build |
-| `qualityAdditions` | Implementor | PlanDescriber (via journal) | Improves future plans by noting what was missing |
+| `qualityAdditions` | Implementor | PlanDescriber | Notes improvements for future reference |
 | `qualityDrift` | Verifier | Orchestrator, Fixer | Catches quality gaps that pass plan verification |
 
 ## Step 2: Pipeline Heartbeat

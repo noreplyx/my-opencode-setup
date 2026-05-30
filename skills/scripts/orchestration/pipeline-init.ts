@@ -3,8 +3,7 @@
  * Pipeline Initialization Script
  *
  * Creates agent-context.md with initial YAML frontmatter, performs pre-flight
- * checks (git status, build compilation, stale context detection), and reads
- * the project journal for past pipeline context.
+ * checks (git status, build compilation, stale context detection).
  *
  * Usage:
  *   pipeline-init.ts --feature=<name> --pipeline-type=<type> \
@@ -32,19 +31,6 @@ interface PipelineArgs {
   forceClean: boolean;
 }
 
-interface JournalEntry {
-  date: string;
-  feature: string;
-  pipelineType: string;
-  result: string;
-  durationMinutes?: number;
-  filesChanged?: string[];
-  keyDecisions?: string[];
-  circuitBreakerEvents?: Array<{ gate: string; attempts: number; resolution: string }>;
-  failedGates?: string[];
-  notes?: string;
-}
-
 interface PreFlightReport {
   branch: string;
   lastCommitSha: string;
@@ -52,16 +38,10 @@ interface PreFlightReport {
   dirtyFiles: string[];
   projectCompiles: boolean;
   buildOutput: string;
-  journalStructureOk: boolean;
   securityToolsOk: boolean;
   staleContextFound: boolean;
   staleContextStatus?: string;
   staleContextAge?: string;
-}
-
-interface MatchResult {
-  entry: JournalEntry;
-  similarity: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,261 +123,6 @@ function parseArgs(): PipelineArgs {
 }
 
 // ---------------------------------------------------------------------------
-// Project Journal Parsing (line-by-line YAML)
-// ---------------------------------------------------------------------------
-
-function parseJournalLine(line: string): { indent: number; key: string; value: string | null } | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith('#')) return null;
-
-  const indent = line.search(/\S/);
-  const colonIdx = trimmed.indexOf(':');
-
-  if (colonIdx === -1) return null;
-
-  const key = trimmed.substring(0, colonIdx).trim();
-  const valueRaw = trimmed.substring(colonIdx + 1).trim();
-
-  if (valueRaw === '' || valueRaw === '|' || valueRaw.startsWith('#')) {
-    return { indent, key, value: null };
-  }
-
-  const value = valueRaw.replace(/\s*#.*$/, '').trim();
-  // Remove surrounding quotes if present
-  const cleaned = value.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
-  return { indent, key, value: cleaned };
-}
-
-function parseJournalYaml(filePath: string): JournalEntry[] {
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
-
-  const entries: JournalEntry[] = [];
-  let currentEntry: any = null;
-  let currentArrayKey: string | null = null;
-  let currentArrayIndent: number = 0;
-  let currentObjectKey: string | null = null;
-  let currentObjectIndent: number = 0;
-  let currentObjectArray: any[] = [];
-
-  for (const line of lines) {
-    const parsed = parseJournalLine(line);
-    if (!parsed) continue;
-
-    const { indent, key, value } = parsed;
-
-    // Detect start of a new entry (top-level list item starting with "- date:")
-    if (key === 'date' && value !== null && indent === 0) {
-      if (currentEntry) {
-        // Finalize nested object arrays
-        if (currentObjectKey && currentObjectArray.length > 0) {
-          currentEntry[currentObjectKey] = [...currentObjectArray];
-          currentObjectArray = [];
-          currentObjectKey = null;
-        }
-        if (currentArrayKey) {
-          currentEntry[currentArrayKey] = currentEntry[currentArrayKey] || [];
-          currentObjectArray = [];
-          currentArrayKey = null;
-        }
-        entries.push(currentEntry);
-      }
-      currentEntry = { date: value };
-      currentArrayKey = null;
-      currentArrayIndent = 0;
-      currentObjectKey = null;
-      currentObjectIndent = 0;
-      currentObjectArray = [];
-      continue;
-    }
-
-    if (!currentEntry) continue;
-
-    // Detect list items inside arrays
-    const listMatch = line.trim().match(/^-\s+(.+):\s*(.*)/);
-    if (listMatch && indent > 4) {
-      // Object within array â€” check if we're inside a specific array
-      const objKey = listMatch[1].trim();
-      const objValue = listMatch[2].trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
-
-      if (currentObjectKey) {
-        // We're building an array of objects
-        const obj: any = { [objKey]: objValue || null };
-        currentObjectArray.push(obj);
-      } else if (currentArrayKey) {
-        // We're building a list of simple objects with different keys
-        // Find the last object and add property
-        if (currentObjectArray.length > 0) {
-          const lastObj = currentObjectArray[currentObjectArray.length - 1];
-          lastObj[objKey] = objValue || null;
-        } else {
-          const obj: any = { [objKey]: objValue || null };
-          currentObjectArray.push(obj);
-        }
-      }
-
-      // If at same indent level as parent list, continue the list
-      continue;
-    }
-
-    // Scalar list item: "- value"
-    const scalarListMatch = line.trim().match(/^-\s+(.+)/);
-    if (scalarListMatch && currentArrayKey) {
-      if (!currentEntry[currentArrayKey]) {
-        currentEntry[currentArrayKey] = [];
-      }
-      (currentEntry[currentArrayKey] as string[]).push(
-        scalarListMatch[1].trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1'),
-      );
-      continue;
-    }
-
-    // Regular key-value at entry level
-    if (currentObjectKey && indent <= currentObjectIndent) {
-      // Exiting nested object context
-      if (currentObjectArray.length > 0) {
-        currentEntry[currentObjectKey] = [...currentObjectArray];
-        currentObjectArray = [];
-      }
-      currentObjectKey = null;
-    }
-
-    if (currentArrayKey && indent <= currentArrayIndent) {
-      // Exiting array context
-      currentArrayKey = null;
-      currentObjectArray = [];
-    }
-
-    if (value === null) {
-      // Might be an array or nested object starting
-      // Check next non-empty line to determine
-      // For now, track it
-      const nextLineContent = getNextNonEmptyLine(lines, lines.indexOf(line) + 1);
-      if (nextLineContent && nextLineContent.trimStart().startsWith('- ')) {
-        currentArrayKey = key;
-        currentArrayIndent = indent;
-        currentEntry[key] = [];
-        currentObjectArray = [];
-      } else {
-        // Nested object â€” store as is, parse sub-keys later
-        currentEntry[key] = {};
-        currentObjectKey = key;
-        currentObjectIndent = indent;
-      }
-      continue;
-    }
-
-    // Handle nested key-value under currentObjectKey
-    if (currentObjectKey && indent > currentObjectIndent) {
-      const parent = currentEntry[currentObjectKey];
-      if (typeof parent === 'object' && !Array.isArray(parent)) {
-        const scalarListInObj = line.trim().match(/^-\s+(.+)/);
-        if (scalarListInObj) {
-          if (!parent[key]) {
-            parent[key] = [];
-          }
-          (parent[key] as string[]).push(
-            scalarListInObj[1].trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1'),
-          );
-        } else {
-          parent[key] = convertValue(value);
-        }
-      }
-      continue;
-    }
-
-    // Simple key-value
-    currentEntry[key] = convertValue(value);
-  }
-
-  // Finalize last entry
-  if (currentEntry) {
-    if (currentObjectKey && currentObjectArray.length > 0) {
-      currentEntry[currentObjectKey] = [...currentObjectArray];
-    }
-    entries.push(currentEntry);
-  }
-
-  return entries;
-}
-
-function getNextNonEmptyLine(lines: string[], startIdx: number): string | null {
-  for (let i = startIdx; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    if (trimmed && !trimmed.startsWith('#')) {
-      return lines[i];
-    }
-  }
-  return null;
-}
-
-function convertValue(value: string): any {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (/^\d+$/.test(value)) return parseInt(value, 10);
-  if (/^\d+\.\d+$/.test(value)) return parseFloat(value);
-  return value;
-}
-
-// ---------------------------------------------------------------------------
-// Fuzzy matching on feature names
-// ---------------------------------------------------------------------------
-
-function tokenize(name: string): string[] {
-  return name
-    .toLowerCase()
-    .split(/[-_/\s]+/)
-    .filter(t => t.length > 1);
-}
-
-function computeSimilarity(a: string, b: string): number {
-  const tokensA = tokenize(a);
-  const tokensB = tokenize(b);
-
-  if (tokensA.length === 0 || tokensB.length === 0) return 0;
-
-  const setA = new Set(tokensA);
-  const setB = new Set(tokensB);
-
-  const intersection = new Set([...setA].filter(t => setB.has(t)));
-  const union = new Set([...setA, ...setB]);
-
-  // Weight: Jaccard similarity, but give partial credit for substring matches
-  let jaccard = intersection.size / union.size;
-
-  // Bonus for exact string match
-  if (a.toLowerCase() === b.toLowerCase()) {
-    jaccard = Math.max(jaccard, 0.9);
-  }
-
-  // Bonus for one being substring of the other
-  if (a.toLowerCase().includes(b.toLowerCase()) || b.toLowerCase().includes(a.toLowerCase())) {
-    jaccard = Math.max(jaccard, 0.6);
-  }
-
-  return Math.round(jaccard * 100);
-}
-
-function findMatchingEntries(entries: JournalEntry[], feature: string, threshold = 30): MatchResult[] {
-  const matches: MatchResult[] = [];
-
-  for (const entry of entries) {
-    const similarity = computeSimilarity(entry.feature, feature);
-    if (similarity >= threshold) {
-      matches.push({ entry, similarity });
-    }
-  }
-
-  // Sort by similarity descending
-  matches.sort((a, b) => b.similarity - a.similarity);
-  return matches;
-}
-
-// ---------------------------------------------------------------------------
 // Pre-flight checks
 // ---------------------------------------------------------------------------
 
@@ -431,10 +156,6 @@ function runPreFlight(): PreFlightReport {
   const buildResult = execSafe(buildCmd + ' 2>/dev/null || true', 15000);
   const projectCompiles = buildResult.exitCode === 0;
   const buildOutput = buildResult.stderr || buildResult.stdout || '(no build output captured)';
-
-  // Check journal structure
-  const journalReadmePath = path.resolve('.opencode/journal/README.md');
-  const journalStructureOk = fs.existsSync(journalReadmePath);
 
   const securityToolsOk = false; // security self-test removed (its tools are language-specific)
 
@@ -472,7 +193,6 @@ function runPreFlight(): PreFlightReport {
     dirtyFiles,
     projectCompiles,
     buildOutput,
-    journalStructureOk,
     securityToolsOk,
     staleContextFound,
     staleContextStatus,
@@ -584,7 +304,6 @@ function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): {
 function printSummary(
   args: PipelineArgs,
   preFlight: PreFlightReport,
-  matches: MatchResult[],
 ): void {
   const separator = 'â”'.repeat(29 + args.feature.length + args.pipelineType.length);
 
@@ -611,19 +330,13 @@ function printSummary(
   if (preFlight.staleContextFound) {
     console.log(`  âš ï¸  Stale context found (status: ${preFlight.staleContextStatus}, age: ${preFlight.staleContextAge})`);
   } else {
-    console.log('  âœ… No stale context found');
-  }
-
-  if (preFlight.journalStructureOk) {
-    console.log('  âœ… Journal structure OK');
-  } else {
-    console.log('  âš ï¸  Journal README.md not found â€” journal may not be initialized');
+    console.log('  ✅ No stale context found');
   }
 
   if (preFlight.securityToolsOk) {
-    console.log('  âœ… Security self-test passed');
+    console.log('  ✅ Security self-test passed');
   } else {
-    console.log('  âš ï¸  Security self-test failed');
+    console.log('  ⚠️  Security self-test failed');
   }
 
   console.log('');
@@ -632,45 +345,6 @@ function printSummary(
   console.log('Agent Readiness:');
   // The readiness check runs in main() before printSummary, so the output is already shown
   console.log('  See above for agent readiness details');
-  console.log('');
-
-  // Cross-session learning section (removed)
-
-  if (matches.length === 0) {
-    console.log('  ðŸ“– No past entries found matching this feature');
-  } else {
-    for (const match of matches) {
-      const entry = match.entry;
-      const failedGates = entry.failedGates && entry.failedGates.length > 0
-        ? ` â€” failed gates: ${entry.failedGates.join(', ')}`
-        : '';
-      const cbEvents = entry.circuitBreakerEvents && entry.circuitBreakerEvents.length > 0
-        ? ` â€” circuit breaker: ${entry.circuitBreakerEvents.map(e => `${e.gate} (${e.attempts} attempts, ${e.resolution})`).join(', ')}`
-        : '';
-
-      console.log(`  ðŸ“– Found past entry matching "${entry.feature}" (${match.similarity}% similar):`);
-      console.log(`     - Result: ${entry.result}${failedGates}${cbEvents}`);
-
-      if (entry.notes) {
-        console.log(`     - Notes: ${entry.notes}`);
-      }
-
-      // Past pipeline results displayed above
-    }
-  }
-
-  console.log('');
-
-  // Module familiarity scores
-  console.log('Module Familiarity:');
-  const coreModules = ['src/', 'src/services/', 'src/controllers/', 'src/models/', 'src/utils/'];
-  for (const mod of coreModules) {
-    if (fs.existsSync(path.resolve(mod))) {
-      const score = computeFamiliarityScore(mod);
-      console.log(`  ${mod}: ${score}/10`);
-    }
-  }
-
   console.log('');
 
   // Created section
@@ -682,43 +356,6 @@ function printSummary(
   console.log(`Ready to proceed. Next: Run pre-flight checks and begin pipeline`);
 }
 
-/**
- * Compute a familiarity score (1-10) for a module based on git activity and test coverage.
- * 1-4: Unknown/new module (< 5 commits, no tests)
- * 5-7: Moderate activity (5-20 commits, some tests)
- * 8-10: Well-known (20+ commits, test file exists)
- */
-function computeFamiliarityScore(modulePath: string): number {
-  let score = 1;
-
-  // Check git commit frequency
-  const gitResult = execSafe(`git log --oneline --follow "${modulePath}" 2>/dev/null | wc -l`);
-  const commitCount = parseInt(gitResult.stdout, 10) || 0;
-
-  if (commitCount >= 20) score += 6;
-  else if (commitCount >= 5) score += 3;
-  else if (commitCount >= 1) score += 1;
-
-  // Check if test file exists
-  const ext = path.extname(modulePath);
-  const base = ext ? modulePath.slice(0, -ext.length) : modulePath;
-  const testFiles = [
-    base + '.test' + ext,
-    base + '.spec' + ext,
-    `tests/${base}.test${ext}`,
-    `__tests__/${path.basename(base)}.test${ext}`,
-  ];
-
-  for (const testFile of testFiles) {
-    if (fs.existsSync(path.resolve(testFile))) {
-      score += 3;
-      break;
-    }
-  }
-
-  return Math.min(10, Math.max(1, score));
-}
-
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -726,15 +363,10 @@ function computeFamiliarityScore(modulePath: string): number {
 function main(): void {
   const args = parseArgs();
 
-  // 1. Read journal for past pipeline context
-  const journalPath = path.resolve('.opencode/journal/journal.yaml');
-  const entries = parseJournalYaml(journalPath);
-  const matches = findMatchingEntries(entries, args.feature);
-
-  // 2. Run pre-flight checks
+  // 1. Run pre-flight checks
   const preFlight = runPreFlight();
 
-  // 2a. Stale pipeline detection â€” exit code 2 if stale context found (unless --force-clean)
+  // 1a. Stale pipeline detection â€” exit code 2 if stale context found (unless --force-clean)
   if (preFlight.staleContextFound) {
     if (args.forceClean) {
       // Archive stale context automatically
@@ -765,7 +397,7 @@ function main(): void {
     }
   }
 
-  // 2b. Agent readiness check â€” verify required agents have correct permissions
+  // 1b. Agent readiness check â€” verify required agents have correct permissions
   if (args.pipelineType !== 'documentation' && !args.skipReadiness) {
     const readinessResult = execSafe(
       `${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType} 2>&1`,
@@ -815,7 +447,7 @@ function main(): void {
   }
 
   // 5. Print summary report
-  printSummary(args, preFlight, matches);
+  printSummary(args, preFlight);
 
   process.exit(0);
 }

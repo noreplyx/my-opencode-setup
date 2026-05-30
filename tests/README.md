@@ -16,12 +16,12 @@ chmod +x tests/run-tests.sh
 
 | File | Tests |
 |------|-------|
-| `pipeline-init.test.ts` | Pre-flight checks, journal parsing, similarity matching, context generation |
+| `pipeline-init.test.ts` | Pre-flight checks, similarity matching, context generation |
 | `audit-log.test.ts` | SHA-256 hash chain integrity, YAML serialization/deserialization, tamper detection |
 | `validate-output-contract.test.ts` | Agent output schema validation, YAML frontmatter parsing, type checking |
 | `validate-context.test.ts` | Context file schema validation (agent-context.md) |
 | `shared-utils.test.ts` | Logger, file I/O utilities, pattern matching, directory walking |
-| `pipeline-teardown.test.ts` | Retrospective calculation, journal entry formatting, lesson extraction |
+| `pipeline-teardown.test.ts` | Pipeline teardown, archival, cleanup |
 
 ## Coverage Targets
 

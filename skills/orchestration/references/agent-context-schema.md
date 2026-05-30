@@ -11,7 +11,7 @@
   2. **Written** before each agent hand-off
   3. **Read** by every agent at startup (step 0 in their workflow)
   4. **Appended** by Orchestrator after each agent completes (add to `agentHistory`)
-  5. **Deleted** when the pipeline ends (after journal entry is written)
+  5. **Deleted** when the pipeline ends
   6. **Cleaned up** when a new pipeline detects a stale previous context and the user approves cleanup
 
 ---
@@ -896,12 +896,6 @@ circuitBreaker.patternSignatures:
 | Fixer→Verifier cycle repeats >= 3 times | closed → half-open | Loop detected — skip Fixer, go to PlanDescriber |
 | >= 5 distinct signatures, mixed classifications | closed → open | Multiple different failures — flag for user review |
 | After PlanDescriber revises plan | open → closed | Reset all counters and signatures |
-
-## Session Resume Data in Journal (Reference)
-
-The journal entry at `.opencode/journal/journal.yaml` already exists. The Session Resume Report references it as follows:
-
-The Orchestrator reads the journal's last 7 days of entries to build the Session Resume Report.
 
 ## Dynamic Context Injection Metadata
 

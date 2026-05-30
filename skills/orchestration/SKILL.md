@@ -200,7 +200,7 @@ The default orchestration workflow follows this sequence:
    â”‚              â””â”€â”€ README updates
    â”‚              â””â”€â”€ Migration guide (if breaking changes)
           â”‚
-8. ORCHESTRATOR â”€â”€â–º Run pipeline-teardown (write journal entry, archive logs),
+8. ORCHESTRATOR ──► Archive pipeline logs and clean up,
                      review all results, report to user
 ```### When to Skip Steps
 - **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber â†’ Implementor â†’ Security Scan (incl. auto semgrep) â†’ QA.
@@ -300,17 +300,16 @@ If an agent submits evidence quality < 70 for 3 consecutive attempts:
 
 ### Pipeline Teardown (Automated)
 
-After every pipeline completes (success or failure), the Orchestrator MUST run the automated pipeline-teardown script:
+After every pipeline completes (success or failure), the Orchestrator runs the automated pipeline-teardown script:
 
 ```bash
 ts-node skills/scripts/orchestration/pipeline-teardown.ts --feature=<name> --pipeline-type=<type> --result=pass|fail|partial --duration-minutes=<N> --files-changed=<file1,file2,...> [--failed-gates=<gate1,gate2,...>]
 ```
 
-This script performs:
-1. **Reads agent-context.md**: Extracts pipeline state, circuit breaker history, agent outputs
-2. **Writes Journal Entry**: Appends to `.opencode/journal/journal.yaml`
-3. **Archives Raw Outputs**: Copies full `agent-context.md` and per-agent outputs to `.opencode/pipeline-logs/<pipelineId>/`
-4. **Deletes agent-context.md**: Cleans up the context file (or preserves with `--keep-context`)
+This script:
+1. Reads agent-context.md and archives pipeline state
+2. Archives Raw Outputs to `.opencode/pipeline-logs/<pipelineId>/`
+3. Cleans up agent-context.md
 
 ### Build Gate & Smoke Test Requirements
 
@@ -678,39 +677,6 @@ ts-node skills/scripts/orchestration/provenance-tracker.ts --fix --manifest=... 
 # View full provenance chain
 ts-node skills/scripts/orchestration/provenance-tracker.ts --view --manifest=... --checkpoint=<id>
 ```
-
-## Project Journal Protocol
-
-### Purpose
-The Project Journal provides memory so the system remembers past work, decisions, and failures. Without it, every session starts fresh.
-
-### Journal Location
-`.opencode/journal/journal.yaml`
-
-### When to Write
-After every pipeline that:
-1. **Completes successfully** â€” all gates pass
-2. **Fails after escalation** â€” circuit breaker opened
-3. **Produces key architecture decisions** â€” even if partial
-
-### What to Record
-| Field | Description | Example |
-|-------|-------------|---------|
-| `date` | ISO-8601 timestamp | `"2026-05-19T10:30:00Z"` |
-| `feature` | Short feature name | `"user-profile"` |
-| `pipelineType` | Type of pipeline run | `"full"`, `"fixer-only"` |
-| `result` | Outcome | `"pass"`, `"fail"`, `"partial"` |
-| `durationMinutes` | How long the pipeline took | `12` |
-| `filesChanged` | Files modified | `["src/services/user.ts"]` |
-| `keyDecisions` | Architecture decisions made | `["Chose in-memory over Redis for MVP"]` |
-| `circuitBreakerEvents` | Any circuit breaker activations | `[{gate: "verifier", attempts: 3}]` |
-| `failedGates` | Gates that didn't pass | `["verifier"]` |
-| `notes` | Free text | `"Revised plan twice due to edge cases"` |
-
-### When to Read
-- **Before starting a pipeline** in a new session: read the journal to understand past work
-- **Before dispatching PlanDescriber**: read the journal to check for relevant past decisions
-- **Before dispatching Finder**: read the journal so you know what's already been explored
 
 ## Agent Action Audit Trail (NEW)
 
@@ -1840,7 +1806,6 @@ Before starting, the Orchestrator assesses its confidence in pipeline selection:
 Confidence is calculated based on:
 - How many pipeline types match the user's request? (1 match = high, 3+ matches = low)
 - How well does the user's language match the pipeline descriptions? (exact match = high, vague = low)
-- Does the journal have past entries for similar features? (yes = higher, no = lower)
 
 ### Mid-Flow Pipeline Switching
 If during execution the Orchestrator discovers the task is different than expected:
@@ -1895,7 +1860,6 @@ If a pipeline fails or the user is unhappy, offer automated rollback:
   2. `git revert {commit}` for committed changes
   3. "Delete newly created files" option
 - The rollback command is presented to the user for confirmation before execution
-- After rollback: Update journal with "rolled back" status
 
 ---
 
@@ -2047,80 +2011,6 @@ Go implement the feature."
 
 ---
 
-## Session Resume Report (NEW)
-
-### Purpose
-When a user returns to a workspace after a break (hours or days), they need a fast summary of what happened in the last session. Without this, they must read the journal, check git log, and inspect the workspace manually.
-
-### When to Generate
-At pipeline **start**, the Orchestrator checks:
-1. Does `.opencode/journal/journal.yaml` exist?
-2. Does it contain entries from the last 7 days?
-3. If yes â†’ generate the Session Resume Report and show it to the user before proceeding
-
-### Report Format
-
-```markdown
-## ðŸ”„ Session Resume Report
-
-### Recent Pipeline Activity (Last 7 Days)
-
-| Date       | Feature         | Result | Duration | Files Changed               |
-|------------|-----------------|--------|----------|-----------------------------|
-| May 18     | user-profile    | âœ… Pass  | 12m     | src/services/user.service.ts |
-| May 17     | rate-limiter    | âŒ Fail  | 8m      | src/middleware/rate-limiter.ts |
-| May 16     | auth-upgrade    | âœ… Pass  | 15m     | 4 files                     |
-
-### Key Decisions Made
-- `user-profile`: Chose Zod over Joi for input validation (already in deps)
-- `user-profile`: Split into 3-phase implementation (model â†’ service â†’ controller)
-- `auth-upgrade`: Rejected Redis session store for MVP (will revisit at 10k users)
-
-### Pending Items
-- `rate-limiter` â€” Failed at Verifier gate (3 attempts). Root cause: plan omission (edge cases not covered).
-  Recommended next action: Revise plan with explicit edge case checkpoints.
-
-### Uncommitted Changes
-- `src/services/user.service.ts` â€” Modified but not committed
-- `plan-manifests/user-profile/v1-manifest.json` â€” Unstaged
-
-### Workspace State
-- Current branch: `feature/user-profile`
-- Behind main by: 2 commits
-- Ready to: Continue verification of user-profile feature
-
-### âš¡ Quick Actions
-1. **Continue where you left off** â€” re-run Verifier on user-profile
-2. **Start fresh** â€” new feature request
-3. **Clean up** â€” reset workspace to clean state
-```
-
-### Data Sources
-| Field | Source |
-|-------|--------|
-| Pipeline history | `.opencode/journal/journal.yaml` |
-| Key decisions | Journal entries' `keyDecisions` field |
-| Pending items | Last journal entry with `result: "fail"` or `circuitBreakerEvents` |
-| Uncommitted changes | `git status --porcelain` |
-| Branch state | `git branch`, `git log --oneline --count HEAD ^main` |
-
-### Workflow
-```
-Pipeline start
-  â”‚
-  â”œâ”€â”€ Read journal â”€â”€â–º Entries exist? â”€â”€â–º No â”€â”€â–º Skip, proceed normally
-  â”‚                       â”‚
-  â”‚                       Yes
-  â”‚                       â–¼
-  â”œâ”€â”€ Build Session Resume Report
-  â”‚                       â”‚
-  â”œâ”€â”€ Present to user â”€â”€â–º "Here's what happened since your last session."
-  â”‚                       â”‚
-  â”‚                       â–¼
-  â””â”€â”€ Ask: "Would you like to continue from where you left off, start fresh, or clean up?"
-```
-
----
 
 ## Semantic Circuit Breaker (NEW â€” replaces simple counter-based breaker)
 

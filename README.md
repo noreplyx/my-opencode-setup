@@ -30,7 +30,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan (semgrep + gitleaks + trivy) → QA → Verifier → Documentor → Orchestrator (report + journal)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Security Scan (semgrep + gitleaks + trivy) → QA → Verifier → Documentor → Orchestrator (report)
                                                   ↓                              ↑
                                             Build Gate + Lint Gate         Fixer (feedback loop)
 ```
@@ -60,7 +60,7 @@ The **Fixer** agent is called when QA discovers bugs or Verifier finds deviation
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer → QA → Verifier
 - **Trivial config changes**: Skip all gates — just delegate to Implementor
 - **UI/website testing**: Use Browser Tester to explore, find bugs, and verify UI implementations
-- **Documentation updates**: Run Documentor after any pipeline that created/modified code but before the final journal entry
+- **Documentation updates**: Run Documentor after any pipeline that created/modified code
 
 ### Pre-Flight Check
 
@@ -68,7 +68,6 @@ Before starting any pipeline, the Orchestrator runs a quick pre-flight check:
 1. Verify the project currently compiles
 2. Check for uncommitted changes (`git status`)
 3. Verify essential configs exist (`package.json`, `tsconfig.json`)
-4. Read the Project Journal for past work and failure patterns
 
 ### Circuit Breaker & Timeout System
 
@@ -85,15 +84,6 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 - 3 Verifier failures → escalate to PlanDescriber
 - 3 Security Scan failures → escalate to user for direction
 - 5 total pipeline retries → pause and report to user
-
-## Project Journal
-
-The Project Journal at `.opencode/journal/journal.yaml` provides a record of past pipelines. After every pipeline, the Orchestrator appends an entry recording:
-- Feature name, pipeline type, result (pass/fail/partial)
-- Files changed, key architecture decisions
-- Circuit breaker events and failed gates
-
-**Readers**: Finder, PlanDescriber, and Orchestrator all read the journal to understand past work before starting a new session.
 
 ## Built-in Skills (17 total)
 
@@ -139,7 +129,7 @@ The **Documentor** agent creates and maintains project documentation:
 
 **Workflow**: Load `api-documentation` skill → Review implementation changes → Write docs → Verify accuracy → Report
 
-**When to use**: After any pipeline that creates or modifies code, before the final Orchestrator journal entry.
+**When to use**: After any pipeline that creates or modifies code.
 
 ## Plan Manifests
 
@@ -174,12 +164,12 @@ This section documents improvements implemented on top of the base system.
 
 | Test File | Tests | Covers |
 |-----------|-------|--------|
-| `tests/pipeline-init.test.ts` | 8 | Pre-flight checks, journal parsing, similarity matching, context generation |
+| `tests/pipeline-init.test.ts` | 8 | Pre-flight checks, similarity matching, context generation |
 | `tests/audit-log.test.ts` | 8 | SHA-256 hash chain integrity, YAML serialization, tamper detection |
 | `tests/validate-output-contract.test.ts` | 42 | Agent output schema validation, YAML frontmatter parsing, type checking |
 | `tests/validate-context.test.ts` | 4 | Context file schema validation |
 | `tests/shared-utils.test.ts` | 21 | Logger, file I/O utilities, pattern matching |
-| `tests/pipeline-teardown.test.ts` | 20 | Retrospective calculation, journal formatting, lesson extraction |
+| `tests/pipeline-teardown.test.ts` | 20 | Pipeline teardown, archival, cleanup |
 
 **Run**: `./tests/run-tests.sh` or `npx ts-node tests/<name>.test.ts`
 

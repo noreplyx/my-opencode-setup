@@ -809,7 +809,7 @@ function printInvalidatedEvidenceReport(chainReport: EvidenceChainReport): void 
       console.log(`    Claim: "${link.claim.slice(0, 80)}..."`);
       console.log(`    File: ${link.source}`);
       console.log(`    Current: File modified, export no longer found`);
-      console.log(`    → Action: Update journal entry or flag for re-verification`);
+      console.log(`    → Action: Flag for re-verification`);
       console.log();
     }
   }

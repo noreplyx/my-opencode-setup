@@ -82,7 +82,7 @@ If the validation returns `valid: false`, report the errors to the user before p
 
 ## Protocol Reference
 
-All orchestration protocols (pre-flight checks, context window budgeting, rollback, parallel dispatch, agent-context tracking, project journal, pipeline selection, brainstorming, security scan, verification, failure escalation) are defined in the `orchestration` skill.
+All orchestration protocols (pre-flight checks, context window budgeting, rollback, parallel dispatch, agent-context tracking, pipeline selection, brainstorming, security scan, verification, failure escalation) are defined in the `orchestration` skill.
 
 📄 **Load the skill**: `skill("orchestration")`
 
@@ -95,13 +95,11 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Rollback | Rollback Protocol |
 | Parallel Dispatch | Parallel Dispatch Workflow |
 | agent-context.md tracking | Agent Context |
-| Project Journal | Project Journal Protocol |
 | Pipeline Selection | Pipeline Selection Protocol |
 | Brainstorming | Orchestrator as Brainstormer |
 | Security Scan | Security Scan Protocol (under Build Gate) |
 | Verification | Verification Protocol |
 | Failure Escalation | Failure Summary & Escalation |
-| Pipeline Retrospective | Pipeline Retrospective Protocol |
 | Pipeline Init/Teardown | Pipeline Init & Teardown Scripts |
 | Merge Coordination | Merge Coordinator Protocol |
 | Context Validation | Context Validator (validate-context.ts) |
