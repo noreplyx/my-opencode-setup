@@ -5,7 +5,6 @@
  * Tests:
  *   - Retrospective Quality Calculation (smooth/rough/failed)
  *   - Journal Entry Formatting (YAML structure)
- *   - Calibration Update Triggers
  *   - Archive Path Generation
  *   - Lesson Extraction & Deduplication
  *   - Full Teardown Flow & keep-context flag
@@ -247,34 +246,6 @@ function ensureDir(dirPath: string): boolean {
   return false;
 }
 
-// ── Calibration tracker (conceptual) ──
-
-interface CalibrationStats {
-  successfulTasks: number;
-  failedTasks: number;
-  totalDurationMinutes: number;
-  pipelineCount: number;
-}
-
-function createCalibrationStats(): CalibrationStats {
-  return { successfulTasks: 0, failedTasks: 0, totalDurationMinutes: 0, pipelineCount: 0 };
-}
-
-function recordPipelineResult(stats: CalibrationStats, result: string, durationMinutes: number): void {
-  if (result === 'pass') {
-    stats.successfulTasks++;
-  } else {
-    stats.failedTasks++;
-  }
-  stats.totalDurationMinutes += durationMinutes;
-  stats.pipelineCount++;
-}
-
-function getAverageDuration(stats: CalibrationStats): number {
-  if (stats.pipelineCount === 0) return 0;
-  return stats.totalDurationMinutes / stats.pipelineCount;
-}
-
 // ── Teardown flow (conceptual) ──
 
 interface TeardownResult {
@@ -508,38 +479,6 @@ async function main() {
     assertEqual(entry.circuitBreakerEvents[0].resolution, 'escalated', 'first CB event resolution');
     assertEqual(entry.circuitBreakerEvents[1].gate, 'lintGate', 'second CB event gate');
     assertEqual(entry.circuitBreakerEvents[1].attempts, 2, 'second CB event attempts');
-  });
-
-  // ═══════════════════════════════════════════════════════
-  // Section 3: Calibration Update Triggers
-  // ═══════════════════════════════════════════════════════
-
-  test('Successful pipeline triggers successfulTasks increment', () => {
-    const stats = createCalibrationStats();
-    assertEqual(stats.successfulTasks, 0, 'should start at 0');
-    recordPipelineResult(stats, 'pass', 10);
-    assertEqual(stats.successfulTasks, 1, 'should increment after pass');
-    recordPipelineResult(stats, 'pass', 5);
-    assertEqual(stats.successfulTasks, 2, 'should increment again');
-    assertEqual(stats.failedTasks, 0, 'failedTasks should remain 0');
-  });
-
-  test('Failed pipeline triggers failedTasks increment', () => {
-    const stats = createCalibrationStats();
-    recordPipelineResult(stats, 'fail', 8);
-    assertEqual(stats.failedTasks, 1, 'failedTasks should increment');
-    assertEqual(stats.successfulTasks, 0, 'successfulTasks should remain 0');
-  });
-
-  test('Pipeline duration updates running average', () => {
-    const stats = createCalibrationStats();
-    assertEqual(getAverageDuration(stats), 0, 'average of empty stats is 0');
-    recordPipelineResult(stats, 'pass', 10);
-    assertEqual(getAverageDuration(stats), 10, 'average after one pipeline');
-    recordPipelineResult(stats, 'fail', 20);
-    assertEqual(getAverageDuration(stats), 15, 'average after two pipelines');
-    recordPipelineResult(stats, 'pass', 30);
-    assertEqual(getAverageDuration(stats), 20, 'average after three pipelines');
   });
 
   // ═══════════════════════════════════════════════════════

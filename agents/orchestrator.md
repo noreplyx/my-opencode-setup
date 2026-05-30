@@ -91,7 +91,6 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Protocol | Section in SKILL.md |
 |----------|---------------------|
 | Pre-Flight Check | Pre-Flight Check |
-| Calibration-Conscious Dispatch | Agent Calibration Database |
 | Context Window Budgeting | Context Window Budgeting |
 | Rollback | Rollback Protocol |
 | Parallel Dispatch | Parallel Dispatch Workflow |
