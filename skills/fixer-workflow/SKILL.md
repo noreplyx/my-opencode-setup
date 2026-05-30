@@ -1,6 +1,6 @@
 ---
 name: fixer-workflow
-description: Workflow protocol for the Fixer subagent. Provides debugging workflow, root cause classification, automated diagnostics protocol, reproduction packet format, cross-session error matching, and post-fix verification. Load this skill when dispatching the Fixer agent.
+description: Workflow protocol for the Fixer subagent. Provides debugging workflow, root cause classification, automated diagnostics protocol, reproduction packet format, and post-fix verification. Load this skill when dispatching the Fixer agent.
 ---
 
 # Skill: fixer-workflow
@@ -28,7 +28,7 @@ You have bash access for debugging and verification tasks. Follow these restrict
 - **Build tools**: `npm run build`, `tsc`, `tsc --incremental`, `webpack`, `vite build`, etc.
 - **Testing**: `npm test`, `jest`, `vitest`, `pytest`, etc.
 - **Linting**: `eslint`, `prettier`, `tsc --noEmit`, etc.
-- **Diagnostic tools**: `provenance-tracker.ts`, `citation-index.ts`, `validate-output-contract.ts`
+- **Diagnostic tools**: `provenance-tracker.ts`, `validate-output-contract.ts`
 - **Git blame/operations**: `git blame`, `git log`, `git diff`, `git add -A`, `git commit` (no force push)
 - **Package management**: `npm install`, `pip install` (only packages explicitly needed for the fix)
 - **Read-only inspection**: `cat`, `head`, `tail`, `ls`, `find` for investigation
@@ -90,26 +90,7 @@ Locate and read the plan manifest file. Determine if the deviation is a **plan-o
 - If **plan-omission**: The plan didn't specify what was needed — escalate to the Orchestrator (not Fixer's job to fix the plan)
 - If **implementation-error**: The code doesn't match the plan's intent — proceed with diagnosis and fix
 
-### Step 3: Check Cross-Session Error Matching
-
-Before running diagnostics, check if this exact error has been seen before:
-
-```bash
-# Check reproduction archive
-ls .opencode/reproductions/ 2>/dev/null
-
-# Check citation index for past checkpoint failures (C4)
-ts-node skills/scripts/orchestration/citation-index.ts --checkpoint=<checkpoint-id>
-```
-
-The citation-index script will:
-- Search `.opencode/journal/` and `.opencode/reproductions/` for past checkpoint failures
-- Return matching entries with previous root cause, fix, and confidence score
-- Return null if no match found
-
-If a matching error packet is found, read it and include the previous root cause and fix in your report. This prevents re-diagnosing the same bug across sessions.
-
-### Step 4: Run Automated Diagnostics Protocol
+### Step 3: Run Automated Diagnostics Protocol
 
 After reading the bug report but BEFORE applying any fix, run these automated diagnostics to gather evidence:
 
@@ -352,39 +333,7 @@ reproduction:
 
 ### Why This Matters
 
-This enables the Orchestrator to store the reproduction in `.opencode/reproductions/` for cross-session error matching. Every failure should be **executable** rather than just **describable**.
-
-## Cross-Session Error Matching
-
-Before applying a fix, check if this exact error has been seen before in past sessions:
-
-### Method 1: Reproduction Archive
-```bash
-ls .opencode/reproductions/ 2>/dev/null
-```
-If matching reproduction packets exist, read them and include the previous root cause and fix in your report.
-
-### Method 2: Citation Index (C4)
-```bash
-ts-node skills/scripts/orchestration/citation-index.ts --checkpoint=<checkpoint-id>
-```
-If the bug is associated with a plan manifest checkpoint (e.g., CP-003), the citation index searches:
-- `.opencode/journal/journal.yaml` for past entries mentioning this checkpoint
-- `.opencode/reproductions/` for reproduction packets referencing this checkpoint
-- Returns matched entries with previous root cause, fix, and confidence score
-
-### Cross-Session Match Output
-```yaml
-crossSessionMatch:
-  found: true
-  pipelineId: "20260519-pipeline-abc"
-  previousRootCause: "Missing null check in validateEmail"
-  previousFix: "Added if (!email) throw new ValidationError()"
-  confidence: 0.85
-  citationIndexSource: "journal.yaml entry #12"
-```
-
-If `found: false`, proceed with fresh diagnosis.
+Every failure should be **executable** rather than just **describable**.
 
 ## Fix Verification
 
@@ -436,7 +385,8 @@ If you have attempted 3 fixes and the bug persists:
 3. Include ALL of the following in your report:
    - All diagnostic results from every attempt
    - All reproduction packets from every attempt
-   - All cross-session match results
+
+
    - The root cause analysis for each attempt
    - What was tried in each attempt (the fix applied)
    - Why each attempt failed (what was still broken after the fix)
@@ -481,7 +431,6 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `rootCauseAnalysis.contributingFactors` | Factors that contributed to the bug |
 | `diagnostics` | Results from automated diagnostic tools |
 | `reproduction` | Reproduction command for build/lint/test failure |
-| `crossSessionMatch` | If found: pipelineId, previousRootCause, previousFix |
 | `testPassed` | Whether existing tests passed (true/false/null) |
 | `testOutput` | Full test output or "No test suite configured" |
 | `escalation` | If escalating: reason, attempts, escalationTarget |
@@ -552,7 +501,6 @@ reproduction:
   expectedExitCode: 0
   actualExitCode: 0
   actualOutputSnippet: "Build completed successfully"
-crossSessionMatch: null
 testPassed: true
 testOutput: "<test output or 'No test suite configured'>"
 sources:
@@ -616,7 +564,6 @@ Below the structured block, include the detailed fixer report (root cause analys
 
 Before reporting, verify:
 - [ ] Step -1 checkpoint commit was created
-- [ ] Cross-session error matching was checked (Step 3)
 - [ ] Automated diagnostics were run (Step 4) — all 6 tools
 - [ ] Root cause was diagnosed (Step 5) — classification recorded
 - [ ] Fix was applied (Step 6) — minimal change only
@@ -635,8 +582,7 @@ Before reporting, verify:
 - ✅ You MUST run automated diagnostics before reasoning about root cause
 - ✅ You MUST run provenance tracker to identify which agent introduced the bug
 - ✅ You MUST emit reproduction command for build/lint/test failures
-- ✅ You MUST check cross-session error matches (both reproduction archive and citation index) before fixing
-- ✅ You MUST check citation index for past checkpoint failures
+- ✅ You MUST create a reproduction packet for every failure
 - ✅ You MUST reason about root cause before applying any fix
 - ✅ You MUST run build + lint after every fix
 - ✅ You MUST run existing tests after every fix (Post-Fix Regression Check)
@@ -687,5 +633,4 @@ Before reporting, verify:
 |--------|---------|-------------|
 | `provenance-tracker.ts --blame --file=<path>` | Trace which agent introduced the bug | Step 4.5 (always) |
 | `check-evidence-regression.ts` | Check test evidence degradation | Step 4.6 (if test regression) |
-| `citation-index.ts --checkpoint=<id>` | Search past checkpoint failures | Step 3 (cross-session matching) |
 | `validate-output-contract.ts --stdin` | Validate structured output format | Step 10 (after output produced) |

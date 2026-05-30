@@ -52,6 +52,5 @@ Follow the structure defined in `shared-agent-workflow` skill.
 |-------|-------------|
 | `diagnostics` | List of diagnostic results with tool, passed, findings |
 | `rootCauseAnalysis` | Ranked root cause with evidence and fix recommendations |
-| `crossSessionMatches` | Matches to previous pipeline failures |
 
 > Note: Detailed workflow instructions are loaded from workflow skill when available.

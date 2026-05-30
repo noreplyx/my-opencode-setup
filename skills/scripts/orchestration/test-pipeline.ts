@@ -6,7 +6,7 @@
  *   [runtime] skills/scripts/orchestration/test-pipeline.ts              # Run all tests
  *   [runtime] skills/scripts/orchestration/test-pipeline.ts --test=context   # Run specific test
  *
- * Available tests: context-lifecycle, fixer-output, calibration, stale-context, output-contract
+ * Available tests: context-lifecycle, fixer-output, stale-context, output-contract
  */
 
 import * as fs from 'fs';
@@ -28,7 +28,6 @@ interface TestResult {
 const ALL_TESTS: string[] = [
   'context-lifecycle',
   'fixer-output',
-  'calibration',
   'stale-context',
   'output-contract',
   'circuit-breaker',
@@ -295,156 +294,7 @@ function testFixerOutput(): void {
   }
 }
 
-// ── Test 3: Calibration Database Read/Write ─────────────────────────────────
-
-function testCalibration(): void {
-  const tmpDir = fs.mkdtempSync('/tmp/calibration-test-');
-  const calibrationDir = path.join(tmpDir, '.opencode', 'calibration');
-  const calibrationFile = path.join(calibrationDir, 'agents.yaml');
-
-  try {
-    // 1. Create calibration directory and initial agents.yaml
-    fs.mkdirSync(calibrationDir, { recursive: true });
-
-    // Create initial empty calibration data
-    const initialCalibration = `# Agent Calibration Database
-# Auto-generated — do not edit manually
-
-agents: {}
-commonFailurePatterns: []
-`;
-    fs.writeFileSync(calibrationFile, initialCalibration, 'utf-8');
-
-    // 2. Simulate update-calibration.ts --agent=implementor --success=true --build-retries=2
-    function updateCalibration(agent: string, success: boolean, buildRetries?: number, failurePattern?: string): void {
-      const raw = fs.readFileSync(calibrationFile, 'utf-8');
-      // Parse existing YAML-like structure manually
-      const agentsMatch = raw.match(/agents:\s*(\{.*?\}|[\s\S]*?(?=\ncommonFailurePatterns))/);
-      let agents: Record<string, Record<string, unknown>> = {};
-      if (agentsMatch) {
-        try {
-          agents = JSON.parse(agentsMatch[1] || '{}');
-        } catch {
-          agents = {};
-        }
-      }
-
-      // Also try to extract agents from indented YAML format
-      const agentLines: string[] = [];
-      let inAgents = false;
-      let inAgent = false;
-      let currentAgent = '';
-      for (const line of raw.split('\n')) {
-        if (line.startsWith('agents:')) {
-          inAgents = true;
-          continue;
-        }
-        if (inAgents && line.startsWith('commonFailurePatterns:')) {
-          inAgents = false;
-          break;
-        }
-        if (inAgents) {
-          agentLines.push(line);
-        }
-      }
-
-      // Parse agents from indented format
-      const parsedAgents: Record<string, Record<string, unknown>> = {};
-      let activeAgent = '';
-      for (const line of agentLines) {
-        const agentMatch = line.match(/^\s{2}(\w+):/);
-        if (agentMatch) {
-          activeAgent = agentMatch[1];
-          parsedAgents[activeAgent] = parsedAgents[activeAgent] || {};
-          continue;
-        }
-        const kvMatch = line.match(/^\s{4}(\w+):\s*(.+)/);
-        if (kvMatch && activeAgent) {
-          const val = kvMatch[2].trim();
-          parsedAgents[activeAgent][kvMatch[1]] = isNaN(Number(val)) ? val : Number(val);
-        }
-      }
-
-      // Merge
-      agents = { ...parsedAgents, ...agents };
-
-      // Update the agent's calibration data
-      const agentData: Record<string, unknown> = agents[agent] || {};
-      agentData.totalTasks = ((agentData.totalTasks as number) || 0) + 1;
-      if (success) {
-        agentData.successfulTasks = ((agentData.successfulTasks as number) || 0) + 1;
-      } else {
-        agentData.failedTasks = ((agentData.failedTasks as number) || 0) + 1;
-      }
-      if (buildRetries !== undefined) {
-        agentData.buildRetries = ((agentData.buildRetries as number) || 0) + buildRetries;
-      }
-      agents[agent] = agentData;
-
-      // Build YAML output
-      let yaml = '# Agent Calibration Database\n# Auto-generated — do not edit manually\n\nagents:\n';
-      for (const [name, data] of Object.entries(agents)) {
-        yaml += `  ${name}:\n`;
-        for (const [key, val] of Object.entries(data)) {
-          yaml += `    ${key}: ${val}\n`;
-        }
-      }
-
-      // Parse commonFailurePatterns
-      const patternsMatch = raw.match(/commonFailurePatterns:\s*(\[[\s\S]*?\])\s*$/m);
-      let patterns: string[] = [];
-      if (patternsMatch) {
-        try {
-          patterns = JSON.parse(patternsMatch[1]);
-        } catch {
-          patterns = [];
-        }
-      }
-
-      if (failurePattern) {
-        if (!patterns.includes(failurePattern)) {
-          patterns.push(failurePattern);
-        }
-      }
-
-      yaml += `commonFailurePatterns: ${JSON.stringify(patterns)}\n`;
-      fs.writeFileSync(calibrationFile, yaml, 'utf-8');
-    }
-
-    // First update: success
-    updateCalibration('implementor', true, 2);
-
-    // 3. Read back and verify
-    let calContent = fs.readFileSync(calibrationFile, 'utf-8');
-    assert.ok(calContent.includes('implementor:'), 'Calibration must contain implementor entry');
-    assert.ok(calContent.includes('totalTasks: 1'), 'totalTasks must be 1 after first run');
-    assert.ok(calContent.includes('successfulTasks: 1'), 'successfulTasks must be 1 after success');
-    assert.ok(calContent.includes('buildRetries: 2'), 'buildRetries must be 2');
-
-    // 4. Second update: failure
-    updateCalibration('implementor', false, undefined, 'Missing barrel export');
-
-    // 5. Read back and verify
-    calContent = fs.readFileSync(calibrationFile, 'utf-8');
-    assert.ok(calContent.includes('totalTasks: 2'), 'totalTasks must be 2 after second run');
-    assert.ok(calContent.includes('failedTasks: 1'), 'failedTasks must be 1 after failure');
-    assert.ok(calContent.includes('commonFailurePatterns'), 'Must have commonFailurePatterns section');
-
-    // Verify commonFailurePatterns contains the pattern
-    const patternsMatch = calContent.match(/commonFailurePatterns:\s*(\[[\s\S]*?\])/);
-    assert.ok(patternsMatch !== null, 'Must have commonFailurePatterns array');
-    const patterns = JSON.parse(patternsMatch[1]);
-    assert.ok(Array.isArray(patterns), 'commonFailurePatterns must be an array');
-    assert.ok(patterns.includes('Missing barrel export'), 'Must contain "Missing barrel export" pattern');
-
-  } finally {
-    if (fs.existsSync(tmpDir)) {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  }
-}
-
-// ── Test 4: Stale agent-context.md Detection ────────────────────────────────
+// ── Test 3: Stale agent-context.md Detection ────────────────────────────────
 
 function isStaleContext(content: string): boolean {
   const match = content.match(/^---\n([\s\S]*?)\n---\n/);
@@ -522,7 +372,7 @@ Failed context body
   assert.ok(!isStaleContext(failedContent), 'Failed context must NOT be flagged as stale regardless of age');
 }
 
-// ── Test 5: Output Contract Validation ──────────────────────────────────────
+// ── Test 4: Output Contract Validation ──────────────────────────────────────
 
 interface AgentOutputContract {
   status: string;
@@ -784,7 +634,7 @@ function testOutputContract(): void {
   }
 }
 
-// ── Test 6: Circuit Breaker State Transitions ────────────────────────────
+// ── Test 5: Circuit Breaker State Transitions ────────────────────────────
 
 function testCircuitBreakerTransitions(): void {
   // 1. Test state transitions: closed → (after 3 failures on same gate) → open → (after reset) → half-open → (after pass) → closed
@@ -844,7 +694,7 @@ function testCircuitBreakerTransitions(): void {
   }
 }
 
-// ── Test 7: Pipeline Selection Logic ────────────────────────────────────
+// ── Test 6: Pipeline Selection Logic ────────────────────────────────────
 
 interface TaskClassification {
   taskType: string;
@@ -902,7 +752,7 @@ function testPipelineSelection(): void {
   console.log(`  Pipeline selection table validated: ${CLASSIFICATIONS.length} classifications, ${quickPresets.length} presets ✓`);
 }
 
-// ── Test 8: Merge Coordinator Output Contract ───────────────────────────
+// ── Test 7: Merge Coordinator Output Contract ───────────────────────────
 
 function testMergeCoordinatorOutput(): void {
   const tmpDir = fs.mkdtempSync('/tmp/merge-coordinator-test-');
@@ -975,7 +825,6 @@ function main(): void {
   const testMap: Record<string, () => void> = {
     'context-lifecycle': testContextLifecycle,
     'fixer-output': testFixerOutput,
-    'calibration': testCalibration,
     'stale-context': testStaleContext,
     'output-contract': testOutputContract,
     'circuit-breaker': testCircuitBreakerTransitions,

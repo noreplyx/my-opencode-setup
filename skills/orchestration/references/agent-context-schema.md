@@ -466,23 +466,7 @@ failureSummary:
     failed: ["Verifier"]
     needsReview:
       - "CP-003: exportExists validateEmail — partial implementation exists but incomplete"
-  retrospective:                           # Auto-generated after pipeline ends
-    pipelineQuality: "rough"
-    handoffQuality:
-      rating: 7
-      issues: ["Hand-off to Implementor was missing context about existing User model"]
-    agentPerformance:
-      - role: "finder"
-        effectiveness: "good"
-        notes: "Found all required files"
-      - role: "implementor"
-        effectiveness: "good"
-        notes: "Followed plan exactly but needed 2 build gate retries"
-    wastedSteps: []
-    improvementsForNextPipeline:
-      - "Give PlanDescriber more context about existing error handling patterns"
-    lessonsLearned:
-      - "Edge case checkpoints in plan manifests prevent Fixer from having to rediscover them"
+
   recommendedAction: "Revise plan to add explicit error handling checkpoints for all user service methods"
 
 # ── Git State ──
@@ -705,9 +689,6 @@ Tracks what was successfully delivered despite pipeline failure. Contains three 
 - `failed`: List of gates/steps that did not pass (e.g., ["Verifier"]). These represent the blocking failures that caused circuit breaker to open.
 - `needsReview`: List of specific items that are partially implemented and need human review (e.g., "CP-003: exportExists validateEmail — partial implementation exists but incomplete"). These items are functional enough to keep but need verification/correction.
 
-### `failureSummary.retrospective`
-Post-pipeline self-evaluation.
-
 ### `status` (top-level)
 - `running`: Pipeline in progress
 - `completed`: Pipeline finished successfully
@@ -919,23 +900,6 @@ circuitBreaker.patternSignatures:
 ## Session Resume Data in Journal (Reference)
 
 The journal entry at `.opencode/journal/journal.yaml` already exists. The Session Resume Report references it as follows:
-
-```yaml
-# Fields used by Session Resume Report:
-retrospective:
-  pipelineQuality: "rough"
-  handoffQuality:
-    rating: 7
-  agentPerformance:
-    - role: "finder"
-      effectiveness: "good"
-  wastedSteps:
-    - "Finder was unnecessary — domain was already well-understood"
-  improvementsForNextPipeline:
-    - "Give PlanDescriber more context about existing error handling patterns"
-  lessonsLearned:
-    - "Edge case checkpoints in plan manifests prevent Fixer from having to rediscover them"
-```
 
 The Orchestrator reads the journal's last 7 days of entries to build the Session Resume Report.
 

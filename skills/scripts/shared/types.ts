@@ -185,18 +185,11 @@ export interface SecurityFixDetails {
   regressionTestsCreated: number;
 }
 
-export interface CrossSessionMatch {
-  pipelineId: string;
-  previousRootCause: string;
-  previousFix: string;
-}
-
 export interface FixerOutput extends AgentOutputContract {
   rootCauseAnalysis: RootCauseAnalysis;
   securityFixDetails?: SecurityFixDetails;
   testPassed: boolean | null;
   testOutput?: string;
-  crossSessionMatch?: CrossSessionMatch;
 }
 
 // ── QA ──────────────────────────────────────────────────────────────────────

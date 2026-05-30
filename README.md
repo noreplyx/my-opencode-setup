@@ -88,7 +88,7 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 
 ## Project Journal
 
-The Project Journal at `.opencode/journal/journal.yaml` provides cross-session memory. After every pipeline, the Orchestrator appends an entry recording:
+The Project Journal at `.opencode/journal/journal.yaml` provides a record of past pipelines. After every pipeline, the Orchestrator appends an entry recording:
 - Feature name, pipeline type, result (pass/fail/partial)
 - Files changed, key architecture decisions
 - Circuit breaker events and failed gates
@@ -176,7 +176,6 @@ This section documents improvements implemented on top of the base system.
 |-----------|-------|--------|
 | `tests/pipeline-init.test.ts` | 8 | Pre-flight checks, journal parsing, similarity matching, context generation |
 | `tests/audit-log.test.ts` | 8 | SHA-256 hash chain integrity, YAML serialization, tamper detection |
-| `tests/update-calibration.test.ts` | 47 | Agent calibration database, success tracking, domain breakdowns |
 | `tests/validate-output-contract.test.ts` | 42 | Agent output schema validation, YAML frontmatter parsing, type checking |
 | `tests/validate-context.test.ts` | 4 | Context file schema validation |
 | `tests/shared-utils.test.ts` | 21 | Logger, file I/O utilities, pattern matching |

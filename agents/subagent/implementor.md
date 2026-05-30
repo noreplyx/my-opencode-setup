@@ -75,7 +75,6 @@ NEVER ship code that cuts corners on error handling, input validation, or type s
 | `qualitySelfReview.warningItemsPassed` | Number of warning quality checks passed |
 | `qualitySelfReview.warningItemsTotal` | Total warning quality checks (5) |
 | `qualitySelfReview.qualityAdditions` | Quality improvements made beyond what the plan specified |
-| `qualitySelfReview.planFeedback` | Feedback for PlanDescriber about quality gaps in the plan |
 
 ## Note
 

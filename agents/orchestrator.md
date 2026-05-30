@@ -82,7 +82,7 @@ If the validation returns `valid: false`, report the errors to the user before p
 
 ## Protocol Reference
 
-All orchestration protocols (pre-flight checks, cross-session learning, calibration-conscious dispatch, context window budgeting, rollback, parallel dispatch, agent-context tracking, project journal, pipeline selection, brainstorming, security scan, verification, failure escalation, and pipeline retrospective) are defined in the `orchestration` skill.
+All orchestration protocols (pre-flight checks, context window budgeting, rollback, parallel dispatch, agent-context tracking, project journal, pipeline selection, brainstorming, security scan, verification, failure escalation) are defined in the `orchestration` skill.
 
 📄 **Load the skill**: `skill("orchestration")`
 
@@ -91,7 +91,6 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | Protocol | Section in SKILL.md |
 |----------|---------------------|
 | Pre-Flight Check | Pre-Flight Check |
-| Cross-Session Learning | Cross-Session Learning |
 | Calibration-Conscious Dispatch | Agent Calibration Database |
 | Context Window Budgeting | Context Window Budgeting |
 | Rollback | Rollback Protocol |
@@ -123,10 +122,6 @@ All orchestration protocols (pre-flight checks, cross-session learning, calibrat
 | Debug Agent | Debug Agent (agents/subagent/debug.md) |
 | Fixer Diagnostics | Fixer Automated Diagnostics Protocol (fixer.md) |
 | Shared Agent Workflow | shared-agent-workflow skill |
-| Lessons Injection | Lessons Injection Protocol |
-
-### Lessons Injection
-Before dispatching PlanDescriber or Implementor, read `.opencode/lessons/learned.yaml`, filter relevant lessons using token matching, and include them in the hand-off as a "Lessons From Previous Pipelines" table. See the orchestration SKILL.md "Lessons Injection Protocol" section for details.
 
 ## Security Tools Reference
 

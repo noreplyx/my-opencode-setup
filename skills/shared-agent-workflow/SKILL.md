@@ -141,8 +141,8 @@ Below the frontmatter, include the detailed report in markdown.
 
 | Agent           | Additional Fields in Structured Output                                          |
 |-----------------|----------------------------------------------------------------------------------|
-| **Implementor** | `selfReview` (confidence, securityItemsPassed, wiringManifest), `securitySelfReview` (passed, failures), `qualitySelfReview` (passed, blockingItemsPassed, blockingItemsTotal, warningItemsPassed, warningItemsTotal, failures[], qualityAdditions[], planFeedback[]) |
-| **Fixer**       | `rootCauseAnalysis` (classification, primaryCause, fixApplied, fixConfidence, crossModuleCheck), `securityFixDetails` (vulnerabilityType, severity, cwe, fixApplied, selfReviewPassed, regressionTestsCreated), `crossSessionMatch` (pipelineId, previousRootCause, previousFix) |
+| **Implementor** | `selfReview` (confidence, securityItemsPassed, wiringManifest), `securitySelfReview` (passed, failures), `qualitySelfReview` (passed, blockingItemsPassed, blockingItemsTotal, warningItemsPassed, warningItemsTotal, failures[], qualityAdditions[]) |
+| **Fixer**       | `rootCauseAnalysis` (classification, primaryCause, fixApplied, fixConfidence, crossModuleCheck), `securityFixDetails` (vulnerabilityType, severity, cwe, fixApplied, selfReviewPassed, regressionTestsCreated) |
 | **QA**          | `projectType`, `smokeTestPassed`, `testFramework`, `coverage`, `securityTestsGenerated`, `securityTestCoverage` (patternsDetected, testsGenerated, coverage, gatePassed, missingTests) |
 | **Verifier**    | `complianceScore`, `weightedScore`, `suggestedCheckpoints`, `securityTestCoverageGate` (securityPatternsDetected, securityTestsGenerated, coverage, gatePassed, missingTestPatterns) |
 | **MergeCoordinator** | `filesChecked`, `importIssues`, `typeIssues`, `blocking` |
@@ -169,9 +169,6 @@ qualitySelfReview:
     - "Added try/catch to UserService.createUser"
     - "Added zod schema validation for createUser input"
     - "Extracted DB queries into UserRepository"
-  planFeedback:                              # Fed back to PlanDescriber
-    - "Plan omitted error handling for createUser"
-    - "Plan specified direct DB access — extracted to repository pattern"
 ```
 
 #### Verifier Quality Drift Attestation
@@ -194,7 +191,6 @@ qualityDrift:
 |-------------|-------------|-------------|---------|
 | `qualitySelfReview` | Implementor | Orchestrator, Code Quality Gate | Ensures code meets minimum quality before build |
 | `qualityAdditions` | Implementor | PlanDescriber (via journal) | Improves future plans by noting what was missing |
-| `planFeedback` | Implementor | PlanDescriber (via lessons) | Trains PlanDescriber to include quality checkpoints |
 | `qualityDrift` | Verifier | Orchestrator, Fixer | Catches quality gaps that pass plan verification |
 
 ## Step 2: Pipeline Heartbeat
@@ -339,7 +335,7 @@ reproduction:
 ```
 
 ### Why This Matters
-Without standardized reproduction commands, bugs can't be reproduced by other agents or across sessions. The reproduction command makes every failure **executable** rather than just **describable**.
+Without standardized reproduction commands, bugs can't be reliably reproduced by other agents. The reproduction command makes every failure **executable** rather than just **describable**.
 
 ### When to Include
 | Scenario | Include reproduction? | Example |
@@ -352,7 +348,6 @@ Without standardized reproduction commands, bugs can't be reproduced by other ag
 
 ### Storing Reproduction Commands
 The Orchestrator will write reproduction commands to `.opencode/reproductions/<pipelineId>-<step>-<timestamp>.yaml` so they can be:
-- Searched across sessions
 - Replayed in CI
 - Compared to find regressions
 

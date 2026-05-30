@@ -224,32 +224,7 @@ After completing the targeted search, perform a proactive scan for potential iss
 - Missing input validation schemas
 - Missing type definitions for external data
 
-### Step 6: Cross-Session Context Building
-
-Before finalizing findings, check for relevant cross-session context:
-
-1. Read the Project Journal at `.opencode/journal/journal.yaml`:
-   - Search for journal entries whose `feature` field matches the current task
-   - Extract `keyDecisions` from matching entries — these are architecture decisions you MUST respect
-   - Check `failedGates` — if a prior pipeline had `verifier` failures, it may indicate plan gaps
-
-2. Read the Calibration Database at `.opencode/calibration/agents.yaml`:
-   - Check the `commonFailurePatterns` for each agent type involved
-   - Example: If Implementor's patterns include "forgets to update barrel file exports", note this as a finding
-
-3. Check the Lessons Learned at `.opencode/lessons/learned.yaml`:
-   - Extract lessons that match the current feature domain
-   - Include relevant lessons in your findings
-
-4. **Report cross-session matches** in the structured evidence:
-   ```
-   Cross-Session Matches:
-     - Journal: "system-review-improvements" (2026-05-19) — Documentor was unreferenced; verify all agent types are accounted for
-     - Calibration: Implementor has `buildRetries: 2` — expect potential build issues
-     - Lesson: None applicable
-   ```
-
-### Step 7: Proactive Suggestion Generation
+### Step 6: Proactive Suggestion Generation
 
 Based on all findings, produce proactive suggestions:
 
@@ -323,7 +298,6 @@ When reporting findings, include these fields per the `shared-agent-workflow` ou
 | `explorationCache.lastCommitSha` | SHA of the commit used for cache comparison |
 | `findings` | List of structured evidence objects |
 | `hazardDetections` | List of hazards found (dead code, security anti-patterns, deprecated APIs) |
-| `crossSessionMatches` | Cross-session context matches from journal, calibration, lessons |
 | `suggestions` | Proactive improvement suggestions and risk warnings |
 | `projectStructure` | High-level project structure map |
 | `totalFilesScanned` | Number of files examined |

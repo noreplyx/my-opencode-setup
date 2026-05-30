@@ -4,7 +4,7 @@
  *
  * Creates agent-context.md with initial YAML frontmatter, performs pre-flight
  * checks (git status, build compilation, stale context detection), and reads
- * the project journal for cross-session learning.
+ * the project journal for past pipeline context.
  *
  * Usage:
  *   pipeline-init.ts --feature=<name> --pipeline-type=<type> \
@@ -43,14 +43,6 @@ interface JournalEntry {
   circuitBreakerEvents?: Array<{ gate: string; attempts: number; resolution: string }>;
   failedGates?: string[];
   notes?: string;
-  retrospective?: {
-    pipelineQuality?: string;
-    handoffQuality?: { rating?: number; issues?: string[] };
-    agentPerformance?: Array<{ role: string; effectiveness: string; notes?: string }>;
-    wastedSteps?: string[];
-    improvementsForNextPipeline?: string[];
-    lessonsLearned?: string[];
-  };
 }
 
 interface PreFlightReport {
@@ -405,63 +397,6 @@ function findMatchingEntries(entries: JournalEntry[], feature: string, threshold
   return matches;
 }
 
-interface LessonEntry {
-  date: string;
-  lesson: string;
-  sourceFeature: string;
-  category: string;
-}
-
-interface CrossSessionLesson {
-  lesson: string;
-  sourceFeature: string;
-  similarity: number;
-}
-
-/**
- * Read lessons from .opencode/lessons/learned.yaml and find those relevant
- * to the current feature using computeSimilarity().
- */
-function readLessons(lessonsPath: string, currentFeature: string): CrossSessionLesson[] {
-  if (!fs.existsSync(lessonsPath)) return [];
-
-  const content = fs.readFileSync(lessonsPath, 'utf-8');
-  const lines = content.split('\n');
-  const lessons: LessonEntry[] = [];
-  let currentLesson: any = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('#')) continue;
-
-    const listMatch = trimmed.match(/^-\s+date:\s*"?([^"]+)"?/);
-    if (listMatch) {
-      if (currentLesson) lessons.push(currentLesson);
-      currentLesson = { date: listMatch[1] };
-      continue;
-    }
-
-    if (currentLesson) {
-      const kvMatch = trimmed.match(/^(\w+):\s*"?([^"]*)"?$/);
-      if (kvMatch) {
-        currentLesson[kvMatch[1]] = kvMatch[2];
-      }
-    }
-  }
-  if (currentLesson) lessons.push(currentLesson);
-
-  const results: CrossSessionLesson[] = [];
-  for (const lesson of lessons) {
-    if (!lesson.lesson || !lesson.sourceFeature) continue;
-    const similarity = computeSimilarity(lesson.sourceFeature, currentFeature);
-    if (similarity >= 30) {
-      results.push({ lesson: lesson.lesson, sourceFeature: lesson.sourceFeature, similarity });
-    }
-  }
-
-  return results.sort((a, b) => b.similarity - a.similarity);
-}
-
 // ---------------------------------------------------------------------------
 // Pre-flight checks
 // ---------------------------------------------------------------------------
@@ -573,10 +508,6 @@ function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): {
   const complexityKey = args.pipelineComplexity;
   const currentThreshold = thresholds[complexityKey];
 
-  // Read cross-session lessons
-  const lessonsPath = path.resolve('.opencode/lessons/learned.yaml');
-  const crossSessionLessons = readLessons(lessonsPath, args.feature);
-
   const lines: string[] = [];
   lines.push('---');
   lines.push(`pipelineId: "${pipelineId}"`);
@@ -635,14 +566,6 @@ function generateAgentContext(args: PipelineArgs, preFlight: PreFlightReport): {
   }
   lines.push('  stashedChanges: false');
   lines.push('  stashedChangesList: []');
-  if (crossSessionLessons.length > 0) {
-    lines.push('crossSessionLessons:');
-    for (const lesson of crossSessionLessons) {
-      lines.push(`  - lesson: "${lesson.lesson.replace(/"/g, '\\"')}"`);
-      lines.push(`    sourceFeature: "${lesson.sourceFeature}"`);
-      lines.push(`    similarity: ${lesson.similarity}`);
-    }
-  }
   lines.push(`nextObjective: "Run pre-flight checks and begin pipeline"`);
   lines.push('---');
   lines.push('');
@@ -711,8 +634,7 @@ function printSummary(
   console.log('  See above for agent readiness details');
   console.log('');
 
-  // Cross-session learning section
-  console.log('Cross-Session Learning:');
+  // Cross-session learning section (removed)
 
   if (matches.length === 0) {
     console.log('  ðŸ“– No past entries found matching this feature');
@@ -733,19 +655,7 @@ function printSummary(
         console.log(`     - Notes: ${entry.notes}`);
       }
 
-      if (entry.retrospective) {
-        const retro = entry.retrospective;
-        if (retro.lessonsLearned && retro.lessonsLearned.length > 0) {
-          for (const lesson of retro.lessonsLearned) {
-            console.log(`     - Lesson: ${lesson}`);
-          }
-        }
-        if (retro.improvementsForNextPipeline && retro.improvementsForNextPipeline.length > 0) {
-          for (const impr of retro.improvementsForNextPipeline) {
-            console.log(`     - Improvement: ${impr}`);
-          }
-        }
-      }
+      // Past pipeline results displayed above
     }
   }
 
@@ -816,7 +726,7 @@ function computeFamiliarityScore(modulePath: string): number {
 function main(): void {
   const args = parseArgs();
 
-  // 1. Read journal for cross-session learning
+  // 1. Read journal for past pipeline context
   const journalPath = path.resolve('.opencode/journal/journal.yaml');
   const entries = parseJournalYaml(journalPath);
   const matches = findMatchingEntries(entries, args.feature);

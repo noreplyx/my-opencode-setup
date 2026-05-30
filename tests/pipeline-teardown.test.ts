@@ -79,7 +79,6 @@ interface Retrospective {
   agentPerformance: Array<{ role: string; effectiveness: string; notes: string }>;
   wastedSteps: string[];
   improvementsForNextPipeline: string[];
-  lessonsLearned: string[];
 }
 
 interface JournalEntry {
@@ -92,7 +91,6 @@ interface JournalEntry {
   keyDecisions: string[];
   circuitBreakerEvents: CircuitBreakerEvent[];
   failedGates: string[];
-  retrospective?: Retrospective;
 }
 
 interface LessonsEntry {
@@ -123,7 +121,6 @@ function generateJournalEntry(params: {
   failedGates: string[];
   circuitBreakerEvents: CircuitBreakerEvent[];
   keyDecisions: string[];
-  retrospective?: Retrospective;
 }): JournalEntry {
   return {
     date: params.date,
@@ -135,7 +132,6 @@ function generateJournalEntry(params: {
     keyDecisions: params.keyDecisions,
     circuitBreakerEvents: params.circuitBreakerEvents,
     failedGates: params.failedGates,
-    retrospective: params.retrospective,
   };
 }
 
@@ -230,52 +226,13 @@ function generateRetrospective(
     improvements.push('Improve agent context handoff: provide more explicit context and reduce ambiguity');
   }
 
-  const lessons: string[] = [];
-  if (totalRetries > 0 && result === 'pass') {
-    lessons.push('Pipeline succeeded despite circuit breaker retries — investigate root cause of retries to prevent future slowdown');
-  }
-  if (failedCount > 0) {
-    lessons.push(`Pipeline had ${failedCount} agent failure(s) — add pre-validation gates for agent inputs`);
-  }
-  if (handoffRating < 7) {
-    lessons.push('Low handoff quality rating indicates agent context needs more explicit detail and less ambiguity');
-  }
-  if (allWarnings.length > 5) {
-    lessons.push('High warning volume across agents suggests need for stricter input validation or clearer specifications');
-  }
-
   return {
     pipelineQuality,
     handoffQuality: { rating: handoffRating, issues: handoffIssues },
     agentPerformance,
     wastedSteps: [],
     improvementsForNextPipeline: improvements,
-    lessonsLearned: lessons,
   };
-}
-
-function extractLessons(
-  retrospective: Retrospective,
-  feature: string,
-  existingLessons: string[],
-): LessonsEntry[] {
-  const now = new Date().toISOString();
-  const lessons: LessonsEntry[] = [];
-  if (retrospective && Array.isArray(retrospective.lessonsLearned)) {
-    for (const lessonText of retrospective.lessonsLearned) {
-      if (!lessonText || typeof lessonText !== 'string') continue;
-      if (existingLessons.includes(lessonText)) continue;
-      lessons.push({
-        date: now,
-        lesson: lessonText,
-        sourceFeature: feature,
-        category: 'process',
-        severity: 'medium',
-        injected: false,
-      });
-    }
-  }
-  return lessons;
 }
 
 function generateArchivePath(baseDir: string, pipelineId: string): string {
@@ -342,7 +299,6 @@ function performTeardown(
   baseDir: string,
   existingLessons: string[],
 ): TeardownResult {
-  const retrospective = generateRetrospective(ctx, result);
   const journalEntry = generateJournalEntry({
     date: new Date().toISOString(),
     feature: args.feature,
@@ -353,10 +309,9 @@ function performTeardown(
     failedGates: args.failedGates,
     circuitBreakerEvents: args.circuitBreakerEvents,
     keyDecisions: [],
-    retrospective,
   });
 
-  const lessons = extractLessons(retrospective, args.feature, existingLessons);
+  const lessons: LessonsEntry[] = [];
 
   const archivePath = generateArchivePath(baseDir, ctx.pipelineId);
   ensureDir(archivePath);
@@ -555,29 +510,6 @@ async function main() {
     assertEqual(entry.circuitBreakerEvents[1].attempts, 2, 'second CB event attempts');
   });
 
-  test('Includes retrospective object', () => {
-    const ctx = makeMinimalCtx({
-      agentHistory: [makeHistoryEntry({ agent: 'finder', result: 'pass' })],
-    });
-    const retro = generateRetrospective(ctx, 'pass');
-    const entry = generateJournalEntry({
-      date: '2026-05-25T12:00:00Z',
-      feature: 'test',
-      pipelineType: 'full',
-      result: 'pass',
-      durationMinutes: 5,
-      filesChanged: [],
-      failedGates: [],
-      circuitBreakerEvents: [],
-      keyDecisions: [],
-      retrospective: retro,
-    });
-    assert(entry.retrospective !== undefined, 'retrospective should be present');
-    assertEqual(entry.retrospective!.pipelineQuality, 'smooth', 'retro quality should be smooth');
-    assertEqual(entry.retrospective!.handoffQuality.rating, 10, 'handoff rating should be 10');
-    assert(Array.isArray(entry.retrospective!.agentPerformance), 'agentPerformance should be array');
-  });
-
   // ═══════════════════════════════════════════════════════
   // Section 3: Calibration Update Triggers
   // ═══════════════════════════════════════════════════════
@@ -637,63 +569,7 @@ async function main() {
   });
 
   // ═══════════════════════════════════════════════════════
-  // Section 5: Lesson Extraction
-  // ═══════════════════════════════════════════════════════
-
-  test('Extracts lessons from retrospective.lessonsLearned', () => {
-    const ctx = makeMinimalCtx({
-      agentHistory: [makeHistoryEntry({ agent: 'implementor', result: 'fail', step: 1, warnings: ['Missing context'] })],
-    });
-    const retro = generateRetrospective(ctx, 'fail');
-    assert(retro.lessonsLearned.length > 0, 'should have at least one lesson');
-    const lessons = extractLessons(retro, 'test-feature', []);
-    assert(lessons.length > 0, 'should extract lessons');
-  });
-
-  test('Creates lesson entries with date, lesson, sourceFeature, category', () => {
-    const fakeRetro: Retrospective = {
-      pipelineQuality: 'failed',
-      handoffQuality: { rating: 4, issues: ['Missing context'] },
-      agentPerformance: [],
-      wastedSteps: [],
-      improvementsForNextPipeline: [],
-      lessonsLearned: ['Add pre-validation gates for agent inputs'],
-    };
-    const lessons = extractLessons(fakeRetro, 'auth-module', []);
-    assertEqual(lessons.length, 1, 'should extract one lesson');
-    const lesson = lessons[0];
-    assert(lesson.date !== undefined && lesson.date.length > 0, 'lesson should have a date');
-    assertEqual(lesson.lesson, 'Add pre-validation gates for agent inputs', 'lesson text');
-    assertEqual(lesson.sourceFeature, 'auth-module', 'sourceFeature');
-    assertEqual(lesson.category, 'process', 'category');
-    assertEqual(lesson.severity, 'medium', 'severity');
-    assertEqual(lesson.injected, false, 'injected should be false');
-  });
-
-  test('Deduplicates identical lessons', () => {
-    const fakeRetro: Retrospective = {
-      pipelineQuality: 'failed',
-      handoffQuality: { rating: 4, issues: [] },
-      agentPerformance: [],
-      wastedSteps: [],
-      improvementsForNextPipeline: [],
-      lessonsLearned: ['Add pre-validation gates'],
-    };
-    // First call — no existing lessons
-    const lessons1 = extractLessons(fakeRetro, 'feature-a', []);
-    assertEqual(lessons1.length, 1, 'first extraction should produce 1 lesson');
-
-    // Second call — lesson already exists
-    const lessons2 = extractLessons(fakeRetro, 'feature-b', ['Add pre-validation gates']);
-    assertEqual(lessons2.length, 0, 'duplicate lesson should be skipped');
-
-    // Third call — same lesson text but different existing lessons
-    const lessons3 = extractLessons(fakeRetro, 'feature-c', ['Something else']);
-    assertEqual(lessons3.length, 1, 'non-duplicate lesson should still be extracted');
-  });
-
-  // ═══════════════════════════════════════════════════════
-  // Section 6: Full Teardown Flow
+  // Section 5: Full Teardown Flow
   // ═══════════════════════════════════════════════════════
 
   test('Full teardown produces journal entry + lesson + archive', () => {
@@ -722,7 +598,6 @@ async function main() {
     assertEqual(result.journalEntry!.result, 'fail', 'journal result');
     assertEqual(result.journalEntry!.feature, 'test-feature', 'journal feature');
     assertEqual(result.journalEntry!.durationMinutes, 12, 'journal duration');
-    assert(result.lessons.length > 0, 'should produce lessons for a failed pipeline');
     assert(result.archived, 'should indicate archive was created');
 
     // Verify archive directory was created

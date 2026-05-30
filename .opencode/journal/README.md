@@ -1,6 +1,6 @@
 # Project Journal
 
-This directory stores structured, append-only records of every pipeline the Orchestrator completes. It provides **cross-session memory** so the system remembers past work, decisions, and failures.
+This directory stores structured, append-only records of every pipeline the Orchestrator completes. It provides a record of past work, decisions, and failures.
 
 ## File Format
 

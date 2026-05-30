@@ -18,7 +18,6 @@ chmod +x tests/run-tests.sh
 |------|-------|
 | `pipeline-init.test.ts` | Pre-flight checks, journal parsing, similarity matching, context generation |
 | `audit-log.test.ts` | SHA-256 hash chain integrity, YAML serialization/deserialization, tamper detection |
-| `update-calibration.test.ts` | Agent calibration database, success tracking, YAML parsing/serialization |
 | `validate-output-contract.test.ts` | Agent output schema validation, YAML frontmatter parsing, type checking |
 | `validate-context.test.ts` | Context file schema validation (agent-context.md) |
 | `shared-utils.test.ts` | Logger, file I/O utilities, pattern matching, directory walking |
@@ -26,7 +25,7 @@ chmod +x tests/run-tests.sh
 
 ## Coverage Targets
 
-- Core orchestration scripts (pipeline-init, pipeline-teardown, audit-log, update-calibration): 90%+ function coverage
+- Core orchestration scripts (pipeline-init, pipeline-teardown, audit-log): 90%+ function coverage
 - Validation scripts (validate-output-contract, validate-context): 85%+ function coverage
 - Shared utilities (Logger, file I/O): 95%+ function coverage
 

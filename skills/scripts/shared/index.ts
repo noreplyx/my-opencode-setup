@@ -27,7 +27,7 @@ export type {
   // ── Per-Agent Outputs ──
   FinderOutput, PlanDescriberOutput,
   ImplementorOutput, SecuritySelfReviewReport,
-  RootCauseAnalysis, SecurityFixDetails, CrossSessionMatch,
+  RootCauseAnalysis, SecurityFixDetails,
   FixerOutput, SecurityTestCoverageReport,
   QAOutput, SuggestedCheckpoint, SecurityTestCoverageGate,
   VerifierOutput, MergeCoordinatorOutput,

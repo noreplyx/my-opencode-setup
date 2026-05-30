@@ -11,7 +11,6 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 |-------------|-------------|---------|
 | **Pipeline State Machine** | `validate-transition.ts` | Enforces valid agent step transitions |
 | **Parallel Dispatch** | `parallel-dispatch.ts` | Native parallel dispatch with phase grouping |
-| **Citation Index** | `citation-index.ts` | Cross-session checkpoint failure patterns |
 | **Shared Test Manifest** | `shared-test-manifest.ts` | QA + Browser Tester coordination |
 | **Unified Error Taxonomy** | `unified-pipeline-error-schema.ts` | Typed PipelineError with 30 error codes |
 | **Agent Readiness Check** | `check-agent-readiness.ts` | Pre-flight agent permission verification |
@@ -49,20 +48,20 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 
 ## Agent Roles
 
-| Agent | Purpose | Reasoning Effort | Called When | Self-Review? | Calibration Tracked? |
-|-------|---------|-----------------|-------------|--------------|---------------------|
-| **Finder** | Codebase exploration, research, information gathering. **Smart Finder**: Also reports proactive hazard detection (dead code, deprecated APIs, security anti-patterns). Returns structured knowledge graph. | 0.3 | Start of pipeline â€” gather context | Yes (self-checks findings) | Yes |
-| **Orchestrator** | Brainstorming, task assignment, coordination | 0.1 | Always â€” primary user interface | Yes (pipeline retrospective) | Yes |
-| **PlanDescriber** | Detailed implementation roadmaps + plan-manifest.json with confidence score | High | After brainstorm or direct feature request | Yes (confidence scoring) | Yes |
-| **Implementor** | Write code following the plan. **Self-Reviewing Implementor**: Pre-implementation validation, self-review pass before reporting, scope guard. | None | After plan is ready | Yes (mandatory self-review) | Yes |
-| **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) | Yes |
-| **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) | Yes |
-| **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) | Yes |
-| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST + gitleaks secrets + trivy vuln/misconfig**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) | No | MANDATORY — loads `pmd-scan` for code quality analysis after Lint Gate. Violations block the pipeline.
-| **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No | No |
-| **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes â€” document verified code | Yes (accuracy check) | Yes |
-| **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) | Yes |
-| **Integrator** | Wire new files into the project: update barrel files, DI registrations, route wiring, fix import paths. Runs after parallel Implementor dispatch and Merge Coordinator verification. | 0.1 | After Merge Coordinator, before Build Gate | Yes (build verifies wiring) | Yes |
+| Agent | Purpose | Reasoning Effort | Called When | Self-Review? |
+|-------|---------|-----------------|-------------|--------------|
+| **Finder** | Codebase exploration, research, information gathering. **Smart Finder**: Also reports proactive hazard detection (dead code, deprecated APIs, security anti-patterns). Returns structured knowledge graph. | 0.3 | Start of pipeline — gather context | Yes (self-checks findings) |
+| **Orchestrator** | Brainstorming, task assignment, coordination | 0.1 | Always — primary user interface | Yes |
+| **PlanDescriber** | Detailed implementation roadmaps + plan-manifest.json with confidence score | High | After brainstorm or direct feature request | Yes (confidence scoring) |
+| **Implementor** | Write code following the plan. **Self-Reviewing Implementor**: Pre-implementation validation, self-review pass before reporting, scope guard. | None | After plan is ready | Yes (mandatory self-review) |
+| **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) |
+| **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) |
+| **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) |
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST + gitleaks secrets + trivy vuln/misconfig**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) |
+| **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No |
+| **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes — document verified code | Yes (accuracy check) |
+| **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) |
+| **Integrator** | Wire new files into the project: update barrel files, DI registrations, route wiring, fix import paths. Runs after parallel Implementor dispatch and Merge Coordinator verification. | 0.1 | After Merge Coordinator, before Build Gate | Yes (build verifies wiring) |
 
 ## Standard Workflow Pipeline
 
@@ -201,8 +200,8 @@ The default orchestration workflow follows this sequence:
    â”‚              â””â”€â”€ README updates
    â”‚              â””â”€â”€ Migration guide (if breaking changes)
           â”‚
-8. ORCHESTRATOR â”€â”€â–º Run pipeline-teardown (write journal entry, update calibration, archive logs),
-                     review all results, generate Session Resume Report, report to user
+8. ORCHESTRATOR â”€â”€â–º Run pipeline-teardown (write journal entry, archive logs),
+                     review all results, report to user
 ```### When to Skip Steps
 - **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber â†’ Implementor â†’ Security Scan (incl. auto semgrep) â†’ QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
@@ -239,16 +238,15 @@ ts-node skills/scripts/orchestration/pipeline-init.ts --feature=<name> --pipelin
 
 This script performs:
 1. **Pre-Flight Checks**: git status (dirty files, branch, last commit SHA), project compilation check (`npm run build` with tail), stale `agent-context.md` detection (>1 hour old with "running" status)
-2. **Cross-Session Learning**: Reads `.opencode/journal/journal.yaml` to find past entries with similar feature names. Extracts lessons learned from past failures. Returns a cross-session learning report.
-3. **agent-context.md Creation**: Writes the full initial YAML frontmatter (pipeline identity, circuit breaker with complexity-based thresholds, git state, empty agent history)
-4. **Pipeline Logs Directory**: Creates `.opencode/pipeline-logs/` if it doesn't exist
-5. **Run pre-flight security check (NEW)**: Before any code changes or npm install, verify:
+2. **agent-context.md Creation**: Writes the full initial YAML frontmatter (pipeline identity, circuit breaker with complexity-based thresholds, git state, empty agent history)
+3. **Pipeline Logs Directory**: Creates `.opencode/pipeline-logs/` if it doesn't exist
+4. **Run pre-flight security check (NEW)**: Before any code changes or npm install, verify:
    - `package-lock.json` integrity (not tampered with since last commit)
    - Run `npm audit signatures` if available (verify registry signatures)
-   - Check lockfile age â€” if last `npm audit` was > 7 days, warn about stale audit
+   - Check lockfile age — if last `npm audit` was > 7 days, warn about stale audit
    - These checks protect against supply chain attacks before any `npm install` runs during the build gate
 
-6. **Agent Readiness Check (NEW)**: After the security check, run the automated agent readiness verification:
+5. **Agent Readiness Check (NEW)**: After the security check, run the automated agent readiness verification:
 
    ```bash
    ts-node skills/scripts/orchestration/check-agent-readiness.ts --agents=<agent1,agent2,...>
@@ -267,8 +265,7 @@ This script performs:
 
 ### Pre-Flight Report
 The script prints a summary report that the Orchestrator should relay to the user, including:
-- âœ… / âŒ / âš ï¸ for each pre-flight check
-- Cross-session learning matches (past features, lessons)
+- ✅ / ❌ / ⚠️ for each pre-flight check
 - Created files
 - A go/no-go recommendation
 
@@ -311,12 +308,9 @@ ts-node skills/scripts/orchestration/pipeline-teardown.ts --feature=<name> --pip
 
 This script performs:
 1. **Reads agent-context.md**: Extracts pipeline state, circuit breaker history, agent outputs
-2. **Calculates Retrospective**: Auto-generates pipeline quality, handoff quality rating, agent performance assessment, and improvement suggestions based on retry counts, warnings, and failure data
-3. **Writes Journal Entry**: Appends to `.opencode/journal/journal.yaml` with all fields including the retrospective
-4. **Appends Lessons**: Writes lessons learned to `.opencode/lessons/learned.yaml` (key decisions, failure root causes)
-5. **Archives Raw Outputs**: Copies full `agent-context.md` and per-agent outputs to `.opencode/pipeline-logs/<pipelineId>/`
-6. **Updates Calibration**: Calls `update-calibration.ts` for each unique agent in the pipeline history
-7. **Deletes agent-context.md**: Cleans up the context file (or preserves with `--keep-context`)
+2. **Writes Journal Entry**: Appends to `.opencode/journal/journal.yaml`
+3. **Archives Raw Outputs**: Copies full `agent-context.md` and per-agent outputs to `.opencode/pipeline-logs/<pipelineId>/`
+4. **Deletes agent-context.md**: Cleans up the context file (or preserves with `--keep-context`)
 
 ### Build Gate & Smoke Test Requirements
 
@@ -688,7 +682,7 @@ ts-node skills/scripts/orchestration/provenance-tracker.ts --view --manifest=...
 ## Project Journal Protocol
 
 ### Purpose
-The Project Journal provides cross-session memory so the system remembers past work, decisions, and failures. Without it, every session starts fresh.
+The Project Journal provides memory so the system remembers past work, decisions, and failures. Without it, every session starts fresh.
 
 ### Journal Location
 `.opencode/journal/journal.yaml`
@@ -717,25 +711,6 @@ After every pipeline that:
 - **Before starting a pipeline** in a new session: read the journal to understand past work
 - **Before dispatching PlanDescriber**: read the journal to check for relevant past decisions
 - **Before dispatching Finder**: read the journal so you know what's already been explored
-
-### Citation Index (NEW)
-The citation index maps checkpoint IDs to past pipeline results. It enables PlanDescriber to see patterns (e.g., "CP-003 has failed 3 times before") and proactively add guardrails.
-
-```bash
-# Build/refresh index
-ts-node skills/scripts/orchestration/citation-index.ts --build
-
-# Query a specific checkpoint
-ts-node skills/scripts/orchestration/citation-index.ts --checkpoint=CP-003
-
-# Query all checkpoints in a manifest
-ts-node skills/scripts/orchestration/citation-index.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json
-
-# Show summary statistics
-ts-node skills/scripts/orchestration/citation-index.ts --stats
-```
-
-The index is stored at `.opencode/cache/citation-index.json`.
 
 ## Agent Action Audit Trail (NEW)
 
@@ -825,161 +800,6 @@ ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --validate
 # Classify a fixer root cause
 ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --classify="Missing export in user.ts" --fixer-classification=implementation-error
 ```
-
-## Pipeline Retrospective Protocol
-
-### Purpose
-After every pipeline completes (success or failure), run a structured retrospective to capture lessons learned that improve future pipelines. Without this, the system repeats the same mistakes across sessions.
-
-### When to Run
-1. After a pipeline completes successfully â€” run a "success retrospective"
-2. After a pipeline fails after escalation â€” run a "failure retrospective"  
-3. After any circuit breaker activation â€” run immediately
-
-### Retrospective Report Format
-After the pipeline ends (after final journal entry), the Orchestrator produces a retrospective assessment appended to the journal entry:
-
-```yaml
-retrospective:
-  pipelineQuality: "smooth" | "rough" | "failed"
-  handoffQuality:
-    rating: 1-10
-    issues: ["Hand-off to Implementor was missing context about existing User model"]
-  agentPerformance:
-    - role: "finder"
-      effectiveness: "good" | "ok" | "poor"
-      notes: "Found all required files but missed the existing validation middleware"
-    - role: "implementor"
-      effectiveness: "good" | "ok" | "poor"
-      notes: "Followed plan exactly but needed 2 build gate retries"
-  wastedSteps:
-    - "Finder was unnecessary â€” domain was already well-understood"
-  improvementsForNextPipeline:
-    - "Skip Finder for similar tasks in this domain"
-    - "Give PlanDescriber more context about existing error handling patterns"
-  lessonsLearned:
-    - "Edge case checkpoints in plan manifests prevent Fixer from having to rediscover them"
-  evidenceQuality:                       # NEW: Evidence quality retrospective
-    overallScore: 87
-    agentsWithLowQuality: ["implementor"]
-    stalenessIssues: 2
-    actionItems:
-      - "Add content hashing requirements to Implementor hand-off"
-      - "Include exact line numbers in Verifier evidence"
-```
-
-### Analysis Prompts (for Orchestrator self-reflection)
-After every pipeline, answer:
-1. Did I select the right pipeline type? If I had chosen a shorter one, would it have worked?
-2. Were my hand-offs clear? Did any agent ask for clarification?
-3. Did any agent output contain surprises (good or bad)?
-4. Did I skip any verification step that should have been run?
-5. What would I do differently next time for a similar task?
-
-### Retrospective Action Items
-- If hand-off quality < 7: next pipeline gets more context in hand-offs
-- If agent effectiveness "poor" for same agent twice: consider replacing or retraining
-- If wasted steps detected: update pipeline selection for similar tasks
-
-## Agent Calibration Database
-
-### Purpose
-Track per-agent success rates across sessions to make smarter dispatch decisions. Without calibration, every agent is treated equally regardless of track record.
-
-### Data Structure
-Stored in `.opencode/calibration/agents.yaml`. Created on first pipeline, updated after every pipeline.
-
-```yaml
-agents:
-  finder:
-    totalTasks: 12
-    successfulTasks: 10
-    failedTasks: 2
-    avgEffectiveness: "good"
-    lastTaskDate: "2026-05-19T10:30:00Z"
-    commonFailurePatterns:
-      - "Misses files outside src/ directory"
-    strengths:
-      - "Fast grep-based searches"
-  implementor:
-    totalTasks: 8
-    successfulTasks: 6
-    failedTasks: 2
-    avgEffectiveness: "good"
-    buildRetries: 4
-    lintRetries: 2
-    lastTaskDate: "2026-05-19T10:30:00Z"
-    commonFailurePatterns:
-      - "Forgets to update barrel file exports"
-    strengths:
-      - "Follows plan checkpoints precisely"
-  mergeCoordinator:
-    totalTasks: 0
-    successfulTasks: 0
-    failedTasks: 0
-    avgEffectiveness: "unknown"
-    lastTaskDate: null
-    commonFailurePatterns: []
-    strengths:
-      - "Cross-file import and type signature verification after parallel dispatch"
-  plandescriber:
-    totalTasks: 5
-    successfulTasks: 3
-    failedTasks: 2
-    avgEffectiveness: "ok"
-    behavioralCheckpointsPerPlan: 4.2
-    lastTaskDate: "2026-05-19T10:30:00Z"
-    commonFailurePatterns:
-      - "Omits error handling checkpoints"
-  documentor:
-    totalTasks: 0
-    successfulTasks: 0
-    failedTasks: 0
-    avgEffectiveness: "unknown"
-    lastTaskDate: null
-    commonFailurePatterns: []
-    strengths:
-      - "Automated documentation creation and maintenance"
-      - "API docs, inline comments, and ADR generation"
-```
-
-### How to Use Calibration
-- Before dispatching an agent, check its `failedTasks` / `totalTasks` ratio
-- If ratio > 0.33 (33% failure rate): warn the user, ask if they want a different agent
-- If `commonFailurePatterns` match the current task's profile: add explicit guardrails in the hand-off
-- If agent `avgEffectiveness` is "poor" for 3 consecutive sessions: flag for user review
-
-### Calibration Updates
-After each pipeline completes:
-1. Read `.opencode/calibration/agents.yaml` (create if missing)
-2. Update the agent's counters (totalTasks++, successfulTasks++ or failedTasks++)
-3. Update `lastTaskDate`
-4. If the retrospective identified issues, append to `commonFailurePatterns`
-5. Save the file
-
-### Automated Script
-Use the calibration management script to read and update the database:
-```bash
-# Update agent success/failure
-ts-node skills/scripts/orchestration/update-calibration.ts --agent=implementor --success=true --build-retries=2
-
-# Read full calibration report
-ts-node skills/scripts/orchestration/update-calibration.ts --read
-
-# Record a failure pattern
-ts-node skills/scripts/orchestration/update-calibration.ts --agent=fixer --success=false --failure-pattern="Missing barrel export"
-```
-
-The script handles file creation, counter increments, and validation.
-
-### Calibration During Pipeline Execution
-During an active pipeline, the Orchestrator uses calibration data BEFORE dispatching:
-1. Read `.opencode/calibration/agents.yaml` (via bash glob)
-2. If the target agent's `failedTasks / totalTasks > 0.33`, include a warning in the hand-off:
-   "Note: This agent has a [X]% failure rate. Previous failures: [patterns]. Consider extra guardrails."
-3. If `commonFailurePatterns` match the current task, add explicit guardrails:
-   "Prevent [failure pattern] by double-checking [specific area] before reporting completion."
-4. After pipeline ends, run the update script to record results.
 
 ## Parallel Dispatch Workflow
 
@@ -1259,15 +1079,6 @@ When the user makes a request, classify it into one of these pipeline types:
 | **Micro-Pipeline** | Feature with clear frontend/backend split | Parallel PlanDescriber(frontend+backend) â†’ Parallel Implementor â†’ Merge QA â†’ Verifier | No (needs Finder to identify split) |
 | **Documentation** | Updating docs, README, API docs, or inline comments | Documentor â†’ report to user | Yes |
 
-### Calibration-Conscious Pipeline Selection
-
-Before selecting a pipeline type, check historical accuracy for the task type:
-1. Read `.opencode/calibration/agents.yaml` via the calibration script
-2. Look up `pipelineSelectionAccuracyByType[taskType]`
-3. If accuracy exists and is < 80%, warn the user:
-   "My historical accuracy for [taskType] tasks is [X]%. Consider a different pipeline type or manual review."
-4. If no history for this task type, fall back to the default lookup table
-
 ### When to Load Skills
 | Pipeline Step | Skill to Load | Why |
 |---------------|---------------|-----|
@@ -1282,23 +1093,7 @@ Before selecting a pipeline type, check historical accuracy for the task type:
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
 | Documentation | `api-documentation` | README, API docs, inline comments, ADRs |
-| Pre-Flight | `smart-finder` | Cross-session journal search + proactive hazard detection |
-
-### Agent Health Monitoring (NEW)
-
-The system tracks agent health across sessions to automatically flag underperforming agents.
-
-**Health Flags File**: `.opencode/calibration/agents.yaml`
-
-| Status | Condition | Action |
-|--------|-----------|--------|
-| ðŸŸ¢ GREEN | Success rate > 85% | Normal dispatch |
-| âš ï¸ YELLOW | 3+ consecutive task failures | Warn user before dispatch |
-| ðŸ”´ RED | 5+ consecutive failures OR > 40% failure rate | Block dispatch until user confirms |
-
-**Automatic Flagging**: After each pipeline completes, the calibration update script evaluates agent health and sets the flag. The Orchestrator reads this before dispatching.
-
-**User Prompt on RED**: "Agent [name] has a [X]% failure rate and [Y] consecutive failures. Consider: (a) continue anyway, (b) switch to an alternative approach, (c) abort the pipeline."
+| Pre-Flight | `smart-finder` | Proactive hazard detection |
 
 ### Minimal Pipeline Rule
 Always select the shortest pipeline that can safely complete the task. Every extra agent adds latency and potential for error. When in doubt, ask the user.
@@ -1939,73 +1734,6 @@ For very long pipelines (8+ steps), even summaries accumulate. Use this graduate
 
 ---
 
-## Cross-Session Learning
-
-### Purpose
-The Project Journal is currently write-only. Cross-Session Learning makes it read-smart by searching past entries for relevant patterns before starting new pipelines.
-
-### How It Works
-Before starting any pipeline, the Orchestrator:
-1. Reads the journal at `.opencode/journal/journal.yaml`
-2. Checks for past entries that match the current feature: similar name, similar pipeline type, similar failed gates
-3. If a match is found with >= 2 matching fields, extracts "lessons learned" from that entry
-4. Injects those lessons into the first agent hand-off as proactive guidance
-
-### Example
-```
-Current feature: "user-notifications" 
-Past match found: "email-notifications" (2 weeks ago)
-- Pipeline: full â†’ failed at verifier (3 attempts)
-- Root cause: PlanDescriber omitted error handling for SMTP failures
-- Lesson: "Add error handling checkpoints for all external service calls"
-
-Proactive guidance injected into PlanDescriber hand-off:
-"Note: A similar feature (email-notifications) failed because error handling for 
-external service failures was omitted from the plan manifest. Ensure all external 
-service calls in this feature have corresponding handlesError checkpoints."
-```
-
-### Journal Indexing
-For efficient lookups, the journal is indexed by:
-- Feature name keywords (tokenized, lowercase)
-- Pipeline type
-- Failed gates
-- Key decisions (extracted from `keyDecisions` field)
-
-### Lessons Injection Protocol
-
-The Orchestrator MUST inject relevant past lessons into PlanDescriber and Implementor hand-offs to prevent repeated mistakes.
-
-#### Protocol Steps
-
-1. **Before dispatching PlanDescriber or Implementor**, read `.opencode/lessons/learned.yaml`
-2. **Filter lessons** that are relevant to the current feature using token similarity matching (same logic as `pipeline-init.ts`)
-3. **Include relevant lessons** in the hand-off message as a "Lessons From Previous Pipelines" section:
-
-```markdown
-### Lessons From Previous Pipelines
-The following lessons from past pipelines are relevant to this task:
-
-| Lesson | Source Feature | Category | Severity |
-|--------|---------------|----------|----------|
-| <lesson text> | <feature name> | <category> | <severity> |
-```
-
-4. **Mark lessons as injected**: After the pipeline completes (or during teardown), update lessons that were injected by changing `injected: false` to `injected: true`
-5. **Skip already-injected lessons** â€” if a lesson already has `injected: true`, don't re-inject it unless the current feature similarity is > 80%
-
-#### When to Inject
-
-| Agent         | Inject Lessons? | Reason                                       |
-|---------------|-----------------|----------------------------------------------|
-| PlanDescriber | âœ… Always       | Lessons about plan omissions, edge cases     |
-| Implementor   | âœ… Always       | Lessons about implementation errors, barrel exports |
-| Fixer         | âœ… When retrying | Lessons about similar failure patterns       |
-| QA            | â­ï¸ Skip         | QA gets lessons via test requirements        |
-| Verifier      | â­ï¸ Skip         | Verifier checks plan only                    |
-
----
-
 ## Skill Loading Conflict Resolution
 
 ### The Problem
@@ -2084,7 +1812,7 @@ When a gate fails after max attempts, the pipeline still delivers partial result
 - Do NOT delete files or undo work on partial failure â€” the user may want to keep working changes
 
 ### Threshold Database
-Store contextual thresholds in `.opencode/calibration/thresholds.yaml`:
+Store contextual thresholds in `.opencode/thresholds.yaml`:
 
 ```yaml
 taskComplexity:
@@ -2212,14 +1940,13 @@ Full documentation, including YAML rule creation, transforms, stdin mode, and JS
 
 ## Tooling (Project & Consistency Tools)
 
-This skill includes executable scripts for project initialization, consistency checking, output validation, calibration management, parallelism analysis, and pipeline testing.
+This skill includes executable scripts for project initialization, consistency checking, output validation, parallelism analysis, and pipeline testing.
 
 ### Available Scripts
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `validate-output-contract.ts` | Validates subagent output against structured output contract schemas | `ts-node <skills-dir>/scripts/orchestration/validate-output-contract.ts --file=<path> \| --pipeline \| --agent=<name>` |
-| `update-calibration.ts` | Reads and updates the agent calibration database (`agents.yaml`) | `ts-node <skills-dir>/scripts/orchestration/update-calibration.ts --agent=<name> --success=true\|false [options]` |
 | `test-pipeline.ts` | E2E test harness exercising all orchestration components | `ts-node <skills-dir>/scripts/orchestration/test-pipeline.ts [--test=<name>]` |
 
 ### Consistency Checks
@@ -2235,16 +1962,6 @@ ts-node skills/scripts/orchestration/validate-output-contract.ts --pipeline
 
 # Validate a specific agent's output file
 ts-node skills/scripts/orchestration/validate-output-contract.ts --file=agent-output.yaml
-```
-
-### Calibration Management
-Update and read agent calibration:
-```bash
-# Record a successful implementor task
-ts-node skills/scripts/orchestration/update-calibration.ts --agent=implementor --success=true
-
-# Read full calibration report
-ts-node skills/scripts/orchestration/update-calibration.ts --read
 ```
 
 ### Parallelism Analysis
@@ -2263,7 +1980,6 @@ ts-node skills/scripts/orchestration/test-pipeline.ts
 | File | Purpose |
 |------|---------|
 | `references/agent-context-schema.md` | Canonical schema for `agent-context.md` YAML frontmatter â€” field types, validation rules, lifecycle |
-| `.opencode/calibration/agents.yaml` | Agent calibration database â€” per-agent success rates, failure patterns, effectiveness |
 
 ## Dynamic Context Injection (NEW)
 
@@ -2275,7 +1991,7 @@ For each hand-off, inject only what the receiving agent actually needs:
 
 | Agent Receiving | Gets | Doesn't Get |
 |-----------------|------|-------------|
-| **PlanDescriber** | Finder's knowledge graph + decision history + journal cross-session lessons | Full Finder exploration report, old plan manifests |
+| **PlanDescriber** | Finder's knowledge graph + decision history | Full Finder exploration report, old plan manifests |
 | **Implementor** | Plan roadmap + plan-manifest.json + current git state | QA reports, Verifier reports from prior iterations |
 | **Integrator** | List of all files created/modified by parallel Implementors + project wiring convention detection | Finder exploration logs, brainstorm notes |
 | **Fixer** (1st cycle) | Bug report or Verifier deviation report + plan manifest + changed files | Full QA output, build logs from other pipelines |
@@ -2708,15 +2424,6 @@ If the hand-off is missing a mandatory field, the Orchestrator MUST:
 3. Re-run the checker to confirm completeness
 4. If auto-fill is impossible, ask the user for clarification
 
-### Pipeline Retrospective Impact
-
-After each pipeline, the Orchestrator records hand-off quality in calibration:
-```bash
-ts-node skills/scripts/orchestration/update-calibration.ts --agent=orchestrator --success=<true/false> --handoff-quality=<1-10>
-```
-
-If hand-off quality < 6 for 3 consecutive pipelines: enable the hand-off checker as a mandatory pre-dispatch gate for ALL future pipelines.
-
 ## Pattern-Based Circuit Breaker (Enhanced)
 
 ### Purpose
@@ -2793,7 +2500,7 @@ circuitBreaker:
 ### Purpose
 Every architectural decision recorded in `agent-context.md` MUST include provenance â€” evidence of what source information led to that decision. This is critical for:
 - **Auditing**: Understanding why a decision was made (not just what was decided)
-- **Cross-session learning**: Future pipelines can reference past decisions with full context
+- **Future reference**: Future pipelines can reference past decisions with full context
 - **Debugging**: When a decision leads to problems, the provenance shows what information it was based on
 
 ### Decision Provenance Format
@@ -2829,77 +2536,6 @@ decisions:
 - âŒ NEVER record a decision without provenance evidence unless it is self-evident (e.g., "Created file X as specified in the plan")
 - âœ… ALWAYS cite the specific source file and excerpt that informed each decision
 - âœ… ALWAYS use at least one evidence entry per decision
-
-## Cross-Session Citation Linking (NEW)
-
-### Purpose
-Journal entries and pipeline logs now link back to specific pieces of evidence, making cross-session learning more precise. Instead of "Last time the fixer had trouble," the system says "Last time fixer had trouble with `handlesError` for `validateEmail` â€” see evidence in pipeline log."
-
-### Journal Entry Enhancement
-
-Journal entries now include an `evidenceCitations` field:
-
-```yaml
-- date: "2026-05-19T10:30:00Z"
-  feature: "user-profile"
-  pipelineType: "full"
-  result: "partial"
-  evidenceCitations:                     # NEW
-    - claim: "Verifier found 72% compliance"
-      source: "pipeline-logs/user-profile-20260519/agent-context.md"
-      method: "read"
-      excerpt: "verifier compliance: 72% â€” 2/8 checkpoints failed (CP-003, CP-007)"
-    - claim: "Root cause: plan-omission (missing CP for duplicate email)"
-      source: "pipeline-logs/user-profile-20260519/agent-context.md"
-      method: "read"
-      excerpt: "fixer.rootCauseAnalysis.classification: 'plan-omission'"
-  notes: "Revised plan twice due to edge cases"
-```
-
-### Evidence File Storage
-
-During pipeline teardown, individual evidence files are archived:
-```
-.opencode/pipeline-logs/<pipelineId>/
-â”œâ”€â”€ agent-context.md                          # Full pipeline state
-â”œâ”€â”€ evidence/
-â”‚   â”œâ”€â”€ finder-evidence.yaml                  # Finder's evidence
-â”‚   â”œâ”€â”€ implementor-evidence.yaml             # Implementor's evidence
-â”‚   â”œâ”€â”€ verifier-evidence.yaml                # Verifier's evidence per checkpoint
-â”‚   â””â”€â”€ fixer-evidence.yaml                   # Fixer's evidence
-```
-
-### Cross-Session Lookup Enhancement
-
-The pipeline-init's cross-session learning now retrieves EVIDENCE:
-
-```bash
-ts-node skills/scripts/orchestration/journal-lookup.ts --feature=<name> --include-evidence
-```
-
-This returns not just "Lesson: X" but also "Evidence: cited from pipeline logs at path Y."
-
-### Pipeline Teardown Update
-
-The teardown script now archives evidence files:
-
-```bash
-ts-node skills/scripts/orchestration/pipeline-teardown.ts \
-  --feature=<name> --pipeline-type=<type> --result=pass|fail|partial \
-  --evidence-path=.opencode/pipeline-logs/<pipelineId>/evidence/
-```
-
-### Journal Reference in Evidence
-
-When the Orchestrator reads cross-session lessons before a pipeline, it now includes evidence citations in the hand-off:
-
-```
-Hand-off note to PlanDescriber:
-"Last time we implemented user-profile, the Verifier found 72% compliance
-because the plan was missing a handlesError checkpoint for duplicate email.
-See evidence: pipeline-logs/user-profile-20260519/evidence/verifier-evidence.yaml
-CP-003: exportExists 'validateEmail' â€” not found."
-```
 
 ## Parallel Dispatch Version Contracts (NEW)
 
@@ -3000,13 +2636,9 @@ HAND-OFF COMPLETENESS:
   Before every dispatch â†’ check-handoff.ts â†’ auto-fill missing fields
   â†“
 PATTERN-BASED CIRCUIT BREAKER:
-  Failure â†’ Generate signature â†’ Check escalation thresholds â†’ Route correctly
-  Detects fixerâ†’verifier loops â†’ Routes to PlanDescriber instead
-  â†“
-CROSS-SESSION CITATION:
-  Pipeline teardown â†’ Archive evidence â†’ Journal with citations
-  Next pipeline init â†’ Read evidence along with lessons
-  â†“
+  Failure → Generate signature → Check escalation thresholds → Route correctly
+  Detects fixer→verifier loops → Routes to PlanDescriber instead
+  ↓
 PARALLEL DISPATCH:
   @contract annotations â†’ Merge Coordinator verifies â†’ Block on mismatch
 ```

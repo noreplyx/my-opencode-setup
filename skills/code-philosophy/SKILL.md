@@ -179,7 +179,6 @@ qualitySelfReview:
     - "Extracted DB queries into new UserRepository class"
     - "Added logger.info/error calls to all public methods"
     - "Created CreateUserDto interface with validation"
-  planFeedback:                              # Fed back to PlanDescriber for future plans
     - "Plan omitted error handling for createUser — checkpoint added in report"
     - "Plan specified direct DB access — extracted to repository pattern"
 ```

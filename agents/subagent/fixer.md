@@ -44,7 +44,7 @@ You are the **Fixer** agent. You debug and fix bugs reported by QA or deviations
 
 Load these skills at the start of every Fixer task:
 - `shared-agent-workflow` — standardized Read Context protocol, output contract, error taxonomy
-- `fixer-workflow` — detailed fixer workflow instructions (diagnostics protocol, root cause classification, reproduction packet, cross-session matching, post-fix verification, escalation logic)
+- `fixer-workflow` — detailed fixer workflow instructions (diagnostics protocol, root cause classification, reproduction packet, post-fix verification, escalation logic)
 - `security-workflow` — security severity classification (Section 5) and anti-pattern fix reference (Section 6). **Required** when fixing security-related bugs or when the fix touches user input, authentication, authorization, data validation, or dependency changes.
 - `code-philosophy` — clean code / SOLID / best practices self-check
 - `backend-code-philosophy` (if the fix involves backend code)
@@ -61,7 +61,6 @@ Load these skills at the start of every Fixer task:
 | `rootCauseAnalysis.crossModuleCheck` | Impact on other modules |
 | `diagnostics` | Results from automated diagnostic tools |
 | `reproduction` | Reproduction command for build/lint/test failure |
-| `crossSessionMatch` | If found: pipelineId, previousRootCause, previousFix |
 | `testPassed` | Whether existing tests passed (true/false/null) |
 | `testOutput` | Full test output |
 
@@ -80,4 +79,4 @@ securityFixDetails:
   regressionTestsCreated: 0 | 1 | 2    # Number of security regression tests added
 ```
 
-Detailed workflow instructions (diagnostics protocol, root cause classification, error reproduction packet format, cross-session error matching, targeted fix application, fix verification, post-fix regression check, self-check against bug report, escalation to Debug agent after 3 attempts) are loaded from the `fixer-workflow` skill during Mandatory Setup.
+Detailed workflow instructions (diagnostics protocol, root cause classification, error reproduction packet format, targeted fix application, fix verification, post-fix regression check, self-check against bug report, escalation to Debug agent after 3 attempts) are loaded from the `fixer-workflow` skill during Mandatory Setup.

@@ -3,7 +3,7 @@
  * Plan Quality Score Script
  *
  * Verifier→PlanDescriber feedback loop. Records Verifier results into
- * .opencode/calibration/plan-quality.yaml and computes quality scores.
+ * and computes quality scores.
  *
  * Quality score formula:
  *   planQualityScore = (complianceScore * 0.6)
@@ -32,8 +32,8 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
-const CALIBRATION_DIR = path.join(PROJECT_ROOT, '.opencode', 'calibration');
-const PLAN_QUALITY_PATH = path.join(CALIBRATION_DIR, 'plan-quality.yaml');
+const QUALITY_DIR = path.join(PROJECT_ROOT, '.opencode');
+const PLAN_QUALITY_PATH = path.join(QUALITY_DIR, 'plan-quality.yaml');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -229,7 +229,7 @@ function loadData(): PlanQualityData {
 }
 
 function saveData(data: PlanQualityData): void {
-  ensureDir(CALIBRATION_DIR);
+  ensureDir(path.dirname(PLAN_QUALITY_PATH));
   const yaml = serializeYaml(data);
   fs.writeFileSync(PLAN_QUALITY_PATH, yaml, 'utf-8');
 }
