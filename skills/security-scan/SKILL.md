@@ -1,6 +1,6 @@
 ---
 name: security-scan
-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities (via osv-scanner), hardcoded secrets, SAST via semgrep, gitleaks secret scanning, SBOM generation, supply chain checks, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill, the gitleaks-scan skill, and the osv-scanner skill as mandatory sub-scans.
+description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities (via osv-scanner), hardcoded secrets, SAST via semgrep, gitleaks secret scanning, Trivy vulnerability/misconfiguration scanning, SBOM generation, supply chain checks, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill, the gitleaks-scan skill, the trivy-scan skill, and the osv-scanner skill as mandatory sub-scans.
 ---
 
 # Security Scan Skill
@@ -114,6 +114,47 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest
 - ✅ NEVER modify project files during scanning
 - ✅ NEVER skip the osv-scanner dependency scan — it is mandatory
 
+### 2.5. Trivy Vulnerability & Misconfiguration Scan (MANDATORY — Auto-Loaded)
+
+The **Trivy Vulnerability & Misconfiguration Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `trivy-scan` skill** and runs Trivy vulnerability and misconfiguration scanning via Podman container:
+
+```bash
+# Pull if needed
+podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest
+
+# Run vulnerability + misconfiguration scan on the project filesystem
+podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
+  fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src
+```
+
+**Why it is mandatory:**
+- Detects CVEs in OS packages (dpkg, apk, rpm) and all language dependencies (npm, pip, Go, Maven, etc.) — complementary to OSV-scanner (Trivy uses NVD/GHSA databases)
+- Scans IaC misconfigurations in Dockerfiles, Kubernetes manifests, Terraform, CloudFormation, and Helm charts
+- Detects hardcoded secrets in files (complementary to gitleaks — Trivy catches additional patterns)
+- Performs license compliance scanning
+- Can generate CycloneDX/SPDX SBOMs
+- Runs after OSV-scanner and before anti-pattern scans
+
+**Why it is NOT a replacement for osv-scanner:** Trivy and OSV-scanner use different vulnerability databases (Trivy: NVD/GHSA/RedHat/Ubuntu; OSV: OSV.dev). Running both provides broader coverage — vulnerabilities missed by one database may be found by the other.
+
+**Verdict:**
+| Exit Code | Meaning | Pipeline Action |
+|-----------|---------|-----------------|
+| 0 | No findings at CRITICAL/HIGH | ✅ PASS — proceed to next scan |
+| 1 | Findings detected at CRITICAL/HIGH | ❌ FAIL — block pipeline, report findings |
+| 2+ | Tool error | ⚠️ WARN — log, proceed if tool unavailable |
+
+**Hard Rules for Trivy:**
+- ✅ The Orchestrator MUST load `trivy-scan` skill during every pipeline
+- ✅ The Trivy scan MUST use `--scanners vuln,misconfig` at minimum
+- ✅ The Trivy scan MUST use `--severity CRITICAL,HIGH` for pipeline gates
+- ✅ The Trivy scan MUST use `--exit-code 1` to block pipeline on findings
+- ✅ Always pull the image first: `podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest`
+- ✅ NEVER modify project files during scanning
+- ✅ NEVER skip the Trivy scan — it is mandatory
+- ✅ Use a persistent cache volume for the vulnerability database to speed up scans
+
+
 ### 3. Hardcoded Secrets Scan
 
 ### 3. Hardcoded Secrets Scan
@@ -211,16 +252,18 @@ git log -p --all -- ':(exclude)package-lock.json' ':(exclude)pnpm-lock.yaml' ':(
 2. **Run Semgrep SAST Scan (MANDATORY)** — Execute `semgrep --config p/security-audit --error .` — if it fails, block the pipeline
 3. **Load `gitleaks-scan` skill** — The Orchestrator loads the `gitleaks-scan` skill automatically (no user prompt)
 4. **Run Gitleaks Secret Scan (MANDATORY)** — Run gitleaks via podman container on the repo — if exit code 1 (leaks detected), block the pipeline
-5. **Detect project type** — Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
-6. **Check for lockfile** — Verify presence of `package-lock.json`, `yarn.lock`, `requirements.txt`, `Cargo.lock`, etc. If missing, emit a warning but do NOT fail.
-7. **Run dependency scan** — Execute the appropriate command (if lockfile or package manager config is found; otherwise skip with a warning)
-8. **Parse results** — Extract vulnerability IDs, severity, package, and description
-9. **Run secrets scan** — Grep for hardcoded secrets
-10. **Run anti-pattern scan** — Grep for security anti-patterns in the changed files
-11. **Generate SBOM**
-12. **Run supply chain integrity check**
-13. **Run git history secret scan**
-14. **Report findings** — Use the standard report format below
+5. **Load `trivy-scan` skill** — The Orchestrator loads the `trivy-scan` skill automatically (no user prompt)
+6. **Run Trivy Vulnerability & Misconfig Scan (MANDATORY)** — Run Trivy fs scan via podman container with --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 — if exit code 1, block the pipeline
+7. **Detect project type** — Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
+8. **Check for lockfile** — Verify presence of `package-lock.json`, `yarn.lock`, `requirements.txt`, `Cargo.lock`, etc. If missing, emit a warning but do NOT fail.
+9. **Run dependency scan (OSV-Scanner)** — Execute osv-scanner via podman container
+10. **Parse results** — Extract vulnerability IDs, severity, package, and description
+11. **Run secrets scan** — Grep for hardcoded secrets
+12. **Run anti-pattern scan** — Grep for security anti-patterns in the changed files
+13. **Generate SBOM**
+14. **Run supply chain integrity check**
+15. **Run git history secret scan**
+16. **Report findings** — Use the standard report format below
 
 ### Lockfile Warnings
 
