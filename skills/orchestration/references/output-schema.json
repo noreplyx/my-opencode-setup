@@ -51,15 +51,7 @@
           "type": "string",
           "description": "Executable command to reproduce the error"
         },
-        "firstSeenSession": {
-          "type": "string",
-          "description": "Cross-session dedup — first session this error was seen"
-        },
-        "timesSeen": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "How many times this errorCode has been seen across sessions"
-        }
+
       }
     },
     "sources": {
@@ -187,7 +179,7 @@
     },
     "provenance": {
       "type": "object",
-      "description": "Tracked lifecycle provenance — references the provenance-tracker format for cross-session audit trail",
+      "description": "Tracked lifecycle history for the checkpoint",
       "properties": {
         "pipelineId": {
           "type": "string",

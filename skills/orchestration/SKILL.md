@@ -14,7 +14,6 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Shared Test Manifest** | `shared-test-manifest.ts` | QA + Browser Tester coordination |
 | **Unified Error Taxonomy** | `unified-pipeline-error-schema.ts` | Typed PipelineError with 30 error codes |
 | **Agent Readiness Check** | `check-agent-readiness.ts` | Pre-flight agent permission verification |
-| **Provenance Tracker** | `provenance-tracker.ts` | File-level checkpoint lifecycle tracking |
 | **Implementor Workflow** | `skills/implementor-workflow/SKILL.md` | Decoupled workflow for Implementor |
 | **Fixer Workflow** | `skills/fixer-workflow/SKILL.md` | Decoupled workflow for Fixer |
 | **Finder Workflow** | `skills/finder-workflow/SKILL.md` | Decoupled workflow for Finder â€” exploration methodology, hazard detection, evidence gathering |
@@ -628,55 +627,6 @@ If the same issue resurfaces after 3 Fixer attempts, escalate back to PlanDescri
 ### Context Preservation
 When cycling back to Fixer, use `task_id` (ses_xxx) to preserve conversation context with the prior Fixer session so the agent retains memory of what it diagnosed.
 
-### Cross-Agent Evidence Provenance (NEW)
-
-Every plan manifest checkpoint now tracks its lifecycle through the pipeline:
-
-```json
-{
-  "id": "CP-003",
-  "type": "behavioral",
-  "description": "validateEmail handles invalid input",
-  "target": "src/services/user.ts",
-  "provenance": {
-    "createdBy": "PlanDescriber",
-    "implementedBy": "Implementor",
-    "implementationEvidence": {
-      "claim": "validateEmail throws on invalid email",
-      "command": "grep -n 'throw.*Invalid email' src/services/user.ts"
-    },
-    "verificationResult": {
-      "verdict": "fail",
-      "verifier": "Verifier",
-      "evidence": { "result": "not_found" }
-    },
-    "fixedBy": "Fixer",
-    "fixEvidence": {
-      "claim": "Added error handling to validateEmail",
-      "command": "grep -n 'throw new ValidationError' src/services/user.ts"
-    }
-  }
-}
-```
-
-This enables the Verifier and Fixer to trace exactly what evidence was collected at each step.
-
-### Provenance Tracking (NEW)
-After each agent completes, track checkpoint provenance:
-
-```bash
-# Implementor records implementation evidence
-ts-node skills/scripts/orchestration/provenance-tracker.ts --implement --manifest=... --agent=implementor --session=<ses_id> --file=<path> --lines=<range> --claim="..."
-
-# Verifier records verification results
-ts-node skills/scripts/orchestration/provenance-tracker.ts --verify --manifest=... --checkpoint=<id> --verdict=<pass|fail> --evidence="command" --result=<found|not_found>
-
-# Fixer records fix
-ts-node skills/scripts/orchestration/provenance-tracker.ts --fix --manifest=... --checkpoint=<id> --agent=fixer --session=<ses_id> --file=<path> --lines=<range> --claim="..."
-
-# View full provenance chain
-ts-node skills/scripts/orchestration/provenance-tracker.ts --view --manifest=... --checkpoint=<id>
-```
 
 ## Agent Action Audit Trail (NEW)
 
@@ -2384,48 +2334,6 @@ circuitBreaker:
   patternDetection:
     cyclePatternHistory: []
 ```
-
-## Decision Provenance Protocol (NEW)
-
-### Purpose
-Every architectural decision recorded in `agent-context.md` MUST include provenance â€” evidence of what source information led to that decision. This is critical for:
-- **Auditing**: Understanding why a decision was made (not just what was decided)
-- **Future reference**: Future pipelines can reference past decisions with full context
-- **Debugging**: When a decision leads to problems, the provenance shows what information it was based on
-
-### Decision Provenance Format
-
-Every decision in the `decisions` array MUST include an `evidence` array:
-
-```yaml
-decisions:
-  - what: "Chose Zod over Joi for input validation"
-    why: "Already in dependency tree â€” no new install needed"
-    by_who: "finder"
-    evidence:                    # NEW â€” REQUIRED
-      - source: "package.json"
-        excerpt: '"zod": "^3.22.0"'
-      - source: "src/services/user.ts"
-        excerpt: "import { z } from 'zod'"
-```
-
-### When Decision Provenance Is Required
-
-| Agent Type | Decision Provenance Required? | Examples |
-|-----------|------------------------------|----------|
-| **Finder** | âœ… Always | "Chose X because Y exists in package.json" â†’ cite package.json |
-| **PlanDescriber** | âœ… Always | "Chose 3-phase split because existing service follows this pattern" â†’ cite the existing service |
-| **Implementor** | âŒ (usually no decisions) | N/A |
-| **Fixer** | âœ… For root cause conclusions | "Root cause is plan-omission because no CP for duplicate email exists" â†’ show the manifest |
-| **QA** | âœ… For test strategy choices | "Chose integration tests over unit tests because the service uses a database" â†’ cite the service |
-| **Verifier** | âŒ (no decisions) | N/A |
-| **Integrator** | âœ… Always | "Used NestJS module pattern because app.module.ts uses @Module" â†’ cite app.module.ts |
-| **Documentor** | âœ… For style decisions | "Used imperative mood because existing docs use it" â†’ cite existing JSDoc |
-
-### Hard Rule
-- âŒ NEVER record a decision without provenance evidence unless it is self-evident (e.g., "Created file X as specified in the plan")
-- âœ… ALWAYS cite the specific source file and excerpt that informed each decision
-- âœ… ALWAYS use at least one evidence entry per decision
 
 ## Parallel Dispatch Version Contracts (NEW)
 

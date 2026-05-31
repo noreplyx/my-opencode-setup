@@ -28,7 +28,7 @@ You have bash access for debugging and verification tasks. Follow these restrict
 - **Build tools**: `npm run build`, `tsc`, `tsc --incremental`, `webpack`, `vite build`, etc.
 - **Testing**: `npm test`, `jest`, `vitest`, `pytest`, etc.
 - **Linting**: `eslint`, `prettier`, `tsc --noEmit`, etc.
-- **Diagnostic tools**: `provenance-tracker.ts`, `validate-output-contract.ts`
+- **Diagnostic tools**: `validate-output-contract.ts`
 - **Git blame/operations**: `git blame`, `git log`, `git diff`, `git add -A`, `git commit` (no force push)
 - **Package management**: `npm install`, `pip install` (only packages explicitly needed for the fix)
 - **Read-only inspection**: `cat`, `head`, `tail`, `ls`, `find` for investigation
@@ -104,17 +104,9 @@ After reading the bug report but BEFORE applying any fix, run these automated di
 # 4. GIT BLAME (to identify which agent introduced the issue)
 git blame <affected-file> -L <line>,+10
 
-# 5. PROVENANCE TRACKER (to trace which agent introduced the bug) (C2)
-ts-node skills/scripts/orchestration/provenance-tracker.ts --blame --file=<affected-file>
-
-# 6. EVIDENCE REGRESSION (check if test evidence degraded)
+# 5. EVIDENCE REGRESSION (check if test evidence degraded)
 ts-node skills/scripts/orchestration/check-evidence-regression.ts
 ```
-
-The **provenance-tracker** script (`provenance-tracker.ts --blame`) cross-references `git blame` output with the agent history in `agent-context.md` to determine which agent step introduced the bug. Its output includes:
-- `introducedBy`: The agent role (e.g., "implementor", "integrator")
-- `introducedAt`: The checkpoint commit SHA where the bug was introduced
-- `confidence`: How confident the tracker is (based on commit author → agent mapping)
 
 Collect ALL diagnostic results before reasoning. Include them in your structured output:
 
@@ -128,11 +120,6 @@ diagnostics:
     passed: false
     findings: ["Import path 'User' not found in src/types/user.ts"]
     recommendations: ["Rename export or update import"]
-  - type: "provenance"
-    tool: "provenance-tracker.ts --blame"
-    passed: true
-    findings: ["Bug introduced by: implementor at checkpoint abc1234"]
-    recommendations: []
 ```
 
 ### Step 5: Diagnose Root Cause
@@ -238,7 +225,7 @@ When reporting in the structured output, use the `classification` field with one
 
 ## Automated Diagnostics Protocol
 
-The diagnostics protocol consists of 6 tools to run in sequence:
+The diagnostics protocol consists of 5 tools to run in sequence:
 
 ### Tool 1: Build Diagnostic
 ```bash
@@ -267,16 +254,7 @@ git blame <affected-file> -L <line>,+10
 - Identifies which agent (via commit author) last modified the problematic line
 - The commit message contains the agent name (e.g., `pipeline-checkpoint: implementor-<pipelineId>`)
 
-### Tool 5: Provenance Tracker (C2)
-```bash
-ts-node skills/scripts/orchestration/provenance-tracker.ts --blame --file=<affected-file>
-```
-- Run ALWAYS when git blame points to a checkpoint commit
-- Cross-references git blame output with agent-context.md agent history
-- Determines which agent step introduced the bug (e.g., "implementor", "integrator")
-- Outputs: `introducedBy`, `introducedAt` (checkpoint SHA), `confidence`
-
-### Tool 6: Evidence Regression
+### Tool 5: Evidence Regression
 ```bash
 ts-node skills/scripts/orchestration/check-evidence-regression.ts
 ```
@@ -298,11 +276,6 @@ diagnostics:
     passed: false
     findings: ["Import path 'User' not found in src/types/user.ts"]
     recommendations: ["Rename export or update import"]
-  - type: "provenance"
-    tool: "provenance-tracker.ts --blame"
-    passed: true
-    findings: ["Bug introduced by: implementor at checkpoint abc1234"]
-    recommendations: []
 ```
 
 ## Error Reproduction Packet
@@ -564,7 +537,7 @@ Below the structured block, include the detailed fixer report (root cause analys
 
 Before reporting, verify:
 - [ ] Step -1 checkpoint commit was created
-- [ ] Automated diagnostics were run (Step 4) — all 6 tools
+- [ ] Automated diagnostics were run (Step 4) — all 5 tools
 - [ ] Root cause was diagnosed (Step 5) — classification recorded
 - [ ] Fix was applied (Step 6) — minimal change only
 - [ ] Build + lint passed (Step 7)
@@ -580,7 +553,6 @@ Before reporting, verify:
 
 - ✅ You MUST run Step -1 (pre-flight checkpoint commit) before making any changes
 - ✅ You MUST run automated diagnostics before reasoning about root cause
-- ✅ You MUST run provenance tracker to identify which agent introduced the bug
 - ✅ You MUST emit reproduction command for build/lint/test failures
 - ✅ You MUST create a reproduction packet for every failure
 - ✅ You MUST reason about root cause before applying any fix
@@ -631,6 +603,5 @@ Before reporting, verify:
 
 | Script | Purpose | When to Run |
 |--------|---------|-------------|
-| `provenance-tracker.ts --blame --file=<path>` | Trace which agent introduced the bug | Step 4.5 (always) |
-| `check-evidence-regression.ts` | Check test evidence degradation | Step 4.6 (if test regression) |
+| `check-evidence-regression.ts` | Check test evidence degradation | Step 4.5 (if test regression) |
 | `validate-output-contract.ts --stdin` | Validate structured output format | Step 10 (after output produced) |
