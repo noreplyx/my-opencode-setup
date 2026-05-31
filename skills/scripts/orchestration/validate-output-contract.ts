@@ -69,7 +69,6 @@ const PIPELINE_ERROR_CHILDREN: FieldRule[] = [
   { name: 'checkpointId', type: 'string', required: false },
   { name: 'rootCause', type: 'string', required: true },
   { name: 'reproduction', type: 'string', required: false },
-  { name: 'firstSeenSession', type: 'string', required: false },
   { name: 'timesSeen', type: 'number', required: false },
 ];
 

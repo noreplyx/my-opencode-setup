@@ -53,7 +53,6 @@ export interface PipelineError {
   checkpointId?: string; // Plan checkpoint ID if applicable
   rootCause: string; // Human-readable
   reproduction?: string; // Executable command to reproduce
-  firstSeenSession?: string; // Cross-session dedup
   timesSeen: number; // How many times this errorCode has been seen
   affectedFiles?: string[]; // Files affected by this error
   suggestedFix?: string; // Optional fix suggestion
@@ -353,7 +352,6 @@ export function createPipelineError(
     checkpointId: overrides.checkpointId,
     rootCause: overrides.rootCause,
     reproduction: overrides.reproduction,
-    firstSeenSession: overrides.firstSeenSession,
     timesSeen: overrides.timesSeen ?? 1,
     affectedFiles: overrides.affectedFiles,
     suggestedFix: overrides.suggestedFix ?? def.suggestedFix,
@@ -440,10 +438,6 @@ export function validatePipelineError(error: unknown): { valid: boolean; errors:
     errors.push('reproduction: must be a string');
   }
 
-  // firstSeenSession: optional string
-  if (e.firstSeenSession !== undefined && typeof e.firstSeenSession !== 'string') {
-    errors.push('firstSeenSession: must be a string');
-  }
 
   // affectedFiles: optional string array
   if (e.affectedFiles !== undefined) {
@@ -463,8 +457,8 @@ export function validatePipelineError(error: unknown): { valid: boolean; errors:
     valid: errors.length === 0,
     errors,
   };
-}
 
+}
 /**
  * Classify a Fixer root cause message into a registered error code.
  * Uses keyword matching against the rootCause string.
@@ -556,9 +550,6 @@ export function formatError(error: PipelineError): string {
     lines.push(`  Files:       ${error.affectedFiles.join(', ')}`);
   }
   lines.push(`  Seen:        ${error.timesSeen}x`);
-  if (error.firstSeenSession) {
-    lines.push(`  First Seen:  ${error.firstSeenSession}`);
-  }
   lines.push(`  Created:     ${error.createdAt}`);
   return lines.join('\n');
 }
@@ -603,9 +594,6 @@ export function generateErrorReport(errors: PipelineError[]): string {
     if (err.reproduction) {
       parts.push(`    reproduction: ${err.reproduction}`);
     }
-    if (err.firstSeenSession) {
-      parts.push(`    firstSeenSession: ${err.firstSeenSession}`);
-    }
     parts.push(`    timesSeen: ${err.timesSeen}`);
     if (err.affectedFiles && err.affectedFiles.length > 0) {
       parts.push('    affectedFiles:');
@@ -639,7 +627,6 @@ export function exportRegistryAsJson(): string {
         ],
         pipelineErrorFields: [
           'errorCode', 'category', 'severity', 'detector', 'checkpointId',
-          'rootCause', 'reproduction', 'firstSeenSession', 'timesSeen',
           'affectedFiles', 'suggestedFix', 'createdAt',
         ],
       },

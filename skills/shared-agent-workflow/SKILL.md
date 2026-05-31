@@ -399,7 +399,6 @@ errorReproduction:
 | Dry-run mode (no execution) | ❌ No |
 
 ### Why Error Packets Matter
-1. **Cross-session error matching**: The Orchestrator can query `.opencode/errors/` for similar errors
 2. **Reproducibility**: Every error has an executable command to reproduce it
 3. **Debug hand-off**: When the Fixer receives an error packet, it can immediately run the reproduction command instead of reasoning from scratch
 4. **Trend analysis**: Over time, error patterns emerge (e.g., "80% of build errors are in src/services/")
