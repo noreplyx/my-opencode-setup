@@ -1,2 +1,3 @@
 # Gitleaks eval generated artifacts - auto-generated scan outputs, not source code
 skills/gitleaks-scan-workspace/
+node_modules/

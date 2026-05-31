@@ -77,6 +77,7 @@ const VALID_CIRCUIT_BREAKER_STATES: CircuitBreakerState[] = ['closed', 'open', '
 // ── Parsing ───────────────────────────────────────────────────────
 
 function parseFrontmatter(content: string): { frontmatter: string | null; body: string } {
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!match) {
     return { frontmatter: null, body: content };

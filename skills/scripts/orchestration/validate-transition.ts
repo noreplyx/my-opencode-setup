@@ -539,6 +539,7 @@ function printMatrixTable(): void {
  * Returns a simplified Record<string, unknown> for the fields we need.
  */
 function parseYamlFrontmatter(content: string): Record<string, unknown> | null {
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!match) return null;
   return parseYamlBlock(match[1]);

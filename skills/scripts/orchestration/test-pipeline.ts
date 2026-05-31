@@ -107,7 +107,8 @@ Finder: Run test exploration
 
     // 2. Verify YAML frontmatter fields
     const content = fs.readFileSync(filePath, 'utf-8');
-    const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n/);
+    const normalized = content.replace(/\r\n/g, '\n');
+    const frontmatterMatch = normalized.match(/^---\n([\s\S]*?)\n---\n/);
     assert.ok(frontmatterMatch !== null, 'File must have YAML frontmatter');
 
     const frontmatterStr = frontmatterMatch[1];
@@ -150,14 +151,16 @@ Finder: Run test exploration
     assert.ok(contentAfterCB.includes('lint: 1'), 'Circuit breaker lint counter should be 1');
 
     // 5. Parse back and verify
-    const reparsedMatch = contentAfterCB.match(/^---\n([\s\S]*?)\n---\n/);
+    const normalizedCB = contentAfterCB.replace(/\r\n/g, '\n');
+    const reparsedMatch = normalizedCB.match(/^---\n([\s\S]*?)\n---\n/);
     assert.ok(reparsedMatch !== null, 'File must still have valid frontmatter after updates');
     assert.ok(reparsedMatch[1].includes('pipelineId: "test-pipe-001"'), 'pipelineId must survive re-parse');
 
     // 6. Verify status becomes "completed"
     const finalContent = contentAfterCB.replace('status: "running"', 'status: "completed"');
     fs.writeFileSync(filePath, finalContent, 'utf-8');
-    const finalFrontmatter = fs.readFileSync(filePath, 'utf-8').match(/^---\n([\s\S]*?)\n---\n/);
+    const finalRead = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
+    const finalFrontmatter = finalRead.match(/^---\n([\s\S]*?)\n---\n/);
     assert.ok(finalFrontmatter !== null, 'Final file must have frontmatter');
     assert.ok(finalFrontmatter[1].includes('status: "completed"'), 'Status must be "completed" at end');
 
@@ -297,6 +300,7 @@ function testFixerOutput(): void {
 // ── Test 3: Stale agent-context.md Detection ────────────────────────────────
 
 function isStaleContext(content: string): boolean {
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\n([\s\S]*?)\n---\n/);
   if (!match) return false;
 

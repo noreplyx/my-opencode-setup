@@ -137,6 +137,7 @@ Exit codes:
 // ── YAML Parsing (same pattern as validate-context.ts) ──────────────────────
 
 function parseFrontmatter(content: string): { frontmatter: string | null; body: string } {
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!match) {
     return { frontmatter: null, body: content };

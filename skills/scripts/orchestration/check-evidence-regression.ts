@@ -125,6 +125,7 @@ function parseCliArgs(argv: string[]): CliArgs {
 
 function parseFrontmatter(content: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
+  content = content.replace(/\r\n/g, '\n');
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) return result;
 

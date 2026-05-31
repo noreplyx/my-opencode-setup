@@ -182,9 +182,10 @@ function parseAgentContext(filePath: string): AgentContextData | null {
     return null;
   }
 
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  let raw = fs.readFileSync(filePath, 'utf-8');
 
   // Extract YAML frontmatter between --- markers
+  raw = raw.replace(/\r\n/g, '\n');
   const frontmatterMatch = raw.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!frontmatterMatch) {
     return null;

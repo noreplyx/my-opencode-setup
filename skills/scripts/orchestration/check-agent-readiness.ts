@@ -322,6 +322,7 @@ function parseYamlFrontmatter(filePath: string): AgentConfig | null {
 
 function parseYamlString(content: string): AgentConfig | null {
   // Match YAML frontmatter between --- markers
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) {
     return null;
@@ -618,6 +619,7 @@ function applyFixes(fixes: FixAction[]): void {
     }
 
     // Find the skill block in the YAML frontmatter and add the missing skill
+    content = content.replace(/\r\n/g, '\n');
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch) {
       console.error(`  ✗ No frontmatter found in ${fix.configFile}`);

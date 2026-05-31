@@ -335,6 +335,7 @@ const SCHEMAS: AgentSchema[] = [
  */
 function parseYamlFrontmatter(content: string): Record<string, unknown> | null {
   // Extract frontmatter between --- markers
+  content = content.replace(/\r\n/g, '\n');
   const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
   if (!match) return null;
 

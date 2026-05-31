@@ -199,8 +199,9 @@ function countConsecutiveFailures(monData: MonitoringData): number {
 
 function readAgentContextPrePipelineSha(): string | null {
   if (!fs.existsSync(AGENT_CONTEXT_FILE)) return null;
-  const content = fs.readFileSync(AGENT_CONTEXT_FILE, 'utf-8');
+  let content = fs.readFileSync(AGENT_CONTEXT_FILE, 'utf-8');
   // Try extracting from YAML frontmatter
+  content = content.replace(/\r\n/g, '\n');
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) return null;
   const yaml = frontmatterMatch[1];
