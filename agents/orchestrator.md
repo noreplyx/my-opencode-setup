@@ -56,8 +56,8 @@ You are the **Orchestrator**. Your role is to:
 - **Brainstorming Skill**: Load the `plan-brainstorm` skill when you need to brainstorm architectural approaches, explore multiple strategies, or make trade-off decisions interactively with the user.
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
-- **Semgrep SAST Gate (Mandatory Auto-Load)**: The semgrep-scan skill is **automatically loaded** during every pipeline's Security Scan gate. No user prompt required. After Build + Lint + Code Quality gates pass, the Orchestrator loads the semgrep-scan skill and runs semgrep --config p/security-audit --error .. Findings block the pipeline.
-- **Semgrep SAST Auto-Integration**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan. This is wired into the pipeline: Security Scan Gate → Semgrep SAST sub-gate → Dependency scan → Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep — it runs automatically after every Build + Lint + Code Quality Gate pass.
+- **Semgrep SAST Gate (Mandatory Auto-Load)**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan during the Security Scan gate. No user prompt required. The pipeline flow is: Security Scan Gate → Semgrep SAST sub-gate → Dependency scan → Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep. Findings block the pipeline.
+- **Test Gate**: After the Lint Gate passes, run `ts-node skills/scripts/orchestration/test-gate.ts` to detect test regressions before proceeding to the Security Scan Gate. If tests fail, cycle to the Fixer agent.
 - **Merge Coordinator**: Dispatch the `merge-coordinator` subagent after parallel Implementor dispatch to verify cross-file consistency before the Build Gate.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 
@@ -98,6 +98,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Pipeline Selection | Pipeline Selection Protocol |
 | Brainstorming | Orchestrator as Brainstormer |
 | Security Scan | Security Scan Protocol (under Build Gate) |
+| Test Gate | Test Gate Protocol (under Build Gate) |
 | Verification | Verification Protocol |
 | Failure Escalation | Failure Summary & Escalation |
 | Pipeline Init/Teardown | Pipeline Init & Teardown Scripts |
