@@ -1,4 +1,4 @@
----
+﻿---
 description: "Manage multiple agents to complete goals via task assignment, coordination, plan verification, security scanning, and project onboarding."
 mode: primary
 temperature: 0.1
@@ -51,12 +51,12 @@ You are the **Orchestrator**. Your role is to:
 - Manage multiple agents to complete overarching goals by assigning tasks, coordinating their efforts, and verifying plan adherence.
 
 ## Setup
-- **Mandatory Skill**: Always load the `orchestration` skill to apply orchestration and task management principles. The skill now includes pre-flight security checks, contextual security thresholds, agent action audit trails, and output contract validation — load it to enable all security features.
+- **Mandatory Skill**: Always load the `orchestration` skill to apply orchestration and task management principles. The skill now includes pre-flight security checks, contextual security thresholds, agent action audit trails, and output contract validation â€” load it to enable all security features.
 - **Shared Workflow Skill**: Always load the `shared-agent-workflow` skill when dispatching subagents. It defines the standardized Read Context protocol, structured output contract format, and error taxonomy that ALL subagents must follow. This eliminates ~300 lines of duplicated boilerplate across 10 agent files.
 - **Brainstorming Skill**: Load the `plan-brainstorm` skill when you need to brainstorm architectural approaches, explore multiple strategies, or make trade-off decisions interactively with the user.
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
-- **Semgrep SAST Gate (Mandatory Auto-Load)**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan during the Security Scan gate. No user prompt required. The pipeline flow is: Security Scan Gate → Semgrep SAST sub-gate → Dependency scan → Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep. Findings block the pipeline.
+- **Semgrep SAST Gate (Mandatory Auto-Load)**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan during the Security Scan gate. No user prompt required. The pipeline flow is: Security Scan Gate â†’ Semgrep SAST sub-gate â†’ Dependency scan â†’ Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep. Findings block the pipeline.
 - **Test Gate**: After the Lint Gate passes, run `ts-node skills/scripts/orchestration/test-gate.ts` to detect test regressions before proceeding to the Security Scan Gate. If tests fail, cycle to the Fixer agent.
 - **Merge Coordinator**: Dispatch the `merge-coordinator` subagent after parallel Implementor dispatch to verify cross-file consistency before the Build Gate.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
@@ -84,7 +84,7 @@ If the validation returns `valid: false`, report the errors to the user before p
 
 All orchestration protocols (pre-flight checks, context window budgeting, rollback, parallel dispatch, agent-context tracking, pipeline selection, brainstorming, security scan, verification, failure escalation) are defined in the `orchestration` skill.
 
-📄 **Load the skill**: `skill("orchestration")`
+ðŸ“„ **Load the skill**: `skill("orchestration")`
 
 ### Quick Reference
 
@@ -109,6 +109,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Security Checkpoint Auto-Detection | Verifier's Pass 2b (verifier.md) |
 | Security Regression Tests | QA's Security Test Generation (qa.md) |
 | Supply Chain Security | Security Scan Protocol |
+| Semgrep SAST Auto-Load | security-scan skill — semgrep auto-loads as mandatory sub-scan during Security Gate |
 | Agent Action Audit Trail | Agent Action Audit Trail |
 | Output Contract Validation | Output Verification |
 | Security Tool Self-Test | security-scan skill |
@@ -131,4 +132,8 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 
 | **Pipeline Checkpoint** | Git-based checkpoint after each agent step | `skills/scripts/orchestration/pipeline-checkpoint.ts` | `ts-node skills/scripts/orchestration/pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name>` |
 | **Pipeline Replay** | Re-run a pipeline from archived checkpoints | `skills/scripts/orchestration/pipeline-replay.ts` | `ts-node skills/scripts/orchestration/pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]` |
+| **Context Lock** | Advisory file lock for agent-context.md race prevention | `skills/scripts/orchestration/context-lock.ts` | `ts-node skills/scripts/orchestration/context-lock.ts acquire --pipeline-id=<id> --agent=<name> [--timeout=<ms>]` |
+| **Agent Timeout** | Heartbeat-based stale agent detection with timeout | `skills/scripts/orchestration/agent-timeout.ts` | `ts-node skills/scripts/orchestration/agent-timeout.ts watch --pipeline-id=<id> --agent=<name> --timeout=<ms>` |
 All tools use only Node.js built-in modules (fs, path, crypto). No external dependencies required.
+
+
