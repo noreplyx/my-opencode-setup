@@ -35,5 +35,6 @@ export type {
 
   // ── Agent Context ──
   AgentContext, AgentContextHistoryEntry,
+  AgentContextPipelineId,
   CircuitBreakerState, GitState, ChainOfCustodyEntry,
 } from './types';

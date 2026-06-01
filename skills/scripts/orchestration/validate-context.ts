@@ -2,7 +2,10 @@
 /**
  * agent-context.md Validator
  * 
- * Validates that agent-context.md conforms to the formal schema defined in shared/types.ts.
+ * Validates that agent-context.md conforms to the AgentContext schema.
+ * Types are inlined to avoid runtime import issues (ts-node / ESM compat).
+ * When updating the schema in shared/types.ts, also update the validation
+ * arrays below (REQUIRED_FIELDS, VALID_PIPELINE_TYPES, etc.) to stay in sync.
  * Called by every agent at step 0 before reading context.
  * 
  * Usage: [runtime] skills/scripts/orchestration/validate-context.ts [--context=agent-context.md]

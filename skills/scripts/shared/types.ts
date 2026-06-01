@@ -310,6 +310,13 @@ export interface AgentContext {
   failedGates?: string[];
 }
 
+/**
+ * Branded string type for pipeline IDs.
+ * Use this instead of raw strings wherever a pipeline ID is expected.
+ * Enables type-safe pipeline ID passing between agents and scripts.
+ */
+export type AgentContextPipelineId = string & { __brand: 'AgentContextPipelineId' };
+
 export interface AgentContextHistoryEntry {
   step: string;
   agent: string;
