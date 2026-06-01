@@ -26,7 +26,7 @@ permission:
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
     "shared-agent-workflow": "allow"
-agentVersion: "2.0.0"
+agentVersion: "2.1.0"
 lastModified: "2026-05-21"
 ---
 

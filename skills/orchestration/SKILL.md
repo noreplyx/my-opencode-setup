@@ -24,7 +24,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
 | **Trivy Vulnerability & Misconfig Scan** | skills/trivy-scan/SKILL.md | Auto-loaded vulnerability and IaC misconfiguration scanning (no user trigger needed). Scans filesystem for CVEs + IaC misconfigs via podman. |
 | **OWASP ZAP DAST Scan** | skills/owasp-zap-scan/SKILL.md | Post-deployment web application DAST scanning — baseline, full active, and API scans via podman (optional pipeline step). |
-| **PMD Code Quality Scan** | skills/pmd-scan/SKILL.md | MANDATORY — auto-loaded code quality analysis after Lint Gate. Detects unused vars, empty catch blocks, code style issues, duplicate code (CPD). Runs via podman (no local install needed). Violations block the pipeline. |
+| **PMD Code Quality Scan** | skills/pmd-scan/SKILL.md | MANDATORY — auto-loaded code quality analysis after Lint Gate. Detects unused vars, empty catch blocks, code style issues, duplicate code (CPD). Runs via podman (no local install needed). Violations block the pipeline. **Note**: PMD primarily targets Java/Apex projects; for pure JS/TS projects, consider skipping or using an alternative linter. |
 | **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning — podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
@@ -90,33 +90,44 @@ The default orchestration workflow follows this sequence:
    â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
           â”‚ (wiring issues â†’ Integrator fixes; build verifies)
           â–¼
-   â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
-   â–¼ BUILD CHECK â–¼ (MANDATORY)
-   â”‚  Implementor MUST run build â”‚
-   â”‚  and return full build outputâ”‚
-   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
+    â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+    â–¼ BUILD CHECK â–¼ (MANDATORY)
+    â”‚  Implementor MUST run build â”‚
+    â”‚  and return full build outputâ”‚
+    â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
           â”‚ (build fails â†’ Implementor fixes, rebuilds)
           â–¼
-   â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
-   â–¼ LINT GATE   â–¼ (MANDATORY if linter configured)
-   â”‚  Implementor MUST run linter â”‚
-   â”‚  (eslint, prettier --check,  â”‚
-   â”‚   tsc --noEmit, etc.)        â”‚
-   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
+    â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+    â–¼ LINT GATE   â–¼ (MANDATORY if linter configured)
+    â”‚  Implementor MUST run linter â”‚
+    â”‚  (eslint, prettier --check,  â”‚
+    â”‚   tsc --noEmit, etc.)        â”‚
+    â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
           â”‚ (lint fails â†’ Implementor fixes, re-lints)
           ▼
-   ┌──────┴──────┐
-   ▼ CODE        ▼ (MANDATORY)
-   │  QUALITY           │
-   │  GATE              │
-   │  1. Load pmd-scan  │
-   │     skill          │
-   │  2. Run PMD check  │
-   │     (rulesets)     │
-   │  3. Run CPD check  │
-   │     (duplicates)   │
-   └──────┬──────┘
+    ┌──────┴──────┐
+    ▼ CODE        ▼ (MANDATORY)
+    │  QUALITY           │
+    │  GATE              │
+    │  1. Load pmd-scan  │
+    │     skill          │
+    │  2. Run PMD check  │
+    │     (rulesets)     │
+    │  3. Run CPD check  │
+    │     (duplicates)   │
+    └──────┬──────┘
           │ (violations → FAIL the gate; block pipeline)
+          ▼
+    ┌──────┴──────┐
+    ▼ TEST        ▼ (MANDATORY)
+    │  GATE              │
+    │  Run test-gate.ts  │
+    │  → npm test / jest │
+    │    / vitest run    │
+    │  → detect test     │
+    │    regressions     │
+    └──────┬──────┘
+          │ (tests fail → cycle to Fixer)
           ▼
     ┌──────┴──────┐
     ▼ SECURITY    ▼ (MANDATORY)
@@ -402,16 +413,19 @@ ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" [
 | `--markdown` | false | Output human-readable markdown report |
 
 **Pipeline integration:**
-```bash
-# Standard call in Security Scan gate:
-result=$(ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose 2>&1)
-exit_code=$?
-if [ $exit_code -eq 1 ]; then
-  echo "❌ Gitleaks secret scan FAILED — pipeline blocked"
-  echo "$result" | jq .findings
-elif [ $exit_code -eq 2 ] || [ $exit_code -eq 255 ]; then
-  echo "⚠️ Gitleaks tool error — review and proceed"
-fi
+
+> **Platform Note**: On Windows (PowerShell), use the commands below. On Linux/macOS (bash), substitute `$LASTEXITCODE` → `$?` and use `jq` instead of `ConvertFrom-Json`.
+
+```powershell
+# Standard call in Security Scan gate (Windows/PowerShell):
+$result = & ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="$PWD" --verbose 2>&1
+$exit_code = $LASTEXITCODE
+if ($exit_code -eq 1) {
+  Write-Host "❌ Gitleaks secret scan FAILED — pipeline blocked"
+  $result | ConvertFrom-Json | Select-Object -ExpandProperty findings
+} elseif ($exit_code -eq 2 -or $exit_code -eq 255) {
+  Write-Host "⚠️ Gitleaks tool error — review and proceed"
+}
 ```
 
 **Exit code mapping:**
@@ -457,7 +471,7 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 
 **Integration with Pipeline:**
 ```
-Build Gate → Lint Gate → Code Quality Gate (pmd-scan ⚡ MANDATORY) → Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan + ★ trivy-scan) → QA (smoke + security regression) → SECURITY TEST COVERAGE GATE → Acceptance Gate → Verifier
+Build Gate → Lint Gate → Code Quality Gate (pmd-scan ⚡ MANDATORY) → Test Gate (test-gate.ts) → Security Scan (security-scan + ★ semgrep-scan + ★ gitleaks-scan + ★ trivy-scan) → QA (smoke + security regression) → SECURITY TEST COVERAGE GATE → Acceptance Gate → Verifier
 ```
 
 **Enforcement:**
