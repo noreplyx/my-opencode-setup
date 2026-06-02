@@ -329,8 +329,8 @@ Every implementation MUST pass through these mandatory validation gates:
 |------------------|---------------|---------------------------------------------------------|-------------------------------------------------|
 | **Build Gate**   | Implementor   | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
 | **Lint Gate**    | Implementor   | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
-| **Code Quality** | Orchestrator | PMD static analysis + CPD duplicate detection for ALL projects via podman (auto-detects Java/Apex/JS/Kotlin/Swift/PLSQL). Loads `pmd-scan` skill. Loads after Lint Gate, before Security Scan. | Violations → FAIL the gate (block pipeline) |
-| **Security Scan**| Orchestrator  | npm audit + secrets + anti-pattern + **auto semgrep SAST + gitleaks secret scan + trivy vuln/misconfig scan** | Report to user; may fix, except, or block       |
+| **Code Quality** | Delegated subagent (with pmd-scan skill) | PMD static analysis + CPD duplicate detection for ALL projects via podman (auto-detects Java/Apex/JS/Kotlin/Swift/PLSQL). Loads `pmd-scan` skill. Loads after Lint Gate, before Security Scan. | Violations → FAIL the gate (block pipeline) |
+| **Security Scan**| Delegated subagent (with security-scan skill) | npm audit + secrets + anti-pattern + **auto semgrep SAST + gitleaks secret scan + trivy vuln/misconfig scan** | Report findings; Orchestrator decides to fix, except, or block |
 | **Smoke Test**   | QA            | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer      |
 | **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover â‰¥ 80% of detected security patterns | Coverage < 50% â†’ cycle back to QA; 50-79% â†’ warn and proceed with Verifier flagging
 | **Plan Verify**  | Verifier      | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% â†’ cycle to Fixer; 3 attempts â†’ PlanDescriber |
@@ -361,14 +361,14 @@ Every implementation MUST pass through these mandatory validation gates:
 - The Implementor's report MUST include lint output alongside build output so the Orchestrator can confirm both gates passed
 
 **Security Scan Protocol:**
-- After build + lint pass, the Orchestrator runs the Security Scan (directly or via subagent)
+- After build + lint pass, the Orchestrator delegates the Security Scan to an appropriate subagent (e.g., Fixer with `security-scan` skill loaded, or a dedicated security subagent). The Orchestrator NEVER runs the scan directly.
 - Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
-- **Additionally, the Orchestrator auto-loads and runs semgrep-scan for SAST analysis** (no user trigger needed)
-- **Orchestrator also auto-loads and runs gitleaks-scan for secret detection** (no user trigger needed)
-- **Orchestrator also auto-loads and runs trivy-scan for vulnerability + IaC misconfiguration scanning** (no user trigger needed). Runs via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
+- **The delegated subagent auto-loads semgrep-scan for SAST analysis** (no user trigger needed)
+- **The delegated subagent also auto-loads gitleaks-scan for secret detection** (no user trigger needed)
+- **The delegated subagent also auto-loads trivy-scan for vulnerability + IaC misconfiguration scanning** (no user trigger needed). Runs via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
 - **For post-deployment DAST, the Orchestrator may optionally load owasp-zap-scan** when a test deployment URL is available
-- **Additionally, the Orchestrator auto-loads and runs pmd-scan for code quality analysis** — detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Violations FAIL the pipeline gate.
-- **Alternatively**, run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks` — handles podman check, image pull, scan, parsing, and structured JSON report
+- **Additionally, the delegated subagent auto-loads and runs pmd-scan for code quality analysis** — detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Violations FAIL the pipeline gate.
+- **Alternatively**, the delegated subagent may run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks` — handles podman check, image pull, scan, parsing, and structured JSON report
 - High/Critical dependency vulnerabilities → FAIL the gate (block pipeline)
 - Install scripts detected in dependencies → FAIL the gate (block pipeline)
 - Secrets/anti-pattern findings → WARN (non-blocking, report findings)
@@ -379,7 +379,7 @@ Every implementation MUST pass through these mandatory validation gates:
 
 #### Automated Gitleaks Scan Script (NEW)
 
-The Orchestrator can now run gitleaks via the automated script instead of manually loading and invoking the skill:
+The delegated subagent can run gitleaks via the automated script instead of manually loading and invoking the skill:
 
 ```bash
 ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" [options]
