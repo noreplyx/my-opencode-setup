@@ -22,7 +22,7 @@ import * as crypto from 'crypto';
 
 type AgentName =
   | 'orchestrator' | 'finder' | 'plandescriber' | 'implementor'
-  | 'fixer' | 'qa' | 'verifier' | 'merge-coordinator'
+  | 'fixer' | 'qa' | 'verifier'
   | 'integrator' | 'browser-tester' | 'documentor' | 'security-scan';
 
 type PipelineType = 'full' | 'quick' | 'fixer-only' | 'documentation'
@@ -67,7 +67,7 @@ const VALID_STATUSES: PipelineStatus[] = ['running', 'completed', 'failed', 'sta
 
 const VALID_AGENT_NAMES: AgentName[] = [
   'orchestrator', 'finder', 'plandescriber', 'implementor',
-  'fixer', 'qa', 'verifier', 'merge-coordinator',
+  'fixer', 'qa', 'verifier',
   'integrator', 'browser-tester', 'documentor', 'security-scan',
 ];
 

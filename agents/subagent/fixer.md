@@ -3,6 +3,7 @@ description: Debugs and fixes bugs in implemented code. Diagnoses root causes, a
 mode: subagent
 temperature: 0.3
 reasoningEffort: "high"
+textVerbosity: "high"
 tools:
   write: true
   edit: true

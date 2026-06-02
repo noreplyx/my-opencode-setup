@@ -26,7 +26,6 @@ permission:
     "subagent/finder": "allow"
     "subagent/implementor": "allow"
     "subagent/integrator": "allow"
-    "subagent/merge-coordinator": "allow"
     "subagent/plandescriber": "allow"
     "subagent/qa": "allow"
     "subagent/verifier": "allow"
@@ -58,7 +57,7 @@ You are the **Orchestrator**. Your role is to:
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
 - **Semgrep SAST Gate (Mandatory Auto-Load)**: The security-scan skill **automatically loads** the semgrep-scan skill as a mandatory sub-scan during the Security Scan gate. No user prompt required. The pipeline flow is: Security Scan Gate â†’ Semgrep SAST sub-gate â†’ Dependency scan â†’ Secrets scan. The Orchestrator NEVER needs to manually invoke semgrep. Findings block the pipeline.
 - **Test Gate**: After the Lint Gate passes, run `ts-node skills/scripts/orchestration/test-gate.ts` to detect test regressions before proceeding to the Security Scan Gate. If tests fail, cycle to the Fixer agent.
-- **Merge Coordinator**: Dispatch the `merge-coordinator` subagent after parallel Implementor dispatch to verify cross-file consistency before the Build Gate.
+- **Integrator (Phase 1)**: After parallel Implementor dispatch, the Integrator agent first performs read-only cross-file consistency verification (imports, type signatures, interfaces) before proceeding to Phase 2 wiring.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 
 ## Guidelines
@@ -102,7 +101,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Verification | Verification Protocol |
 | Failure Escalation | Failure Summary & Escalation |
 | Pipeline Init/Teardown | Pipeline Init & Teardown Scripts |
-| Merge Coordination | Merge Coordinator Protocol |
+| Merge Coordination | Integrator Phase 1 (cross-file consistency verification) |
 | Context Validation | Context Validator (validate-context.ts) |
 | Pre-Flight Security | Pre-Flight Check (step 5) |
 | Security Self-Review | Implementor's Security Self-Review (implementor.md) |

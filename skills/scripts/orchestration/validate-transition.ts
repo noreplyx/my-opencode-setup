@@ -34,7 +34,6 @@ type AgentName =
   | 'fixer'
   | 'qa'
   | 'verifier'
-  | 'merge-coordinator'
   | 'integrator'
   | 'browser-tester'
   | 'documentor'
@@ -71,8 +70,7 @@ interface PlanManifest {
 const VALID_TRANSITIONS: TransitionMatrix = {
   finder: ['plandescriber', 'orchestrator'],
   plandescriber: ['implementor', 'orchestrator'],
-  implementor: ['merge-coordinator', 'integrator', 'orchestrator', 'fixer'],
-  'merge-coordinator': ['integrator', 'implementor', 'orchestrator'],
+  implementor: ['integrator', 'orchestrator', 'fixer'],
   integrator: ['orchestrator'],
   fixer: ['qa', 'verifier', 'orchestrator'],
   qa: ['fixer', 'verifier', 'orchestrator'],
@@ -82,7 +80,7 @@ const VALID_TRANSITIONS: TransitionMatrix = {
   'browser-tester': ['fixer', 'qa', 'orchestrator'],
   orchestrator: [
     'finder', 'plandescriber', 'implementor', 'fixer', 'qa',
-    'verifier', 'documentor', 'merge-coordinator', 'integrator',
+    'verifier', 'documentor', 'integrator',
     'security-scan', 'browser-tester',
   ],
   'pre-flight': ['finder', 'plandescriber', 'implementor'],
@@ -96,7 +94,6 @@ const ALL_AGENTS: AgentName[] = [
   'fixer',
   'qa',
   'verifier',
-  'merge-coordinator',
   'integrator',
   'browser-tester',
   'documentor',
@@ -798,8 +795,7 @@ State Transition Matrix:
   orchestrator     → all agents
   finder           → plandescriber, orchestrator
   plandescriber    → implementor, orchestrator
-  implementor      → merge-coordinator, integrator, orchestrator, fixer
-  merge-coordinator→ integrator, implementor, orchestrator
+  implementor      → integrator, orchestrator, fixer
   integrator       → orchestrator
   fixer            → qa, verifier, orchestrator
   qa               → fixer, verifier, orchestrator

@@ -29,6 +29,7 @@ permission:
     "frontend-code-philosophy": "allow"
     "implementor-workflow": "allow"
     "playwright-cli": "allow"
+    "pmd-scan": "allow"
     "security-workflow": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"

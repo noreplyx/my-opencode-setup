@@ -635,20 +635,6 @@ function createChecklist(agentName: string): HandoffChecklistItem[] {
         checkFn: (text) => /(?:existing|current|found|located|uses|pattern)/i.test(text),
       },
     ],
-    'merge-coordinator': [
-      {
-        field: 'crossFileEvidence',
-        description: 'Evidence from across multiple files showing merge conflicts or integration issues',
-        mandatory: true,
-        checkFn: (text) => /(?:cross[-_ ]?file|merge|conflict|integration|multiple files|diff)/i.test(text),
-      },
-      {
-        field: 'mergeStrategies',
-        description: 'Merge strategy or resolution approach',
-        mandatory: true,
-        checkFn: (text) => /(?:merge|resolve|strategy|ours|theirs|manual|auto)/i.test(text),
-      },
-    ],
     'acceptance-gate': [
       {
         field: 'acceptanceEvidence',
@@ -1045,7 +1031,7 @@ Usage:
   [runtime] check-handoff.ts --agent=<name> --completeness-score --pipeline
   [runtime] check-handoff.ts --agent=<name> --completeness-score
 
-Agents: finder, plandescriber, implementor, fixer, qa, verifier, integrator, documentor, merge-coordinator, acceptance-gate
+Agents: finder, plandescriber, implementor, fixer, qa, verifier, integrator, documentor, acceptance-gate
 Flags: --verbose, --all, --output=<path>
 `);
   process.exit(0);

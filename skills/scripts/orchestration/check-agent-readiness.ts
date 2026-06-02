@@ -33,7 +33,6 @@ type AgentName =
   | 'fixer'
   | 'qa'
   | 'verifier'
-  | 'merge-coordinator'
   | 'integrator'
   | 'browser-tester'
   | 'documentor'
@@ -123,7 +122,7 @@ const PIPELINE_TYPE_MAP: Record<PipelineType, AgentName[]> = {
   'full':              ['finder', 'plandescriber', 'implementor', 'qa', 'verifier', 'documentor'],
   'quick':             ['implementor', 'qa'],
   'fixer-only':        ['fixer', 'qa', 'verifier'],
-  'parallel-feature':  ['implementor', 'merge-coordinator', 'integrator', 'qa', 'verifier'],
+  'parallel-feature':  ['implementor', 'integrator', 'qa', 'verifier'],
   'tdd':               ['plandescriber', 'qa', 'implementor', 'verifier'],
   'security-fix':      ['implementor'],
   'ui-bug':            ['browser-tester', 'fixer', 'qa'],
@@ -151,7 +150,6 @@ const TOOL_REQUIREMENTS: ToolRequirement[] = [
   { agent: 'plandescriber',     tool: 'bash', expected: true },
   { agent: 'documentor',        tool: 'bash', expected: true },
   { agent: 'verifier',          tool: 'bash', expected: true },
-  { agent: 'merge-coordinator', tool: 'bash', expected: true },
   { agent: 'browser-tester',    tool: 'bash', expected: true },
 
   // Agents that need to edit files
@@ -176,7 +174,6 @@ const SKILL_REQUIREMENTS: SkillRequirement[] = [
   { agent: 'fixer',              skill: 'shared-agent-workflow', expectedAccess: 'allow' },
   { agent: 'qa',                 skill: 'shared-agent-workflow', expectedAccess: 'allow' },
   { agent: 'verifier',           skill: 'shared-agent-workflow', expectedAccess: 'allow' },
-  { agent: 'merge-coordinator',  skill: 'shared-agent-workflow', expectedAccess: 'allow' },
   { agent: 'integrator',         skill: 'shared-agent-workflow', expectedAccess: 'allow' },
   { agent: 'browser-tester',     skill: 'shared-agent-workflow', expectedAccess: 'allow' },
   { agent: 'documentor',         skill: 'shared-agent-workflow', expectedAccess: 'allow' },

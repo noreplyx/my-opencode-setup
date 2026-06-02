@@ -24,17 +24,14 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 | **Fixer** | `agents/subagent/fixer.md` | Debugs and fixes bugs. Diagnoses root causes, applies targeted fixes. Has high reasoning effort. |
 | **QA** | `agents/subagent/qa.md` | Runs Smoke Test, code review, bug discovery, coverage analysis, quality checks |
 | **Verifier** | `agents/subagent/verifier.md` | Compares implementation against plan manifest (structural + behavioral checks) |
-| **Merge Coordinator** | `agents/subagent/merge-coordinator.md` | Cross-file consistency check after parallel Implementor dispatch |
-| **Integrator** | `agents/subagent/integrator.md` | Wires new files into project: barrel files, DI, routes |
-| **Merge Coordinator** | `agents/subagent/merge-coordinator.md` | Cross-file consistency check after parallel Implementor dispatch |
-| **Integrator** | `agents/subagent/integrator.md` | Wires new files into project: barrel files, DI, routes |
+| **Integrator** | `agents/subagent/integrator.md` | Verifies cross-file consistency and wires new files into the project: barrel files, DI, routes |
 
 ## Pipeline
 
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Merge Coordinator → Integrator → Build Gate + Lint Gate → Test Gate → Security Scan → QA → Acceptance Gate → Verifier → Documentor → Orchestrator (report)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Integrator (Phase 1: verify + Phase 2: wire) → Build Gate + Lint Gate → Test Gate → Security Scan → QA → Acceptance Gate → Verifier → Documentor → Orchestrator (report)
                                                                                          →                                              →
                                                                                      Fixer (feedback loop)                       Debug (after 3 Fixers)
 ``````
@@ -112,7 +109,7 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 | `trivy-scan` | Orchestrator | Vulnerability + IaC misconfiguration scanning via Trivy in Podman. Auto-loaded in Security Scan gate. |
 | gitleaks-scan | Orchestrator | Git history secret scanning |
 | semgrep-scan | Orchestrator (auto-loaded) | SAST static analysis — auto-loaded during Security Scan gate |
-| st-grep | Implementor, Fixer | AST-based pattern matching for code analysis |
+| ast-grep | Implementor, Fixer | AST-based pattern matching for code analysis |
 | osv-scanner | Orchestrator | Open Source Vulnerability scanner |
 | pmd-scan | Orchestrator | PMD static analysis scanner |
 | `owasp-zap-scan` | Orchestrator | OWASP ZAP DAST web application scanning â€” baseline, full active, and API scans via Podman (optional post-deployment). |
@@ -153,16 +150,15 @@ PlanDescriber produces a machine-readable `plan-manifest.json` alongside every r
 
 ## Merge Coordinator
 
-After parallel Implementor dispatch, the **Merge Coordinator** verifies cross-file consistency — checking imports resolve, type signatures match, and interfaces are properly connected — before the Build Gate. Run only when multiple Implementors execute in parallel.
+Merge Coordinator responsibilities have been merged into the Integrator agent. The Integrator now performs Phase 1 (read-only cross-file consistency verification) before Phase 2 (write wiring).
 
 ## Integrator
 
-After Merge Coordinator verification passes, the **Integrator** wires new files into the project: updating barrel files, DI registrations, route wiring, and fixing import paths. The Build Gate then verifies the wiring.
+After parallel Implementor dispatch, the **Integrator** agent runs in two phases:
+- **Phase 1 (Read-Only Verification)**: Verifies cross-file consistency — checking imports resolve, type signatures match, interfaces align, and barrel file re-exports are complete. Does not modify any files.
+- **Phase 2 (Write Wiring)**: Updates barrel files, DI registrations, route wiring, and fixes import paths. The Build Gate then verifies the wiring.
 
-
-## Integrator
-
-After Merge Coordinator verification passes, the **Integrator** wires new files into the project: updating barrel files, DI registrations, route wiring, and fixing import paths. The Build Gate then verifies the wiring.
+Phase 1 replaces the former Merge Coordinator step. If blocking issues are found in Phase 1, the Integrator reports them to the Orchestrator without proceeding to Phase 2.
 
 ## Skill Authoring
 

@@ -32,7 +32,6 @@ const ALL_TESTS: string[] = [
   'output-contract',
   'circuit-breaker',
   'pipeline-selection',
-  'merge-coordinator',
 ];
 
 function parseArgs(): string[] {
@@ -756,70 +755,6 @@ function testPipelineSelection(): void {
   console.log(`  Pipeline selection table validated: ${CLASSIFICATIONS.length} classifications, ${quickPresets.length} presets ✓`);
 }
 
-// ── Test 7: Merge Coordinator Output Contract ───────────────────────────
-
-function testMergeCoordinatorOutput(): void {
-  const tmpDir = fs.mkdtempSync('/tmp/merge-coordinator-test-');
-  try {
-    // Valid merge coordinator output
-    const validOutput = {
-      status: 'completed',
-      resultSummary: 'Cross-file consistency check complete — all imports verified',
-      agentOutputs: {
-        mergeCoordinator: {
-          status: 'completed',
-          resultSummary: '5 files checked, 12 imports verified, 0 issues found',
-          buildPassed: null,
-          lintPassed: null,
-        },
-      },
-      decisions: [
-        { what: 'All files consistent', why: 'No import path or type signature issues found', by_who: 'merge-coordinator' },
-      ],
-      warnings: [],
-      changedFiles: [],
-      artifacts: ['Merge coordination report'],
-    };
-
-    // Validate the merge coordinator output contract
-    assert.strictEqual(validOutput.status, 'completed');
-    assert.ok(validOutput.resultSummary.length > 0);
-
-    const mc = validOutput.agentOutputs.mergeCoordinator;
-    assert.strictEqual(mc.buildPassed, null, 'Merge Coordinator buildPassed should be null (read-only)');
-    assert.strictEqual(mc.lintPassed, null, 'Merge Coordinator lintPassed should be null (read-only)');
-
-    // Invalid output: missing resultSummary
-    const invalidOutput = {
-      status: 'failed',
-      agentOutputs: {
-        mergeCoordinator: {} as Record<string, unknown>,
-      },
-    };
-    assert.strictEqual(invalidOutput.agentOutputs.mergeCoordinator.resultSummary, undefined, 'Missing resultSummary should be detected');
-
-    // Invalid output: non-null buildPassed
-    const invalidOutput2 = {
-      status: 'completed',
-      resultSummary: 'test',
-      agentOutputs: {
-        mergeCoordinator: {
-          status: 'completed',
-          resultSummary: 'test',
-          buildPassed: true, // Should be null for read-only agent
-        },
-      },
-    };
-    assert.strictEqual(invalidOutput2.agentOutputs.mergeCoordinator.buildPassed, true, 'Non-null buildPassed should be flagged');
-
-    console.log('  Merge Coordinator output contract validated ✓');
-  } finally {
-    if (fs.existsSync(tmpDir)) {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  }
-}
-
 // ── Main Runner ──────────────────────────────────────────────────────────────
 
 function main(): void {
@@ -833,7 +768,6 @@ function main(): void {
     'output-contract': testOutputContract,
     'circuit-breaker': testCircuitBreakerTransitions,
     'pipeline-selection': testPipelineSelection,
-    'merge-coordinator': testMergeCoordinatorOutput,
   };
 
   const startTime = Date.now();

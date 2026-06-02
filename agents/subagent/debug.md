@@ -3,6 +3,7 @@ description: "Deep diagnostic agent for failed pipelines. Called when Fixer exha
 mode: subagent
 temperature: 0.1
 reasoningEffort: "high"
+textVerbosity: "high"
 tools:
   write: false
   edit: false

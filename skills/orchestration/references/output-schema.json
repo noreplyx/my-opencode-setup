@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$version": "2.0.0",
   "title": "Agent Output Contract Schema",
@@ -19,7 +19,7 @@
     },
     "pipelineError": {
       "type": "object",
-      "description": "Unified pipeline error taxonomy — standardized across all agents. Every error-producing agent MUST report pipeline errors in this format.",
+      "description": "Unified pipeline error taxonomy â€” standardized across all agents. Every error-producing agent MUST report pipeline errors in this format.",
       "required": ["errorCode", "category", "severity"],
       "properties": {
         "errorCode": {
@@ -109,7 +109,7 @@
     },
     "rollback": {
       "type": "object",
-      "description": "Rollback checkpoint — how to undo this agent's changes (mandatory for write-capable agents)",
+      "description": "Rollback checkpoint â€” how to undo this agent's changes (mandatory for write-capable agents)",
       "properties": {
         "checkpointCommit": {
           "type": "string",
@@ -326,7 +326,7 @@
           },
           "importScanResults": {
             "type": "array",
-            "description": "Cross-file import scan results (Merge Coordinator only)",
+            "description": "Cross-file import scan results (Integrator Phase 1 only)",
             "items": {
               "type": "object",
               "properties": {

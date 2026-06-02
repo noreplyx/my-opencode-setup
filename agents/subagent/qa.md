@@ -2,6 +2,8 @@
 description: QA agent specialized in ensuring software quality through comprehensive testing, bug discovery, and adherence to quality standards.
 mode: subagent
 temperature: 0.1
+reasoningEffort: 0.1
+textVerbosity: "medium"
 tools:
   write: true
   edit: true
@@ -25,6 +27,7 @@ permission:
     "ast-grep": "allow"
     "security-scan": "allow"
     "quality-assurance": "allow"
+    "qa-workflow": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.1.0"

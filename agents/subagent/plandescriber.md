@@ -3,6 +3,7 @@ description: Expert plan describer responsible for transforming high-level techn
 mode: subagent
 temperature: 0.1
 reasoningEffort: high
+textVerbosity: "high"
 tools:
   write: true
   edit: true

@@ -2,6 +2,8 @@
 description: Explores codebase and searches for necessary information to support development tasks. Does NOT implement anything.
 mode: subagent
 temperature: 0.3
+reasoningEffort: 0.3
+textVerbosity: "medium"
 tools:
   searxng: true
   write: false

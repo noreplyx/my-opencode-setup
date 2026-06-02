@@ -593,8 +593,7 @@ artifacts:
 | **Fixer** | Root cause identification with evidence of the bug, fix verification |
 | **Browser Tester** | Screenshot paths, test script verification |
 | **Documentor** | Each documentation change with citation of what was documented |
-| **Integrator** | Barrel file changes, DI registrations, route wiring with build verification |
-| **Merge Coordinator** | Import resolution evidence for each cross-file check |
+| **Integrator** | Barrel file changes, DI registrations, route wiring, cross-file import resolution evidence, build verification |
 
 ### Output Verification by Orchestrator
 

@@ -41,7 +41,6 @@ export type AgentRole =
   | 'verifier'
   | 'documentor'
   | 'integrator'
-  | 'merge-coordinator'
   | 'browser-tester'
   | 'orchestrator';
 
@@ -396,7 +395,7 @@ export function validatePipelineError(error: unknown): { valid: boolean; errors:
   // detector: required
   const validAgentRoles: AgentRole[] = [
     'finder', 'plandescriber', 'implementor', 'fixer', 'qa', 'verifier',
-    'documentor', 'integrator', 'merge-coordinator', 'browser-tester', 'orchestrator',
+    'documentor', 'integrator', 'browser-tester', 'orchestrator',
   ];
   if (typeof e.detector !== 'string' || !validAgentRoles.includes(e.detector as AgentRole)) {
     errors.push(`detector: required, must be one of ${validAgentRoles.join(', ')}`);
@@ -623,7 +622,7 @@ export function exportRegistryAsJson(): string {
         errorSeverity: ['blocking', 'warning', 'info'],
         agentRole: [
           'finder', 'plandescriber', 'implementor', 'fixer', 'qa', 'verifier',
-          'documentor', 'integrator', 'merge-coordinator', 'browser-tester', 'orchestrator',
+          'documentor', 'integrator', 'browser-tester', 'orchestrator',
         ],
         pipelineErrorFields: [
           'errorCode', 'category', 'severity', 'detector', 'checkpointId',
@@ -730,9 +729,14 @@ function main(): void {
     process.exit(0);
   }
 
-  // --validate
+  // --validate (cross-platform: uses file descriptor 0 for stdin, works on Windows and Unix)
   if (options.validate) {
-    const stdin = fs.readFileSync('/dev/stdin', 'utf-8').trim();
+    let stdin = '';
+    try {
+      stdin = fs.readFileSync(0, 'utf-8').trim();
+    } catch {
+      // stdin is a TTY (no piped input) — leave empty
+    }
     if (!stdin) {
       console.log('No input provided on stdin for validation.');
       process.exit(2);
