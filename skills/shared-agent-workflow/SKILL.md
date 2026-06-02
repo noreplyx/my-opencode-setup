@@ -88,8 +88,7 @@ Each agent extracts context relevant to its role:
 | **Fixer**       | QA/Verifier reports, prior Fixer attempts (critical for retries)               | verifier counter â€” last attempt awareness       |
 | **QA**          | Implementor changedFiles, security scan results                                 | smokeTest counter                               |
 | **Verifier**    | Implementor changedFiles, buildPassed/lintPassed, prior Verifier scores         | verifier counter â€” know re-verify count         |
-| **MergeCoordinator** | Last set of Implementor changedFiles                                      | build counter â€” runs before build               |
-| **Integrator**  | Implementor changedFiles, MergeCoordinator results                              | build counter â€” runs before build               |
+| **Integrator**  | Implementor changedFiles, merge check results from Phase 1 (4-pass verification) | build counter â€” runs before build               |
 | **BrowserTester** | Implementor changedFiles, QA results                                           | testing-related counters                        |
 | **Documentor**  | Implementor changedFiles, PlanDescriber decisions                               | Not applicable (informational only)             |
 

@@ -1,6 +1,6 @@
----
+﻿---
 name: security-scan
-description: Use this skill to perform security scanning on project code and dependencies. It runs automated checks for dependency vulnerabilities (via osv-scanner), hardcoded secrets, SAST via semgrep, gitleaks secret scanning, Trivy vulnerability/misconfiguration scanning, SBOM generation, supply chain checks, and common security anti-patterns. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. It loads the semgrep-scan skill, the gitleaks-scan skill, the trivy-scan skill, and the osv-scanner skill as mandatory sub-scans.
+description: Use this skill to perform security scanning on project code and dependencies. Uses lazy-loading — only scans relevant to the project are run. Supports parallel execution of independent scans: semgrep SAST, gitleaks secret scanning, Trivy vuln/misconfig scan, OSV-Scanner dependency scan, anti-pattern scan, supply chain integrity check, SBOM generation, and git history secret scan. This skill is automatically loaded by the Orchestrator after the Build+Lint+Code Quality gates pass. Scans are lazy-loaded based on project characteristics and run in parallel where independent.
 ---
 
 # Security Scan Skill
@@ -9,11 +9,60 @@ description: Use this skill to perform security scanning on project code and dep
 
 The Security Scan gate runs automated security checks on the codebase after the Build Gate passes and before QA begins. Its goal is to catch high-severity security issues early � before they reach production.
 
-This skill is **automatically loaded by the Orchestrator** during every pipeline. It **always loads the `semgrep-scan` skill, the `gitleaks-scan` skill, the `trivy-scan` skill, and the `osv-scanner` skill** as mandatory sub-scans. No user prompt is required to run any of these tools.
+This skill is **automatically loaded by the Orchestrator** during every pipeline. It uses **lazy-loading** — each sub-scan skill is loaded only when the project characteristics justify it. Scans that are independent of each other run **in parallel** for maximum throughput. No user prompt is required to run any of these tools.
+
+### Lazy-Loading Rules
+
+| Scan | Load Condition | Why |
+|------|---------------|-----|
+| **Semgrep SAST** | Source files exist (`src/` directory or `*.ts`/`*.js` files in root) | No source code = nothing to analyze |
+| **Gitleaks Secrets** | Git history exists with ≥1 commit | Fresh repos with no commits have no history to scan |
+| **Trivy Vuln & Misconfig** | Dockerfile, K8s manifest, Terraform, or lockfile exists | No artifacts = nothing to scan |
+| **OSV-Scanner Dependencies** | Lockfile exists (`package-lock.json`, `yarn.lock`, `Cargo.lock`, etc.) | No dependencies = no vulnerabilities |
+| **Anti-Pattern Scan** | Source files were changed in this pipeline | Only scan what's new |
+| **Supply Chain** | Lockfile exists | No dependencies = no supply chain |
+| **SBOM Generation** | `@cyclonedx/bom` is available in the project | Skip if tool not installed |
+| **Git History Scans** | Git history exists | Fresh repos have no history |
+
+## Lazy-Loading Detection
+
+Before running any scan, detect what's available in the project:
+
+```bash
+# Check for source files
+has_source=false
+if [ -d "src" ] || ls *.ts *.js 2>/dev/null | head -1 > /dev/null 2>&1; then
+  has_source=true
+fi
+
+# Check for git history
+has_git_history=false
+if git log --oneline -1 2>/dev/null | head -1 > /dev/null 2>&1; then
+  has_git_history=true
+fi
+
+# Check for Docker/K8s/Terraform artifacts
+has_infra_artifacts=false
+if ls Dockerfile* *.yaml *.yml *.tf 2>/dev/null | head -1 > /dev/null 2>&1; then
+  has_infra_artifacts=true
+fi
+
+# Check for lockfile
+has_lockfile=false
+for lf in package-lock.json yarn.lock pnpm-lock.yaml requirements.txt Cargo.lock go.sum Gemfile.lock poetry.lock composer.lock; do
+  if [ -f "$lf" ]; then has_lockfile=true; break; fi
+done
+
+# Check if cyclonedx-bom available
+has_sbom_tool=false
+if npx @cyclonedx/bom --help 2>/dev/null | head -1 > /dev/null 2>&1; then
+  has_sbom_tool=true
+fi
+```
 
 ## Scan Types
 
-### 0. Semgrep SAST Scan (MANDATORY � Auto-Loaded)
+### 0. Semgrep SAST Scan (Lazy-Loaded — runs if source files exist)
 
 The **Semgrep SAST Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `semgrep-scan` skill** and runs semgrep static analysis:
 
@@ -35,13 +84,13 @@ semgrep --config p/security-audit --error .
 | 2+ | Tool error | ?? WARN � log, proceed if tool unavailable |
 
 **Hard Rules for semgrep:**
-- ? The Orchestrator MUST load `semgrep-scan` skill during every pipeline
+- ? The Orchestrator loads the `semgrep-scan` skill when source files exist (lazy-loaded)
 - ? The semgrep scan MUST use `--config p/security-audit` (security-focused)
 - ? The semgrep scan MUST use `--error` (strict mode)
 - ? NEVER modify project files during scanning
 - ? NEVER use `--autofix`
 
-### 1. Gitleaks Secret Scan (MANDATORY — Auto-Loaded)
+### 1. Gitleaks Secret Scan (Lazy-Loaded — runs if git history exists)
 
 The **Gitleaks Secret Scan Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `gitleaks-scan` skill** and runs gitleaks secret detection:
 
@@ -65,14 +114,14 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:lat
 | 2+ | Tool error | ⚠️ WARN — log, proceed if tool unavailable |
 
 **Hard Rules for gitleaks:**
-- ✅ The Orchestrator MUST load `gitleaks-scan` skill during every pipeline
+- ✅ The Orchestrator loads the `gitleaks-scan` skill when git history exists (lazy-loaded)
 - ✅ The gitleaks scan MUST use `git` mode (full history scan)
 - ✅ The gitleaks scan MUST use JSON output format for machine parsing
 - ✅ Always pull the image first: `podman image exists docker.io/zricethezav/gitleaks:latest || podman pull docker.io/zricethezav/gitleaks:latest`
 - ✅ NEVER modify project files during scanning
-- ✅ NEVER skip the gitleaks scan — it is mandatory
+- ✅ gitleaks is skipped only when no git history exists
 
-### 2. Dependency Vulnerability Scan (OSV-Scanner)
+### 2. OSV-Scanner Dependency Scan (Lazy-Loaded — runs if lockfile exists)
 
 The **OSV-Scanner Dependency Vulnerability Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `osv-scanner` skill** and runs dependency vulnerability scanning via Podman container:
 
@@ -107,14 +156,14 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest
 | 127 | General error | ⚠️ WARN — log, proceed if tool unavailable |
 
 **Hard Rules for osv-scanner:**
-- ✅ The Orchestrator MUST load `osv-scanner` skill during every pipeline
+- ✅ The Orchestrator loads the `osv-scanner` skill when a lockfile exists (lazy-loaded)
 - ✅ The osv-scanner scan MUST use recursive mode (`-r`) to find all lockfiles
 - ✅ The osv-scanner scan MUST use JSON output format for machine parsing
 - ✅ Always pull the image first: `podman image exists ghcr.io/google/osv-scanner:latest || podman pull ghcr.io/google/osv-scanner:latest`
 - ✅ NEVER modify project files during scanning
-- ✅ NEVER skip the osv-scanner dependency scan — it is mandatory
+- ✅ osv-scanner is skipped only when no lockfile exists
 
-### 2.5. Trivy Vulnerability & Misconfiguration Scan (MANDATORY — Auto-Loaded)
+### 2.5. Trivy Vulnerability & Misconfiguration Scan (Lazy-Loaded — runs if infra artifacts or lockfiles exist)
 
 The **Trivy Vulnerability & Misconfiguration Gate** is a mandatory sub-gate of the Security Scan. The Orchestrator **always loads the `trivy-scan` skill** and runs Trivy vulnerability and misconfiguration scanning via Podman container:
 
@@ -145,13 +194,13 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
 | 2+ | Tool error | ⚠️ WARN — log, proceed if tool unavailable |
 
 **Hard Rules for Trivy:**
-- ✅ The Orchestrator MUST load `trivy-scan` skill during every pipeline
+- ✅ The Orchestrator loads the `trivy-scan` skill when Docker/K8s/Terraform artifacts or lockfiles exist (lazy-loaded)
 - ✅ The Trivy scan MUST use `--scanners vuln,misconfig` at minimum
 - ✅ The Trivy scan MUST use `--severity CRITICAL,HIGH` for pipeline gates
 - ✅ The Trivy scan MUST use `--exit-code 1` to block pipeline on findings
 - ✅ Always pull the image first: `podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest`
 - ✅ NEVER modify project files during scanning
-- ✅ NEVER skip the Trivy scan — it is mandatory
+- ✅ Trivy is skipped only when no infra artifacts or lockfiles exist
 - ✅ Use a persistent cache volume for the vulnerability database to speed up scans
 
 ### 2.6. OWASP ZAP DAST Scan (OPTIONAL — Post-Deployment)
@@ -282,22 +331,57 @@ git log -p --all -- ':(exclude)package-lock.json' ':(exclude)pnpm-lock.yaml' ':(
 
 ## Scan Workflow
 
-1. **Load `semgrep-scan` skill** — The Orchestrator loads the `semgrep-scan` skill automatically (no user prompt)
-2. **Run Semgrep SAST Scan (MANDATORY)** — Execute `semgrep --config p/security-audit --error .` — if it fails, block the pipeline
-3. **Load `gitleaks-scan` skill** — The Orchestrator loads the `gitleaks-scan` skill automatically (no user prompt)
-4. **Run Gitleaks Secret Scan (MANDATORY)** — Run gitleaks via podman container on the repo — if exit code 1 (leaks detected), block the pipeline
-5. **Load `trivy-scan` skill** — The Orchestrator loads the `trivy-scan` skill automatically (no user prompt)
-6. **Run Trivy Vulnerability & Misconfig Scan (MANDATORY)** — Run Trivy fs scan via podman container with --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 — if exit code 1, block the pipeline
-7. **Detect project type** — Read `package.json`, `requirements.txt`, `Cargo.toml`, etc.
-8. **Check for lockfile** — Verify presence of `package-lock.json`, `yarn.lock`, `requirements.txt`, `Cargo.lock`, etc. If missing, emit a warning but do NOT fail.
-9. **Run dependency scan (OSV-Scanner)** — Execute osv-scanner via podman container
-10. **Parse results** — Extract vulnerability IDs, severity, package, and description
-11. **Run secrets scan** — Grep for hardcoded secrets
-12. **Run anti-pattern scan** — Grep for security anti-patterns in the changed files
-13. **Generate SBOM**
-14. **Run supply chain integrity check**
-15. **Run git history secret scan**
-16. **Report findings** — Use the standard report format below
+### Phase 1: Detection
+1. Run the lazy-loading detection script to determine which scans are applicable
+2. Build an execution plan of enabled scans
+
+### Phase 2: Parallel Dispatch (Independent Scans)
+Launch these scans in parallel when their conditions are met. Each runs in its own process:
+
+```bash
+# Launch semgrep (if source exists)
+if [ "$has_source" = true ]; then
+  semgrep --config p/security-audit --error . &
+  semgrep_pid=$!
+fi
+
+# Launch gitleaks (if git history exists)
+if [ "$has_git_history" = true ]; then
+  podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest \
+    git --source=/src --report-format=json --report-path=- --no-banner --verbose &
+  gitleaks_pid=$!
+fi
+
+# Launch trivy (if infra artifacts or lockfiles exist)
+if [ "$has_infra_artifacts" = true ] || [ "$has_lockfile" = true ]; then
+  podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
+    fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src &
+  trivy_pid=$!
+fi
+
+# Launch osv-scanner (if lockfile exists)
+if [ "$has_lockfile" = true ]; then
+  podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest \
+    scan source -r --format json /src &
+  osv_pid=$!
+fi
+
+# Wait for all parallel scans to complete
+wait
+```
+
+### Phase 3: Sequential Lightweight Scans
+After all parallel scans complete, run the lighter-weight scans sequentially:
+1. **Hardcoded Secrets Scan** — grep-based, runs if source was changed
+2. **Security Anti-Pattern Scan** — grep-based, runs if source was changed
+3. **Supply Chain Integrity Check** — runs if lockfile exists
+4. **SBOM Generation** — runs if cyclonedx-bom is available
+5. **Git History Secret Scan** — runs if git history exists
+
+### Phase 4: Aggregate & Report
+1. Collect results from all scans (parallel + sequential)
+2. Combine into single Security Scan Report
+3. Determine overall verdict based on all results
 
 ### Lockfile Warnings
 
@@ -383,60 +467,57 @@ Remediation is **not** performed automatically by the scan � these suggestions
 
 ## Integration with Pipeline (Automatic)
 
-The Security Scan runs as a gate between **Build Gate** and **QA**, and it **always includes the Semgrep SAST gate, Gitleaks secret scan gate, Trivy vulnerability & misconfig gate, and OSV-Scanner dependency vulnerability gate as mandatory sub-steps**:
+The Security Scan runs as a gate between **Build Gate** and **QA**:
 ```
-Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
-                                                  |
-                                           +-------------+
-                                           |   SEMGREP   |
-                                           |   SAST GATE |
-                                           | (auto-loaded)|
-                                           +-------------+
-                                                  |
-                                           +-------------+
-                                           |   GITLEAKS  |
-                                           |   SECRET    |
-                                           |   SCAN GATE |
-                                           | (auto-loaded)|
-                                           +-------------+
-                                                  |
-                                           +-------------+
-                                           |   TRIVY     |
-                                           | VULN & MIS-  |
-                                           | CONFIG GATE |
-                                           | (auto-loaded)|
-                                           +-------------+
-                                                  |
-                                           +------------------+
-                                           |   OSV-SCANNER    |
-                                           | DEPENDENCY VULN  |
-                                           | SCAN GATE        |
-                                           | (auto-loaded)    |
-                                           +------------------+
-                                                  |
-                                           +-------------+
-                                           | SBOM +      |
-                                           | SUPPLY CHAIN|
-                                           +-------------+
-                                                  |
-                                           +-------------+
-                                           | SECRETS &   |
-                                           | ANTI-PATTERN|
-                                           +-------------+
+Build Gate → Lint Gate → Code Quality Gate → SECURITY SCAN → QA
+                                                 │
+                                         ┌───────┴────────┐
+                                         │  LAZY-LOADING  │
+                                         │  DETECTION     │
+                                         │  (Phase 1)     │
+                                         └───────┬────────┘
+                                                 │
+                                  ┌──────────────┼──────────────┐
+                                  │              │              │
+                           ┌──────┴──────┐ ┌─────┴─────┐ ┌──────┴──────┐
+                           │   SEMGREP   │ │  GITLEAKS │ │   TRIVY     │
+                           │  SAST GATE  │ │  SECRET   │ │ VULN & MIS- │
+                           │ (lazy: if   │ │  SCAN     │ │ CONFIG GATE │
+                           │  source)    │ │ (lazy: if │ │ (lazy: if   │
+                           └──────┬──────┘ │  history) │ │  artifacts) │
+                                  │        └─────┬─────┘ └──────┬──────┘
+                                  │              │              │
+                           ┌──────┴──────────────┴──────────────┴──────┐
+                           │            OSV-SCANNER                    │
+                           │       DEPENDENCY VULN SCAN               │
+                           │       (lazy: if lockfile)                │
+                           │                                           │
+                           │    ALL 4 RUN IN PARALLEL (Phase 2)       │
+                           └──────────────────┬───────────────────────┘
+                                              │
+                           ┌──────────────────┴───────────────────────┐
+                           │      PHASE 3: Sequential Lightweight     │
+                           │  ┌──────────┬──────────┬──────────────┐ │
+                           │  │ Secrets  │ Anti-    │ Supply Chain │ │
+                           │  │ Scan     │ Pattern  │ Integrity    │ │
+                           │  ├──────────┼──────────┼──────────────┤ │
+                           │  │ SBOM Gen │ Git Hist │              │ │
+                           │  │          │ Secrets  │              │ │
+                           │  └──────────┴──────────┘              │ │
+                           └──────────────────┬───────────────────────┘
+                                              │
+                           ┌──────────────────┴───────────────────────┐
+                           │      PHASE 4: Aggregate & Report        │
+                           └──────────────────────────────────────────┘
 ```
 
 **Automatic triggering:**
 1. After Build + Lint + Code Quality gates pass, the Orchestrator loads the `security-scan` skill
-2. The Orchestrator then loads the `semgrep-scan` skill (always as a mandatory sub-step)
-3. The Orchestrator runs `semgrep --config p/security-audit --error .`
-4. The Orchestrator then loads the `gitleaks-scan` skill (always as a mandatory sub-step)
-5. The Orchestrator runs gitleaks via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest git --source=/src --report-format=json --report-path=- --no-banner --verbose`
-6. The Orchestrator then loads the `trivy-scan` skill (always as a mandatory sub-step)
-7. The Orchestrator runs Trivy via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
-8. The Orchestrator then loads the `osv-scanner` skill (always as a mandatory sub-step)
-9. The Orchestrator runs osv-scanner via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" ghcr.io/google/osv-scanner:latest scan source -r --format json /src`
-10. The Orchestrator then proceeds with -> SBOM -> supply chain -> secrets & anti-pattern scans
-11. All findings are combined into a single Security Scan Report
+2. **Phase 1 (Detection)**: Run lazy-loading detection to determine which scans are applicable
+3. **Phase 2 (Parallel Dispatch)**: Launch independent scans simultaneously based on lazy-loading rules
+4. Wait for all parallel scans to complete
+5. **Phase 3 (Sequential)**: Run lightweight scans: secrets, anti-pattern, supply chain, SBOM, git history
+6. **Phase 4 (Aggregate)**: Combine all findings into a single Security Scan Report
 
 If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 - The pipeline is **blocked**
@@ -449,25 +530,26 @@ If the Security Scan fails (Semgrep findings OR High/Critical vulnerabilities):
 ## Hard Rules
 
 - ✅ The Security Scan MUST run after build succeeds
-- ✅ The `semgrep-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ The `gitleaks-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ The `osv-scanner` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ The `trivy-scan` skill MUST be loaded as a mandatory sub-scan during every pipeline
-- ✅ Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode)
-- ✅ OSV-Scanner MUST run with recursive mode and JSON output
+- ✅ The `semgrep-scan` skill is lazy-loaded — only loaded when source files exist
+- ✅ The `gitleaks-scan` skill is lazy-loaded — only loaded when git history exists
+- ✅ The `osv-scanner` skill is lazy-loaded — only loaded when a lockfile exists
+- ✅ The `trivy-scan` skill is lazy-loaded — only loaded when infra artifacts or lockfiles exist
+- ✅ Semgrep MUST run with `--config p/security-audit --error .` (security-focused, strict mode) when loaded
+- ✅ OSV-Scanner MUST run with recursive mode and JSON output when loaded
 - ✅ Secrets scan MUST be non-blocking (informational only)
 - ✅ The Security Scan MUST NOT modify any files — it is read-only
 - ✅ The Security Scan MUST NOT install additional dependencies
 - ✅ The Security Scan MUST NOT run on test files or fixture data
+- ✅ Independent scans MUST run in parallel (Phase 2) for maximum throughput
 
 ## Related Tools
 
 | Tool | Purpose | Location |
 |------|---------|----------|
-| `semgrep-scan` skill | Deep SAST static analysis (auto-loaded as mandatory sub-scan) | `skills/semgrep-scan/SKILL.md` |
-| `osv-scanner` skill | OSV-Scanner dependency vulnerability scanning (auto-loaded as mandatory sub-scan) | `skills/osv-scanner/SKILL.md` |
-| `gitleaks-scan` skill | Gitleaks secret scanning (auto-loaded as mandatory sub-scan) | `skills/gitleaks-scan/SKILL.md` |
-| `trivy-scan` skill | Trivy vulnerability & misconfiguration scanning (auto-loaded as mandatory sub-scan) | `skills/trivy-scan/SKILL.md` |
+| `semgrep-scan` skill | Deep SAST static analysis (lazy-loaded — runs if source files exist) | `skills/semgrep-scan/SKILL.md` |
+| `osv-scanner` skill | OSV-Scanner dependency vulnerability scanning (lazy-loaded — runs if lockfile exists) | `skills/osv-scanner/SKILL.md` |
+| `gitleaks-scan` skill | Gitleaks secret scanning (lazy-loaded — runs if git history exists) | `skills/gitleaks-scan/SKILL.md` |
+| `trivy-scan` skill | Trivy vulnerability & misconfiguration scanning (lazy-loaded — runs if artifacts or lockfiles exist) | `skills/trivy-scan/SKILL.md` |
 | `owasp-zap-scan` skill | OWASP ZAP DAST web application scanning (optional post-deployment) | `skills/owasp-zap-scan/SKILL.md` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) | `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) | `skills/scripts/orchestration/audit-log.ts` |

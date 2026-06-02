@@ -26,7 +26,6 @@ permission:
     "subagent/finder": "allow"
     "subagent/implementor": "allow"
     "subagent/integrator": "allow"
-    "subagent/merge-coordinator": "allow"
     "subagent/plandescriber": "allow"
     "subagent/qa": "allow"
     "subagent/verifier": "allow"
@@ -41,7 +40,7 @@ permission:
     "skill-creator": "allow"
     "shared-agent-workflow": "allow"
     "trivy-scan": "allow"
-agentVersion: "2.2.0"
+agentVersion: "2.3.0"
 lastModified: "2026-06-02"
 ---
 # Orchestrator Agent
@@ -97,7 +96,7 @@ You are the **Orchestrator**. Your role is to:
 | Browser testing | `browser-tester` | ❌ Never |
 | Write docs | `documentor` | ❌ Never |
 | Wire imports/barrels | `integrator` | ❌ Never |
-| Merge coordination | `merge-coordinator` | ❌ Never |
+| Merge coordination | `integrator` (Phase 1) | ❌ Never |
 | **Pipeline init/teardown** | — | ✅ Directly (bash) |
 | **Context validation** | — | ✅ Directly (bash) |
 | **Audit logging** | — | ✅ Directly (bash) |
@@ -142,7 +141,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Verification | Verification Protocol |
 | Failure Escalation | Failure Summary & Escalation |
 | Pipeline Init/Teardown | Pipeline Init & Teardown Scripts |
-| Integrator Cross-File Consistency | Integrator Phase 1 (cross-file consistency verification) |
+| Merge Coordination | Integrator Phase 1 — 4-pass merge verification (merged: replaces former Merge Coordinator) |
 | Context Validation | Context Validator (validate-context.ts) |
 | Pre-Flight Security | Pre-Flight Check (step 5) |
 | Security Self-Review | Implementor's Security Self-Review (skills/implementor-workflow/SKILL.md) |

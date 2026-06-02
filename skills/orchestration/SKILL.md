@@ -59,8 +59,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST + gitleaks secrets + trivy vuln/misconfig**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | After build + lint pass | N/A (read-only) |
 | **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | When UI testing is needed | No |
 | **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | After Verifier passes — document verified code | Yes (accuracy check) |
-| **Merge Coordinator** | Cross-file consistency check after parallel dispatch. Verifies imports, type signatures, and interface contracts between files from concurrent Implementors. | 0.1 | After parallel Implementor dispatch, before Integrator | Yes (self-checks findings) |
-| **Integrator** | Wire new files into the project: update barrel files, DI registrations, route wiring, fix import paths. Runs after parallel Implementor dispatch and Merge Coordinator verification. | 0.1 | After Merge Coordinator, before Build Gate | Yes (build verifies wiring) |
+| **Integrator** | Cross-file consistency verification (4-pass merge check: imports, type signatures, interfaces, re-exports) + wiring (barrel files, DI registrations, route wiring, import fixes). Absorbs former Merge Coordinator role. Runs after parallel Implementor dispatch, before Build Gate. | 0.1 | After parallel Implementor dispatch, before Build Gate | Yes (self-checks findings, build verifies wiring) |
 
 ## Standard Workflow Pipeline
 
@@ -76,20 +75,19 @@ The default orchestration workflow follows this sequence:
           â”‚
 4. IMPLEMENTOR â”€â”€â–º Write code strictly following the plan (can dispatch multiple Implementors in parallel)
           â”‚
-   â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
-   â–¼ MERGE COORDINATOR â–¼ (runs after parallel dispatch)
-   â”‚  Verify cross-file imports,  â”‚
-   â”‚  type signatures, interfaces  â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+   â–¼ INTEGRATOR  â–¼ (MERGED â€” Phase 1: 4-pass merge verification + Phase 2: wiring)
+   â”‚  Phase 1: Verify cross-file   â”‚
+   â”‚  consistency (imports, type   â”‚
+   â”‚  signatures, interfaces, re-  â”‚
+   â”‚  exports). Score 0.0-1.0.    â”‚
+   â”‚  Phase 2: Wire barrels, DI,   â”‚
+   â”‚  routes, fix import paths.   â”‚
    â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
-          â”‚ (inconsistencies found â†’ Fixer, then re-run Merge Coordinator)
-          â–¼
-   â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
-   â–¼ INTEGRATOR  â–¼ (NEW â€” wires barrels, DI, routes after parallel dispatch)
-   â”‚  Update barrel files,        â”‚
-   â”‚  DI registrations, routes    â”‚
-   â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
-          â”‚ (wiring issues â†’ Integrator fixes; build verifies)
-          â–¼
+          â”‚ (verification issues â†’ Fixer, re-run Integrator Phase 1)
+          â”‚ (wiring issues â†’ Integrator fixes Phase 2; build verifies)
+â–¼
+
     â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
     â–¼ BUILD CHECK â–¼ (MANDATORY)
     â”‚  Implementor MUST run build â”‚
@@ -97,7 +95,7 @@ The default orchestration workflow follows this sequence:
     â””â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”˜
           â”‚ (build fails â†’ Implementor fixes, rebuilds)
           â–¼
-    â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
+â”Œâ”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”
     â–¼ LINT GATE   â–¼ (MANDATORY if linter configured)
     â”‚  Implementor MUST run linter â”‚
     â”‚  (eslint, prettier --check,  â”‚
@@ -780,7 +778,7 @@ Before dispatching parallel tasks, answer these questions in order:
    - If ALL YES â†’ Proceed to question 2. If ANY NO â†’ Dispatch sequentially.
 
 2. **Will parallel execution cause merge conflicts?**
-   - Will multiple agents write to the same file? â†’ If YES, dispatch sequentially unless using a Merge Coordinator
+   - Will multiple agents write to the same file? â†’ If YES, dispatch sequentially unless using an Integrator (Phase 1 merge check)
    - Will one agent's output change the API contract another depends on? â†’ If YES, dispatch sequentially
 
 3. **What's the complexity of each sub-task?**
@@ -817,45 +815,17 @@ This creates per-phase dispatch manifests at `.opencode/dispatch/<pipelineId>/ph
 
 Use `--dry-run` to preview, `--plan` for human-readable output, and `--verify` for consistency checking.
 
-### Merge Coordinator Protocol
+### Merge Verification (Part of Integrator Phase 1)
 
-After dispatching parallel Implementors (multiple instances writing to independent files), the Orchestrator dispatches the **Merge Coordinator** before the Build Gate:
+Cross-file consistency verification is now part of **Integrator Phase 1** (read-only audit). The Integrator performs a 4-pass merge check:
+1. **Import Path Verification** â Trace every `from '...'` import, resolve relative paths
+2. **Type Signature Alignment** â Compare import vs export names
+3. **Interface Contract Verification** â Parameter count, required vs optional, return types
+4. **Re-export Completeness** â Barrel file re-exports for all new modules
 
-#### Workflow
-```
-Parallel Implementors â”€â”€â–º Merge Coordinator â”€â”€â–º Build Gate
-```
+A consistency score (0.0â1.0) is calculated. If `blocking: true`, the Orchestrator dispatches a Fixer before proceeding to Phase 2 (wiring). If `blocking: false`, Phase 2 proceeds.
 
-#### What the Merge Coordinator Checks
-1. **Import Path Verification**: Every `from '...'` import in every changed file â†’ target file exists
-2. **Type Signature Alignment**: Imported function/class names match exported names in target files
-3. **Interface Contract Verification**: Parameter count consistency between callers and callees
-4. **Re-export Completeness**: Barrel files (`index.ts`) re-export everything from parallel-created modules
-
-#### Handling Issues
-| Merge Coordinator Result | Action |
-|-------------------------|--------|
-| âœ… All consistent | Proceed to Build Gate |
-| âš ï¸ Warnings only | Proceed to Build Gate, note in warnings |
-| âŒ Blocking issues | Report to Implementor or Fixer, fix, re-run Merge Coordinator |
-
-#### When to Skip
-- **Single Implementor**: No parallel dispatch â†’ no merge coordination needed
-- **Trivial changes**: One-file changes don't need cross-file checks
-- **Obvious independence**: Types file + service file with no interdependency â†’ still run Merge Coordinator (it's fast)
-
-#### Hand-off Format
-```
-Orchestrator to Merge Coordinator:
-"After parallel dispatch of Implementors, the following files were created:
-- src/types/user.ts (by Implementor instance 1)
-- src/services/user.ts (by Implementor instance 2)
-- src/controllers/user.ts (by Implementor instance 3)
-
-Agent context: agent-context.md (read for full agent history and changedFiles)
-
-Please verify cross-file consistency: check imports resolve, type signatures match, and all interfaces are properly connected."
-```
+See `agents/subagent/integrator.md` for the full protocol.
 
 ## Agent Context (`agent-context.md`)
 
@@ -1004,7 +974,7 @@ When the user makes a request, classify it into one of these pipeline types:
 | **UI Bug** | Visual or behavioral bug in frontend | Browser Tester â†’ Fixer â†’ QA | Yes (if root cause known) |
 | **Quick Fix** | One-line fix, config change, typo | Ultra-Quick: Implementor â†’ Build | Yes |
 | **Small Feature** | Small feature with known domain | Quick: Implementor â†’ Build â†’ Lint â†’ QA | Yes |
-| **Parallel Feature** | Feature with independent sub-components | Implementor (parallel) â†’ Merge Coordinator â†’ Build â†’ Lint â†’ Security (incl. semgrep) â†’ QA â†’ Verifier | Yes |
+| **Parallel Feature** | Feature with independent sub-components | Implementor (parallel) â†’ Integrator â†’ Build â†’ Lint â†’ Security (incl. semgrep) â†’ QA â†’ Verifier | Yes |
 | **New Feature (TDD)** | Adding a tested feature with tests written first | PlanDescriber â†’ QA (tests) â†’ Implementor â†’ Build â†’ Lint â†’ Security â†’ Verifier | Yes |
 | **Micro-Pipeline** | Feature with clear frontend/backend split | Parallel PlanDescriber(frontend+backend) â†’ Parallel Implementor â†’ Merge QA â†’ Verifier | No (needs Finder to identify split) |
 | **Documentation** | Updating docs, README, API docs, or inline comments | Documentor â†’ report to user | Yes |
@@ -1040,7 +1010,7 @@ For faster iteration on simple tasks, use these minimal pipelines:
 | **Quick** | Implementor â†’ Build â†’ Lint â†’ QA | Small bug fix with known cause, trivial feature addition | âŒ No |
 | **Review** | Implementor â†’ Build â†’ Lint â†’ Security â†’ QA | Small feature that needs the safety net but no plan needed | âŒ No |
 | **Standard** | PlanDescriber â†’ Implementor â†’ Build â†’ Lint â†’ Security (incl. semgrep) â†’ QA â†’ Verifier â†’ Documentor | New feature in a familiar domain | âœ… Yes |
-| **Full** | Finder â†’ Brainstorm â†’ PlanDescriber â†’ Implementor (parallel) â†’ Merge Coordinator â†’ Build â†’ Lint â†’ Security (incl. semgrep) â†’ QA â†’ Verifier â†’ Documentor | New feature in unfamiliar domain, complex changes, or parallel sub-tasks | âœ… Yes |
+| **Full** | Finder â†’ Brainstorm â†’ PlanDescriber â†’ Implementor (parallel) â†’ Integrator â†’ Build â†’ Lint â†’ Security (incl. semgrep) â†’ QA â†’ Verifier â†’ Documentor | New feature in unfamiliar domain, complex changes, or parallel sub-tasks | âœ… Yes |
 | **Fixer-Only** | Fixer â†’ Build â†’ Lint â†’ Test â†’ QA â†’ Verifier | Bug with known root cause | âŒ No |
 | **Research** | Finder â†’ report to user | Understanding code, exploring options | âŒ No |
 | **Docs** | Documentor â†’ report to user | Documentation only | N/A |
@@ -1276,7 +1246,7 @@ artifacts:
 | **Verifier** | No (read-only) | No | No | Yes â€” `suggestedCheckpoints`, `driftDetection` |
 | **Fixer** | Yes (mandatory) | Yes (root cause classification) | Yes (files modified) | Yes â€” `rootCauseAnalysis` (classification, primaryCause, contributingFactors, fixApplied, fixConfidence, crossModuleCheck) |
 | **Browser Tester** | No | No | Yes (test scripts, screenshots) | No |
-| **Merge Coordinator** | No | Yes (merge decisions) | No | Yes â€” import scan results, cross-file consistency report |
+| **Integrator Phase 1** | No | Yes (merge decisions) | No | Yes — import scan results, cross-file consistency report, consistency score |
 | **Documentor** | No | Yes (documentation format/structure decisions) | Yes (documentation files created/modified) | No |
 
 ## Smart Finder Protocol
@@ -2116,29 +2086,9 @@ Please update:
 
 ## Integrator Agent (NEW â€” runs after parallel Implementor dispatch)
 
-### Relationship to Merge Coordinator
+### Integrator — Unified Merge + Wiring Agent
 
-| Aspect | Merge Coordinator (existing) | Integrator (NEW) |
-|--------|------------------------------|-------------------|
-| **What it does** | Reads files, checks cross-references | Writes wiring files (barrels, DI, routes) |
-| **Passive/Active** | Passive (read-only verification) | Active (writes barrel files, DI registrations) |
-| **When it runs** | After parallel Implementors, before Build | After Merge Coordinator, before Build |
-| **Failure mode** | Reports inconsistencies | Fixes inconsistencies, reports what it did |
-
-### Workflow
-```
-Parallel Implementor A â”€â”€â”
-                         â”œâ”€â”€â–º Merge Coordinator (verify cross-refs) â”€â”€â–º Integrator (wire everything) â”€â”€â–º Build Gate
-Parallel Implementor B â”€â”€â”˜
-```
-
-### Hand-off
-The Integrator loads the `integrator` skill which provides full guidance on detecting wiring conventions, updating barrel files, registering DI, and wiring routes.
-
-### When to Use
-- **Parallel dispatch** (multiple Implementors): Always run Integrator
-- **Single Implementor**: Skip Integrator (no parallel files to wire)
-- **Single file change**: Skip Integrator (no wiring needed)
+The Integrator now handles both cross-file consistency verification (Phase 1) and wiring (Phase 2) in a single agent. This replaces the former separate Merge Coordinator + Integrator split, eliminating ~90% overlap between the two agents.
 
 ---
 
@@ -2209,7 +2159,7 @@ Every subagent's output MUST include an `evidence` array (at the agentOutputs le
 | **Browser Tester** | 1 per test scenario | Screenshot paths, script execution output |
 | **Documentor** | 1 per documentation file changed | Verify the documentation was written correctly (read the file) |
 | **Integrator** | 1 per wiring change + 1 for build | Barrel file change verified (grep), DI registration verified (read), build pass |
-| **Merge Coordinator** | 1 per file pair checked | Import resolution evidence for each cross-file check |
+| **Integrator (Phase 1)** | 1 per file pair checked | Import resolution evidence for each cross-file check |
 
 ### Evidence Validation Gate
 
@@ -2352,7 +2302,7 @@ circuitBreaker:
 ## Parallel Dispatch Version Contracts (NEW)
 
 ### Purpose
-When dispatching multiple Implementors in parallel, each creates files that may depend on types/interfaces from other files. Version contracts prevent integration issues by ensuring each file declares what versions of dependencies it expects, and the Merge Coordinator verifies they match.
+When dispatching multiple Implementors in parallel, each creates files that may depend on types/interfaces from other files. Version contracts prevent integration issues by ensuring each file declares what versions of dependencies it expects, and the Integrator verifies they match (Phase 1).
 
 ### Version Contract Format
 
@@ -2364,7 +2314,7 @@ Each file created by a parallel Implementor includes an `@contract` comment at t
 // @depends: types/user.types.ts@^1.0 (User, CreateUserDto)
 ```
 
-When the Merge Coordinator runs, it:
+When the Integrator runs Phase 1, it:
 1. Extracts all `@contract` comments from all new files
 2. Verifies that each `@depends` entry matches a corresponding `@exports` entry in another file
 3. Checks version compatibility (semver range matching)
@@ -2386,12 +2336,12 @@ Rules:
 - Multiple `@depends` lines are allowed
 - The contract block MUST be at the top of the file (first 10 lines)
 
-### Merge Coordinator Integration
+### Integrator Phase 1 Integration
 
-The Merge Coordinator now checks these contracts:
+The Integrator now checks these contracts (Phase 1):
 
 ```yaml
-# In Merge Coordinator output:
+# In Integrator output:
 contractVerification:
   totalContracts: 3
   matched: 3
@@ -2423,12 +2373,12 @@ contractVerification:
 |---------------|---------------------------|
 | Single Implementor | No (no merge needed) |
 | Parallel Implementors (independent files) | âœ… Yes â€” ensures cross-file type compatibility |
-| Parallel Implementors (with Merge Coordinator) | âœ… Yes â€” Merge Coordinator checks contracts |
+| Parallel Implementors (with Integrator Phase 1) | âœ… Yes â€” Integrator Phase 1 checks contracts |
 | Sequential Implementors | No (files built on each other directly) |
 
 ### Hard Rules
 - âŒ NEVER dispatch parallel Implementors without @contract annotations in all new files
-- âŒ NEVER skip Merge Coordinator's contract verification when using parallel dispatch
+- âŒ NEVER skip Integrator Phase 1's contract verification when using parallel dispatch
 - âœ… ALWAYS include @contract/@exports/@depends in every new file from parallel dispatch
 - âœ… ALWAYS use semver ranges (@^1.0, @~1.0, @1.0.0) for dependency versions
 - âœ… ALWAYS report contract mismatches as blocking issues (prevent proceeding to Build Gate)
@@ -2452,7 +2402,7 @@ PATTERN-BASED CIRCUIT BREAKER:
   Detects fixer→verifier loops → Routes to PlanDescriber instead
   ↓
 PARALLEL DISPATCH:
-  @contract annotations â†’ Merge Coordinator verifies â†’ Block on mismatch
+  @contract annotations â†’ Integrator Phase 1 verifies â†’ Block on mismatch
 ```
 
 ### Hand-off Checklist (Updated with Evidence)
