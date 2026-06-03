@@ -13,7 +13,7 @@ This skill ensures that all APIs are well-documented, consistent, and developer-
 
 - Use **OpenAPI 3.x** (OpenAPI 3.1.0 preferred) for REST API documentation.
 - Define APIs in a machine-readable format (YAML or JSON) that can be used to generate documentation, client SDKs, and server stubs.
-- Maintain the API specification as the **single source of truth** — the specification should drive both documentation and code generation.
+- Maintain the API specification as the **single source of truth** -- the specification should drive both documentation and code generation.
 
 #### OpenAPI Document Structure
 ```yaml
@@ -65,15 +65,15 @@ Every API endpoint MUST document:
 
 | Element | Required | Details |
 |---------|----------|---------|
-| **Summary** | ✅ | Brief, one-line description of what the endpoint does |
-| **Description** | ✅ | Detailed explanation including business context |
-| **Parameters** | ✅ | Query, path, header parameters with types, formats, and defaults |
-| **Request Body** | ✅ | For POST/PUT/PATCH: schema, required fields, examples |
-| **Responses** | ✅ | Every possible status code with schemas and examples |
-| **Authentication** | ✅ | Auth method required (Bearer token, API key, OAuth) |
-| **Error Responses** | ✅ | Error schemas with error codes and messages |
-| **Rate Limits** | ⚠️ | If applicable |
-| **Deprecation Status** | ⚠️ | If endpoint is deprecated |
+| **Summary** | [x] | Brief, one-line description of what the endpoint does |
+| **Description** | [x] | Detailed explanation including business context |
+| **Parameters** | [x] | Query, path, header parameters with types, formats, and defaults |
+| **Request Body** | [x] | For POST/PUT/PATCH: schema, required fields, examples |
+| **Responses** | [x] | Every possible status code with schemas and examples |
+| **Authentication** | [x] | Auth method required (Bearer token, API key, OAuth) |
+| **Error Responses** | [x] | Error schemas with error codes and messages |
+| **Rate Limits** | [!] | If applicable |
+| **Deprecation Status** | [!] | If endpoint is deprecated |
 
 ### 3. API Design Consistency
 
@@ -82,8 +82,8 @@ Every API endpoint MUST document:
 - Use **camelCase** for JSON property names: `firstName`, `lastLoginAt`
 - Use plural nouns for collection endpoints: `/users`, `/orders`
 - Use HTTP methods to represent actions (not verbs in URLs):
-  - ✅ `POST /users` (create a user)
-  - ❌ `POST /createUser`
+  - [x] `POST /users` (create a user)
+  - [X] `POST /createUser`
 
 #### Status Codes
 | Code | Meaning | When to Use |
@@ -215,7 +215,7 @@ security:
 paths:
   /health:
     get:
-      security: []  # Public endpoint — no auth required
+      security: []  # Public endpoint -- no auth required
 ```
 
 ## WebSocket Documentation Patterns
@@ -224,7 +224,7 @@ For real-time APIs (WebSocket), document the protocol separately from REST endpo
 
 ### WebSocket Document Template
 ```markdown
-# WebSocket API — Real-Time Events
+# WebSocket API -- Real-Time Events
 
 **Endpoint:** `wss://api.example.com/v1/events`
 
@@ -240,10 +240,10 @@ For real-time APIs (WebSocket), document the protocol separately from REST endpo
 
 | Direction | Event | Payload | Description |
 |-----------|-------|---------|-------------|
-| Client → Server | `subscribe` | `{"type":"subscribe","channels":["orders"]}` | Subscribe to channels |
-| Server → Client | `order.created` | `{"type":"order.created","data":{...}}` | New order created |
-| Server → Client | `order.updated` | `{"type":"order.updated","data":{...}}` | Order status changed |
-| Server → Client | `error` | `{"type":"error","code":"AUTH_FAILED","message":"..."}` | Error notification |
+| Client -> Server | `subscribe` | `{"type":"subscribe","channels":["orders"]}` | Subscribe to channels |
+| Server -> Client | `order.created` | `{"type":"order.created","data":{...}}` | New order created |
+| Server -> Client | `order.updated` | `{"type":"order.updated","data":{...}}` | Order status changed |
+| Server -> Client | `error` | `{"type":"error","code":"AUTH_FAILED","message":"..."}` | Error notification |
 
 **Reconnection:** Exponential backoff starting at 1s, max 30s interval.
 ```
@@ -259,10 +259,10 @@ Structure your OpenAPI spec to optimize auto-generated client SDKs using tools l
 
 ### Best Practices for Client-Friendly Specs
 
-- **Use `$ref` consistently** — avoid inline schemas for reused types so generated clients create proper classes.
-- **Avoid `oneOf`/`anyOf` without discriminators** — use a `discriminator` property (e.g., `objectType`) so generated code can deserialize polymorphic responses.
+- **Use `$ref` consistently** -- avoid inline schemas for reused types so generated clients create proper classes.
+- **Avoid `oneOf`/`anyOf` without discriminators** -- use a `discriminator` property (e.g., `objectType`) so generated code can deserialize polymorphic responses.
 - **Provide `example` values** on every schema property so generated client docs show realistic data.
-- **Name operations explicitly** — use the `operationId` field with a clear verb-noun pattern (`getUserById`, `listOrders`).
+- **Name operations explicitly** -- use the `operationId` field with a clear verb-noun pattern (`getUserById`, `listOrders`).
 
 ```yaml
 paths:
@@ -373,7 +373,7 @@ parameters:
     example: "eyJpZCI6IjEyMyJ9"
   - name: limit
     in: query
-    description: Maximum number of items to return (1–100)
+    description: Maximum number of items to return (1-100)
     schema:
       type: integer
       minimum: 1
@@ -475,19 +475,19 @@ parameters:
 
 | Change | Breaking? | Notes |
 |--------|-----------|-------|
-| Removing an endpoint | ✅ Yes | New major version required |
-| Renaming a field | ✅ Yes | New major version required |
-| Changing a field type | ✅ Yes | New major version required |
-| Making an optional field required | ✅ Yes | New major version required |
-| Removing an enum value | ✅ Yes | New major version required |
-| Adding a new required field in request body | ✅ Yes | New major version required |
-| Changing the URL path structure | ✅ Yes | New major version required |
-| Changing authentication requirements | ✅ Yes | New major version required |
-| Adding a new optional field to response | ❌ No | Backward compatible |
-| Adding a new endpoint | ❌ No | Backward compatible |
-| Adding a new enum value | ❌ No | Backward compatible (clients should handle unknown values gracefully) |
-| Relaxing validation constraints | ❌ No | Backward compatible |
-| Extending max length on a field | ❌ No | Backward compatible |
+| Removing an endpoint | [x] Yes | New major version required |
+| Renaming a field | [x] Yes | New major version required |
+| Changing a field type | [x] Yes | New major version required |
+| Making an optional field required | [x] Yes | New major version required |
+| Removing an enum value | [x] Yes | New major version required |
+| Adding a new required field in request body | [x] Yes | New major version required |
+| Changing the URL path structure | [x] Yes | New major version required |
+| Changing authentication requirements | [x] Yes | New major version required |
+| Adding a new optional field to response | [X] No | Backward compatible |
+| Adding a new endpoint | [X] No | Backward compatible |
+| Adding a new enum value | [X] No | Backward compatible (clients should handle unknown values gracefully) |
+| Relaxing validation constraints | [X] No | Backward compatible |
+| Extending max length on a field | [X] No | Backward compatible |
 
 ### Communication Protocol
 1. **Announcement**: Post deprecation notice in the API changelog and on the developer portal at least **90 days** before removal.
@@ -511,12 +511,12 @@ paths:
 | **Workflow** | Write code first; generate OpenAPI from annotations/decorators | Write OpenAPI spec first; generate server stubs and client code |
 | **Tools** | SpringDoc, NestJS Swagger, FastAPI, Django REST Framework | openapi-generator, speakeasy, Fern, Stoplight |
 | **Source of Truth** | Code (spec is derived) | OpenAPI spec (code is derived) |
-| **Speed of Initial Development** | Faster — no upfront spec design | Slower — spec must be written first |
-| **API Contract Consistency** | Lower — spec details depend on annotation coverage | Higher — spec drives all implementation |
-| **Client SDK Generation** | Possible but requires spec stability | Natural fit — spec is the input to codegen |
-| **Cross-Team Collaboration** | Harder — frontend/mobile teams must wait for backend | Easier — spec is available before any code is written |
-| **Breaking Change Detection** | Manual or done at integration test time | Automatic — CI can diff specs and flag breaking changes |
-| **Documentation Quality** | Varies — depends on annotation thoroughness | High — spec is written with documentation in mind |
+| **Speed of Initial Development** | Faster -- no upfront spec design | Slower -- spec must be written first |
+| **API Contract Consistency** | Lower -- spec details depend on annotation coverage | Higher -- spec drives all implementation |
+| **Client SDK Generation** | Possible but requires spec stability | Natural fit -- spec is the input to codegen |
+| **Cross-Team Collaboration** | Harder -- frontend/mobile teams must wait for backend | Easier -- spec is available before any code is written |
+| **Breaking Change Detection** | Manual or done at integration test time | Automatic -- CI can diff specs and flag breaking changes |
+| **Documentation Quality** | Varies -- depends on annotation thoroughness | High -- spec is written with documentation in mind |
 | **When to Use** | Prototypes, small teams, rapid iteration | Large teams, public APIs, multiple client platforms |
 
 **Recommendation**: Use **Design-First** for public-facing APIs and multi-platform products. Use **Code-First** for internal microservices where the backend is the only consumer and speed matters.
@@ -529,7 +529,7 @@ When applying the API Documentation skill, follow these steps:
 
 2. **Identify**: Point out missing documentation, inconsistent patterns, or broken specifications. Note security schemes that are undocumented, endpoints without examples, and missing error response schemas.
 
-3. **Propose**: Suggest improvements following the standards above. For each issue, provide a concrete fix — a code snippet showing the improved OpenAPI YAML or JSON. Prioritize fixes by impact:
+3. **Propose**: Suggest improvements following the standards above. For each issue, provide a concrete fix -- a code snippet showing the improved OpenAPI YAML or JSON. Prioritize fixes by impact:
    - **P0**: Missing authentication/security definitions or broken specs that prevent code generation
    - **P1**: Endpoints without request/response examples or error documentation
    - **P2**: Inconsistent naming, missing descriptions, or incomplete pagination documentation

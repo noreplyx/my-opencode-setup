@@ -7,12 +7,12 @@ description: Presentation layer, component design patterns, styling architecture
 
 ### 1.1 Pure Rendering Functions
 
-Rendering functions **must be pure** — they transform state/data into a visual representation and **must NOT contain business logic**. Business logic belongs in separate modules, services, or controller layers.
+Rendering functions **must be pure** -- they transform state/data into a visual representation and **must NOT contain business logic**. Business logic belongs in separate modules, services, or controller layers.
 
-**Bad — business logic in the render function:**
+**Bad -- business logic in the render function:**
 
 ```js
-// ❌ BAD: Business logic mixed into rendering
+// [X] BAD: Business logic mixed into rendering
 function renderUserProfile(container, userId) {
   fetch(`/api/users/${userId}`)
     .then(r => r.json())
@@ -24,10 +24,10 @@ function renderUserProfile(container, userId) {
 }
 ```
 
-**Good — logic extracted to a service layer:**
+**Good -- logic extracted to a service layer:**
 
 ```js
-// ✅ GOOD: Pure rendering function
+// [x] GOOD: Pure rendering function
 function renderUserProfile(container, user) {
   container.innerHTML = `
     <div class="user-profile">
@@ -58,7 +58,7 @@ async function loadUserProfile(container, userId) {
 Improve perceived performance during loading states with skeleton screens. Never show a blank area or janky spinner without context.
 
 ```js
-// Skeleton element — reusable base
+// Skeleton element -- reusable base
 function createSkeleton({ width = '100%', height = '1rem', borderRadius = '4px' } = {}) {
   const el = document.createElement('div');
   el.className = 'skeleton';
@@ -103,7 +103,7 @@ function renderUserProfileSkeleton(container) {
 Separate data orchestration (container) from rendering (presentational). Containers know about data sources and side effects; presentational functions receive data via arguments and are highly reusable.
 
 ```js
-// Presentational — pure, reusable, testable
+// Presentational -- pure, reusable, testable
 function renderUserList(container, { users, onSelect, isLoading }) {
   if (isLoading) {
     renderUserListSkeleton(container);
@@ -130,7 +130,7 @@ function renderUserList(container, { users, onSelect, isLoading }) {
   container.appendChild(list);
 }
 
-// Container — data-aware, orchestrates side effects
+// Container -- data-aware, orchestrates side effects
 async function UserListPageController(container) {
   const { data: users, isLoading } = await fetchUsers();
 
@@ -201,7 +201,7 @@ function createAccordion(container, items) {
 Encapsulate reusable stateful logic into modules or classes. Each module has a single responsibility.
 
 ```js
-// Debounce — reusable debounce function (framework-agnostic)
+// Debounce -- reusable debounce function (framework-agnostic)
 function createDebounce(delayMs) {
   let timer = null;
   return {
@@ -215,7 +215,7 @@ function createDebounce(delayMs) {
   };
 }
 
-// MediaQuery — reactive media query observer
+// MediaQuery -- reactive media query observer
 function createMediaQuery(query) {
   const mql = window.matchMedia(query);
   return {
@@ -250,14 +250,14 @@ searchInput.addEventListener('input', () => {
 ### 3.2 Naming Conventions (BEM)
 
 ```css
-/* Block — standalone component */
+/* Block -- standalone component */
 .card { }
 
-/* Element — part of a block */
+/* Element -- part of a block */
 .card__title { }
 .card__body { }
 
-/* Modifier — a variant */
+/* Modifier -- a variant */
 .card--featured { }
 .card__title--large { }
 ```
@@ -408,7 +408,7 @@ uiStore.setState({ sidebarOpen: !uiStore.getState().sidebarOpen });
 ### 5.1 Controlled vs Uncontrolled Inputs
 
 ```js
-// Controlled — JavaScript manages input state (preferred)
+// Controlled -- JavaScript manages input state (preferred)
 function createControlledForm(container) {
   let email = '';
 
@@ -420,7 +420,7 @@ function createControlledForm(container) {
   container.appendChild(input);
 }
 
-// Uncontrolled — DOM manages input state (use on submit)
+// Uncontrolled -- DOM manages input state (use on submit)
 function createUncontrolledForm(container) {
   const form = document.createElement('form');
   form.innerHTML = `

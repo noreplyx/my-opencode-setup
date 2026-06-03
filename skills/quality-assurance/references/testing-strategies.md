@@ -33,7 +33,7 @@ The "trophy" model (Kent C. Dodds) de-emphasizes shallow unit tests in favor of 
 |---|---|---|
 | **Static Analysis** | Catch typos and type errors | TypeScript, ESLint |
 | **Unit Tests** | Pure logic, utilities, helpers | Jest + Vitest |
-| **Integration Tests** | **Core confidence** — test behavior not implementation | React Testing Library, Supertest |
+| **Integration Tests** | **Core confidence**  --  test behavior not implementation | React Testing Library, Supertest |
 | **E2E Tests** | Critical user journeys | Playwright, Cypress |
 | **Visual Regression** | UI appearance changes | Percy, Chromatic |
 
@@ -55,7 +55,7 @@ The "trophy" model (Kent C. Dodds) de-emphasizes shallow unit tests in favor of 
 
 Divide input data into partitions that should be treated identically by the system. Test one value from each partition.
 
-- **Example**: Age field (0-17 = minor, 18-65 = adult, 66+ = senior) → test 10, 30, 70.
+- **Example**: Age field (0-17 = minor, 18-65 = adult, 66+ = senior) -> test 10, 30, 70.
 
 #### Boundary Value Analysis
 
@@ -67,7 +67,7 @@ Test the edges of equivalence partitions.
 
 Test combinations of conditions and expected actions.
 
-- **Example**: Login — valid credentials? account active? IP whitelisted?
+- **Example**: Login  --  valid credentials? account active? IP whitelisted?
 
 #### State Transition Testing
 

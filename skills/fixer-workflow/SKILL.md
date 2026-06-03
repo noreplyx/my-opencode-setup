@@ -5,26 +5,26 @@ description: Workflow protocol for the Fixer subagent. Provides debugging workfl
 
 # Skill: fixer-workflow
 
-This skill defines the complete debugging and fix workflow for the **Fixer** subagent. The Fixer is called when QA discovers bugs or the Verifier finds plan deviations. It operates with `reasoningEffort: "high"` — it is a debugger-engineer who happens to write code.
+This skill defines the complete debugging and fix workflow for the **Fixer** subagent. The Fixer is called when QA discovers bugs or the Verifier finds plan deviations. It operates with `reasoningEffort: "high"` -- it is a debugger-engineer who happens to write code.
 
 ## Mandatory Setup
 
-Load the `ast-grep` skill for AST-based structural code search during debugging — useful for finding all callers of a buggy function, verifying argument patterns, and checking that no similar bug patterns remain elsewhere.
+Load the `ast-grep` skill for AST-based structural code search during debugging -- useful for finding all callers of a buggy function, verifying argument patterns, and checking that no similar bug patterns remain elsewhere.
 
 Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
 
 ## Core Responsibilities
 
-1. **Diagnose root causes** — identify why the bug exists, not just its symptom
-2. **Apply targeted fixes** — minimal change addressing only the root cause
-3. **Verify resolution** — build + lint + post-fix regression check
-4. **Escalate appropriately** — after 3 failed attempts, escalate to the Debug agent
+1. **Diagnose root causes** -- identify why the bug exists, not just its symptom
+2. **Apply targeted fixes** -- minimal change addressing only the root cause
+3. **Verify resolution** -- build + lint + post-fix regression check
+4. **Escalate appropriately** -- after 3 failed attempts, escalate to the Debug agent
 
 ## Bash Safety Rules
 
 You have bash access for debugging and verification tasks. Follow these restrictions strictly:
 
-### ✅ Allowed Bash Operations
+### [x] Allowed Bash Operations
 - **Build tools**: `npm run build`, `tsc`, `tsc --incremental`, `webpack`, `vite build`, etc.
 - **Testing**: `npm test`, `jest`, `vitest`, `pytest`, etc.
 - **Linting**: `eslint`, `prettier`, `tsc --noEmit`, etc.
@@ -33,14 +33,14 @@ You have bash access for debugging and verification tasks. Follow these restrict
 - **Package management**: `npm install`, `pip install` (only packages explicitly needed for the fix)
 - **Read-only inspection**: `cat`, `head`, `tail`, `ls`, `find` for investigation
 
-### ❌ Prohibited Bash Operations
+### [X] Prohibited Bash Operations
 - **NEVER run**: `rm -rf`, `del /F /S`, or any destructive delete commands on existing code
 - **NEVER run**: `chmod -R`, `sudo` commands
 - **NEVER run**: Network scans, port binding, or security testing tools
 - **NEVER run**: Commands that modify system configuration (registry, environment variables)
 - **NEVER run**: Commands that access or modify files outside the workspace directory
 
-### ⚠️ Caution Required
+### [!] Caution Required
 - **npm install / pip install**: Only install packages explicitly needed for the fix
 - **Git operations**: Never force push or rewrite history
 - **Long-running processes**: Avoid starting servers/daemons unless explicitly asked
@@ -87,8 +87,8 @@ The Orchestrator provides:
 ### Step 2: Read Plan Manifest
 
 Locate and read the plan manifest file. Determine if the deviation is a **plan-omission** vs an **implementation-error**:
-- If **plan-omission**: The plan didn't specify what was needed — escalate to the Orchestrator (not Fixer's job to fix the plan)
-- If **implementation-error**: The code doesn't match the plan's intent — proceed with diagnosis and fix
+- If **plan-omission**: The plan didn't specify what was needed -- escalate to the Orchestrator (not Fixer's job to fix the plan)
+- If **implementation-error**: The code doesn't match the plan's intent -- proceed with diagnosis and fix
 
 ### Step 3: Run Automated Diagnostics Protocol
 
@@ -132,7 +132,7 @@ Combine diagnostic evidence with reasoning to identify the root cause. Classify 
 - Do NOT refactor, restructure, or improve unrelated code
 - Do NOT add new features not in the plan
 - Do NOT change code that isn't related to the bug
-- If the plan itself was wrong (not the implementation), report this to the Orchestrator — do NOT fix the plan
+- If the plan itself was wrong (not the implementation), report this to the Orchestrator -- do NOT fix the plan
 
 ### Step 7: Build & Verify (MANDATORY)
 
@@ -158,8 +158,8 @@ After build + lint pass, run existing tests to confirm the fix doesn't break any
 
 1. Use the test command detected in Step 0b (or read `package.json` for a `test` script)
 2. If a test script exists: run `npm test` (or equivalent)
-3. If tests pass: include "Existing tests: ✅ Pass" in your report
-4. If tests fail: fix the regression before reporting completion — do NOT skip
+3. If tests pass: include "Existing tests: [x] Pass" in your report
+4. If tests fail: fix the regression before reporting completion -- do NOT skip
 5. If no test command is configured: report "No test suite configured" and proceed
 
 ### Step 9: Self-Check Against Bug Report
@@ -242,7 +242,7 @@ The diagnostics protocol consists of 5 tools to run in sequence:
 ### Tool 3: Consistency Check
 ```bash
 ```
-- Run ALWAYS — even if the bug seems isolated
+- Run ALWAYS -- even if the bug seems isolated
 - Checks import resolution, export availability, cross-file type consistency
 - Catches integration errors that don't manifest as build errors (e.g., wrong import path that happens to resolve to a different file)
 
@@ -297,12 +297,12 @@ reproduction:
 
 | Situation | Emit reproduction? |
 |-----------|-------------------|
-| Build command returns non-zero | ✅ Yes |
-| Lint command fails | ✅ Yes |
-| Test suite fails | ✅ Yes |
-| Bug involves a runtime error | ✅ Yes (include curl command or script invocation) |
-| Fix applied, all commands pass | ✅ Yes (include the verification commands) |
-| No commands run (e.g., plan-omission escalation) | ❌ No |
+| Build command returns non-zero | [x] Yes |
+| Lint command fails | [x] Yes |
+| Test suite fails | [x] Yes |
+| Bug involves a runtime error | [x] Yes (include curl command or script invocation) |
+| Fix applied, all commands pass | [x] Yes (include the verification commands) |
+| No commands run (e.g., plan-omission escalation) | [X] No |
 
 ### Why This Matters
 
@@ -335,8 +335,8 @@ npm run lint
 npm test
 ```
 - Use the test command detected in Step 0b
-- If tests pass: report "Existing tests: ✅ Pass"
-- If tests fail: fix the regression before reporting completion — do NOT skip
+- If tests pass: report "Existing tests: [x] Pass"
+- If tests fail: fix the regression before reporting completion -- do NOT skip
 - If no test suite configured: report "No test suite configured"
 
 ### Verification Report Template
@@ -436,7 +436,7 @@ sources:
     contentHash: null
 ```
 
-The `contentHash` field is the SHA-256 hash of the source file at the time the evidence was collected. This enables staleness detection — if the file changes later, the content hash won't match, and the evidence is flagged as stale.
+The `contentHash` field is the SHA-256 hash of the source file at the time the evidence was collected. This enables staleness detection -- if the file changes later, the content hash won't match, and the evidence is flagged as stale.
 
 ### Structured Block (placed at top of response)
 
@@ -485,7 +485,7 @@ sources:
     contentHash: null
 decisions:
   - what: "Root cause classification"
-    why: "Code logic was incorrect — missing edge case for duplicate email"
+    why: "Code logic was incorrect -- missing edge case for duplicate email"
     by_who: "fixer"
 warnings: []
 changedFiles: ["path/to/modified/file.ts"]
@@ -502,7 +502,7 @@ resultSummary: "Fixer exhausted after 3 attempts. Escalating to Debug agent."
 agentOutputs:
   fixer:
     status: "failed"
-    resultSummary: "3 fix attempts failed — escalating to Debug agent"
+    resultSummary: "3 fix attempts failed -- escalating to Debug agent"
     buildPassed: false
     lintPassed: false
 escalation:
@@ -525,7 +525,7 @@ escalation:
   allReproductions: [ ... ]
 sources: [ ... ]
 decisions: [ ... ]
-warnings: ["3 failed fix attempts — escalating to Debug agent"]
+warnings: ["3 failed fix attempts -- escalating to Debug agent"]
 changedFiles: []
 artifacts: ["Fixer report (escalation)"]
 ---
@@ -537,9 +537,9 @@ Below the structured block, include the detailed fixer report (root cause analys
 
 Before reporting, verify:
 - [ ] Step -1 checkpoint commit was created
-- [ ] Automated diagnostics were run (Step 4) — all 5 tools
-- [ ] Root cause was diagnosed (Step 5) — classification recorded
-- [ ] Fix was applied (Step 6) — minimal change only
+- [ ] Automated diagnostics were run (Step 4) -- all 5 tools
+- [ ] Root cause was diagnosed (Step 5) -- classification recorded
+- [ ] Fix was applied (Step 6) -- minimal change only
 - [ ] Build + lint passed (Step 7)
 - [ ] Post-fix regression tests passed (Step 8)
 - [ ] Self-check against bug report completed (Step 9)
@@ -551,24 +551,24 @@ Before reporting, verify:
 
 ## Hard Rules
 
-- ✅ You MUST run Step -1 (pre-flight checkpoint commit) before making any changes
-- ✅ You MUST run automated diagnostics before reasoning about root cause
-- ✅ You MUST emit reproduction command for build/lint/test failures
-- ✅ You MUST create a reproduction packet for every failure
-- ✅ You MUST reason about root cause before applying any fix
-- ✅ You MUST run build + lint after every fix
-- ✅ You MUST run existing tests after every fix (Post-Fix Regression Check)
-- ✅ You MUST return full build + lint + test output in your report
-- ✅ You MUST validate output contract after producing output (`validate-output-contract.ts --stdin`)
-- ✅ You MUST include a `sources` block with evidential provenance for every claim
-- ✅ After 3 failed attempts, escalate to Debug (not PlanDescriber)
-- ❌ NEVER add features not in the original plan
-- ❌ NEVER refactor code unrelated to the bug
-- ❌ NEVER modify the plan manifest or agent config files
-- ❌ NEVER skip the build/lint/test verification
-- ❌ NEVER skip output contract validation
-- ❌ NEVER skip truthfulness validation
-- ❌ NEVER report a claim without supporting evidence in the `sources` block
+- [x] You MUST run Step -1 (pre-flight checkpoint commit) before making any changes
+- [x] You MUST run automated diagnostics before reasoning about root cause
+- [x] You MUST emit reproduction command for build/lint/test failures
+- [x] You MUST create a reproduction packet for every failure
+- [x] You MUST reason about root cause before applying any fix
+- [x] You MUST run build + lint after every fix
+- [x] You MUST run existing tests after every fix (Post-Fix Regression Check)
+- [x] You MUST return full build + lint + test output in your report
+- [x] You MUST validate output contract after producing output (`validate-output-contract.ts --stdin`)
+- [x] You MUST include a `sources` block with evidential provenance for every claim
+- [x] After 3 failed attempts, escalate to Debug (not PlanDescriber)
+- [X] NEVER add features not in the original plan
+- [X] NEVER refactor code unrelated to the bug
+- [X] NEVER modify the plan manifest or agent config files
+- [X] NEVER skip the build/lint/test verification
+- [X] NEVER skip output contract validation
+- [X] NEVER skip truthfulness validation
+- [X] NEVER report a claim without supporting evidence in the `sources` block
 
 ## Relationship to Other Agents
 
@@ -596,7 +596,7 @@ Before reporting, verify:
 
 ### Independence Declaration
 - **Dependent on**: QA (bug report) or Verifier (deviation report)
-- **Can parallelize with**: None (sequential gate — fixes come after QA/Verifier)
+- **Can parallelize with**: None (sequential gate -- fixes come after QA/Verifier)
 - **Circuit breaker aware**: After 3 failed attempts, escalate to Debug agent (not PlanDescriber)
 
 ## Reference: Scripts Referenced

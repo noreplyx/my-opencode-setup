@@ -1,15 +1,15 @@
-﻿---
+---
 name: ast-grep
 description: >-
   Use this skill for ALL structural code search, linting, and rewriting tasks using ast-grep (sg).
-  ast-grep is an AST-based tool (tree-sitter) that understands code structure — searches are
+  ast-grep is an AST-based tool (tree-sitter) that understands code structure -- searches are
   structure-aware, NOT text-based. This skill covers: ad-hoc pattern search (`ast-grep run`),
   YAML rule creation (`ast-grep scan`), code rewriting with `fix` and `transform`, inline rules,
   JSON output, test-driven rule development, project-level scanning, and stdin/pipe usage.
   
   CRITICAL: Use this skill WHENEVER the user asks to "find all X", "search for pattern",
   "replace this code structure", "find functions that...", "refactor X to Y", "lint for...",
-  "create a rule", "write a codemod", or ANY codebase structural search/rewrite task — even
+  "create a rule", "write a codemod", or ANY codebase structural search/rewrite task -- even
   if the user doesn't mention ast-grep by name. Recognize these as ast-grep-worthy tasks.
   ast-grep is ESPECIALLY useful over plain grep when the pattern involves nested code structures,
   multi-line constructs, or semantic relationships between code elements (function calls with
@@ -22,7 +22,7 @@ description: >-
 
 # ast-grep Skill
 
-ast-grep (`sg`) is a structural code search, lint, and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure — it matches AST nodes, not lines.
+ast-grep (`sg`) is a structural code search, lint, and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
 > **Installed version**: 0.42.3 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
 
@@ -56,9 +56,9 @@ ast-grep (`sg`) is a structural code search, lint, and rewrite tool based on Abs
 ### Key Insight: AST Matching vs Text Matching
 
 With `grep`, you match text patterns. With `ast-grep`, you write **code patterns** that match syntactically equivalent code:
-- Whitespace and line breaks don't matter — `a + b` matches `a+b` and `a + b`
+- Whitespace and line breaks don't matter -- `a + b` matches `a+b` and `a + b`
 - Comments, strings, and other non-code text are automatically ignored
-- Structure is preserved — `foo()` does NOT match `foo(a, b)` because the AST is different
+- Structure is preserved -- `foo()` does NOT match `foo(a, b)` because the AST is different
 - Rewrite preserves indentation levels
 
 ### The Expanded Three-Question Framework
@@ -66,8 +66,8 @@ With `grep`, you match text patterns. With `ast-grep`, you write **code patterns
 Before writing any ast-grep command, step through this decision tree:
 
 1. **Do I need `pattern` or `kind`?**
-   - `pattern` → when you care about the *content* of the code: `console.log($ARG)`
-   - `kind` → when you care about the *type* of AST node: all `arrow_function` nodes
+   - `pattern` -> when you care about the *content* of the code: `console.log($ARG)`
+   - `kind` -> when you care about the *type* of AST node: all `arrow_function` nodes
    - Combine with `all: [{kind: ...}, {pattern: ...}]` to narrow a node type by content
 2. **What parts should be fixed and what parts should be variable?** (use `$META` for variable parts)
 3. **Do I need extra conditions?** (only inside classes, only with specific children, etc.)
@@ -86,7 +86,7 @@ ast-grep -p 'console.log($ARG)' -l ts
 ast-grep -p 'console.log($ARG)' src/
 ```
 
-**Always single-quote patterns**: `-p '$PATTERN'` ✅ (`-p "$PATTERN"` ❌ — shell expands `$`).
+**Always single-quote patterns**: `-p '$PATTERN'` [x] (`-p "$PATTERN"` [X] -- shell expands `$`).
 
 ### When `pattern` isn't enough: Pattern Object Syntax
 
@@ -110,7 +110,7 @@ rule:
 **Key rule**: `$A` = one node, `$$$A` = 0+. So `console.log($ARG)` matches `log(x)` but NOT `log(x, y)` or `log()`; `console.log($$$)` matches all three.
 
 **Same name = equality**: `$A == $A` matches `a == a` but NOT `a == b`.
-**Non-capturing `$_`**: faster — no bookkeeping overhead.
+**Non-capturing `$_`**: faster -- no bookkeeping overhead.
 
 See `references/pattern-syntax.md` for full reference.
 
@@ -171,9 +171,9 @@ A rule matches if ALL fields match (implicit AND). See `references/rule-referenc
 | `note` | String | Developer guidance | `"Use the logger module"` |
 
 **`kind` vs `pattern` cheat sheet:**
-- `kind` → find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
-- `pattern` → find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
-- Both → `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
+- `kind` -> find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
+- `pattern` -> find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
+- Both -> `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
 
 Common kind names: `call_expression`, `function_declaration`, `method_definition`, `arrow_function`, `class_declaration`, `variable_declaration`, `identifier`, `import_statement`, `return_statement`, `binary_expression`. See `references/recipes.md` for per-language lists.
 
@@ -392,11 +392,11 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 | You need to... | Use this |
 |----------------|----------|
-| Simple text search (one keyword) | `grep`/`ripgrep` — ast-grep is overkill |
+| Simple text search (one keyword) | `grep`/`ripgrep` -- ast-grep is overkill |
 | Structural search (by syntax, not text) | `ast-grep run -p '...'` |
-| Complex search (multiple conditions, relational rules) | YAML rule → `ast-grep scan --inline-rules` |
-| Code refactoring / codemod (transform code) | YAML `fix`/`transform` → `ast-grep scan --rule rule.yml -U` |
-| Persistent lint rule (run in CI) | Project setup → `ast-grep new project`, add rules |
+| Complex search (multiple conditions, relational rules) | YAML rule -> `ast-grep scan --inline-rules` |
+| Code refactoring / codemod (transform code) | YAML `fix`/`transform` -> `ast-grep scan --rule rule.yml -U` |
+| Persistent lint rule (run in CI) | Project setup -> `ast-grep new project`, add rules |
 | Piped/scripted usage (process stdin) | `ast-grep --stdin` or `--json` |
 | Rule development (discover kinds, test) | [Playground](https://ast-grep.github.io/playground.html) first, then `ast-grep test` |
 
@@ -404,21 +404,21 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 ## Important Gotchas
 
-### Quoting & Shell (top priority — most common bug)
-- **Always single-quote patterns**: `-p '$PATTERN'` ✅ — `-p "$PATTERN"` ❌ (shell expands `$`)
-- **Pattern must be valid code** in the target language — tree-sitter must parse it
+### Quoting & Shell (top priority -- most common bug)
+- **Always single-quote patterns**: `-p '$PATTERN'` [x] -- `-p "$PATTERN"` [X] (shell expands `$`)
+- **Pattern must be valid code** in the target language -- tree-sitter must parse it
 
 ### Meta-Variables
-- **One `$NAME` = one AST node**: `$A` won't match `a, b` — use `$$$` for multiple
-- **`$_` is non-capturing**: faster — no bookkeeping overhead
+- **One `$NAME` = one AST node**: `$A` won't match `a, b` -- use `$$$` for multiple
+- **`$_` is non-capturing**: faster -- no bookkeeping overhead
 - **`transform` vars don't use `$`**: `NEW_VAR`, not `$NEW_VAR`
 - **Same-name capture = equality**: `$A == $A` matches `a == a`, not `a == b`
 
 ### Rules & Matching
-- **`pattern` ≠ `kind`**: `pattern` matches specific code; `kind` matches node types. Use `kind` for "find ALL arrow functions", `pattern` for "find arrow functions that call foo()". Combine with `all:`.
+- **`pattern` ? `kind`**: `pattern` matches specific code; `kind` matches node types. Use `kind` for "find ALL arrow functions", `pattern` for "find arrow functions that call foo()". Combine with `all:`.
 - **`kind` names are language-specific**: use the [playground](https://ast-grep.github.io/playground.html) to discover them
 - **`nthChild` is 1-based** (like CSS)
-- **Regex uses Rust syntax** — no lookahead/lookbehind/backreferences
+- **Regex uses Rust syntax** -- no lookahead/lookbehind/backreferences
 
 ### Rewriting
 - **`fix` is indentation-sensitive**: meta-variables preserve their original indentation
@@ -434,46 +434,46 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 ### Output Control
 - **`--no-color`**: suppresses ANSI for CI/scripting
-- **`severity`**: `error` > `warning` > `info` > `hint` — controls scan output visibility
-- **Scan JSON ≠ Run JSON**: `ast-grep scan --json` gives flat array with `ruleId` field; `ast-grep run --json` gives flat array without `ruleId`
+- **`severity`**: `error` > `warning` > `info` > `hint` -- controls scan output visibility
+- **Scan JSON ? Run JSON**: `ast-grep scan --json` gives flat array with `ruleId` field; `ast-grep run --json` gives flat array without `ruleId`
 - **`--no-ignore hidden`**: search `.git` and hidden files
 
 ---
 
 ## Reference Files
 
-- `references/rule-reference.md` — Full rule object reference, atomic/composite/relational rules, TypeScript interfaces, complete YAML structure
-- `references/pattern-syntax.md` — Meta-variable syntax, pattern object forms, strictness levels
-- `references/transforms.md` — Transform operations (replace, substring, convert, rewrite), chaining
-- `references/recipes.md` — Common patterns for TS/JS, Python, Rust; multi-step codemods; kind name tables by language
+- `references/rule-reference.md` -- Full rule object reference, atomic/composite/relational rules, TypeScript interfaces, complete YAML structure
+- `references/pattern-syntax.md` -- Meta-variable syntax, pattern object forms, strictness levels
+- `references/transforms.md` -- Transform operations (replace, substring, convert, rewrite), chaining
+- `references/recipes.md` -- Common patterns for TS/JS, Python, Rust; multi-step codemods; kind name tables by language
 
 ---
 
 ## Agent Tool Protocol
 
 ### Purpose
-ast-grep (sg) is an **on-demand structural code tool** for subagents — NOT a pipeline gate. The rules it enforces (no-console, missing return types, no-any-type, etc.) are already covered by ESLint, TypeScript strict mode, and the semgrep SAST scan. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform.
+ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. The rules it enforces (no-console, missing return types, no-any-type, etc.) are already covered by ESLint, TypeScript strict mode, and the semgrep SAST scan. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform.
 
 ### When Subagents Should Use ast-grep
 
 | Agent | Typical Task | ast-grep Role |
 |-------|-------------|---------------|
 | **Finder** | Codebase exploration | Structural pattern discovery: "Find all classes that implement interface X", "Find all function declarations with specific decorators" |
-| **PlanDescriber** | Pattern analysis before planning | "Find all service/repository patterns to understand conventions" — AST-aware search reveals structural consistency |
+| **PlanDescriber** | Pattern analysis before planning | "Find all service/repository patterns to understand conventions" -- AST-aware search reveals structural consistency |
 | **Implementor** | Writing new code | "Find existing patterns to follow", "Rename function X to Y across all call sites" (codemod) |
 | **Fixer** | Debugging & fixing | "Find all try/catch blocks without error logging", "Find all places where deprecated API is called" |
 | **QA** | Test verification | "Find all test files that use pattern P" |
 
 ### When NOT to Use ast-grep
 
-- **Simple keyword search** → use grep/
+- **Simple keyword search** -> use grep/
 g (ast-grep is overkill for text matching)
-- **Already enforced by the Lint Gate** → ESLint already catches 
+- **Already enforced by the Lint Gate** -> ESLint already catches 
 o-console, 
 o-explicit-any, explicit-function-return-type, 
 o-empty
-- **Already covered by semgrep SAST** → semgrep already catches AST-level security patterns
-- **Already covered by TypeScript strict mode** → strict, 
+- **Already covered by semgrep SAST** -> semgrep already catches AST-level security patterns
+- **Already covered by TypeScript strict mode** -> strict, 
 oImplicitReturns, strictNullChecks
 
 ### Quick Commands for Subagents

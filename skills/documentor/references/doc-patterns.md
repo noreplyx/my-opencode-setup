@@ -79,10 +79,10 @@ export interface RateLimiterOptions {
  * Public API for the user module.
  *
  * Export surface:
- * - {@link UserService} — CRUD operations for user accounts
- * - {@link UserController} — HTTP route handlers
- * - {@link User} — User entity type
- * - {@link CreateUserDto} — Input validation schema
+ * - {@link UserService} -- CRUD operations for user accounts
+ * - {@link UserController} -- HTTP route handlers
+ * - {@link User} -- User entity type
+ * - {@link CreateUserDto} -- Input validation schema
  */
 
 export { UserService } from './user.service';
@@ -140,7 +140,7 @@ const profile = await service.getProfile(userId);
 | DELETE | `/api/users/:id` | Delete user account |
 
 **Configuration:**
-- `USER_CACHE_TTL` — Profile cache TTL in seconds (default: 300)
+- `USER_CACHE_TTL` -- Profile cache TTL in seconds (default: 300)
 ```
 
 ### Configuration Change
@@ -149,7 +149,7 @@ const profile = await service.getProfile(userId);
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `DATABASE_URL` | Yes | -- | PostgreSQL connection string |
 | `USER_CACHE_TTL` | No | `300` | Profile cache TTL in seconds |
 ```
 
@@ -172,8 +172,8 @@ const profile = await service.getProfile(userId);
 
 ## When NOT to Document
 
-- **Trivial internal refactors** — Renaming a private variable
-- **Test files** — Tests are self-documenting (unless testing a public API contract)
-- **Generated files** — `dist/`, `build/`, compiled output
-- **Configuration that is self-evident** — `port: 3000` doesn't need a comment
-- **Obvious getters/setters** — `get name()` doesn't need JSDoc if the name is clear
+- **Trivial internal refactors** -- Renaming a private variable
+- **Test files** -- Tests are self-documenting (unless testing a public API contract)
+- **Generated files** -- `dist/`, `build/`, compiled output
+- **Configuration that is self-evident** -- `port: 3000` doesn't need a comment
+- **Obvious getters/setters** -- `get name()` doesn't need JSDoc if the name is clear

@@ -1,4 +1,4 @@
-# Authentication Middleware
+﻿# Authentication Middleware
 
 ## Overview
 Add JWT-based authentication middleware to protect existing API routes.
@@ -17,14 +17,14 @@ Add JWT-based authentication middleware to protect existing API routes.
 
 ### Implementation
 Modify existing file:
-- `src/middleware/auth.ts` — Add authenticate middleware
+- `src/middleware/auth.ts` -- Add authenticate middleware
 
 New files:
-- `src/types/auth.ts` — Define `AuthPayload` interface with `userId` and `role` fields
+- `src/types/auth.ts` -- Define `AuthPayload` interface with `userId` and `role` fields
 
 ### File Structure
-- `src/middleware/auth.ts` — Must export `authenticate` function
-- `src/types/auth.ts` — Must export `AuthPayload` type
+- `src/middleware/auth.ts` -- Must export `authenticate` function
+- `src/types/auth.ts` -- Must export `AuthPayload` type
 
 ### Behavioral Requirements
 - `authenticate` must handle errors (invalid/expired token) gracefully and return appropriate HTTP responses

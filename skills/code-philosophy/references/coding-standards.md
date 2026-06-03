@@ -7,10 +7,10 @@ description: Detailed reference for SOLID principles, clean code, clean architec
 
 ### 1. SOLID Principles
 
-#### S — Single Responsibility
+#### S -- Single Responsibility
 A class or function should have one, and only one, reason to change.
 
-**❌ Violation:**
+**[X] Violation:**
 ```js
 class UserService {
   async createUser(data) {
@@ -23,7 +23,7 @@ class UserService {
 }
 ```
 
-**✅ Fix — Extract responsibilities:**
+**[x] Fix -- Extract responsibilities:**
 ```js
 class UserCreator {
   constructor(repo, hasher) {
@@ -46,20 +46,20 @@ class WelcomeEmailSender {
 }
 ```
 
-#### O — Open/Closed
+#### O -- Open/Closed
 Software entities should be open for extension but closed for modification.
 
-**❌ Violation:**
+**[X] Violation:**
 ```js
 function getDiscount(price, customerType) {
   if (customerType === 'regular') return price * 0.05;
   if (customerType === 'premium') return price * 0.10;
-  if (customerType === 'vip') return price * 0.20; // ← modifies existing function
+  if (customerType === 'vip') return price * 0.20; // <- modifies existing function
   return 0;
 }
 ```
 
-**✅ Fix — Extend via strategy:**
+**[x] Fix -- Extend via strategy:**
 ```js
 // Strategy contract: { apply(price) }
 
@@ -77,10 +77,10 @@ class VipDiscount {
 }
 ```
 
-#### L — Liskov Substitution
+#### L -- Liskov Substitution
 Objects of a superclass should be replaceable with objects of its subclasses without breaking the application.
 
-**❌ Violation:**
+**[X] Violation:**
 ```js
 class Rectangle {
   constructor(w, h) {
@@ -100,11 +100,11 @@ class Square extends Rectangle {
 function resize(rect) {
   rect.setWidth(5);
   rect.setHeight(10);
-  console.log(rect.getArea()); // Rectangle: 50, Square: 100 ← wrong!
+  console.log(rect.getArea()); // Rectangle: 50, Square: 100 <- wrong!
 }
 ```
 
-**✅ Fix — Favor composition or a shared abstraction:**
+**[x] Fix -- Favor composition or a shared abstraction:**
 ```js
 // Shape contract: { getArea() }
 
@@ -124,10 +124,10 @@ class SquareV2 {
 }
 ```
 
-#### I — Interface Segregation
+#### I -- Interface Segregation
 No client should be forced to depend on methods it does not use.
 
-**❌ Violation:**
+**[X] Violation:**
 ```js
 // Worker contract: { work(), eat(), sleep() }
 class Robot {
@@ -137,7 +137,7 @@ class Robot {
 }
 ```
 
-**✅ Fix — Segregated contracts:**
+**[x] Fix -- Segregated contracts:**
 ```js
 // Separate contracts
 // Workable: { work() }
@@ -155,10 +155,10 @@ class RobotWorker {
 }
 ```
 
-#### D — Dependency Inversion
+#### D -- Dependency Inversion
 Depend upon abstractions, not concretions.
 
-**❌ Violation:**
+**[X] Violation:**
 ```js
 class OrderService {
   constructor() {
@@ -173,7 +173,7 @@ class OrderService {
 }
 ```
 
-**✅ Fix — Inject abstractions:**
+**[x] Fix -- Inject abstractions:**
 ```js
 // Database contract: { save(order) }
 // MailService contract: { sendConfirmation(order) }
@@ -195,23 +195,23 @@ class OrderService {
 
 #### Meaningful Names
 
-**❌ Bad:**
+**[X] Bad:**
 ```js
 const d = new Date();                        // what is d?
 const lst = await getData();                 // what data?
 const fn = (a, b) => a * b;                  // what does fn do?
 ```
 
-**✅ Good:**
+**[x] Good:**
 ```js
 const currentUtcTimestamp = new Date();
 const pendingOrders = await fetchPendingOrders();
 const calculateDiscount = (price, rate) => price * rate;
 ```
 
-#### Small Functions — One Thing
+#### Small Functions -- One Thing
 
-**❌ Too many responsibilities:**
+**[X] Too many responsibilities:**
 ```js
 async function handleRequest(req) {
   const body = await req.json();
@@ -226,7 +226,7 @@ async function handleRequest(req) {
 }
 ```
 
-**✅ Refactored into small focused functions:**
+**[x] Refactored into small focused functions:**
 ```js
 async function handleLoginRequest(request) {
   const credentials = await parseJsonBody(request);
@@ -250,7 +250,7 @@ async function authenticateUser(user, password) { /* ... */ }
 
 #### Avoid Side Effects
 
-**❌ Impure / side-effecting:**
+**[X] Impure / side-effecting:**
 ```js
 let cache = new Map();
 
@@ -262,7 +262,7 @@ function process(id) {
 }
 ```
 
-**✅ Pure / no side effects:**
+**[x] Pure / no side effects:**
 ```js
 function process(id, cache) {
   if (cache.has(id)) return { result: cache.get(id), updatedCache: cache };
@@ -274,13 +274,13 @@ function process(id, cache) {
 
 #### Self-Documenting Code
 
-**❌ Comments explain "what" (noise):**
+**[X] Comments explain "what" (noise):**
 ```js
 // Add 1 to the counter
-counter = counter + 1;           // ← obvious, comment is noise
+counter = counter + 1;           // <- obvious, comment is noise
 ```
 
-**✅ Comments explain "why" (value):**
+**[x] Comments explain "why" (value):**
 ```js
 // We subtract 1 because the DB index is 0-based but the UI shows 1-based
 const dbIndex = uiIndex - 1;
@@ -292,38 +292,38 @@ const dbIndex = uiIndex - 1;
 
 ```
 src/
-├── core/                       ← Innermost layer — zero dependencies
-│   ├── entities/
-│   │   └── Order.js            ← Business objects (no framework imports)
-│   ├── use-cases/
-│   │   └── PlaceOrder.js       ← Application business rules
-│   └── ports/
-│       ├── OrderRepository.js  ← Interface (abstraction)
-│       └── PaymentGateway.js   ← Interface (abstraction)
-│
-├── adapters/                   ← Middle layer — depends on core
-│   ├── controllers/
-│   │   └── OrderController.js  ← HTTP handler → calls use case
-│   ├── repositories/
-│   │   └── PostgresOrderRepo.js ← Implements OrderRepository
-│   └── gateways/
-│       └── StripePayment.js    ← Implements PaymentGateway
-│
-├── infrastructure/             ← Outermost layer — framework details
-│   ├── database/
-│   │   └── migrations/
-│   ├── server/
-│   │   └── httpServer.js
-│   └── config/
-│       └── env.js
-│
-└── main.js                     ← Composition root (wires everything)
++-- core/                       <- Innermost layer -- zero dependencies
+|   +-- entities/
+|   |   +-- Order.js            <- Business objects (no framework imports)
+|   +-- use-cases/
+|   |   +-- PlaceOrder.js       <- Application business rules
+|   +-- ports/
+|       +-- OrderRepository.js  <- Interface (abstraction)
+|       +-- PaymentGateway.js   <- Interface (abstraction)
+|
++-- adapters/                   <- Middle layer -- depends on core
+|   +-- controllers/
+|   |   +-- OrderController.js  <- HTTP handler -> calls use case
+|   +-- repositories/
+|   |   +-- PostgresOrderRepo.js <- Implements OrderRepository
+|   +-- gateways/
+|       +-- StripePayment.js    <- Implements PaymentGateway
+|
++-- infrastructure/             <- Outermost layer -- framework details
+|   +-- database/
+|   |   +-- migrations/
+|   +-- server/
+|   |   +-- httpServer.js
+|   +-- config/
+|       +-- env.js
+|
++-- main.js                     <- Composition root (wires everything)
 ```
 
 #### Dependency Flow
 
 ```
-[Infrastructure]  ──depends on──►  [Adapters]  ──depends on──►  [Core]
+[Infrastructure]  --depends on-->  [Adapters]  --depends on-->  [Core]
      (HTTP, Postgres)            (Controllers, Repos)         (Entities, Use Cases)
 
 Dependencies ALWAYS point INWARD. Core NEVER knows about HTTP or Postgres.
@@ -332,10 +332,10 @@ Dependencies ALWAYS point INWARD. Core NEVER knows about HTTP or Postgres.
 #### Dependency Rule in Action
 
 ```js
-// core/ports/OrderRepository.js  ← pure contract, no framework
+// core/ports/OrderRepository.js  <- pure contract, no framework
 // Contract: { save(order), findById(id) }
 
-// adapters/repositories/PostgresOrderRepo.js  ← framework detail, depends on core
+// adapters/repositories/PostgresOrderRepo.js  <- framework detail, depends on core
 class PostgresOrderRepo {
   constructor(db) {
     this.db = db;
@@ -352,9 +352,9 @@ class PostgresOrderRepo {
 
 ### 4. Best Practices (DRY / KISS / YAGNI)
 
-#### DRY — Don't Repeat Yourself
+#### DRY -- Don't Repeat Yourself
 
-**❌ Duplication:**
+**[X] Duplication:**
 ```js
 function formatUserName(user) {
   return `${user.first} ${user.last}`.trim();
@@ -365,16 +365,16 @@ function formatAdminName(admin) {
 }
 ```
 
-**✅ Unified:**
+**[x] Unified:**
 ```js
 function formatFullName(person) {
   return `${person.first} ${person.last}`.trim();
 }
 ```
 
-#### KISS — Keep It Simple
+#### KISS -- Keep It Simple
 
-**❌ Over-engineered:**
+**[X] Over-engineered:**
 ```js
 class FibonacciCalculator {
   constructor() {
@@ -394,7 +394,7 @@ class FibonacciCalculator {
 }
 ```
 
-**✅ Simple:**
+**[x] Simple:**
 ```js
 function fibonacci(n) {
   if (n <= 1) return n;
@@ -404,29 +404,29 @@ function fibonacci(n) {
 }
 ```
 
-#### YAGNI — You Ain't Gonna Need It
+#### YAGNI -- You Ain't Gonna Need It
 
-**❌ Building for hypothetical future needs:**
+**[X] Building for hypothetical future needs:**
 ```js
 class UserManager {
-  // Plugin system for user validation — not needed yet!
+  // Plugin system for user validation -- not needed yet!
   constructor() {
     this.validators = [];
   }
   registerValidator(v) { this.validators.push(v); }
 
-  // Multi-tenant support — not needed yet!
+  // Multi-tenant support -- not needed yet!
   async getUsers(tenantId) {
     if (tenantId) return db.users.findMany({ where: { tenantId } });
     return db.users.findMany();
   }
 
-  // Export to 5 formats — only CSV is needed today
+  // Export to 5 formats -- only CSV is needed today
   async export(format) { /* ... */ }
 }
 ```
 
-**✅ Only what's needed today:**
+**[x] Only what's needed today:**
 ```js
 class UserService {
   constructor(repo) {
@@ -438,14 +438,14 @@ class UserService {
 
 #### Composition over Inheritance
 
-**❌ Deep inheritance:**
+**[X] Deep inheritance:**
 ```js
 class Animal { eat() { /* ... */ } }
 class Bird extends Animal { fly() { /* ... */ } }
 class Penguin extends Bird { /* penguins can't fly, breaks LSP */ }
 ```
 
-**✅ Composition:**
+**[x] Composition:**
 ```js
 // Movement strategy: { move() }
 class WalkStrategy { move() { console.log('Walking'); } }

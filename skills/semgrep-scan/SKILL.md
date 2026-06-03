@@ -1,13 +1,13 @@
 ---
 name: semgrep-scan
-description: "Run Semgrep scans on projects for static analysis security testing (SAST) via a Podman container (no local install needed). This skill triggers automatically as a mandatory step within the orchestration pipeline Security Scan gate — it does NOT require the user to explicitly request semgrep. During any pipeline, after Build Gate + Lint Gate pass, the Orchestrator loads this skill and runs semgrep SAST scanning automatically via the `docker.io/semgrep/semgrep` container image. Also use when the user manually asks to scan code for security vulnerabilities, run semgrep, perform SAST scanning, check for code security issues, validate custom semgrep rules, or when integrating security scanning into a CI pipeline. Supports auto-detected rules, language-specific packs (p/python, p/javascript, p/java, etc.), security-focused rule packs (p/owasp-top-ten, p/command-injection, p/secrets), custom .yaml rule files, and rule validation with semgrep validate."
+description: "Run Semgrep scans on projects for static analysis security testing (SAST) via a Podman container (no local install needed). This skill triggers automatically as a mandatory step within the orchestration pipeline Security Scan gate -- it does NOT require the user to explicitly request semgrep. During any pipeline, after Build Gate + Lint Gate pass, the Orchestrator loads this skill and runs semgrep SAST scanning automatically via the `docker.io/semgrep/semgrep` container image. Also use when the user manually asks to scan code for security vulnerabilities, run semgrep, perform SAST scanning, check for code security issues, validate custom semgrep rules, or when integrating security scanning into a CI pipeline. Supports auto-detected rules, language-specific packs (p/python, p/javascript, p/java, etc.), security-focused rule packs (p/owasp-top-ten, p/command-injection, p/secrets), custom .yaml rule files, and rule validation with semgrep validate."
 ---
 
 # Semgrep Scan Skill (Container-Based)
 
 ## Purpose
 
-Run Semgrep static analysis on project code to detect security vulnerabilities, enforce coding standards, and find bug patterns — **all via a Podman container** with zero local installation required. The official `docker.io/semgrep/semgrep` image includes the full semgrep CLI plus jq, bash, curl, python3, and git.
+Run Semgrep static analysis on project code to detect security vulnerabilities, enforce coding standards, and find bug patterns -- **all via a Podman container** with zero local installation required. The official `docker.io/semgrep/semgrep` image includes the full semgrep CLI plus jq, bash, curl, python3, and git.
 
 This skill is **automatically loaded by the Orchestrator** during every pipeline's Security Scan gate (after Build + Lint + Code Quality gates pass). It runs as a mandatory SAST sub-scan alongside dependency and secrets scanning.
 
@@ -21,11 +21,11 @@ This skill is **automatically loaded by the Orchestrator** during every pipeline
 
 ## Why Container-Based?
 
-- ✅ **No local install** — no pip install, no npm, no version conflicts
-- ✅ **Isolated** — runs in its own environment, can't modify project files
-- ✅ **Bundled tools** — includes jq, bash, curl, python3, git (v1.162.0+)
-- ✅ **Reproducible** — same semgrep version across all environments
-- ✅ **Auto-updates** — pull the latest image to get new rules & semgrep versions
+- [x] **No local install** -- no pip install, no npm, no version conflicts
+- [x] **Isolated** -- runs in its own environment, can't modify project files
+- [x] **Bundled tools** -- includes jq, bash, curl, python3, git (v1.162.0+)
+- [x] **Reproducible** -- same semgrep version across all environments
+- [x] **Auto-updates** -- pull the latest image to get new rules & semgrep versions
 
 ## Quick Start
 
@@ -73,7 +73,7 @@ semgrep-docker validate .semgrep/rules.yaml
 
 ## Container Image Reference
 
-- **Image**: `docker.io/semgrep/semgrep:latest` (also available as `semgrep/semgrep` — the newer official location)
+- **Image**: `docker.io/semgrep/semgrep:latest` (also available as `semgrep/semgrep` -- the newer official location)
 - **Mount point**: Your code directory must be mounted at `/src` inside the container
 - **Working directory**: The container runs at `/` by default; use `semgrep scan .` (relative) or `/src/...` (absolute) for paths within the mounted volume
 - **Output files**: Write to `/src/<filename>` to persist results to the host
@@ -99,7 +99,7 @@ This skill is **automatically triggered** during every pipeline as part of the S
 First, determine what to scan:
 - **Full project scan**: Scan the entire project or working directory (`.`)
 - **Targeted scan**: Scan specific files, directories, or a git diff (`/src/src/`, `/src/path/to/file.ts`)
-- **Baseline scan**: Scan only changes since a given commit (`--baseline-commit` — requires `-w /src`)
+- **Baseline scan**: Scan only changes since a given commit (`--baseline-commit` -- requires `-w /src`)
 
 Check the project layout to understand the codebase:
 
@@ -150,12 +150,12 @@ semgrep-docker scan \
 | `--sarif-output /src/FILE` | Write SARIF copy to file | Upload to GitHub Advanced Security |
 | `--emacs` | Emacs single-line format | Editor integration |
 
-**Output file path rule**: When writing output to a file (via `--output`, `--json-output`, `--sarif-output`), you **must** use the container's `/src/` prefix, e.g. `--output /src/results.sarif` — NOT `--output results.sarif`. The file will appear at `results.sarif` on the host.
+**Output file path rule**: When writing output to a file (via `--output`, `--json-output`, `--sarif-output`), you **must** use the container's `/src/` prefix, e.g. `--output /src/results.sarif` -- NOT `--output results.sarif`. The file will appear at `results.sarif` on the host.
 
 **Smart defaults:**
-- Terminal available → colorized output
-- CI environment (no TTY) → JSON for machine parsing
-- SARIF requested → use `--sarif` with `--sarif-output /src/results.sarif`
+- Terminal available -> colorized output
+- CI environment (no TTY) -> JSON for machine parsing
+- SARIF requested -> use `--sarif` with `--sarif-output /src/results.sarif`
 - For quick review, use `--json` and pipe to `jq` for filtering
 
 ### Step 4: Strict Mode (CI Integration)
@@ -173,7 +173,7 @@ semgrep-docker scan --config p/security-audit --error . --severity ERROR
 Exit codes:
 | Code | Meaning |
 |------|---------|
-| 0    | OK — no findings |
+| 0    | OK -- no findings |
 | 1    | Findings detected (with `--error`) |
 | 2    | Fatal error |
 | 3-8  | Configuration errors |
@@ -261,13 +261,13 @@ When the user needs help interpreting results, structure the report like this:
 ### Detailed Findings
 
 #### ERROR: Path Traversal (3 occurrences)
-- `src/routes/files.ts:45` — Possible user input in `path.join`
+- `src/routes/files.ts:45` -- Possible user input in `path.join`
   - **Fix**: Validate/sanitize user input before using in path operations
-- `src/utils/upload.ts:102` — Possible user input in `path.resolve`
+- `src/utils/upload.ts:102` -- Possible user input in `path.resolve`
   - **Fix**: Use allowlist of approved paths
 
 #### WARNING: Hardcoded Secret (2 occurrences)
-- `src/config/defaults.ts:15` — Possible hardcoded API key
+- `src/config/defaults.ts:15` -- Possible hardcoded API key
   - **Fix**: Move to environment variable or secrets manager
 
 ### Recommendations
@@ -315,7 +315,7 @@ Validation checks:
 - Pattern validity per language
 - Metavariable consistency
 
-Validate new rules **before** running scans with them — this catches syntax errors early.
+Validate new rules **before** running scans with them -- this catches syntax errors early.
 
 ## Common Scan Recipes
 
@@ -372,14 +372,14 @@ podman pull docker.io/semgrep/semgrep:latest
 
 ## Integration with Pipeline (Automatic)
 
-This skill is **automatically loaded by the Orchestrator** during every pipeline as part of the **Semgrep SAST Gate** — a mandatory sub-gate of the Security Scan gate. No user prompt is required.
+This skill is **automatically loaded by the Orchestrator** during every pipeline as part of the **Semgrep SAST Gate** -- a mandatory sub-gate of the Security Scan gate. No user prompt is required.
 
 ### Automatic Triggering
 
 The Orchestrator loads and invokes this skill automatically at this point in the pipeline:
 
 ```
-Build Gate → Lint Gate → Code Quality Gate → SECURITY SCAN → QA
+Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
                                                    |
                                             +-------------+
                                             | SEMGREP SAST |
@@ -404,7 +404,7 @@ Build Gate → Lint Gate → Code Quality Gate → SECURITY SCAN → QA
      semgrep scan --config p/security-audit --error .
    ```
 4. The Orchestrator parses the semgrep output and includes findings in the combined Security Scan report
-5. If semgrep exits with code 1 (findings detected with `--error`), the **Semgrep SAST Gate FAILS** — the pipeline is blocked
+5. If semgrep exits with code 1 (findings detected with `--error`), the **Semgrep SAST Gate FAILS** -- the pipeline is blocked
 6. The Orchestrator reports findings to the user and decides to fix, except, or block
 
 ### Container Readiness Check
@@ -421,10 +421,10 @@ If the image cannot be pulled (no network), the Orchestrator should report a war
 
 | Semgrep Exit Code | Meaning | Pipeline Action |
 |-------------------|---------|-----------------|
-| 0 | No findings | ✅ PASS — proceed to dependency scan |
-| 1 | Findings detected | ❌ FAIL — block pipeline, report to Orchestrator |
-| 2 | Fatal error | ⚠️ WARN — log error, continue (image may not be available) |
-| 3-8 | Config error | ⚠️ WARN — report to Orchestrator |
+| 0 | No findings | [x] PASS -- proceed to dependency scan |
+| 1 | Findings detected | [X] FAIL -- block pipeline, report to Orchestrator |
+| 2 | Fatal error | [!] WARN -- log error, continue (image may not be available) |
+| 3-8 | Config error | [!] WARN -- report to Orchestrator |
 
 ### Pipeline Scan Defaults
 
@@ -432,25 +432,25 @@ When automatically triggered during a pipeline, the semgrep scan uses these defa
 - **Image**: `docker.io/semgrep/semgrep:latest`
 - **Volume mount**: `$WORKSPACE_ROOT:/src:Z` (with SELinux label)
 - **Config**: `p/security-audit` (security-focused)
-- **Mode**: `--error` (strict — fail on any finding)
+- **Mode**: `--error` (strict -- fail on any finding)
 - **Target**: `.` (inside container at `/src`)
 - **Exclusions**: `node_modules/`, `dist/`, `build/`, `tests/`, `*.test.*`, `*.spec.*` (automatic via `.semgrepignore` / `.gitignore`)
 
 ## Hard Rules
 
-- ✅ Always use `--error` for CI/strict mode — fails the pipeline on findings
-- ✅ Always mount the project root with `-v "${PWD}:/src:Z"` — the `:Z` flag handles SELinux labeling
-- ✅ Always use `--rm` to clean up the container after execution
-- ✅ The Orchestrator loads this skill automatically during every pipeline — no user prompt required
-- ✅ Read-only operation — the container is ephemeral (`--rm`), no persistent changes
-- ✅ Validate custom rules BEFORE running them in a scan
-- ✅ Use `.semgrepignore` or `--exclude` to skip irrelevant files (node_modules, dist, build)
-- ✅ Use `--baseline-commit` with `-w /src` for incremental scans to reduce noise
-- ✅ NEVER use `--autofix` — this skill is for scanning only
-- ✅ NEVER modify project files during scanning
-- ✅ NEVER run scans without a `--config` flag (will use default config; always be explicit)
-- ✅ Use `/src/...` prefix for all file paths that reference files inside the mounted volume (custom rules, output paths, scan targets that are subdirectories)
-- ✅ DO NOT scan minified, generated, or vendored files unless explicitly requested
+- [x] Always use `--error` for CI/strict mode -- fails the pipeline on findings
+- [x] Always mount the project root with `-v "${PWD}:/src:Z"` -- the `:Z` flag handles SELinux labeling
+- [x] Always use `--rm` to clean up the container after execution
+- [x] The Orchestrator loads this skill automatically during every pipeline -- no user prompt required
+- [x] Read-only operation -- the container is ephemeral (`--rm`), no persistent changes
+- [x] Validate custom rules BEFORE running them in a scan
+- [x] Use `.semgrepignore` or `--exclude` to skip irrelevant files (node_modules, dist, build)
+- [x] Use `--baseline-commit` with `-w /src` for incremental scans to reduce noise
+- [x] NEVER use `--autofix` -- this skill is for scanning only
+- [x] NEVER modify project files during scanning
+- [x] NEVER run scans without a `--config` flag (will use default config; always be explicit)
+- [x] Use `/src/...` prefix for all file paths that reference files inside the mounted volume (custom rules, output paths, scan targets that are subdirectories)
+- [x] DO NOT scan minified, generated, or vendored files unless explicitly requested
 
 ## Key References
 

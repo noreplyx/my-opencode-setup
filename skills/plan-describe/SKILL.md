@@ -37,21 +37,21 @@ Convert the deep dive into a linear sequence of actionable tasks.
   - Define the specific test cases (unit, integration, E2E) that must pass.
   - Specify the exact commands to run for linting and type-checking.
 
-### ❌ Constraints Section (MANDATORY)
+### [X] Constraints Section (MANDATORY)
 
 Every roadmap MUST include a "What NOT to Do" section with at least 5 constraints. These become `pattern_forbidden` contract rules in the manifest.
 
 ```markdown
-## ❌ Constraints (Violations Are Blocking)
+## [X] Constraints (Violations Are Blocking)
 
 1. **Do NOT** add any new npm dependencies without explicit plan approval
 2. **Do NOT** modify existing tests unless the plan specifies it
-3. **Do NOT** use `any` types — use proper generics or `unknown`
+3. **Do NOT** use `any` types -- use proper generics or `unknown`
 4. **Do NOT** skip error handling on any async operation
-5. **Do NOT** create barrel files manually — the Integrator handles this
+5. **Do NOT** create barrel files manually -- the Integrator handles this
 6. **Do NOT** put business logic in controllers
 7. **Do NOT** hardcode environment-specific values
-8. **Do NOT** add console.log — use proper logger
+8. **Do NOT** add console.log -- use proper logger
 ```
 
 **Hard Rule**: Every roadmap MUST include:
@@ -80,18 +80,18 @@ Every plan manifest MUST include quality checkpoints that enforce best practices
 | Error handling | `handlesError` | Every error-prone operation (DB queries, network calls, filesystem ops, external API calls) | Must specify what error scenario (e.g., "database failure in createUser") |
 | Logging | `logsAtLevel` | Every public method in services, controllers, and middleware | At minimum: `info` on success path, `error` on failure |
 | Type definition | `typeExists` or `exportExists` | Every feature that introduces data shapes | Create DTOs, interfaces, or schemas BEFORE implementation |
-| Repository/DAO layer | `exportExists` or `classExists` | Every feature that accesses a database | Plans MUST NOT specify direct DB access — require a repository pattern |
+| Repository/DAO layer | `exportExists` or `classExists` | Every feature that accesses a database | Plans MUST NOT specify direct DB access -- require a repository pattern |
 
 #### Hard Rules
 
-- ❌ NEVER produce a manifest with only structural checkpoints. EVERY manifest MUST have at least:
+- [X] NEVER produce a manifest with only structural checkpoints. EVERY manifest MUST have at least:
   - 2 `validatesInput` checkpoints per modified file
   - 2 `handlesError` checkpoints per modified file  
   - 1 `logsAtLevel` checkpoint per modified file
   - 1 `typeExists` or `exportExists` for DTOs/interfaces per feature
-- ❌ NEVER specify direct DB access in the roadmap — always route through a repository/DAO layer
-- ✅ ALWAYS include acceptance criteria (`acceptanceCriteria`) for every POST/PUT/DELETE endpoint
-- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits
+- [X] NEVER specify direct DB access in the roadmap -- always route through a repository/DAO layer
+- [x] ALWAYS include acceptance criteria (`acceptanceCriteria`) for every POST/PUT/DELETE endpoint
+- [x] ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits
 
 #### Quality Minimum Threshold
 
@@ -99,11 +99,11 @@ Before submitting a plan manifest, verify:
 
 | Check | Minimum | 
 |-------|---------|
-| Total checkpoints per modified file | ≥ 5 |
-| Behavioral checkpoints (validatesInput + handlesError) per file | ≥ 4 |
-| Acceptance criteria checkpoints per feature | ≥ 2 |
-| logAtLevel checkpoints per file | ≥ 1 |
-| Type/interface checkpoints per feature | ≥ 1 |
+| Total checkpoints per modified file | >= 5 |
+| Behavioral checkpoints (validatesInput + handlesError) per file | >= 4 |
+| Acceptance criteria checkpoints per feature | >= 2 |
+| logAtLevel checkpoints per file | >= 1 |
+| Type/interface checkpoints per feature | >= 1 |
 
 If any file in the plan has fewer checkpoints than the minimum, add more.
 
@@ -184,7 +184,7 @@ Each plan manifest MUST include a `contractRules` array at the top level alongsi
       "id": "CR-001",
       "type": "import_restriction",
       "severity": "blocking",
-      "description": "No direct DB access in controllers — all DB access must go through Repository layer",
+      "description": "No direct DB access in controllers -- all DB access must go through Repository layer",
       "rule": "grep -n 'db\\.\\|prisma\\.\\|query\\|execute' src/controllers/*.ts",
       "expectedResult": "no_matches"
     }
@@ -205,8 +205,8 @@ Each plan manifest MUST include a `contractRules` array at the top level alongsi
 | `naming_convention` | Enforce naming rules | `grep -n 'class.*Service' src/services/*.ts` | `matches_found` |
 
 **Severity levels:**
-- `blocking` — The pipeline MUST NOT proceed if this rule fails. Violation → Fixer cycle.
-- `warning` — Non-blocking. Flagged in report but doesn't block the pipeline.
+- `blocking` -- The pipeline MUST NOT proceed if this rule fails. Violation -> Fixer cycle.
+- `warning` -- Non-blocking. Flagged in report but doesn't block the pipeline.
 
 **Hard Rule**: Every manifest MUST have at least 3 contract rules per file being modified:
 - At least 1 `import_restriction` rule (e.g., "no direct DB access")
@@ -216,7 +216,7 @@ Each plan manifest MUST include a `contractRules` array at the top level alongsi
 #### Dependency Mapping
 - Use `dependsOn` to express ordering: if checkpoint A must pass before B can be verified, set B's `dependsOn: ["CP-00A"]`
 - File existence checks should be dependencies of export/behavioral checks within that file
-- Keep dependencies minimal — only declare what's strictly necessary
+- Keep dependencies minimal -- only declare what's strictly necessary
 
 #### Manifest Diffing Support
 
@@ -254,11 +254,11 @@ ts-node skills/scripts/orchestration/validate-manifest-schema.ts --manifest=plan
 **Schema reference:** `plan-manifests/plan-manifest.schema.json`
 
 #### Hard Rule
-- ❌ NEVER skip producing the manifest. Every roadmap MUST have a corresponding manifest.
-- ✅ Place all manifests under `plan-manifests/` directory (create it if it doesn't exist).
-- ✅ Use only the verification kinds listed above.
-- ❌ NEVER produce a plan manifest with only structural checkpoints — every manifest MUST include at least 2 behavioral checkpoints (`handlesError`, `validatesInput`, or `logsAtLevel`) per file being modified.
-- ✅ ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits, and error scenarios for every error-prone operation
+- [X] NEVER skip producing the manifest. Every roadmap MUST have a corresponding manifest.
+- [x] Place all manifests under `plan-manifests/` directory (create it if it doesn't exist).
+- [x] Use only the verification kinds listed above.
+- [X] NEVER produce a plan manifest with only structural checkpoints -- every manifest MUST include at least 2 behavioral checkpoints (`handlesError`, `validatesInput`, or `logsAtLevel`) per file being modified.
+- [x] ALWAYS include edge case checkpoints: empty input, null input, concurrent access, rate limits, and error scenarios for every error-prone operation
 
 ## Full Roadmap Example
 
@@ -295,7 +295,7 @@ After brainstorming, the user chose: **In-memory sliding window rate limiter** f
 - [ ] `src/app.ts` imports and applies the limiter
 - [ ] Build passes: `npm run build`
 - [ ] Lint passes: `npm run lint`
-- [ ] Smoke test: 101 requests in 1 second from same IP → 100 succeed, 101st gets 429
+- [ ] Smoke test: 101 requests in 1 second from same IP -> 100 succeed, 101st gets 429
 
 ### Corresponding Manifest
 The `plan-manifests/rate-limiter-manifest.json` would contain:
@@ -316,10 +316,10 @@ For each phase in the roadmap, assign a confidence score:
 
 | Score | Meaning | Action |
 |---|---|---|
-| 10 | Certain — exact files, lines, and logic are known | Proceed |
-| 7-9 | Mostly confident — minor ambiguity about internal details | Proceed, but note the uncertainty |
-| 4-6 | Partial — unsure about some file locations or interfaces | Orchestrator should consider running Finder for more context |
-| 1-3 | Uncertain — significant gaps in understanding of the codebase | Orchestrator MUST run Finder before proceeding |
+| 10 | Certain -- exact files, lines, and logic are known | Proceed |
+| 7-9 | Mostly confident -- minor ambiguity about internal details | Proceed, but note the uncertainty |
+| 4-6 | Partial -- unsure about some file locations or interfaces | Orchestrator should consider running Finder for more context |
+| 1-3 | Uncertain -- significant gaps in understanding of the codebase | Orchestrator MUST run Finder before proceeding |
 
 ### Scoring Format
 
@@ -349,9 +349,9 @@ Before finalizing a roadmap, verify:
 - [ ] Edge cases are documented for non-trivial logic
 - [ ] Test commands are specified (build, lint, test, type-check)
 - [ ] A plan-manifest.json is always produced alongside the roadmap
-- [ ] Every modified file has ≥ 5 total checkpoints in the manifest
-- [ ] Every modified file has ≥ 4 behavioral checkpoints (validatesInput + handlesError)
-- [ ] Every modified file has ≥ 1 logsAtLevel checkpoint
+- [ ] Every modified file has >= 5 total checkpoints in the manifest
+- [ ] Every modified file has >= 4 behavioral checkpoints (validatesInput + handlesError)
+- [ ] Every modified file has >= 1 logsAtLevel checkpoint
 - [ ] The plan specifies a repository/DAO layer, not direct DB access
 - [ ] DTOs/interfaces are defined as separate checkpoints
 - [ ] At least 3 contract rules defined per modified file
@@ -359,16 +359,16 @@ Before finalizing a roadmap, verify:
 - [ ] Each constraint maps to a contract rule
 
 ## Hard Rules
-- ❌ NEVER skip the Plan Analysis phase — always decompose the plan first
-- ❌ NEVER skip producing the plan-manifest.json — verification depends on it
-- ❌ NEVER use vague language like "implement the feature" — specify exact files, functions, and logic
-- ✅ ALWAYS include a Definition of Done for each phase
-- ✅ ALWAYS reference specific file paths and line numbers for modifications to existing files
-- ✅ ALWAYS specify exact commands for build, lint, and test verification
-- ✅ MANDATORY: Every plan manifest MUST include at least 4 behavioral checkpoints (validatesInput + handlesError) per modified file — this ensures the plan specifies quality standards, not just file structure
-- ✅ MANDATORY: Every plan manifest MUST include at least 1 logsAtLevel checkpoint per modified file — logging is not optional
-- ✅ MANDATORY: Every plan manifest MUST include at least 1 typeExists or exportExists checkpoint for DTOs/interfaces — data shapes must be defined before implementation
-- ❌ NEVER specify code that directly accesses a database in a controller or service — require a repository/DAO abstraction layer
+- [X] NEVER skip the Plan Analysis phase -- always decompose the plan first
+- [X] NEVER skip producing the plan-manifest.json -- verification depends on it
+- [X] NEVER use vague language like "implement the feature" -- specify exact files, functions, and logic
+- [x] ALWAYS include a Definition of Done for each phase
+- [x] ALWAYS reference specific file paths and line numbers for modifications to existing files
+- [x] ALWAYS specify exact commands for build, lint, and test verification
+- [x] MANDATORY: Every plan manifest MUST include at least 4 behavioral checkpoints (validatesInput + handlesError) per modified file -- this ensures the plan specifies quality standards, not just file structure
+- [x] MANDATORY: Every plan manifest MUST include at least 1 logsAtLevel checkpoint per modified file -- logging is not optional
+- [x] MANDATORY: Every plan manifest MUST include at least 1 typeExists or exportExists checkpoint for DTOs/interfaces -- data shapes must be defined before implementation
+- [X] NEVER specify code that directly accesses a database in a controller or service -- require a repository/DAO abstraction layer
 
 ---
 
@@ -428,4 +428,4 @@ Structural checkpoints verify that code has certain patterns (exports, error han
 - At minimum, each manifest MUST include at least 2 acceptance criteria checkpoints for features that modify data or have business rules
 
 #### Hard Rule Update
-- ✅ At minimum, each manifest MUST include at least 2 `acceptanceCriteria` checkpoints for features that create/modify data or have business rules. This ensures the code actually works for the business scenario, not just that the code structure matches expectations.
+- [x] At minimum, each manifest MUST include at least 2 `acceptanceCriteria` checkpoints for features that create/modify data or have business rules. This ensures the code actually works for the business scenario, not just that the code structure matches expectations.

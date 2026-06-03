@@ -1,4 +1,4 @@
----
+﻿---
 description: QA agent specialized in ensuring software quality through comprehensive testing, bug discovery, and adherence to quality standards.
 mode: subagent
 temperature: 0.1
@@ -46,8 +46,8 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 2. Load `qa-workflow` for the full QA testing workflow (project detection, smoke tests, test discovery, coverage, security regression tests)
 3. Load `quality-assurance` for QA methodology
 4. Load `security-workflow` for:
-   - **Section 3 (Security Regression Test Generation Table)** — generate tests for each detected security pattern
-   - **Section 3 (Security Test Coverage Gate)** — produce the coverage report that Verifier uses to gate the pipeline
+   - **Section 3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
+   - **Section 3 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
 5. Load `accessibility` if testing frontend components
 
 ## Output Fields
@@ -87,7 +87,7 @@ securityTestCoverage:
 6. **Documented skips**: Each untested pattern MUST have a valid skip reason from the allowed list in Section 3
 
 #### Coverage Gate Rules
-- **≥ 80%**: Set `gatePassed: true` — proceed
-- **< 80%**: Set `gatePassed: false` — the Verifier will block the pipeline
+- **>= 80%**: Set `gatePassed: true` -- proceed
+- **< 80%**: Set `gatePassed: false` -- the Verifier will block the pipeline
 
 Detailed workflow instructions are loaded from the `qa-workflow` skill.

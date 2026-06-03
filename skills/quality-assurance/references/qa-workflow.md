@@ -5,13 +5,13 @@ description: Detailed reference for the end-to-end QA process, test documentatio
 
 ## Table of Contents
 
-1. [QA Workflow — 6 Phases](#qa-workflow--6-phases)
+1. [QA Workflow  --  6 Phases](#qa-workflow--6-phases)
 2. [Test Documentation](#test-documentation)
 3. [Acceptance Criteria Format](#acceptance-criteria-format)
 
 ---
 
-## QA Workflow — 6 Phases
+## QA Workflow  --  6 Phases
 
 Follow this process for every feature, bug fix, or release.
 
@@ -98,13 +98,13 @@ Good documentation makes tests maintainable, auditable, and valuable for onboard
 
 ### Traceability Matrix
 
-A traceability matrix maps requirements → test cases → test results.
+A traceability matrix maps requirements -> test cases -> test results.
 
 | Req ID | Requirement | Test Case ID(s) | Status |
 |---|---|---|---|
-| REQ-AUTH-01 | User can log in with email and password | TC-LOGIN-001, TC-LOGIN-002 | ✅ Pass |
-| REQ-AUTH-02 | Locked user gets "Account locked" message | TC-LOGIN-005 | ✅ Pass |
-| REQ-AUTH-03 | Password reset email sent within 30 seconds | TC-LOGIN-010 | ❌ Fail — timeout > 30s |
+| REQ-AUTH-01 | User can log in with email and password | TC-LOGIN-001, TC-LOGIN-002 | [OK] Pass |
+| REQ-AUTH-02 | Locked user gets "Account locked" message | TC-LOGIN-005 | [OK] Pass |
+| REQ-AUTH-03 | Password reset email sent within 30 seconds | TC-LOGIN-010 | [FAIL] Fail  --  timeout > 30s |
 
 Maintain this matrix in a spreadsheet or test management tool (TestRail, Xray, Zephyr). Update after every test cycle.
 

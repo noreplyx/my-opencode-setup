@@ -1,25 +1,25 @@
 ---
 name: owasp-zap-scan
-description: "Run OWASP ZAP (Zed Attack Proxy) web application security scans — baseline, full active, and API scans — via a Podman container (no local Java/ZAP install needed). This skill can be triggered as a pipeline step when a web application or API target URL is available for DAST testing. Use when the user asks to scan a web application for vulnerabilities, run ZAP, perform DAST scanning, run a baseline spider scan, run a full active scan against a web app, scan an API (OpenAPI/SOAP/GraphQL) for security issues, check for OWASP Top 10 vulnerabilities in a running web app, perform authenticated web app scanning, generate ZAP security reports (HTML/Markdown/JSON/XML), or integrate DAST scanning into a CI/CD pipeline. For filesystem/container/dependency vulnerability scanning (not web apps), use the trivy-scan skill instead. Supports three packaged scan scripts: zap-baseline.py (passive, CI-safe), zap-full-scan.py (active spider + attack), and zap-api-scan.py (OpenAPI/SOAP/GraphQL). Supports HTML, Markdown, XML, and JSON report output. Supports custom config files for fail/warn/ignore rule thresholds, context files for authenticated scanning, and scan hooks for custom behavior."
+description: "Run OWASP ZAP (Zed Attack Proxy) web application security scans -- baseline, full active, and API scans -- via a Podman container (no local Java/ZAP install needed). This skill can be triggered as a pipeline step when a web application or API target URL is available for DAST testing. Use when the user asks to scan a web application for vulnerabilities, run ZAP, perform DAST scanning, run a baseline spider scan, run a full active scan against a web app, scan an API (OpenAPI/SOAP/GraphQL) for security issues, check for OWASP Top 10 vulnerabilities in a running web app, perform authenticated web app scanning, generate ZAP security reports (HTML/Markdown/JSON/XML), or integrate DAST scanning into a CI/CD pipeline. For filesystem/container/dependency vulnerability scanning (not web apps), use the trivy-scan skill instead. Supports three packaged scan scripts: zap-baseline.py (passive, CI-safe), zap-full-scan.py (active spider + attack), and zap-api-scan.py (OpenAPI/SOAP/GraphQL). Supports HTML, Markdown, XML, and JSON report output. Supports custom config files for fail/warn/ignore rule thresholds, context files for authenticated scanning, and scan hooks for custom behavior."
 ---
 
 # OWASP ZAP Scan Skill (Container-Based)
 
 ## Purpose
 
-Run [OWASP ZAP (Zed Attack Proxy)](https://www.zaproxy.org/) — the world's most widely used web application security scanner — to perform DAST (Dynamic Application Security Testing) on web applications and APIs — **all via a Podman container** with zero local Java/ZAP installation needed. Uses the official `ghcr.io/zaproxy/zaproxy:stable` or `docker.io/zaproxy/zap-stable` image.
+Run [OWASP ZAP (Zed Attack Proxy)](https://www.zaproxy.org/) -- the world's most widely used web application security scanner -- to perform DAST (Dynamic Application Security Testing) on web applications and APIs -- **all via a Podman container** with zero local Java/ZAP installation needed. Uses the official `ghcr.io/zaproxy/zaproxy:stable` or `docker.io/zaproxy/zap-stable` image.
 
-This skill is designed to be **automatically loaded by the Orchestrator** during pipelines that involve web application security testing — after the application is built and deployed to a test environment. It can also be triggered manually for ad-hoc web app scanning.
+This skill is designed to be **automatically loaded by the Orchestrator** during pipelines that involve web application security testing -- after the application is built and deployed to a test environment. It can also be triggered manually for ad-hoc web app scanning.
 
 ## Why Container-Based?
 
-- ✅ **No local Java install** — no JDK/JRE, no ZAP installation, no version conflicts
-- ✅ **Isolated** — runs in its own environment, no interference with local tools
-- ✅ **Reproducible** — same ZAP version across all environments (stable/weekly/nightly/bare)
-- ✅ **Auto-updates** — pull the latest image to get new rules & ZAP versions
-- ✅ **Official images** — actively maintained by the ZAP team at Checkmarx
-- ✅ **Packaged scan scripts** — baseline, full, and API scans ready to use
-- ✅ **Podman-native** — works with `--network host` for scanning localhost apps
+- [x] **No local Java install** -- no JDK/JRE, no ZAP installation, no version conflicts
+- [x] **Isolated** -- runs in its own environment, no interference with local tools
+- [x] **Reproducible** -- same ZAP version across all environments (stable/weekly/nightly/bare)
+- [x] **Auto-updates** -- pull the latest image to get new rules & ZAP versions
+- [x] **Official images** -- actively maintained by the ZAP team at Checkmarx
+- [x] **Packaged scan scripts** -- baseline, full, and API scans ready to use
+- [x] **Podman-native** -- works with `--network host` for scanning localhost apps
 
 ## Quick Reference
 
@@ -54,7 +54,7 @@ This skill is designed to be **automatically loaded by the Orchestrator** during
 | **weekly** | Weekly | ~600MB | Early access to new ZAP features |
 | **nightly** | Daily | ~600MB | Bleeding edge, testing new rules |
 
-**Bare image note**: The `bare` image contains only the minimum dependencies to run ZAP — it does NOT include the packaged scan scripts (`zap-baseline.py`, `zap-full-scan.py`, `zap-api-scan.py`). If you need the packaged scans, use `stable`, `weekly`, or `nightly`.
+**Bare image note**: The `bare` image contains only the minimum dependencies to run ZAP -- it does NOT include the packaged scan scripts (`zap-baseline.py`, `zap-full-scan.py`, `zap-api-scan.py`). If you need the packaged scans, use `stable`, `weekly`, or `nightly`.
 
 
 
@@ -62,11 +62,11 @@ This skill is designed to be **automatically loaded by the Orchestrator** during
 
 This skill is for **web application and API DAST scanning** via OWASP ZAP. Do NOT use it when:
 
-- **Scanning filesystems or project directories** for dependency vulnerabilities — use the `trivy-scan` skill instead
-- **Scanning container images** for CVEs — use the `trivy-scan` skill instead
-- **Running SAST on source code** for security bugs — use the `semgrep-scan` skill instead
-- **Scanning git history for leaked secrets** — use the `gitleaks-scan` skill instead
-- **Checking IaC misconfigurations** (Dockerfile, K8s, Terraform) — use the `trivy-scan` skill instead
+- **Scanning filesystems or project directories** for dependency vulnerabilities -- use the `trivy-scan` skill instead
+- **Scanning container images** for CVEs -- use the `trivy-scan` skill instead
+- **Running SAST on source code** for security bugs -- use the `semgrep-scan` skill instead
+- **Scanning git history for leaked secrets** -- use the `gitleaks-scan` skill instead
+- **Checking IaC misconfigurations** (Dockerfile, K8s, Terraform) -- use the `trivy-scan` skill instead
 
 
 ## When to Use This Skill
@@ -90,30 +90,30 @@ This skill is **designed for automatic pipeline integration** when web applicati
 A passive scan that runs the ZAP spider against a target URL (default: 1 minute), then waits for passive scanning to complete. **Does NOT perform any actual attacks**. Ideal for CI/CD and production environments.
 
 **Characteristics:**
-- ✅ Passive only — no attack payloads sent
-- ⏱ Runs in a few minutes
-- ✅ CI/CD safe (can run against production)
-- 🔍 Detects: missing security headers, cookie flags, info disclosure, etc.
+- [x] Passive only -- no attack payloads sent
+- [T] Runs in a few minutes
+- [x] CI/CD safe (can run against production)
+- [S] Detects: missing security headers, cookie flags, info disclosure, etc.
 
 ### 2. Full Scan (`zap-full-scan.py`)
 
 An active scan that runs the ZAP spider + optional AJAX spider, then performs a **full active scan** with attack payloads. **Potentially destructive**.
 
 **Characteristics:**
-- ⚠️ Sends attack payloads (SQLi, XSS, command injection, etc.)
-- ⏱ Can run for hours (no time limit by default)
-- ❌ CI/CD NOT safe for production
-- 🔍 Detects: OWASP Top 10, injection flaws, XSS, CSRF, etc.
+- [!] Sends attack payloads (SQLi, XSS, command injection, etc.)
+- [T] Can run for hours (no time limit by default)
+- [X] CI/CD NOT safe for production
+- [S] Detects: OWASP Top 10, injection flaws, XSS, CSRF, etc.
 
 ### 3. API Scan (`zap-api-scan.py`)
 
 Tuned for scanning APIs defined by OpenAPI, SOAP, or GraphQL. Imports the API definition and runs an Active Scan against discovered endpoints.
 
 **Characteristics:**
-- ✅ No spidering needed — endpoints defined by API spec
-- ⚠️ Active scan tuned for APIs (skips web-specific checks like XSS)
-- 📋 Supports OpenAPI (JSON/YAML), SOAP (WSDL), GraphQL (schema)
-- 🔍 Detects: API-specific vulnerabilities, server error codes, content type issues
+- [x] No spidering needed -- endpoints defined by API spec
+- [!] Active scan tuned for APIs (skips web-specific checks like XSS)
+- [i] Supports OpenAPI (JSON/YAML), SOAP (WSDL), GraphQL (schema)
+- [S] Detects: API-specific vulnerabilities, server error codes, content type issues
 
 ## Quick Start
 
@@ -318,10 +318,10 @@ All three scan scripts use the same exit code convention:
 
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | Success (no FAILs, or all WARN) | ✅ PASS |
-| 1 | At least 1 FAIL (from config) | ❌ FAIL — block pipeline |
-| 2 | At least 1 WARN, no FAILs | ⚠️ WARN — proceed with findings |
-| 3 | Tool error / other failure | ❌ FAIL — investigate |
+| 0 | Success (no FAILs, or all WARN) | [x] PASS |
+| 1 | At least 1 FAIL (from config) | [X] FAIL -- block pipeline |
+| 2 | At least 1 WARN, no FAILs | [!] WARN -- proceed with findings |
+| 3 | Tool error / other failure | [X] FAIL -- investigate |
 
 **Important**: By default, all alerts are reported as WARNings. To make specific alerts fail the pipeline, use `-c config_file` and set rules to FAIL.
 
@@ -401,7 +401,7 @@ When reporting ZAP scan results, structure the output like this:
 - Markdown: `baseline-report.md`
 
 ### Pipeline Verdict
-- ✅ PASS / ❌ FAIL (based on exit code)
+- [x] PASS / [X] FAIL (based on exit code)
 ```
 
 ## Pipeline Integration
@@ -424,21 +424,21 @@ podman run --rm --network host -v "${WORKSPACE_ROOT}:/zap/wrk/:Z" \
 
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | Success | ✅ PASS — proceed |
-| 1 | At least 1 FAIL | ❌ FAIL — block pipeline |
-| 2 | At least 1 WARN | ⚠️ WARN — proceed with findings |
-| 3 | Tool error | ❌ FAIL — investigate |
+| 0 | Success | [x] PASS -- proceed |
+| 1 | At least 1 FAIL | [X] FAIL -- block pipeline |
+| 2 | At least 1 WARN | [!] WARN -- proceed with findings |
+| 3 | Tool error | [X] FAIL -- investigate |
 
 ### Hard Rules for OWASP ZAP
 
-- ✅ Always use `--network host` when scanning localhost applications
-- ✅ Mount the working directory to `/zap/wrk/` for report output and config files
-- ✅ Use `ghcr.io/zaproxy/zaproxy:stable` for production pipelines (monthly updates)
-- ✅ For CI/CD pipelines, prefer **baseline scan** (passive, safe)
-- ✅ Always pull the image first: `podman image exists ghcr.io/zaproxy/zaproxy:stable || podman pull ghcr.io/zaproxy/zaproxy:stable`
-- ✅ NEVER use `zap-full-scan.py` against production targets
-- ✅ For API scanning, ensure the API spec file is accessible (mount local files or use URL)
-- ✅ Report files are written to `/zap/wrk/` inside the container and appear in the mounted host directory
+- [x] Always use `--network host` when scanning localhost applications
+- [x] Mount the working directory to `/zap/wrk/` for report output and config files
+- [x] Use `ghcr.io/zaproxy/zaproxy:stable` for production pipelines (monthly updates)
+- [x] For CI/CD pipelines, prefer **baseline scan** (passive, safe)
+- [x] Always pull the image first: `podman image exists ghcr.io/zaproxy/zaproxy:stable || podman pull ghcr.io/zaproxy/zaproxy:stable`
+- [x] NEVER use `zap-full-scan.py` against production targets
+- [x] For API scanning, ensure the API spec file is accessible (mount local files or use URL)
+- [x] Report files are written to `/zap/wrk/` inside the container and appear in the mounted host directory
 
 ## Examples
 

@@ -1,4 +1,4 @@
-﻿# OpenCode AI Agent System
+# OpenCode AI Agent System
 
 This directory contains the configuration for the OpenCode AI agent system.
 
@@ -17,10 +17,10 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 |---|---|---|
 | **Orchestrator** | `agents/orchestrator.md` | Delegates tasks, coordinates agents, reviews results, reports to user |
 | **Finder** | `agents/subagent/finder.md` | Codebase research, web search, information gathering (read-only) |
-| **Browser Tester** | `agents/subagent/browser-tester.md` | Browser automation with Playwright CLI â€” explore websites, find UI/UX bugs, verify implementations, create test scripts |
-| **Documentor** | `agents/subagent/documentor.md` | Creates documentation â€” README, API docs, inline comments, architecture docs |
+| **Browser Tester** | `agents/subagent/browser-tester.md` | Browser automation with Playwright CLI -- explore websites, find UI/UX bugs, verify implementations, create test scripts |
+| **Documentor** | `agents/subagent/documentor.md` | Creates documentation -- README, API docs, inline comments, architecture docs |
 | **PlanDescriber** | `agents/subagent/plandescriber.md` | Creates detailed implementation roadmaps + `plan-manifest.json` |
-| **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate + Lint Gate. No thinking â€” pure execution. |
+| **Implementor** | `agents/subagent/implementor.md` | Writes code following the plan; runs mandatory Build Gate + Lint Gate. No thinking -- pure execution. |
 | **Fixer** | `agents/subagent/fixer.md` | Debugs and fixes bugs. Diagnoses root causes, applies targeted fixes. Has high reasoning effort. |
 | **QA** | `agents/subagent/qa.md` | Runs Smoke Test, code review, bug discovery, coverage analysis, quality checks |
 | **Verifier** | `agents/subagent/verifier.md` | Compares implementation against plan manifest (structural + behavioral checks) |
@@ -31,8 +31,8 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor (checkpoint-driven: contract validation → implement per-checkpoint → self-verify → adherence gate) → Integrator → Build Gate → Lint Gate → Test Gate → Security Scan → QA → Acceptance Gate → Verifier (fast-pass if adherence ≥ 90%) → Documentor → Orchestrator (report)
-                                                                                         →                                              →
+Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor (checkpoint-driven: contract validation -> implement per-checkpoint -> self-verify -> adherence gate) -> Integrator -> Build Gate -> Lint Gate -> Test Gate -> Security Scan -> QA -> Acceptance Gate -> Verifier (fast-pass if adherence >= 90%) -> Documentor -> Orchestrator (report)
+                                                                                         ->                                              ->
                                                                                      Fixer (feedback loop)                       Debug (after 3 Fixers)
 ``````
 
@@ -43,24 +43,24 @@ Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor (checkpoi
 | **Build Gate** | Implementor | Code compiles without errors | Fix and rebuild before proceeding |
 | **Lint Gate** | Implementor | Code passes linter/style checks (eslint, prettier, tsc --noEmit) | Fix lint errors before proceeding |
 | **Security Scan** | Orchestrator | Semgrep SAST + Gitleaks secrets + Trivy vuln/misconfig + npm audit + anti-patterns | Report to user; may fix, except, or block |
-| **Smoke Test** | QA | App boots/starts without crashing | Critical bug â†’ cycle to Fixer |
-| **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score â‰¥ 80%) | Score < 80% â†’ cycle to Fixer; 3 attempts â†’ PlanDescriber |
-| **Test Gate** | Implementor | Runs project test suite (`npm test`, `vitest run`, etc.) and reports pass/fail | Tests fail → cycle to Fixer |
+| **Smoke Test** | QA | App boots/starts without crashing | Critical bug -> cycle to Fixer |
+| **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score >=80%) | Score < 80% -> cycle to Fixer; 3 attempts -> PlanDescriber |
+| **Test Gate** | Implementor | Runs project test suite (`npm test`, `vitest run`, etc.) and reports pass/fail | Tests fail -> cycle to Fixer |
 
 ### Fixer Agent
 
 The **Fixer** agent is called when QA discovers bugs or Verifier finds deviations. Unlike the Implementor (which is pure plan-following with no reasoning), the Fixer has `reasoningEffort: "high"` and is explicitly allowed to think and debug.
 
-**Workflow**: Receive bug/deviation report â†’ Diagnose root cause â†’ Apply minimal targeted fix â†’ Build + Lint â†’ Self-check â†’ Report
+**Workflow**: Receive bug/deviation report -> Diagnose root cause -> Apply minimal targeted fix -> Build + Lint -> Self-check -> Report
 
 **Escalation**: If the same issue persists after 3 Fixer attempts, the Orchestrator escalates to PlanDescriber for roadmap revision.
 
 ### Skip Shortcuts
 
-- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber â†’ Implementor â†’ Security Scan â†’ QA
+- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber -> Implementor -> Security Scan -> QA
 - **Exploratory/research tasks**: Use only Finder, report findings directly
-- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer â†’ QA â†’ Verifier
-- **Trivial config changes**: Skip all gates â€” just delegate to Implementor
+- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer -> QA -> Verifier
+- **Trivial config changes**: Skip all gates -- just delegate to Implementor
 - **UI/website testing**: Use Browser Tester to explore, find bugs, and verify UI implementations
 - **Documentation updates**: Run Documentor after any pipeline that created/modified code
 
@@ -82,10 +82,10 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 | **Half-Open** | Probation period | One retry allowed to test resolution |
 
 **Escalation limits**:
-- 3 Fixer attempts for same bug â†’ escalate to PlanDescriber
-- 3 Verifier failures â†’ escalate to PlanDescriber
-- 3 Security Scan failures â†’ escalate to user for direction
-- 5 total pipeline retries â†’ pause and report to user
+- 3 Fixer attempts for same bug -> escalate to PlanDescriber
+- 3 Verifier failures -> escalate to PlanDescriber
+- 3 Security Scan failures -> escalate to user for direction
+- 5 total pipeline retries -> pause and report to user
 
 ## Built-in Skills
 
@@ -93,7 +93,7 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 |---|---|---|
 | `orchestration` | Orchestrator | Multi-agent orchestration, task management, pipeline workflows |
 | `plan-brainstorm` | Orchestrator | Collaborative brainstorming with trade-off analysis |
-| `skill-creator` | Orchestrator | Skill lifecycle management â€” create, modify, evaluate AI agent skills |
+| `skill-creator` | Orchestrator | Skill lifecycle management -- create, modify, evaluate AI agent skills |
 | `project-onboarding` | Orchestrator | 5-phase project onboarding: detect, map, document, set up, report |
 | `security-scan` | Orchestrator | Dependency vulnerability scanning, secrets detection, anti-pattern checks |
 | `plan-describe` | PlanDescriber | Detailed implementation roadmap creation |
@@ -108,33 +108,33 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 | `playwright-cli` | Browser Tester, Implementor | Browser automation: navigate, click, fill, snapshot, eval, console, network, etc. |
 | `trivy-scan` | Orchestrator | Vulnerability + IaC misconfiguration scanning via Trivy in Podman. Auto-loaded in Security Scan gate. |
 | gitleaks-scan | Orchestrator | Git history secret scanning |
-| semgrep-scan | Orchestrator (auto-loaded) | SAST static analysis — auto-loaded during Security Scan gate |
+| semgrep-scan | Orchestrator (auto-loaded) | SAST static analysis -- auto-loaded during Security Scan gate |
 | ast-grep | Implementor, Fixer | AST-based pattern matching for code analysis |
 | osv-scanner | Orchestrator | Open Source Vulnerability scanner |
 | pmd-scan | Orchestrator | PMD static analysis scanner |
-| `owasp-zap-scan` | Orchestrator | OWASP ZAP DAST web application scanning â€” baseline, full active, and API scans via Podman (optional post-deployment). |
+| `owasp-zap-scan` | Orchestrator | OWASP ZAP DAST web application scanning -- baseline, full active, and API scans via Podman (optional post-deployment). |
 
 ### Browser Tester Agent
 
 The **Browser Tester** agent uses Playwright CLI to automate real browser interactions:
 
-- **Website Feature Discovery** â€” Open sites, navigate pages, explore UI flows, document features
-- **Bug Discovery & Reporting** â€” Find UI/UX bugs, check console errors, network failures, document with snapshots
-- **Implementation Verification** â€” Confirm UI/API fixes work correctly in the live browser
-- **Test Script Creation** â€” Generate Playwright test scripts from discovered workflows
+- **Website Feature Discovery** -- Open sites, navigate pages, explore UI flows, document features
+- **Bug Discovery & Reporting** -- Find UI/UX bugs, check console errors, network failures, document with snapshots
+- **Implementation Verification** -- Confirm UI/API fixes work correctly in the live browser
+- **Test Script Creation** -- Generate Playwright test scripts from discovered workflows
 
-**Workflow**: Load `playwright-cli` skill â†’ open browser â†’ explore/interact â†’ document findings â†’ close browser â†’ report
+**Workflow**: Load `playwright-cli` skill -> open browser -> explore/interact -> document findings -> close browser -> report
 
 ### Documentor Agent
 
 The **Documentor** agent creates and maintains project documentation:
 
-- **README & Project Documentation** â€” Update README.md with new features, usage instructions, config changes
-- **API Documentation** â€” Document new endpoints with request/response schemas using `api-documentation` skill
-- **Inline Code Documentation** â€” Add JSDoc/TSDoc comments for public APIs and complex logic
-- **Architecture Decision Records** â€” Document key architecture decisions and trade-offs
+- **README & Project Documentation** -- Update README.md with new features, usage instructions, config changes
+- **API Documentation** -- Document new endpoints with request/response schemas using `api-documentation` skill
+- **Inline Code Documentation** -- Add JSDoc/TSDoc comments for public APIs and complex logic
+- **Architecture Decision Records** -- Document key architecture decisions and trade-offs
 
-**Workflow**: Load `api-documentation` skill â†’ Review implementation changes â†’ Write docs â†’ Verify accuracy â†’ Report
+**Workflow**: Load `api-documentation` skill -> Review implementation changes -> Write docs -> Verify accuracy -> Report
 
 **When to use**: After any pipeline that creates or modifies code.
 
@@ -142,9 +142,9 @@ The **Documentor** agent creates and maintains project documentation:
 
 PlanDescriber produces a machine-readable `plan-manifest.json` alongside every roadmap. The manifest contains checkpoints that the Verifier agent uses to programmatically confirm the implementation matches the plan.
 
-- **Location**: `plan-manifests/<feature>/v<version>-manifest.json` (versioned â€” never overwrite)
+- **Location**: `plan-manifests/<feature>/v<version>-manifest.json` (versioned -- never overwrite)
 - **Checkpoint types**: structural (files, exports, types, routes, file deletions) and behavioral (error handling, validation, logging, middleware)
-- **Compliance score**: `(Passed / (Total - Skipped)) Ã— 100`
+- **Compliance score**: `(Passed / (Total - Skipped)) x100`
 - **Schema validation**: Manifests are validated against JSON schema
 - **Deletion verification**: Use `fileNotExists` kind to verify files/directories have been successfully removed
 
@@ -155,7 +155,7 @@ Merge Coordinator responsibilities have been merged into the Integrator agent. T
 ## Integrator
 
 After parallel Implementor dispatch, the **Integrator** agent runs in two phases:
-- **Phase 1 (Read-Only Verification)**: Verifies cross-file consistency — checking imports resolve, type signatures match, interfaces align, and barrel file re-exports are complete. Does not modify any files.
+- **Phase 1 (Read-Only Verification)**: Verifies cross-file consistency -- checking imports resolve, type signatures match, interfaces align, and barrel file re-exports are complete. Does not modify any files.
 - **Phase 2 (Write Wiring)**: Updates barrel files, DI registrations, route wiring, and fixes import paths. The Build Gate then verifies the wiring.
 
 Phase 1 replaces the former Merge Coordinator step. If blocking issues are found in Phase 1, the Integrator reports them to the Orchestrator without proceeding to Phase 2.
@@ -171,9 +171,9 @@ Use the `skill-creator` skill (loaded by the Orchestrator) to create, modify, or
 
 ## Configuration
 
-- `opencode.jsonc` â€” Main platform config (server port, plugins)
-- `.gitignore` â€” Files excluded from version control
-- `package.json` â€” Dependencies (includes `@playwright/cli` for browser automation)
+- `opencode.jsonc` -- Main platform config (server port, plugins)
+- `.gitignore` -- Files excluded from version control
+- `package.json` -- Dependencies (includes `@playwright/cli` for browser automation)
 
 ## Improvements & New Capabilities
 
@@ -206,18 +206,18 @@ This section documents improvements implemented on top of the base system.
 
 | Script | Purpose | Location |
 |--------|---------|----------|
-| **plan-quality-score.ts** | Verifierâ†’PlanDescriber feedback loop â€” computes plan quality from Verifier results, auto-escalates when PlanDescriber drops below 70% | `skills/scripts/orchestration/plan-quality-score.ts` |
-| **security-self-review-gate.ts** | Enforces the security self-review gate for Implementor â€” blocks pipeline if security review fails | `skills/scripts/orchestration/security-self-review-gate.ts` |
-| **monitor-pipeline.ts** | Pipeline health monitoring â€” tracks gates, durations, pass rates, dashboard, stuck pipeline alerts | `skills/scripts/orchestration/monitor-pipeline.ts` |
-| **cost-tracker.ts** | Pipeline cost estimation â€” tracks agent output tokens, estimates API costs, cleanup old records | `skills/scripts/orchestration/cost-tracker.ts` |
-| **dependency-check.ts** | Pre-flight dependency verification â€” checks tool availability, validates script references in SKILL.md | `skills/scripts/orchestration/dependency-check.ts` |
-| **auto-rollback.ts** | Automated rollback on consecutive failures â€” checks out pre-pipeline git state, creates rollback records | `skills/scripts/orchestration/auto-rollback.ts` |
-| `check-plan-contract.ts` | Pre-implementation plan contract validation â€” runs contract rules before coding | `skills/scripts/orchestration/check-plan-contract.ts` |
-| `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint adherence verification (score â‰¥ 90%) | `skills/scripts/orchestration/check-plan-adherence.ts` |
+| **plan-quality-score.ts** | Verifier->PlanDescriber feedback loop -- computes plan quality from Verifier results, auto-escalates when PlanDescriber drops below 70% | `skills/scripts/orchestration/plan-quality-score.ts` |
+| **security-self-review-gate.ts** | Enforces the security self-review gate for Implementor -- blocks pipeline if security review fails | `skills/scripts/orchestration/security-self-review-gate.ts` |
+| **monitor-pipeline.ts** | Pipeline health monitoring -- tracks gates, durations, pass rates, dashboard, stuck pipeline alerts | `skills/scripts/orchestration/monitor-pipeline.ts` |
+| **cost-tracker.ts** | Pipeline cost estimation -- tracks agent output tokens, estimates API costs, cleanup old records | `skills/scripts/orchestration/cost-tracker.ts` |
+| **dependency-check.ts** | Pre-flight dependency verification -- checks tool availability, validates script references in SKILL.md | `skills/scripts/orchestration/dependency-check.ts` |
+| **auto-rollback.ts** | Automated rollback on consecutive failures -- checks out pre-pipeline git state, creates rollback records | `skills/scripts/orchestration/auto-rollback.ts` |
+| `check-plan-contract.ts` | Pre-implementation plan contract validation -- runs contract rules before coding | `skills/scripts/orchestration/check-plan-contract.ts` |
+| `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint adherence verification (score >=90%) | `skills/scripts/orchestration/check-plan-adherence.ts` |
 | `plan-diff-report.ts` | Human-readable diff report between plan manifest and implementation | `skills/scripts/orchestration/plan-diff-report.ts` |
-| **pipeline-visualizer.ts** | Generates Mermaid.js pipeline flowcharts from agent history â€” color-coded by pass/fail/partial | `skills/scripts/orchestration/pipeline-visualizer.ts` |
-| **skill-drift-detector.ts** | Detects skill drift by comparing SHA-256 hashes against `skills-lock.json` â€” alerts on tampered/stale skills | `skills/scripts/orchestration/skill-drift-detector.ts` |
-| **validate-transition.ts** | Pipeline state machine — enforces valid agent step transitions | `skills/scripts/orchestration/validate-transition.ts` |
+| **pipeline-visualizer.ts** | Generates Mermaid.js pipeline flowcharts from agent history -- color-coded by pass/fail/partial | `skills/scripts/orchestration/pipeline-visualizer.ts` |
+| **skill-drift-detector.ts** | Detects skill drift by comparing SHA-256 hashes against `skills-lock.json` -- alerts on tampered/stale skills | `skills/scripts/orchestration/skill-drift-detector.ts` |
+| **validate-transition.ts** | Pipeline state machine -- enforces valid agent step transitions | `skills/scripts/orchestration/validate-transition.ts` |
 | **parallel-dispatch.ts** | Native parallel dispatch with phase grouping and dependency analysis | `skills/scripts/orchestration/parallel-dispatch.ts` |
 | **shared-test-manifest.ts** | QA + Browser Tester coordination via shared manifest | `skills/scripts/orchestration/shared-test-manifest.ts` |
 | **unified-pipeline-error-schema.ts** | Typed PipelineError with 30 error codes | `skills/scripts/orchestration/unified-pipeline-error-schema.ts` |
@@ -229,7 +229,7 @@ This section documents improvements implemented on top of the base system.
 
 | Improvement | Description |
 |-------------|-------------|
-| **Verifierâ†’PlanDescriber feedback** | Plan quality scores auto-escalate to PlanDescriber skill updates when quality < 70% |
+| **Verifier->PlanDescriber feedback** | Plan quality scores auto-escalate to PlanDescriber skill updates when quality < 70% |
 | **Security self-review gate enforcement** | BLOCK files prevent pipeline progression if Implementor's security review fails |
 | **Pipeline monitoring dashboard** | Aggregate view of all pipelines, per-gate pass rates, stuck pipeline alerts |
 | **Cost tracking** | Token and cost estimation per agent per pipeline, cleanup of stale records |
@@ -238,7 +238,7 @@ This section documents improvements implemented on top of the base system.
 | **Pipeline visualization** | Auto-generated Mermaid.js diagrams from agent history |
 | **Skill drift detection** | SHA-256 hash comparison alerts on tampered or stale agent skills |
 | **Trivy + OWASP ZAP pipeline integration** | Trivy auto-loaded as mandatory sub-scan in Security Gate. OWASP ZAP available as optional post-deployment DAST scan. |
-| **Plan Adherence Gate** | Three new scripts (`check-plan-contract.ts`, `check-plan-adherence.ts`, `plan-diff-report.ts`) enforce plan-following: pre-implementation contract validation, checkpoint-by-checkpoint implementation with self-verification, and pre-build adherence score (â‰¥ 90%). |
+| **Plan Adherence Gate** | Three new scripts (`check-plan-contract.ts`, `check-plan-adherence.ts`, `plan-diff-report.ts`) enforce plan-following: pre-implementation contract validation, checkpoint-by-checkpoint implementation with self-verification, and pre-build adherence score (>=90%). |
 
 ### Quick Reference
 
@@ -247,7 +247,7 @@ This section documents improvements implemented on top of the base system.
 ./tests/run-tests.sh                          # Run all tests
 npx ts-node tests/audit-log.test.ts           # Run single test
 
-# Plan Quality (Verifierâ†’PlanDescriber feedback)
+# Plan Quality (Verifier->PlanDescriber feedback)
 npx ts-node skills/scripts/orchestration/plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=85 --plan-omissions=1
 npx ts-node skills/scripts/orchestration/plan-quality-score.ts --query-plan-describer   # Exits 2 if < 70%
 

@@ -1,13 +1,13 @@
 ---
 name: pmd-scan
-description: "Run PMD static code analysis on Java, Apex, JavaScript, Kotlin, Swift, PLSQL, and more languages via a Podman container (no local install needed). Use this skill whenever the user asks to run PMD, check code quality with PMD, find code style issues, detect common programming flaws (unused variables, empty catch blocks, unnecessary object creation), perform static analysis, run CPD (Copy/Paste Detector) for duplicate code detection, generate PMD violation reports, scan code for best-practice violations, or integrate PMD quality gates into a pipeline. Covers the official pmdcode/pmd container image workflow, shell wrapper alias, ruleset selection guidance, multi-language support, report format options (text, XML, HTML, CSV, SARIF, JSON), and CPD copy-paste detection — all through Podman with zero local Java or PMD installation."
+description: "Run PMD static code analysis on Java, Apex, JavaScript, Kotlin, Swift, PLSQL, and more languages via a Podman container (no local install needed). Use this skill whenever the user asks to run PMD, check code quality with PMD, find code style issues, detect common programming flaws (unused variables, empty catch blocks, unnecessary object creation), perform static analysis, run CPD (Copy/Paste Detector) for duplicate code detection, generate PMD violation reports, scan code for best-practice violations, or integrate PMD quality gates into a pipeline. Covers the official pmdcode/pmd container image workflow, shell wrapper alias, ruleset selection guidance, multi-language support, report format options (text, XML, HTML, CSV, SARIF, JSON), and CPD copy-paste detection -- all through Podman with zero local Java or PMD installation."
 ---
 
 # PMD Scan Skill (Container-Based)
 
 ## Purpose
 
-Run [PMD](https://pmd.github.io/) static code analysis on project source code to detect common programming flaws, code style issues, unused variables, empty catch blocks, unnecessary object creation, and more — **all via a Podman container** with zero local installation required. The official `docker.io/pmdcode/pmd` image includes the full PMD CLI plus CPD (Copy/Paste Detector).
+Run [PMD](https://pmd.github.io/) static code analysis on project source code to detect common programming flaws, code style issues, unused variables, empty catch blocks, unnecessary object creation, and more -- **all via a Podman container** with zero local installation required. The official `docker.io/pmdcode/pmd` image includes the full PMD CLI plus CPD (Copy/Paste Detector).
 
 PMD supports **17+ languages**: Java, Apex, JavaScript, TypeScript, JSP, Kotlin, Swift, Scala, PLSQL, HTML, XML, XSL, Velocity, Visualforce, Modelica, Maven POM, WSDL.
 
@@ -23,11 +23,11 @@ PMD supports **17+ languages**: Java, Apex, JavaScript, TypeScript, JSP, Kotlin,
 
 ## Why Container-Based?
 
-- ✅ **No local install** — no Java SDK, no PMD binary, no version conflicts
-- ✅ **Isolated** — runs in its own environment, can't modify project files
-- ✅ **Bundled** — includes all PMD rulesets for all languages
-- ✅ **Reproducible** — same PMD version across all environments
-- ✅ **Auto-updates** — pull the latest image to get new PMD versions & rules
+- [x] **No local install** -- no Java SDK, no PMD binary, no version conflicts
+- [x] **Isolated** -- runs in its own environment, can't modify project files
+- [x] **Bundled** -- includes all PMD rulesets for all languages
+- [x] **Reproducible** -- same PMD version across all environments
+- [x] **Auto-updates** -- pull the latest image to get new PMD versions & rules
 
 ## Quick Start
 
@@ -109,20 +109,20 @@ PMD's CLI command is `check`. Below is a quick-reference table for the most usef
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-d <path>` | **Required.** Source directory or file to scan | — |
-| `-R <rulesets>` | **Required.** Path to ruleset XML file. Can repeat or comma-separate multiple | — |
+| `-d <path>` | **Required.** Source directory or file to scan | -- |
+| `-R <rulesets>` | **Required.** Path to ruleset XML file. Can repeat or comma-separate multiple | -- |
 | `-f <format>` | Report format (text, xml, html, csv, json, sarif) | text |
-| `-r <file>` | Write report to file instead of stdout | — |
-| `--cache <file>` | Cache path for incremental analysis (speeds up repeat scans) | — |
+| `-r <file>` | Write report to file instead of stdout | -- |
+| `--cache <file>` | Cache path for incremental analysis (speeds up repeat scans) | -- |
 | `--use-version <lang-version>` | Set language version (e.g., `java-21`, `java-17`, `java-11`, `java-8`) | latest |
-| `--force-language <lang>` | Force language for all files (e.g., `xml` for non-standard XML files) | — |
-| `--minimum-priority <n>` | Minimum rule priority (1=highest, 5=lowest). Lower priority violations suppressed | — |
-| `--aux-classpath <cp>` | Java classpath for type resolution (colon-separated paths or file: URL) | — |
+| `--force-language <lang>` | Force language for all files (e.g., `xml` for non-standard XML files) | -- |
+| `--minimum-priority <n>` | Minimum rule priority (1=highest, 5=lowest). Lower priority violations suppressed | -- |
+| `--aux-classpath <cp>` | Java classpath for type resolution (colon-separated paths or file: URL) | -- |
 | `--no-fail-on-violation` | Exit with 0 even if violations found | fail (exit 4) |
 | `--no-fail-on-error` | Exit with 0 even if recoverable errors occur | fail (exit 5) |
-| `-v` / `--verbose` | Verbose/debug log output | — |
-| `-b` / `--benchmark` | Output benchmark report to stderr | — |
-| `--help` | Show help | — |
+| `-v` / `--verbose` | Verbose/debug log output | -- |
+| `-b` / `--benchmark` | Output benchmark report to stderr | -- |
+| `--help` | Show help | -- |
 
 ### Exit Codes
 
@@ -135,13 +135,13 @@ PMD's CLI command is `check`. Below is a quick-reference table for the most usef
 
 ## Choosing Rulesets
 
-PMD bundles rulesets for each language under `rulesets/<language>/`. All paths are relative to PMD's classpath — they work out of the box inside the container.
+PMD bundles rulesets for each language under `rulesets/<language>/`. All paths are relative to PMD's classpath -- they work out of the box inside the container.
 
 ### Java Rulesets
 
 | Ruleset | Focus |
 |---------|-------|
-| `rulesets/java/quickstart.xml` | All Java rules (best practices, code style, design, documentation, error prone, multithreading, performance, security) — **start here** |
+| `rulesets/java/quickstart.xml` | All Java rules (best practices, code style, design, documentation, error prone, multithreading, performance, security) -- **start here** |
 | `rulesets/java/bestpractices.xml` | Best practices (e.g., avoid using hard-coded literals, use try-with-resources) |
 | `rulesets/java/codestyle.xml` | Code style (e.g., naming conventions, unnecessary imports, modifier order) |
 | `rulesets/java/design.xml` | Design (e.g., excessive method length, too many fields, tight coupling) |
@@ -186,9 +186,9 @@ If you have a custom `pmd-ruleset.xml` in your project:
 pmd-docker check -d /src -R /src/pmd-ruleset.xml
 ```
 
-Example custom ruleset file (`pmd-ruleset.xml`) — **PMD 7.x compatible**:
+Example custom ruleset file (`pmd-ruleset.xml`) -- **PMD 7.x compatible**:
 
-> **⚠️ PMD 6.x vs 7.x Ruleset Paths:** PMD 7.x changed rule paths from `rulesets/java/errorprone.xml` to `category/java/errorprone.xml`.
+> **[!]? PMD 6.x vs 7.x Ruleset Paths:** PMD 7.x changed rule paths from `rulesets/java/errorprone.xml` to `category/java/errorprone.xml`.
 > If you see errors like `No such ruleset`, update your paths to use `category/<language>/<category>.xml` format.
 > Use `category/java/bestpractices.xml`, `category/java/codestyle.xml`, `category/java/design.xml`, `category/java/documentation.xml`,
 > `category/java/errorprone.xml`, `category/java/multithreading.xml`, `category/java/performance.xml`, `category/java/security.xml`.
@@ -269,7 +269,7 @@ pmd-docker check -d /src -R rulesets/java/quickstart.xml --use-version java-8
 
 ## CPD: Copy/Paste Detector
 
-> **⚠️ PMD 7.x Flag Changes:** The container runs PMD 7.x which uses `--dir <path>` (instead of the legacy `--files`) for specifying source directories,
+> **[!]? PMD 7.x Flag Changes:** The container runs PMD 7.x which uses `--dir <path>` (instead of the legacy `--files`) for specifying source directories,
 > and `--report-file <path>` or `-r <path>` (instead of legacy `--file`) for writing the report. The examples below use the PMD 7.x syntax.
 
 
@@ -302,13 +302,13 @@ pmd-docker cpd --minimum-tokens 50 --language ecmascript --dir /src
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--minimum-tokens <n>` | Minimum token count for a duplicate block | 100 |
-| `--language <lang>` | Language to analyze (java, ecmascript, cpp, cs, go, kotlin, ruby, swift, etc.) | — |
-| `--dir <path>` / `--files <path>` | Directory to scan (can repeat). PMD 7.x uses `--dir`; legacy PMD 6.x used `--files` | — |
+| `--language <lang>` | Language to analyze (java, ecmascript, cpp, cs, go, kotlin, ruby, swift, etc.) | -- |
+| `--dir <path>` / `--files <path>` | Directory to scan (can repeat). PMD 7.x uses `--dir`; legacy PMD 6.x used `--files` | -- |
 | `--encoding <charset>` | File encoding | UTF-8 |
 | `--format <format>` | Output format (text, xml, csv, json, vs) | text |
 | `--report-file <path>` / `-r <path>` | Output report file path (PMD 7.x). Legacy used `--file <path>` | stdout |
-| `--skip-lexical-errors` | Skip files with lexical errors | — |
-| `--no-skip-blocks` | Do not skip duplicate blocks | — |
+| `--skip-lexical-errors` | Skip files with lexical errors | -- |
+| `--no-skip-blocks` | Do not skip duplicate blocks | -- |
 
 ### Languages Supported by CPD
 
@@ -347,7 +347,7 @@ pmd-docker check -d /src -R rulesets/java/quickstart.xml -f xml -r /src/pmd-repo
 
 # Check exit code in script
 if [ $? -eq 4 ]; then
-  echo "❌ PMD violations found — quality gate failed"
+  echo "[X] PMD violations found -- quality gate failed"
   exit 1
 fi
 ```
@@ -356,7 +356,7 @@ fi
 
 ```bash
 pmd-docker check -d /src -R rulesets/java/quickstart.xml --cache /src/.pmd-cache
-# Second run is much faster — only re-analyzes changed files
+# Second run is much faster -- only re-analyzes changed files
 pmd-docker check -d /src -R rulesets/java/quickstart.xml --cache /src/.pmd-cache
 ```
 

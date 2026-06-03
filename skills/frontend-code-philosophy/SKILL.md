@@ -5,7 +5,7 @@ description: Use this skill when planning or implementing frontend code to ensur
 
 # Frontend Code Philosophy
 
-This skill provides frontend-specific guidelines that supplement the universal `code-philosophy` skill. It covers web-standard UI development using vanilla JavaScript, HTML, and CSS — applicable regardless of framework choice.
+This skill provides frontend-specific guidelines that supplement the universal `code-philosophy` skill. It covers web-standard UI development using vanilla JavaScript, HTML, and CSS -- applicable regardless of framework choice.
 
 ## Relationship to code-philosophy
 
@@ -25,14 +25,14 @@ Detailed content is organized into reference files for progressive loading:
 ## Core Principles (Summary)
 
 ### 1. Presentation Layer
-- **Rendering must be PURE** — No business logic in render functions or templates. Extract logic to separate modules, services, or controller layers.
-  - **Why**: Pure rendering is predictable (same input → same output), easier to unit test, avoids side-effect bugs during DOM reconciliation, and keeps the UI layer a thin projection of state.
-- **Skeleton/Shimmer screens** for loading states — never blank or janky spinners.
+- **Rendering must be PURE** -- No business logic in render functions or templates. Extract logic to separate modules, services, or controller layers.
+  - **Why**: Pure rendering is predictable (same input -> same output), easier to unit test, avoids side-effect bugs during DOM reconciliation, and keeps the UI layer a thin projection of state.
+- **Skeleton/Shimmer screens** for loading states -- never blank or janky spinners.
 
 ### 2. Component Design
-- **Container/Presentational** — Separate data-fetching/state orchestration from rendering
-- **Composition over inheritance** — Compose small, focused components together
-- **Single-file component organization** — Colocate template, logic, and styles per component
+- **Container/Presentational** -- Separate data-fetching/state orchestration from rendering
+- **Composition over inheritance** -- Compose small, focused components together
+- **Single-file component organization** -- Colocate template, logic, and styles per component
 
 ### 3. Styling
 - CSS Modules for large apps, Tailwind for rapid prototyping, CSS-in-JS for dynamic themes
@@ -40,17 +40,17 @@ Detailed content is organized into reference files for progressive loading:
 
 ### 4. State Management
 - Start with local/component state, lift only when needed
-- Server state → dedicated data-fetching layer with caching
-- Shared UI state → events, reactive stores, or DI patterns
-- URL state → URL search params and hash as source of truth for filters/sort/pagination
+- Server state -> dedicated data-fetching layer with caching
+- Shared UI state -> events, reactive stores, or DI patterns
+- URL state -> URL search params and hash as source of truth for filters/sort/pagination
 
 ### 5. Forms
-- Prefer controlled inputs (state-driven values) — input values owned by the component
+- Prefer controlled inputs (state-driven values) -- input values owned by the component
 - Validate with schema-based validators (e.g. Zod, Yup, Valibot)
 - Accessible error messages with `role="alert"`
 
 ### 6. Security
-- **NEVER use `innerHTML` / `insertAdjacentHTML` / comparable raw-HTML APIs with unsanitized input** — always sanitize with DOMPurify
+- **NEVER use `innerHTML` / `insertAdjacentHTML` / comparable raw-HTML APIs with unsanitized input** -- always sanitize with DOMPurify
 - Sanitize user input at the boundary
 - Secrets must live on the server (BFF pattern)
 
@@ -66,7 +66,7 @@ Detailed content is organized into reference files for progressive loading:
 
 ### 9. Error Handling
 - Error boundary per major section (cascading catch handlers, not one for the whole app)
-- Graceful degradation: loading → error → empty → success states
+- Graceful degradation: loading -> error -> empty -> success states
 
 ### 10. Accessibility
 > See the dedicated `accessibility` skill for comprehensive guidance.
@@ -85,22 +85,22 @@ Detailed content is organized into reference files for progressive loading:
 
 When applying the Frontend Code Philosophy skill:
 
-1. **Analyze the context** — Identify which area of frontend code is being worked on
-2. **Reference the relevant section** — Each reference file provides concrete patterns and code examples. For accessibility guidance, load and follow the `accessibility` skill alongside this one.
-3. **Evaluate against principles** — Use the checklist below
-4. **Propose improvements** — Provide code diffs following the patterns in this skill
-5. **Verify** — Build, lint, test, and audit for a11y/performance
+1. **Analyze the context** -- Identify which area of frontend code is being worked on
+2. **Reference the relevant section** -- Each reference file provides concrete patterns and code examples. For accessibility guidance, load and follow the `accessibility` skill alongside this one.
+3. **Evaluate against principles** -- Use the checklist below
+4. **Propose improvements** -- Provide code diffs following the patterns in this skill
+5. **Verify** -- Build, lint, test, and audit for a11y/performance
 
 ### Evaluation Checklist
-- ✅ **Rendering purity** — No business logic in render
-- ✅ **Component design** — Correct pattern for the use case
-- ✅ **State management** — Correctly scoped (local vs shared vs server)
-- ✅ **Accessibility** — Semantic HTML, keyboard-nav, ARIA (see `accessibility` skill)
-- ✅ **Performance** — Memoization, code splitting, virtualization
-- ✅ **Security** — Input sanitized, no XSS, no secrets exposed
-- ✅ **Error handling** — Error boundaries, graceful degradation
-- ✅ **Forms** — Validation, accessible error messages
-- ✅ **Tests** — Component + E2E covering critical flows
+- [x] **Rendering purity** -- No business logic in render
+- [x] **Component design** -- Correct pattern for the use case
+- [x] **State management** -- Correctly scoped (local vs shared vs server)
+- [x] **Accessibility** -- Semantic HTML, keyboard-nav, ARIA (see `accessibility` skill)
+- [x] **Performance** -- Memoization, code splitting, virtualization
+- [x] **Security** -- Input sanitized, no XSS, no secrets exposed
+- [x] **Error handling** -- Error boundaries, graceful degradation
+- [x] **Forms** -- Validation, accessible error messages
+- [x] **Tests** -- Component + E2E covering critical flows
 
 ## Tooling
 
@@ -116,5 +116,5 @@ ts-node skills/scripts/frontend-philosophy/check-frontend.ts --dir=./
 ```
 
 > **For detailed patterns and code examples**, see the reference files:
-> - `references/component-patterns.md` — Component design, state management, forms
-> - `references/ux-and-testing.md` — Security, performance, routing, testing, logging
+> - `references/component-patterns.md` -- Component design, state management, forms
+> - `references/ux-and-testing.md` -- Security, performance, routing, testing, logging

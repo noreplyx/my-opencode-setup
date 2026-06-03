@@ -24,11 +24,11 @@ Integrating quality gates into the pipeline ensures consistent quality without r
 
 | Pipeline Stage | Tests Run | Gate? |
 |---|---|---|
-| **pre-commit / pre-push** | Lint, type check, unit tests, smoke tests | Yes — block push if failed |
-| **PR (feature branch)** | All unit + integration tests, SAST, dependency scan, coverage diff | Yes — block merge if failed |
-| **Staging deploy** | E2E tests, performance tests, DAST | Yes — block promotion if failed |
-| **Production deploy** | Smoke tests, canary analysis | Soft gate — alert but allow if canary passes |
-| **Nightly** | Full regression suite, visual regression, long-running perf tests | No blocking — report in morning standup |
+| **pre-commit / pre-push** | Lint, type check, unit tests, smoke tests | Yes  --  block push if failed |
+| **PR (feature branch)** | All unit + integration tests, SAST, dependency scan, coverage diff | Yes  --  block merge if failed |
+| **Staging deploy** | E2E tests, performance tests, DAST | Yes  --  block promotion if failed |
+| **Production deploy** | Smoke tests, canary analysis | Soft gate  --  alert but allow if canary passes |
+| **Nightly** | Full regression suite, visual regression, long-running perf tests | No blocking  --  report in morning standup |
 
 ---
 
@@ -83,7 +83,7 @@ Identify which tests are affected by a change:
 ## Gating Strategy
 
 - **Required checks**: All P0 + P1 tests must pass. Coverage must not decrease.
-- **Soft checks**: P2 tests, performance budgets — warn but do not block.
+- **Soft checks**: P2 tests, performance budgets  --  warn but do not block.
 - **Emergency override**: Engineering lead can bypass the gate with written justification (logged in audit trail).
 
 ---
@@ -119,7 +119,7 @@ test('home page has no accessibility violations', async ({ page }) => {
 - [ ] **Keyboard navigation**: Tab through all interactive elements. Is focus order logical? Is there a visible focus indicator?
 - [ ] **Screen reader**: Narrator (Windows), VoiceOver (macOS/iOS), TalkBack (Android). Listen to the full flow.
 - [ ] **Color contrast**: Check all text/background combos. Minimum ratio 4.5:1 for normal text, 3:1 for large text.
-- [ ] **Zoom**: 200% zoom in browser — no content clipped or overlapping.
+- [ ] **Zoom**: 200% zoom in browser  --  no content clipped or overlapping.
 - [ ] **Reduced motion**: With `prefers-reduced-motion: reduce`, animations should be disabled or replaced.
 - [ ] **Form labels**: Every input has an associated `<label>` or `aria-label`.
 

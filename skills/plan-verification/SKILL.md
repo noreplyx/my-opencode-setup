@@ -9,13 +9,13 @@ description: Use this skill to verify that implemented code aligns with the stru
 
 This skill enables a Verifier agent to systematically check that code produced by an Implementor matches the specification defined in a `plan-manifest.json` file. It supports five verification passes:
 
-1. **Structural Pass** (fast, automated) — Check files exist, exports are present, types match
-2. **Behavioral Pass** (thorough) — Check error handling, input validation, logging patterns, etc.
-3. **Acceptance Criteria Pass** (business scenarios) — Verify end-to-end scenarios work correctly
-4. **Security Test Coverage Cross-Check** (Pass 2.6) — Cross-reference QA's security regression tests against independently detected security patterns
-5. **Checkpoint Suggestion Pass** (corrective) — When behavioral checks fail, suggest missing checkpoints for PlanDescriber
-6. **Plan Drift Detection Pass** (architectural) — Verify overall implementation matches plan's architectural intent
-7. **Quality Drift Detection Pass** (NEW) — Verify code quality meets minimum standards regardless of what the plan specified
+1. **Structural Pass** (fast, automated) -- Check files exist, exports are present, types match
+2. **Behavioral Pass** (thorough) -- Check error handling, input validation, logging patterns, etc.
+3. **Acceptance Criteria Pass** (business scenarios) -- Verify end-to-end scenarios work correctly
+4. **Security Test Coverage Cross-Check** (Pass 2.6) -- Cross-reference QA's security regression tests against independently detected security patterns
+5. **Checkpoint Suggestion Pass** (corrective) -- When behavioral checks fail, suggest missing checkpoints for PlanDescriber
+6. **Plan Drift Detection Pass** (architectural) -- Verify overall implementation matches plan's architectural intent
+7. **Quality Drift Detection Pass** (NEW) -- Verify code quality meets minimum standards regardless of what the plan specified
 
 ---
 
@@ -25,8 +25,8 @@ This skill enables a Verifier agent to systematically check that code produced b
 
 | Kind | What It Checks | How to Verify |
 |---|---|---|
-| `fileExists` | File exists at the specified path | `glob` or `read` the path — if it returns content, pass |
-| `fileNotExists` | File or directory does NOT exist (e.g., after deletion) | `glob` the path — if it returns nothing, pass; if path exists, fail |
+| `fileExists` | File exists at the specified path | `glob` or `read` the path -- if it returns content, pass |
+| `fileNotExists` | File or directory does NOT exist (e.g., after deletion) | `glob` the path -- if it returns nothing, pass; if path exists, fail |
 | `exportExists` | A named export exists in a module | `grep` for `export class <Name>`, `export function <Name>`, `export const <Name>`, `export interface <Name>` in the target file |
 | `classExists` | A class is exported from a module | `grep` for `export class <className>` in the target file |
 | `functionExists` | A function is exported from a module | `grep` for `export function <functionName>` or `export const <functionName>` in the target file |
@@ -38,7 +38,7 @@ This skill enables a Verifier agent to systematically check that code produced b
 
 | Kind | What It Checks | How to Verify |
 |---|---|---|
-| `handlesError` | Method handles a specific error condition | Search for try/catch blocks, `if`-guard-`throw` patterns, error class references, or error-handling middleware. Accept any pattern that interrupts normal flow on error (throw, return error, catch block). The method does NOT need try/catch — a simple `if (condition) throw new Error(...)` is valid error handling. |
+| `handlesError` | Method handles a specific error condition | Search for try/catch blocks, `if`-guard-`throw` patterns, error class references, or error-handling middleware. Accept any pattern that interrupts normal flow on error (throw, return error, catch block). The method does NOT need try/catch -- a simple `if (condition) throw new Error(...)` is valid error handling. |
 | `validatesInput` | Method validates input before processing | Search for input validation logic (e.g., zod schemas, `if`/`else` guards that throw on invalid input, regex tests, validation library calls) **before** the main processing logic. An `if (!x) throw ...` guard at the top of a method counts as input validation. |
 | `logsAtLevel` | Logging at a specific severity level exists | `grep` for `logger.<level>(` or `console.<level>(` in the target file |
 | `hasMiddleware` | A route/endpoint has specified middleware | `grep` for the middleware name in route registrations (e.g., `app.get('/path', middlewareName` or `.use(middlewareName)`) |
@@ -157,9 +157,9 @@ securityTestCoverageGate:
 
 | Coverage | Verdict | Action by Verifier |
 |----------|---------|--------------------|
-| ≥ 80% | ✅ PASS | Include in output, proceed to Pass 3 |
-| 50-79% | ⚠️ WARN | Flag in report as `gatePassed: false`, proceed to Pass 3 |
-| < 50% | ❌ FAIL | Flag in report as `gatePassed: false`. Orchestrator will block pipeline. |
+| >= 80% | [x] PASS | Include in output, proceed to Pass 3 |
+| 50-79% | [!] WARN | Flag in report as `gatePassed: false`, proceed to Pass 3 |
+| < 50% | [X] FAIL | Flag in report as `gatePassed: false`. Orchestrator will block pipeline. |
 
 ### Reconciliation Logic
 
@@ -185,7 +185,7 @@ After behavioral verification, analyze any failed behavioral checkpoints and sug
 
 **Example**:
 - If CP-005 (`handlesError` for `validateEmail`) fails because no duplicate email error handling was found, suggest:
-  `Suggested missing checkpoint: CP-NNN (handlesError) for method validateEmail in file src/services/user-service.ts — Missing error handling for duplicate email`
+  `Suggested missing checkpoint: CP-NNN (handlesError) for method validateEmail in file src/services/user-service.ts -- Missing error handling for duplicate email`
 
 This feedback loop helps PlanDescriber produce better manifests next time.
 
@@ -207,7 +207,7 @@ After all evidence is anchored, run an independent quality scan on every modifie
 
 1. For each file in `changedFiles`, run the 10 Quality Drift checks listed above
 2. Score: percentage of blocking checks passed
-3. If score < 80% → set overall verdict to FAIL with quality drift reason
+3. If score < 80% -> set overall verdict to FAIL with quality drift reason
 4. Include quality drift output in structured output
 
 ---
@@ -217,7 +217,7 @@ After all evidence is anchored, run an independent quality scan on every modifie
 The overall compliance score is calculated as:
 
 ```
-Compliance % = (Total Passed / (Total Checkpoints - Total Skipped)) × 100
+Compliance % = (Total Passed / (Total Checkpoints - Total Skipped)) x 100
 ```
 
 - **Skipped** checkpoints are excluded from the denominator (they indicate blocked checks, not failures)
@@ -227,10 +227,10 @@ Compliance % = (Total Passed / (Total Checkpoints - Total Skipped)) × 100
 
 | Score | Status | Meaning |
 |---|---|---|
-| 100% | ✅ Full Compliance | Everything in the plan is implemented |
-| 80–99% | ⚠️ Partial Compliance | Most things implemented, some missing |
-| 50–79% | ❌ Low Compliance | Significant gaps between plan and implementation |
-| < 50% | 🚫 Critical Non-Compliance | Major deviations from the plan |
+| 100% | [x] Full Compliance | Everything in the plan is implemented |
+| 80-99% | [!] Partial Compliance | Most things implemented, some missing |
+| 50-79% | [X] Low Compliance | Significant gaps between plan and implementation |
+| < 50% | [X] Critical Non-Compliance | Major deviations from the plan |
 
 ### Confidence Level
 
@@ -242,7 +242,7 @@ A `confidence` field accompanies the compliance score to indicate how trustworth
 | 100% pass rate but drift detected | **MEDIUM** |
 | < 100% pass rate (any failures) | **LOW** (explicit deviations) |
 
-The confidence level is reported alongside the compliance score (e.g., "95% — ⚠️ Partial Compliance — Confidence: LOW").
+The confidence level is reported alongside the compliance score (e.g., "95% -- [!] Partial Compliance -- Confidence: LOW").
 
 ---
 
@@ -258,7 +258,7 @@ After verification, output a report in this format. **You MUST include all secti
 **Verification Date**: <YYYY-MM-DD HH:MM:SS>
 
 ### Compliance Score
-**Overall**: <XX%> — <Status Label> — Confidence: <HIGH/MEDIUM/LOW>
+**Overall**: <XX%> -- <Status Label> -- Confidence: <HIGH/MEDIUM/LOW>
 
 ### Results Summary
 | Category | Total | Passed | Failed | Skipped |
@@ -270,9 +270,9 @@ After verification, output a report in this format. **You MUST include all secti
 ### Detailed Checkpoint Results
 | ID | Type | Verdict | Reason |
 |---|---|---|---|
-| CP-001 | structural (fileExists) | ✅ Pass | File exists at path/to/file.ts |
-| CP-002 | structural (exportExists) | ❌ Fail | Export "Foo" not found in target file |
-| CP-003 | behavioral (handlesError) | ⏭️ Skipped | Depends on CP-001 which failed |
+| CP-001 | structural (fileExists) | [x] Pass | File exists at path/to/file.ts |
+| CP-002 | structural (exportExists) | [X] Fail | Export "Foo" not found in target file |
+| CP-003 | behavioral (handlesError) | [>>] Skipped | Depends on CP-001 which failed |
 
 ### Failed Checkpoints
 | ID | Type | Description | Failure Reason |
@@ -290,20 +290,20 @@ After verification, output a report in this format. **You MUST include all secti
 | CP-NNN | behavioral | handlesError for method validateEmail | Missing error handling for duplicate email |
 
 ### Drift Detection
-None detected ✅ / ⚠️ Drift found: [description]
+None detected [x] / [!] Drift found: [description]
 
 ### Quality Drift
-**Score**: N% — ✅ PASS / ❌ FAIL
+**Score**: N% -- [x] PASS / [X] FAIL
 | Check | File | Verdict | Detail |
 |-------|------|---------|--------|
-| Error Handling Completeness | src/services/user.ts | ✅ Pass | try/catch present in all async functions |
-| Direct DB in Controllers | src/controllers/user.ts | ❌ Fail | db.query() called directly in controller |
+| Error Handling Completeness | src/services/user.ts | [x] Pass | try/catch present in all async functions |
+| Direct DB in Controllers | src/controllers/user.ts | [X] Fail | db.query() called directly in controller |
 
 ### Verdict
-**✅ PASS** / **⚠️ PARTIAL** / **❌ FAIL**
+**[x] PASS** / **[!] PARTIAL** / **[X] FAIL**
 ```
 
-**IMPORTANT**: Always include a **Detailed Checkpoint Results** table. This table lists every single checkpoint from the plan manifest by its ID (e.g., CP-001, CP-002, ...) with its verdict (✅ Pass / ❌ Fail / ⏭️ Skipped) and a brief reason. Do NOT report only aggregate counts — you must enumerate each checkpoint individually.
+**IMPORTANT**: Always include a **Detailed Checkpoint Results** table. This table lists every single checkpoint from the plan manifest by its ID (e.g., CP-001, CP-002, ...) with its verdict ([x] Pass / [X] Fail / [>>] Skipped) and a brief reason. Do NOT report only aggregate counts -- you must enumerate each checkpoint individually.
 
 **IMPORTANT**: If Pass 3 or Pass 4 yielded any results, include the **Suggested Checkpoints** and **Drift Detection** sections in the report. If neither pass produced results, these sections can be omitted.
 
@@ -311,11 +311,11 @@ None detected ✅ / ⚠️ Drift found: [description]
 
 ## Hard Rules
 
-- ❌ NEVER modify implementation code
-- ❌ NEVER modify the plan manifest
-- ✅ ONLY read files, search with grep/glob, and produce a verification report
-- ✅ Always process checkpoints in dependency order
-- ✅ Skip behavioral verification if structural verification failed for related files
+- [X] NEVER modify implementation code
+- [X] NEVER modify the plan manifest
+- [x] ONLY read files, search with grep/glob, and produce a verification report
+- [x] Always process checkpoints in dependency order
+- [x] Skip behavioral verification if structural verification failed for related files
 
 ---
 
@@ -358,8 +358,8 @@ For each `acceptance` type checkpoint, run the specified `testCommand` to verify
 
 1. Check that all `dependsOn` checkpoints passed
 2. Execute the `testCommand` from the checkpoint manifest using your bash tool
-3. If exit code is 0 → ✅ Pass
-4. If exit code is non-zero → ❌ Fail, capture stdout+stderr
+3. If exit code is 0 -> [x] Pass
+4. If exit code is non-zero -> [X] Fail, capture stdout+stderr
 5. Record: Pass / Fail / Skipped (if dependency failed)
 
 **Acceptance criteria pass fails if:**
@@ -394,16 +394,16 @@ For each `acceptance` type checkpoint, run the specified `testCommand` to verify
 Acceptance criteria checkpoints are weighted **double** in the compliance score:
 
 ```
-Compliance % = ((Structural Passed × 1) + (Behavioral Passed × 1) + (Acceptance Passed × 2)) / 
-               ((Total Structural × 1) + (Total Behavioral × 1) + (Total Acceptance × 2)) × 100
+Compliance % = ((Structural Passed x 1) + (Behavioral Passed x 1) + (Acceptance Passed x 2)) / 
+               ((Total Structural x 1) + (Total Behavioral x 1) + (Total Acceptance x 2)) x 100
 ```
 
 This weighting reflects that acceptance criteria provide the highest confidence that the implementation works correctly.
 
 **Example:**
 - 5 structural (all pass), 3 behavioral (2 pass, 1 fail), 2 acceptance (1 pass, 1 fail)
-- Score = ((5 × 1) + (2 × 1) + (1 × 2)) / ((5 × 1) + (3 × 1) + (2 × 2)) × 100
-- Score = (5 + 2 + 2) / (5 + 3 + 4) × 100 = 9/12 × 100 = 75%
+- Score = ((5 x 1) + (2 x 1) + (1 x 2)) / ((5 x 1) + (3 x 1) + (2 x 2)) x 100
+- Score = (5 + 2 + 2) / (5 + 3 + 4) x 100 = 9/12 x 100 = 75%
 
 
 ### Acceptance Criteria Verification Kind
@@ -434,12 +434,12 @@ In addition to structural and behavioral kinds, the Verifier now supports `accep
 
 ## Hard Rules Update
 
-- ❌ NEVER skip acceptance criteria verification — these provide the highest-confidence check that code works for the business scenario
-- ✅ ALWAYS start the application if acceptance criteria checkpoints exist in the manifest
-- ✅ ALWAYS stop the application after all acceptance checks complete
-- ✅ ALWAYS report the exit code and captured output for failed acceptance criteria checkpoints
+- [X] NEVER skip acceptance criteria verification -- these provide the highest-confidence check that code works for the business scenario
+- [x] ALWAYS start the application if acceptance criteria checkpoints exist in the manifest
+- [x] ALWAYS stop the application after all acceptance checks complete
+- [x] ALWAYS report the exit code and captured output for failed acceptance criteria checkpoints
 
-## Pass 5: Evidence Anchoring (NEW — Mandatory)
+## Pass 5: Evidence Anchoring (NEW -- Mandatory)
 
 Every checkpoint verdict MUST include anchored evidence showing exactly what was checked and what was found. Without this, the Verifier's claims cannot be independently verified.
 
@@ -459,7 +459,7 @@ evidence:
     source: "src/services/user.ts"
     method: "grep"
     command: "grep -n 'export.*validateEmail' src/services/user.ts"
-    excerpt: "(no match — export not found)"
+    excerpt: "(no match -- export not found)"
     result: "not_found"
   - claim: "CP-008: handlesError for createUser on duplicate email"
     source: "src/services/user.ts"
@@ -493,11 +493,11 @@ For every **Failed** checkpoint, the evidence MUST include the exact output that
 
 ```yaml
 evidence:
-  - claim: "CP-003: exportExists 'validateEmail' — FAILED"
+  - claim: "CP-003: exportExists 'validateEmail' -- FAILED"
     source: "src/services/user.ts"
     method: "grep"
     command: "grep -n 'export.*validateEmail' src/services/user.ts"
-    excerpt: "Command produced no output — export 'validateEmail' not found"
+    excerpt: "Command produced no output -- export 'validateEmail' not found"
     result: "not_found"
 ```
 
@@ -505,7 +505,7 @@ For every **Passed** checkpoint, the evidence MUST include a relevant excerpt:
 
 ```yaml
 evidence:
-  - claim: "CP-001: fileExists for src/services/user.ts — PASSED"
+  - claim: "CP-001: fileExists for src/services/user.ts -- PASSED"
     source: "src/services/user.ts"
     method: "stat"
     command: "ls src/services/user.ts 2>&1"
@@ -515,14 +515,14 @@ evidence:
 
 ### Hard Rules Update
 
-- ❌ NEVER report a checkpoint verdict without accompanying evidence
-- ❌ NEVER report "exists" or "found" as evidence result without also showing the excerpt
-- ✅ ALWAYS include the exact command used to verify each checkpoint
-- ✅ ALWAYS include the raw output excerpt (even for failures — show what was found instead)
-- ✅ ALWAYS include line numbers in the excerpt when using read method
-- ✅ ALWAYS include exit code for acceptance criteria evidence
+- [X] NEVER report a checkpoint verdict without accompanying evidence
+- [X] NEVER report "exists" or "found" as evidence result without also showing the excerpt
+- [x] ALWAYS include the exact command used to verify each checkpoint
+- [x] ALWAYS include the raw output excerpt (even for failures -- show what was found instead)
+- [x] ALWAYS include line numbers in the excerpt when using read method
+- [x] ALWAYS include exit code for acceptance criteria evidence
 
-### Pass 6: Quality Drift Detection (NEW — MANDATORY)
+### Pass 6: Quality Drift Detection (NEW -- MANDATORY)
 
 After all plan checkpoints are verified, perform a quality drift scan on every modified/created file. Quality drift occurs when code passes all plan checkpoints but uses poor practices that the plan didn't explicitly forbid.
 
@@ -535,7 +535,7 @@ The plan tells Implementors WHAT to build. But Implementors can achieve 100% pla
 - No logging (if the plan didn't specify it)
 - Hardcoded config values (if the plan didn't mention env vars)
 
-Pass 6 catches these quality gaps and reports them as **enforceable deviations** — not just warnings.
+Pass 6 catches these quality gaps and reports them as **enforceable deviations** -- not just warnings.
 
 #### Quality Drift Checks
 
@@ -543,28 +543,28 @@ For each modified/created file, run these checks:
 
 | # | Check | How to Verify | Severity | Blocking? |
 |---|-------|--------------|----------|-----------|
-| 1 | **Error Handling Completeness** — Every async function should have try/catch or `.catch()` | `grep` for `async` function, then check if `try {` or `.catch(` exists within 10 lines | Critical | ❌ Yes |
-| 2 | **Input Validation** — Public API functions should validate inputs | `grep` for `export function\|export async function`, check for validation (zod, if-guard) | Critical | ❌ Yes |
-| 3 | **No Direct DB in Controllers** — Controllers/services should not call `db.query()` directly | `grep` for `db\.\|prisma\.\|\.query(\|\.execute(` — should be in repository files | Critical | ❌ Yes |
-| 4 | **Logging Presence** — Service-level functions should log | `grep` for `logger\.\|console\.log\|console.error` | High | ⚠️ No |
-| 5 | **No `any` Types** — TypeScript code should not use `any` | `grep` for `: any\|as any\|<any>` | High | ⚠️ No |
-| 6 | **Config from Env** — Secrets/URLs should come from env vars | `grep` for hardcoded passwords, API keys, DB URLs | Critical | ❌ Yes |
-| 7 | **No Magic Numbers/Strings** — No unexplained constants | Manual scan of string/number literals | Medium | ⚠️ No |
-| 8 | **No TODO/FIXME/HACK** — No unfinished work placeholders | `grep` for `TODO\|FIXME\|HACK\|XXX\|TEMP` | High | ❌ Yes |
-| 9 | **No Eval/InnerHTML/Dangerous APIs** — Security anti-patterns | `grep` for `eval(\|innerHTML\|dangerouslySetInnerHTML` | Critical | ❌ Yes |
-| 10 | **DTOs/Interfaces Defined** — Public data shapes have types | `grep` for `interface\|type\|z.object\|Joi.object` near API boundaries | High | ⚠️ No |
+| 1 | **Error Handling Completeness** -- Every async function should have try/catch or `.catch()` | `grep` for `async` function, then check if `try {` or `.catch(` exists within 10 lines | Critical | [X] Yes |
+| 2 | **Input Validation** -- Public API functions should validate inputs | `grep` for `export function\|export async function`, check for validation (zod, if-guard) | Critical | [X] Yes |
+| 3 | **No Direct DB in Controllers** -- Controllers/services should not call `db.query()` directly | `grep` for `db\.\|prisma\.\|\.query(\|\.execute(` -- should be in repository files | Critical | [X] Yes |
+| 4 | **Logging Presence** -- Service-level functions should log | `grep` for `logger\.\|console\.log\|console.error` | High | [!] No |
+| 5 | **No `any` Types** -- TypeScript code should not use `any` | `grep` for `: any\|as any\|<any>` | High | [!] No |
+| 6 | **Config from Env** -- Secrets/URLs should come from env vars | `grep` for hardcoded passwords, API keys, DB URLs | Critical | [X] Yes |
+| 7 | **No Magic Numbers/Strings** -- No unexplained constants | Manual scan of string/number literals | Medium | [!] No |
+| 8 | **No TODO/FIXME/HACK** -- No unfinished work placeholders | `grep` for `TODO\|FIXME\|HACK\|XXX\|TEMP` | High | [X] Yes |
+| 9 | **No Eval/InnerHTML/Dangerous APIs** -- Security anti-patterns | `grep` for `eval(\|innerHTML\|dangerouslySetInnerHTML` | Critical | [X] Yes |
+| 10 | **DTOs/Interfaces Defined** -- Public data shapes have types | `grep` for `interface\|type\|z.object\|Joi.object` near API boundaries | High | [!] No |
 
 #### Quality Drift Scoring
 
 ```
-Quality Drift Score = (BlockingPassed / BlockingTotal) × 100
+Quality Drift Score = (BlockingPassed / BlockingTotal) x 100
 ```
 
 | Score | Verdict | Action |
 |-------|---------|--------|
-| 100% | ✅ No quality drift | Proceed |
-| 50-99% | ⚠️ Quality drift detected | Blocking items MUST be fixed. Non-blocking items reported as warnings. Pass score < 80% → cycle to Fixer |
-| < 50% | ❌ Critical quality drift | Block pipeline. Cycle to Fixer for quality remediation |
+| 100% | [x] No quality drift | Proceed |
+| 50-99% | [!] Quality drift detected | Blocking items MUST be fixed. Non-blocking items reported as warnings. Pass score < 80% -> cycle to Fixer |
+| < 50% | [X] Critical quality drift | Block pipeline. Cycle to Fixer for quality remediation |
 
 #### Quality Drift Output
 
@@ -587,10 +587,10 @@ qualityDrift:
 
 #### Integration with Overall Verdict
 
-If Quality Drift score < 80% → the overall Verifier verdict is **FAIL** even if plan checkpoint compliance is 100%. The Verifier MUST report:
+If Quality Drift score < 80% -> the overall Verifier verdict is **FAIL** even if plan checkpoint compliance is 100%. The Verifier MUST report:
 
 ```
-Overall: Plan Compliance 100% | Quality Drift 66% → ❌ FAIL (quality drift below threshold)
+Overall: Plan Compliance 100% | Quality Drift 66% -> [X] FAIL (quality drift below threshold)
 ```
 
 This ensures that a plan-compliant but poorly written implementation is caught before reaching the Documentor.
@@ -608,11 +608,11 @@ Add to the Verifier's role-specific output fields table in the agent config:
 
 ### Hard Rules Update (Security Test Coverage)
 
-- ✅ ALWAYS run Pass 2.6 (Security Test Coverage Cross-Check) after Pass 2.5
-- ✅ ALWAYS load `security-workflow` skill for Section 2 (Security Checkpoint Auto-Detection)
-- ✅ ALWAYS report `securityTestCoverageGate` in structured output
-- ❌ NEVER skip the security test coverage cross-check — this gate prevents unchecked security patterns from reaching production
-- ❌ NEVER accept QA's test count as the sole truth — independently verify by running your own pattern detection
+- [x] ALWAYS run Pass 2.6 (Security Test Coverage Cross-Check) after Pass 2.5
+- [x] ALWAYS load `security-workflow` skill for Section 2 (Security Checkpoint Auto-Detection)
+- [x] ALWAYS report `securityTestCoverageGate` in structured output
+- [X] NEVER skip the security test coverage cross-check -- this gate prevents unchecked security patterns from reaching production
+- [X] NEVER accept QA's test count as the sole truth -- independently verify by running your own pattern detection
 
 
 ### Output Schema Update
@@ -629,22 +629,22 @@ agentOutputs:
     resultSummary: "Brief summary"
     buildPassed: null
     lintPassed: null
-    evidence:                    # NEW — one entry per checkpoint
-      - claim: "CP-001: fileExists — ✅ Pass"
+    evidence:                    # NEW -- one entry per checkpoint
+      - claim: "CP-001: fileExists -- [x] Pass"
         source: "src/services/user.ts"
         method: "stat"
         command: "ls src/services/user.ts 2>&1"
         excerpt: "src/services/user.ts"
         result: "exists"
-      - claim: "CP-003: exportExists validateEmail — ❌ Fail"
+      - claim: "CP-003: exportExists validateEmail -- [X] Fail"
         source: "src/services/user.ts"
         method: "grep"
         command: "grep -n 'export.*validateEmail' src/services/user.ts"
-        excerpt: "(no output — not found)"
+        excerpt: "(no output -- not found)"
         result: "not_found"
     suggestedCheckpoints: [...]
     driftDetection: {...}
-evidence:                         # NEW — top-level cross-cutting evidence
+evidence:                         # NEW -- top-level cross-cutting evidence
   - claim: "Structural pass: 5/5 passed"
     source: "aggregate"
     method: "analysis"

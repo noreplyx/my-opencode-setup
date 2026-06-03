@@ -20,16 +20,16 @@ Detailed content is organized into reference files for progressive loading:
 ## Core Principles (Summary)
 
 ### 1. Microservice Readiness
-- **Independent deployability** — Feature flags over coordinated deploys
-- **Async communication** — Events/message queues over synchronous HTTP for cross-service workflows
-- **API Gateway** — Single entry point for auth, rate limiting, routing
-- **Health checks** — Every service exposes `/health` and `/health/ready`
+- **Independent deployability** -- Feature flags over coordinated deploys
+- **Async communication** -- Events/message queues over synchronous HTTP for cross-service workflows
+- **API Gateway** -- Single entry point for auth, rate limiting, routing
+- **Health checks** -- Every service exposes `/health` and `/health/ready`
 
 ### 2. Horizontal Scaling
-- **Statelessness** — Session state in external store (e.g. Redis), not process memory
-- **Shared-nothing** — No local mutexes, no in-memory caches assuming single process
-- **Idempotent handlers** — Same input always produces same result
-- **Graceful shutdown** — SIGTERM drains connections before exit
+- **Statelessness** -- Session state in external store (e.g. Redis), not process memory
+- **Shared-nothing** -- No local mutexes, no in-memory caches assuming single process
+- **Idempotent handlers** -- Same input always produces same result
+- **Graceful shutdown** -- SIGTERM drains connections before exit
 
 ### 3. API Design
 - RESTful conventions (plural nouns, kebab-case, standard HTTP methods)
@@ -38,7 +38,7 @@ Detailed content is organized into reference files for progressive loading:
 - Idempotency-Key header for mutating endpoints
 
 ### 4. Caching
-- Multi-layer: L1 (memory) → L2 (distributed cache) → L3 (database)
+- Multi-layer: L1 (memory) -> L2 (distributed cache) -> L3 (database)
 - Write-through or event-driven cache invalidation
 - Probabilistic early expiration to prevent thundering herds
 
@@ -46,7 +46,7 @@ Detailed content is organized into reference files for progressive loading:
 - Repository pattern with domain/infrastructure separation
 - Versioned, reversible migrations (up/down always)
 - Eager loading to prevent N+1 queries
-- Short transactions — never hold locks across external calls
+- Short transactions -- never hold locks across external calls
 
 ### 6. Error Handling
 - Custom error classes with status codes and machine-readable `code`
@@ -61,7 +61,7 @@ Detailed content is organized into reference files for progressive loading:
 - Secrets in environment variables or secret manager, never in code
 
 ### 8. Observability
-- Structured logging — never raw console.log
+- Structured logging -- never raw console.log
 - Readiness + liveness health check endpoints
 - Metrics collection (e.g. Prometheus histograms, gauges)
 
@@ -72,12 +72,12 @@ When asked to implement or review backend code:
 1. **Load the general `code-philosophy` skill** first for foundational clean code, SOLID, and architecture guidance
 2. **Load this `backend-code-philosophy` skill** for backend-specific concerns
 3. **Identify the concern type** from the task:
-   - New API endpoint → API Design + Security + Observability
-   - New service/module → Microservice Readiness + Scaling + Database
-   - Performance optimization → Caching + Query optimization
-   - Resilience improvement → Error Handling & Resilience
-   - Adding tests → Testing Strategy
-   - Upgrading/versioning API → API Versioning
+   - New API endpoint -> API Design + Security + Observability
+   - New service/module -> Microservice Readiness + Scaling + Database
+   - Performance optimization -> Caching + Query optimization
+   - Resilience improvement -> Error Handling & Resilience
+   - Adding tests -> Testing Strategy
+   - Upgrading/versioning API -> API Versioning
 4. **Reference the relevant reference file** for detailed patterns and code examples
 5. **Verify** the implementation follows both general and backend-specific principles
 
@@ -95,6 +95,6 @@ ts-node skills/scripts/backend-philosophy/check-backend.ts --dir=./
 ```
 
 > **For detailed patterns and code examples**, see the reference files:
-> - `references/microservice-patterns.md` — Full microservice, scaling, and API design content
-> - `references/data-and-resilience.md` — Caching, database, testing, and resilience patterns
-> - `references/security-and-observability.md` — Security, observability, and API versioning
+> - `references/microservice-patterns.md` -- Full microservice, scaling, and API design content
+> - `references/data-and-resilience.md` -- Caching, database, testing, and resilience patterns
+> - `references/security-and-observability.md` -- Security, observability, and API versioning

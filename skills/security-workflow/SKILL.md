@@ -5,7 +5,7 @@ description: Shared security workflow for all subagents. Provides security self-
 
 # Security Workflow Skill
 
-A shared security knowledge base that consolidates patterns, anti-patterns, scanning procedures, and severity classification used across implementor, fixer, QA, and verifier agents. This is the single source of truth for security concerns — all subagents MUST load this skill when performing security-sensitive work.
+A shared security knowledge base that consolidates patterns, anti-patterns, scanning procedures, and severity classification used across implementor, fixer, QA, and verifier agents. This is the single source of truth for security concerns -- all subagents MUST load this skill when performing security-sensitive work.
 
 ## 1. Security Self-Review Checklist
 
@@ -17,21 +17,21 @@ After writing or modifying code, run this mandatory 15-item self-review against 
 
 ### The Checklist
 
-- [ ] **Parameterized Queries** — Are all database queries parameterized (no string concatenation in SQL/NoSQL queries)?
-- [ ] **Input Validation** — Is all user input validated against a schema (Zod, Joi, class-validator, or equivalent)?
-- [ ] **Secrets Management** — Are secrets (API keys, DB passwords, JWT secrets) accessed ONLY via environment variables (`process.env.*`)?
-- [ ] **Path Traversal** — Are file operations using path traversal protections (`path.resolve` + prefix check)?
-- [ ] **Authentication** — Is authentication enforced on all protected routes?
-- [ ] **Authorization** — Is authorization checked on every resource access (not just auth — verify ownership)?
-- [ ] **Error Sanitization** — Are error messages sanitized (no stack traces, no internal details in production responses)?
-- [ ] **Security Headers** — Are all HTTP responses setting security headers where applicable (CSP, HSTS, X-Frame-Options)?
-- [ ] **Rate Limiting** — Is there a rate limiting or input size limit on user-submitted data?
-- [ ] **No Eval** — Is `eval()` avoided? If used, is it absolutely necessary and sanitized?
-- [ ] **IDOR Prevention** — Is there any direct object reference (IDOR) where a user could access another user's data by changing an ID?
-- [ ] **Third-Party URLs** — Are all third-party URLs/fetches using an allowlist or validated against expected domains?
-- [ ] **SSRF Protection** — Are dynamic URLs constructed from user input protected against Server-Side Request Forgery (SSRF)?
-- [ ] **Prototype Pollution** — Is bracket notation assignment `obj[variable]` validated to prevent prototype pollution (e.g., `__proto__`, `constructor` key blocking)?
-- [ ] **File Upload Validation** — Are file uploads validated for type (MIME), size, and content (magic bytes)?
+- [ ] **Parameterized Queries** -- Are all database queries parameterized (no string concatenation in SQL/NoSQL queries)?
+- [ ] **Input Validation** -- Is all user input validated against a schema (Zod, Joi, class-validator, or equivalent)?
+- [ ] **Secrets Management** -- Are secrets (API keys, DB passwords, JWT secrets) accessed ONLY via environment variables (`process.env.*`)?
+- [ ] **Path Traversal** -- Are file operations using path traversal protections (`path.resolve` + prefix check)?
+- [ ] **Authentication** -- Is authentication enforced on all protected routes?
+- [ ] **Authorization** -- Is authorization checked on every resource access (not just auth -- verify ownership)?
+- [ ] **Error Sanitization** -- Are error messages sanitized (no stack traces, no internal details in production responses)?
+- [ ] **Security Headers** -- Are all HTTP responses setting security headers where applicable (CSP, HSTS, X-Frame-Options)?
+- [ ] **Rate Limiting** -- Is there a rate limiting or input size limit on user-submitted data?
+- [ ] **No Eval** -- Is `eval()` avoided? If used, is it absolutely necessary and sanitized?
+- [ ] **IDOR Prevention** -- Is there any direct object reference (IDOR) where a user could access another user's data by changing an ID?
+- [ ] **Third-Party URLs** -- Are all third-party URLs/fetches using an allowlist or validated against expected domains?
+- [ ] **SSRF Protection** -- Are dynamic URLs constructed from user input protected against Server-Side Request Forgery (SSRF)?
+- [ ] **Prototype Pollution** -- Is bracket notation assignment `obj[variable]` validated to prevent prototype pollution (e.g., `__proto__`, `constructor` key blocking)?
+- [ ] **File Upload Validation** -- Are file uploads validated for type (MIME), size, and content (magic bytes)?
 
 ### Scoring
 
@@ -121,19 +121,19 @@ securityTestCoverage:
 
 | Scenario | Coverage | Notes |
 |----------|----------|-------|
-| All patterns tested | 100% | ✅ Full coverage |
-| Some patterns skipped (valid reason) | 80-99% | ✅ Pass gate with note |
-| Some patterns skipped (no valid reason) | < 80% | ❌ Fail gate — block pipeline |
-| No patterns detected | N/A | ⏭️ Gate skipped (not applicable) |
-| No tests generated at all | 0% | ❌ Fail gate — block pipeline |
+| All patterns tested | 100% | [x] Full coverage |
+| Some patterns skipped (valid reason) | 80-99% | [x] Pass gate with note |
+| Some patterns skipped (no valid reason) | < 80% | [X] Fail gate -- block pipeline |
+| No patterns detected | N/A | | Gate skipped (not applicable) |
+| No tests generated at all | 0% | [X] Fail gate -- block pipeline |
 
 #### Valid Skip Reasons
 
 When a pattern cannot be tested, it MUST have a documented valid reason:
-- `not_applicable` — Pattern not relevant to this code change (e.g., Zip Slip in a JSON API)
-- `needs_mock_infrastructure` — Requires mocking that doesn't exist
-- `already_covered_by_existing_test` — Existing test already covers this pattern
-- `blocked_by_dependency` — Can't test without a dependency that isn't installed
+- `not_applicable` -- Pattern not relevant to this code change (e.g., Zip Slip in a JSON API)
+- `needs_mock_infrastructure` -- Requires mocking that doesn't exist
+- `already_covered_by_existing_test` -- Existing test already covers this pattern
+- `blocked_by_dependency` -- Can't test without a dependency that isn't installed
 
 Invalid reasons (these fail the gate):
 - `ran_out_of_time`
@@ -155,12 +155,12 @@ When a vulnerability is found, classify it by severity and respond according to 
 
 ```
 Is there direct data access or code execution?
-  ├─ Yes → Can it be triggered remotely without auth?
-  │   ├─ Yes → CRITICAL
-  │   └─ No  → HIGH
-  └─ No  → Can it lead to data exposure indirectly?
-      ├─ Yes → MEDIUM
-      └─ No  → LOW
+  +- Yes -> Can it be triggered remotely without auth?
+  |   +- Yes -> CRITICAL
+  |   +- No  -> HIGH
+  +- No  -> Can it lead to data exposure indirectly?
+      +- Yes -> MEDIUM
+      +- No  -> LOW
 ```
 
 ## 6. Common Security Anti-Patterns with Fixes
@@ -180,14 +180,14 @@ Is there direct data access or code execution?
 ### Quick Reference: Safe vs Unsafe Code
 
 ```typescript
-// ❌ UNSAFE
+// [X] UNSAFE
 const query = `SELECT * FROM users WHERE id = ${req.params.id}`;
 const output = `<div>${userInput}</div>`;
 exec(`rm -rf ${userPath}`);
 const data = JSON.parse(userInput);
 const resolved = path.resolve(userInput);
 
-// ✅ SAFE
+// [x] SAFE
 const query = 'SELECT * FROM users WHERE id = $1';
 const output = `<div>${escapeHtml(userInput)}</div>`;
 spawn('rm', ['-rf', sanitizedPath]);
@@ -256,29 +256,29 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 | Agent | When to Load This Skill | What to Use |
 |-------|------------------------|-------------|
 | Implementor | After writing code, before build | Section 1 (Self-Review Checklist) |
-| Fixer | When fixing security-related bugs | Section 1 (Self-Review — re-run after fix), Section 5 (Severity), Section 6 (Anti-Pattern Fixes) |
-| Verifier | Pass 2b — security checkpoint detection and security test coverage gate | Section 2 (Auto-Detection Table), Section 3 (Test Generation Table — for coverage reconciliation) |
+| Fixer | When fixing security-related bugs | Section 1 (Self-Review -- re-run after fix), Section 5 (Severity), Section 6 (Anti-Pattern Fixes) |
+| Verifier | Pass 2b -- security checkpoint detection and security test coverage gate | Section 2 (Auto-Detection Table), Section 3 (Test Generation Table -- for coverage reconciliation) |
 | QA | Security regression test generation | Section 3 (Test Generation Table + Coverage Gate output format) |
 | Security Scanner | Running parallel security scans (npm audit, semgrep, secrets) | Section 4 (Parallel Scan Protocol), Section 7 (Report Format) |
 | Orchestrator | Pipeline decisions on security findings, security test coverage gate enforcement | Section 5 (Severity Classification), Section 3 (Coverage Gate rules) |
 
 ## Hard Rules
 
-- ✅ Section 1 (Self-Review Checklist) MUST be run by Implementor agents after every code modification
-- ✅ Section 1 (Self-Review Checklist) MUST be re-run by Fixer agents after every security-related fix
-- ✅ Section 2 (Auto-Detection) MUST be used by Verifier during Pass 2b
-- ✅ Section 3 (Test Generation) MUST be used by QA when creating security regression tests
-- ✅ Section 3 (Security Test Coverage Gate) MUST be reported by QA in every pipeline that touches security-sensitive code
-- ✅ Section 3 (Security Test Coverage Gate) MUST be verified by Verifier during its Pass 2b check
-- ✅ Section 4 (Parallel Scan) is the PREFERRED method for running security scans
-- ✅ Section 5 (Severity Classification) MUST be used to determine pipeline blocking decisions
-- ❌ This skill MUST NOT be treated as a replacement for the `security-scan` or `semgrep-scan` skills — it complements them (security-scan/semgrep-scan handle tool execution, this skill handles knowledge and workflows)
+- [x] Section 1 (Self-Review Checklist) MUST be run by Implementor agents after every code modification
+- [x] Section 1 (Self-Review Checklist) MUST be re-run by Fixer agents after every security-related fix
+- [x] Section 2 (Auto-Detection) MUST be used by Verifier during Pass 2b
+- [x] Section 3 (Test Generation) MUST be used by QA when creating security regression tests
+- [x] Section 3 (Security Test Coverage Gate) MUST be reported by QA in every pipeline that touches security-sensitive code
+- [x] Section 3 (Security Test Coverage Gate) MUST be verified by Verifier during its Pass 2b check
+- [x] Section 4 (Parallel Scan) is the PREFERRED method for running security scans
+- [x] Section 5 (Severity Classification) MUST be used to determine pipeline blocking decisions
+- [X] This skill MUST NOT be treated as a replacement for the `security-scan` or `semgrep-scan` skills -- it complements them (security-scan/semgrep-scan handle tool execution, this skill handles knowledge and workflows)
 
 ## Related Skills
 
 | Skill | Relationship |
 |-------|-------------|
-| `security-scan` / `semgrep-scan` | Tool execution (dependency scan, secrets scan, SAST/semgrep, supply chain) — this skill provides the knowledge layer |
-| `code-philosophy` | General coding standards — this skill provides the security-specific subset |
-| `backend-code-philosophy` | Backend-specific coding philosophy — security is part of that |
-| `shared-agent-workflow` | Startup protocol and output contract — this skill is loaded AFTER shared-agent-workflow |
+| `security-scan` / `semgrep-scan` | Tool execution (dependency scan, secrets scan, SAST/semgrep, supply chain) -- this skill provides the knowledge layer |
+| `code-philosophy` | General coding standards -- this skill provides the security-specific subset |
+| `backend-code-philosophy` | Backend-specific coding philosophy -- security is part of that |
+| `shared-agent-workflow` | Startup protocol and output contract -- this skill is loaded AFTER shared-agent-workflow |

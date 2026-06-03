@@ -32,7 +32,7 @@ This ensures:
 - Rollback is possible if QA finds irreparable issues
 - The git log shows a clear pipeline timeline (`git log --grep="pipeline-checkpoint"`)
 
-If the commit fails (nothing to stage), log and proceed — no checkpoint needed.
+If the commit fails (nothing to stage), log and proceed -- no checkpoint needed.
 
 ### Step 0: Load Shared Workflow
 
@@ -81,8 +81,8 @@ Determine the necessary testing types (Functional, Integration, Security, Perfor
 
 | Priority | Test Type | When to Apply |
 |----------|-----------|---------------|
-| P0 | Smoke test | Always — must pass before any other testing |
-| P1 | Functional tests | Always — verify feature correctness |
+| P0 | Smoke test | Always -- must pass before any other testing |
+| P1 | Functional tests | Always -- verify feature correctness |
 | P1 | Security regression | Changes touching auth, input, data access |
 | P2 | Integration tests | Cross-module changes |
 | P2 | Edge case tests | Public API changes, new functions |
@@ -107,7 +107,7 @@ Inspect the code for obvious quality issues, security flaws, and adherence to th
 
 ### Step 4: Smoke Test
 
-Run a quick "does the app start?" smoke test. The build gate and security scan have already passed — this confirms the app is runnable.
+Run a quick "does the app start?" smoke test. The build gate and security scan have already passed -- this confirms the app is runnable.
 
 Choose the most appropriate approach for the project (see Smoke Test Guidelines table below).
 
@@ -133,7 +133,7 @@ Before running any test suite:
    ```
    Before running tests, check if `.opencode/test-manifest.yaml` exists.
    If it does, read it to understand what the Browser Tester is testing.
-   Use it to coordinate parallel test execution — avoid duplicating test coverage.
+   Use it to coordinate parallel test execution -- avoid duplicating test coverage.
    ```
 3. **QA + Browser Tester hand-off protocol** (P3 coordination):
    ```
@@ -178,19 +178,19 @@ After coverage analysis, automatically generate security regression tests for th
 
 | If file contains... | Generate security test... |
 |---------------------|--------------------------|
-| Database queries (`db.query`, `db.execute`, `.find(`, `.raw(`) | SQL/NoSQL injection test — try injection payloads on all endpoints that use this file |
-| Route handlers (`@Post`, `app.post`, `router.post`, `@Get`, `app.get`) | Auth bypass test — try accessing protected routes without a token |
-| File I/O (`readFileSync`, `writeFileSync`, `createReadStream`) | Path traversal test — try path traversal payloads in file-related parameters |
-| User input processing (`req.body`, `req.query`, `req.params`) | XSS test — try XSS payloads on text input fields |
-| `res.redirect` or `response.redirect` | Open redirect test — try external URL redirects |
-| JWT or auth logic | Token tampering test — try modified JWTs |
-| ID-based resource access (`/api/:id`, `/api/users/:userId`) | IDOR test — try accessing another user's resource |
-| File upload handling | Upload validation test — try uploading malicious file types |
-| Rate limiting (or missing rate limiting) | Rate limit test — verify 429 after N rapid requests |
-| `fetch()` or `http.request()` to external URLs | **SSRF test** — try internal hostnames (127.0.0.1, 169.254.169.254, metadata endpoints) and verify they are blocked |
-| Object merge/spread (`Object.assign`, `{...obj}`, `_.merge`, `_.extend`) | **Prototype pollution test** — try `__proto__`, `constructor.prototype` payloads and verify object integrity |
-| MongoDB query operators (`$where`, `$gt`, `$ne`, `$regex` in query objects) | **NoSQL injection test** — try `$gt: ""`, `$ne: null`, `$where: "1"` payloads on MongoDB-backed endpoints |
-| Unsanitized user input in `eval()`, `setTimeout()`, `setInterval()` string args | **Code injection test** — try payloads that execute arbitrary code |
+| Database queries (`db.query`, `db.execute`, `.find(`, `.raw(`) | SQL/NoSQL injection test -- try injection payloads on all endpoints that use this file |
+| Route handlers (`@Post`, `app.post`, `router.post`, `@Get`, `app.get`) | Auth bypass test -- try accessing protected routes without a token |
+| File I/O (`readFileSync`, `writeFileSync`, `createReadStream`) | Path traversal test -- try path traversal payloads in file-related parameters |
+| User input processing (`req.body`, `req.query`, `req.params`) | XSS test -- try XSS payloads on text input fields |
+| `res.redirect` or `response.redirect` | Open redirect test -- try external URL redirects |
+| JWT or auth logic | Token tampering test -- try modified JWTs |
+| ID-based resource access (`/api/:id`, `/api/users/:userId`) | IDOR test -- try accessing another user's resource |
+| File upload handling | Upload validation test -- try uploading malicious file types |
+| Rate limiting (or missing rate limiting) | Rate limit test -- verify 429 after N rapid requests |
+| `fetch()` or `http.request()` to external URLs | **SSRF test** -- try internal hostnames (127.0.0.1, 169.254.169.254, metadata endpoints) and verify they are blocked |
+| Object merge/spread (`Object.assign`, `{...obj}`, `_.merge`, `_.extend`) | **Prototype pollution test** -- try `__proto__`, `constructor.prototype` payloads and verify object integrity |
+| MongoDB query operators (`$where`, `$gt`, `$ne`, `$regex` in query objects) | **NoSQL injection test** -- try `$gt: ""`, `$ne: null`, `$where: "1"` payloads on MongoDB-backed endpoints |
+| Unsanitized user input in `eval()`, `setTimeout()`, `setInterval()` string args | **Code injection test** -- try payloads that execute arbitrary code |
 
 **Test file naming convention:**
 - `tests/security/<feature>-sqli.test.ts`
@@ -266,7 +266,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `securityTestCoverage.patternsDetected` | Number of security patterns found in modified code |
 | `securityTestCoverage.testsGenerated` | Number of security tests actually created |
 | `securityTestCoverage.coverage` | Coverage percentage (testsGenerated / patternsDetected * 100) |
-| `securityTestCoverage.gatePassed` | Whether coverage meets the ≥ 80% threshold |
+| `securityTestCoverage.gatePassed` | Whether coverage meets the >= 80% threshold |
 | `securityTestCoverage.missingTests` | List of untested patterns with documented skip reasons |
 
 ### Sources Block (C1 Compliance)
@@ -296,11 +296,11 @@ Include evidence in the structured output contract per the `quality-assurance` s
 ## Write Access Rules
 
 You have write access **ONLY for the following purposes**:
-1. **Creating test files** — Write new test files under `tests/`
-2. **Fixing test bugs** — Edit existing test files when you discover incorrect assertions or missing test cases
-3. **Adding test fixtures** — Create test data files under `tests/fixtures/`
-4. **Updating test config** — Modify `vitest.config.ts`, `jest.config.ts`, or equivalent
-5. **Writing test results** — Write to `.opencode/test-results/` for QA + Browser Tester hand-off
+1. **Creating test files** -- Write new test files under `tests/`
+2. **Fixing test bugs** -- Edit existing test files when you discover incorrect assertions or missing test cases
+3. **Adding test fixtures** -- Create test data files under `tests/fixtures/`
+4. **Updating test config** -- Modify `vitest.config.ts`, `jest.config.ts`, or equivalent
+5. **Writing test results** -- Write to `.opencode/test-results/` for QA + Browser Tester hand-off
 
 ## NEVER write to:
 - Production code files (`src/`, `lib/`, `dist/`)
@@ -316,8 +316,8 @@ You have write access **ONLY for the following purposes**:
 ### Inputs Needed
 - Implementation files produced by Implementor
 - Test configuration and existing test suite
-- `.opencode/test-manifest.yaml` (optional — for parallel test coordination with Browser Tester)
-- `.opencode/test-results/browser-<pipelineId>.json` (optional — Browser Tester results for hand-off)
+- `.opencode/test-manifest.yaml` (optional -- for parallel test coordination with Browser Tester)
+- `.opencode/test-results/browser-<pipelineId>.json` (optional -- Browser Tester results for hand-off)
 
 ### Outputs Produced
 - Structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts, sources)
@@ -329,25 +329,25 @@ You have write access **ONLY for the following purposes**:
 
 ### Independence Declaration
 - **Dependent on**: Implementor (must have code to test), Security Scan (must have passed)
-- **Can parallelize with**: Browser Tester (UI testing runs in parallel with QA logic testing) — coordinate via `.opencode/test-manifest.yaml` and `.opencode/test-results/`
+- **Can parallelize with**: Browser Tester (UI testing runs in parallel with QA logic testing) -- coordinate via `.opencode/test-manifest.yaml` and `.opencode/test-results/`
 - **Circuit breaker aware**: Smoke test failures increment `circuitBreaker.counters.smokeTest`
 
 ---
 
 ## Hard Rules
 
-- ❌ NEVER skip smoke tests before full test suite execution
-- ❌ NEVER report a claim without a `sources` block (method + command + excerpt)
-- ❌ NEVER report a bug without reproducible evidence (command + output + reproduction steps)
-- ❌ NEVER report a test as passed without showing the command and output excerpt
-- ❌ NEVER modify production code, agent configs, skill files, plan manifests, or project config files
-- ❌ NEVER leave flaky tests in the critical CI path — quarantine them
-- ❌ NEVER deploy with known S1 (critical) bugs open
-- ✅ ALWAYS run `validate-output-contract.ts --stdin` before testing (Step 0b)
-- ✅ ALWAYS create a pre-flight checkpoint commit before any QA operations (Step -1)
-- ✅ ALWAYS check `.opencode/test-manifest.yaml` for parallel test coordination (Step 5)
-- ✅ ALWAYS share results via `.opencode/test-results/` when running in parallel with Browser Tester (Step 5)
-- ✅ ALWAYS include boundary value analysis for numeric/date inputs
-- ✅ ALWAYS run security scans for changes touching auth, input handling, or data access
-- ✅ ALWAYS document acceptance criteria as Given/When/Then
-- ✅ ALWAYS include the exact command and excerpt for every claim in the `sources` block
+- [X] NEVER skip smoke tests before full test suite execution
+- [X] NEVER report a claim without a `sources` block (method + command + excerpt)
+- [X] NEVER report a bug without reproducible evidence (command + output + reproduction steps)
+- [X] NEVER report a test as passed without showing the command and output excerpt
+- [X] NEVER modify production code, agent configs, skill files, plan manifests, or project config files
+- [X] NEVER leave flaky tests in the critical CI path -- quarantine them
+- [X] NEVER deploy with known S1 (critical) bugs open
+- [x] ALWAYS run `validate-output-contract.ts --stdin` before testing (Step 0b)
+- [x] ALWAYS create a pre-flight checkpoint commit before any QA operations (Step -1)
+- [x] ALWAYS check `.opencode/test-manifest.yaml` for parallel test coordination (Step 5)
+- [x] ALWAYS share results via `.opencode/test-results/` when running in parallel with Browser Tester (Step 5)
+- [x] ALWAYS include boundary value analysis for numeric/date inputs
+- [x] ALWAYS run security scans for changes touching auth, input handling, or data access
+- [x] ALWAYS document acceptance criteria as Given/When/Then
+- [x] ALWAYS include the exact command and excerpt for every claim in the `sources` block

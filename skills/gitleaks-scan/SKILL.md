@@ -1,23 +1,23 @@
 ---
 name: gitleaks-scan
-description: "Run Gitleaks secret scanning on projects to detect hardcoded secrets like passwords, API keys, tokens, and private keys in Git repositories and files using a Podman container (no local Go install needed). This skill triggers automatically as a mandatory sub-scan within the orchestration pipeline Security Scan gate — alongside semgrep SAST. Also use when the user asks to scan for secrets, run gitleaks, check for hardcoded credentials, detect leaked API keys, scan git history for secrets, perform secret detection, or integrate secret scanning into a CI pipeline. Supports three scanning modes: git repository scanning (full history or incremental), directory/file scanning, and stdin scanning. Custom rules via .gitleaks.toml, ignore lists via .gitleaksignore, and multiple output formats (JSON, CSV, SARIF, JUnit)."
+description: "Run Gitleaks secret scanning on projects to detect hardcoded secrets like passwords, API keys, tokens, and private keys in Git repositories and files using a Podman container (no local Go install needed). This skill triggers automatically as a mandatory sub-scan within the orchestration pipeline Security Scan gate -- alongside semgrep SAST. Also use when the user asks to scan for secrets, run gitleaks, check for hardcoded credentials, detect leaked API keys, scan git history for secrets, perform secret detection, or integrate secret scanning into a CI pipeline. Supports three scanning modes: git repository scanning (full history or incremental), directory/file scanning, and stdin scanning. Custom rules via .gitleaks.toml, ignore lists via .gitleaksignore, and multiple output formats (JSON, CSV, SARIF, JUnit)."
 ---
 
 # Gitleaks Scan Skill (Container-Based)
 
 ## Purpose
 
-Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret detection on projects to find hardcoded passwords, API keys, tokens, private keys, and other sensitive data — **all via a Podman container** with zero local installation required. Uses the official `docker.io/zricethezav/gitleaks` image (v8.30.1+).
+Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret detection on projects to find hardcoded passwords, API keys, tokens, private keys, and other sensitive data -- **all via a Podman container** with zero local installation required. Uses the official `docker.io/zricethezav/gitleaks` image (v8.30.1+).
 
 This skill is **automatically loaded by the Orchestrator** during every pipeline's Security Scan gate as a **mandatory secret-scanning sub-gate**. It runs alongside semgrep SAST, dependency scanning, and other security checks.
 
 ## Why Container-Based?
 
-- ✅ **No local Go install** — no homebrew, no go build, no version conflicts
-- ✅ **Isolated** — runs in its own environment, read-only access
-- ✅ **Reproducible** — same gitleaks version across all environments
-- ✅ **Auto-updates** — pull the latest image to get new rules & gitleaks versions
-- ✅ **Official image** — 10M+ Docker pulls, actively maintained
+- [x] **No local Go install** -- no homebrew, no go build, no version conflicts
+- [x] **Isolated** -- runs in its own environment, read-only access
+- [x] **Reproducible** -- same gitleaks version across all environments
+- [x] **Auto-updates** -- pull the latest image to get new rules & gitleaks versions
+- [x] **Official image** -- 10M+ Docker pulls, actively maintained
 
 ## Quick Reference
 
@@ -161,9 +161,9 @@ The **Fingerprint** uniquely identifies each finding (format: `commit:file:ruleI
 
 | Code | Meaning | Pipeline Action |
 |------|---------|-----------------|
-| 0 | No leaks | ✅ PASS |
-| 1 | Leaks detected | ❌ FAIL (configurable via `--exit-code`) |
-| 2 | Fatal error | ⚠️ WARN |
+| 0 | No leaks | [x] PASS |
+| 1 | Leaks detected | [X] FAIL (configurable via `--exit-code`) |
+| 2 | Fatal error | [!]? WARN |
 
 ### Step 6: Baseline Scanning (Incremental CI)
 
@@ -258,7 +258,7 @@ Structure findings reports like this:
 
 ### Detailed Findings
 
-#### HIGH: Generic API Key — src/config/settings.ts:15
+#### HIGH: Generic API Key -- src/config/settings.ts:15
 - **Secret**: `sk-1234abcdef...` (entropy: 3.5)
 - **Commit**: `a1b2c3d` by Jane Doe (2024-01-15)
 - **Fingerprint**: `a1b2c3d:src/config/settings.ts:generic-api-key:15`
@@ -277,7 +277,7 @@ Structure findings reports like this:
 This skill is **automatically loaded by the Orchestrator** during every pipeline's Security Scan gate as a mandatory sub-gate:
 
 ```
-Build → Lint → Code Quality → SECURITY SCAN → QA
+Build -> Lint -> Code Quality -> SECURITY SCAN -> QA
                                    |
                             +-------------+
                             | SEMGREP     |
@@ -286,7 +286,7 @@ Build → Lint → Code Quality → SECURITY SCAN → QA
                                    |
                             +-------------+
                             | GITLEAKS    |
-                            | SECRET GATE | ← THIS SKILL
+                            | SECRET GATE | <- THIS SKILL
                             +-------------+
                                    |
                             +-------------+
@@ -308,8 +308,8 @@ Build → Lint → Code Quality → SECURITY SCAN → QA
    podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/zricethezav/gitleaks:latest \
      git --source=/src --report-format=json --report-path=- --no-banner --verbose
    ```
-5. Parse JSON output → include in combined Security Scan report
-6. If exit code 1 (leaks detected) → **gate FAILS**, pipeline blocked
+5. Parse JSON output -> include in combined Security Scan report
+6. If exit code 1 (leaks detected) -> **gate FAILS**, pipeline blocked
 
 ### Pipeline Defaults
 
@@ -324,13 +324,13 @@ Build → Lint → Code Quality → SECURITY SCAN → QA
 
 ## Integration with security-scan Skill
 
-The `security-scan` skill should load `gitleaks-scan` as a mandatory sub-scan alongside `semgrep-scan`. The gitleaks scan serves as a **more thorough replacement** for the basic hardcoded-secrets grep in step 4 — gitleaks uses 170+ curated rules (regex + entropy), has official maintainers, and catches patterns a simple grep would miss.
+The `security-scan` skill should load `gitleaks-scan` as a mandatory sub-scan alongside `semgrep-scan`. The gitleaks scan serves as a **more thorough replacement** for the basic hardcoded-secrets grep in step 4 -- gitleaks uses 170+ curated rules (regex + entropy), has official maintainers, and catches patterns a simple grep would miss.
 
 Pipeline sequence:
 ```
 security-scan loads:
   1. semgrep-scan skill  (SAST)
-  2. gitleaks-scan skill (Secret detection) ← NEW
+  2. gitleaks-scan skill (Secret detection) <- NEW
   3. Dependency scan
   4. Anti-pattern scan
   5. SBOM + Supply chain
@@ -338,16 +338,16 @@ security-scan loads:
 
 ## Hard Rules
 
-- ✅ Always pull first: `podman image exists ... || podman pull ...`
-- ✅ Always mount with `-v "${PWD}:/src:Z"` — SELinux `:Z` flag
-- ✅ Always use `--rm` to clean up
-- ✅ Always use `--source=/src` for targets in the mounted volume
-- ✅ Use `--report-path=-` for stdout or `/src/<file>` to persist
-- ✅ The Orchestrator loads this skill automatically during every pipeline
-- ✅ Read-only operation — the container is ephemeral
-- ✅ Use `--baseline-path` for incremental CI scanning
-- ✅ Place `.gitleaks.toml` at project root for auto-detection
-- ✅ NEVER modify project files during scanning
+- [x] Always pull first: `podman image exists ... || podman pull ...`
+- [x] Always mount with `-v "${PWD}:/src:Z"` -- SELinux `:Z` flag
+- [x] Always use `--rm` to clean up
+- [x] Always use `--source=/src` for targets in the mounted volume
+- [x] Use `--report-path=-` for stdout or `/src/<file>` to persist
+- [x] The Orchestrator loads this skill automatically during every pipeline
+- [x] Read-only operation -- the container is ephemeral
+- [x] Use `--baseline-path` for incremental CI scanning
+- [x] Place `.gitleaks.toml` at project root for auto-detection
+- [x] NEVER modify project files during scanning
 
 ## Key References
 

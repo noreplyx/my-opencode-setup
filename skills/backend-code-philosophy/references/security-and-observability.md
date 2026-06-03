@@ -17,7 +17,7 @@ description: Detailed reference for security best practices, observability (logg
     role: z.enum(['user', 'admin']).default('user'),
   });
 
-  // Middleware — validate request body against schema
+  // Middleware -- validate request body against schema
   function validate(schema) {
     return (request, sendResponse, next) => {
       const result = schema.safeParse(request.body);
@@ -29,14 +29,14 @@ description: Detailed reference for security best practices, observability (logg
     };
   }
 
-  // Route — framework-agnostic
+  // Route -- framework-agnostic
   // POST /users with validate(createUserSchema) middleware
   ```
 
 - **Authentication & Authorization:**
 
   ```js
-  // Authentication middleware — verify token, attach user to request
+  // Authentication middleware -- verify token, attach user to request
   async function authenticate(request, sendResponse, next) {
     const token = request.headers.authorization?.replace('Bearer ', '');
     if (!token) throw new UnauthorizedError('Missing authentication token');
@@ -50,7 +50,7 @@ description: Detailed reference for security best practices, observability (logg
     }
   }
 
-  // Authorization middleware — check user role/permissions
+  // Authorization middleware -- check user role/permissions
   function requireRole(...roles) {
     return (request, sendResponse, next) => {
       if (!request.user || !roles.includes(request.user.role)) {
@@ -111,7 +111,7 @@ description: Detailed reference for security best practices, observability (logg
   }
 
   // BAD: Hardcoded secrets
-  const jwtSecret = 'supersecretkey123!'; // ❌ Never do this
+  const jwtSecret = 'supersecretkey123!'; // [X] Never do this
   ```
 
 ### 9. Observability
@@ -141,12 +141,12 @@ Backend services must be observable: logs, metrics, and traces must be available
 - **Health Check Endpoints:**
 
   ```js
-  // GET /health — liveness probe (is the process alive?)
+  // GET /health -- liveness probe (is the process alive?)
   function handleHealth(request, sendResponse) {
     sendResponse(200, { status: 'ok', timestamp: new Date().toISOString() });
   }
 
-  // GET /health/ready — readiness probe (can the service accept traffic?)
+  // GET /health/ready -- readiness probe (can the service accept traffic?)
   async function handleReadiness(request, sendResponse) {
     const checks = {
       database: await checkDatabase(),
@@ -226,8 +226,8 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
 
   ```js
   // Routes are scoped by version
-  // /api/v1/users → handled by v1 handlers
-  // /api/v2/users → handled by v2 handlers
+  // /api/v1/users -> handled by v1 handlers
+  // /api/v2/users -> handled by v2 handlers
 
   const v1Handlers = {
     listUsers: (req, res) => { /* v1 response format */ },
@@ -235,12 +235,12 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
   };
 
   const v2Handlers = {
-    listUsers: (req, res) => { /* v2 response format — updated */ },
-    createUser: (req, res) => { /* v2 create logic — new required fields */ },
+    listUsers: (req, res) => { /* v2 response format -- updated */ },
+    createUser: (req, res) => { /* v2 create logic -- new required fields */ },
   };
   ```
 
-- **Header Versioning (alternative — keeps URLs clean but requires client cooperation):**
+- **Header Versioning (alternative -- keeps URLs clean but requires client cooperation):**
 
   ```js
   // Client sends: Accept: application/vnd.myapi.v2+json
@@ -262,8 +262,8 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
 
 - **Backward Compatibility Rules:**
 
-  1. Never remove a field from a response — mark it as `deprecated` instead and remove it in a future major version.
-  2. Never make an optional field required in the same version — add it as optional first, then require it in the next version.
+  1. Never remove a field from a response -- mark it as `deprecated` instead and remove it in a future major version.
+  2. Never make an optional field required in the same version -- add it as optional first, then require it in the next version.
   3. Support old request formats for at least one major version cycle.
   4. Use the `Sunset` and `Deprecation` HTTP headers to inform clients of upcoming changes.
 
@@ -276,7 +276,7 @@ APIs evolve over time. Versioning strategies ensure existing clients are not bro
         id: user.id,
         name: user.name,
         email: user.email,
-        full_name: user.name, // Deprecated — same as 'name', kept for backward compat
+        full_name: user.name, // Deprecated -- same as 'name', kept for backward compat
       },
     }, {
       'Deprecation': 'true',

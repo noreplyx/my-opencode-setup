@@ -52,13 +52,13 @@ const config = {
 
 #### SQL Injection Prevention
 
-**❌ Vulnerable — string interpolation:**
+**[X] Vulnerable -- string interpolation:**
 ```js
 const query = `SELECT * FROM users WHERE email = '${userInput}'`;
 await db.execute(query);
 ```
 
-**✅ Safe — parameterized queries:**
+**[x] Safe -- parameterized queries:**
 ```js
 // Using an ORM (safe by default):
 await db.users.findUnique({ where: { email: userInput } });
@@ -69,10 +69,10 @@ await db.execute('SELECT * FROM users WHERE email = $1', [userInput]);
 
 ### 6. Performance
 
-#### Big O Notation — Prefer Optimal Complexity
+#### Big O Notation -- Prefer Optimal Complexity
 
 ```js
-// ❌ O(n²) — nested loop
+// [X] O(n^2) -- nested loop
 function findDuplicates(arr) {
   const dups = [];
   for (let i = 0; i < arr.length; i++) {
@@ -83,7 +83,7 @@ function findDuplicates(arr) {
   return dups;
 }
 
-// ✅ O(n) — using a Set
+// [x] O(n) -- using a Set
 function findDuplicates(arr) {
   const seen = new Set();
   const dups = new Set();
@@ -131,7 +131,7 @@ class ExpensiveReportGenerator {
 #### Connection Pooling
 
 ```js
-// ❌ Open/close on every request:
+// [X] Open/close on every request:
 async function getUsers() {
   const client = await createDbConnection(connectionString);
   const result = await client.query('SELECT * FROM users');
@@ -139,7 +139,7 @@ async function getUsers() {
   return result.rows;
 }
 
-// ✅ Reuse pool:
+// [x] Reuse pool:
 const pool = createDbPool({ connectionString, max: 20 });
 async function getUsers() {
   const result = await pool.query('SELECT * FROM users');
@@ -152,10 +152,10 @@ async function getUsers() {
 #### Structured Logging JSON Example
 
 ```js
-// ❌ Unstructured:
+// [X] Unstructured:
 console.log(`User ${userId} placed order ${orderId} for $${total}`);
 
-// ✅ Structured:
+// [x] Structured:
 logger.info({
   message: 'Order placed successfully',
   event: 'order.placed',
@@ -175,7 +175,7 @@ logger.info({
 ```js
 const { randomUUID } = await import('crypto');
 
-// Request context — stores correlation ID per request
+// Request context -- stores correlation ID per request
 const requestContext = {
   _store: new Map(),
   run(correlationId, fn) {
@@ -185,14 +185,14 @@ const requestContext = {
   getCorrelationId() { return this._store.get('correlationId') || 'none'; },
 };
 
-// Middleware — generates and stores correlation ID per request
+// Middleware -- generates and stores correlation ID per request
 function correlationMiddleware(request) {
   const correlationId = request.headers['x-correlation-id'] || generateId();
   requestContext.run(correlationId, () => {});
   return correlationId;
 }
 
-// Logger — automatically attaches correlation ID
+// Logger -- automatically attaches correlation ID
 function createLogger() {
   return {
     info(msg, meta) {
@@ -309,7 +309,7 @@ Use this checklist when reviewing pull requests or planning new code:
 - [ ] **YAGNI**: Is every feature justified by current requirements, not hypothetical futures?
 - [ ] **Security**: Is all external input validated? Are secrets in env vars, not code?
 - [ ] **SQL Injection**: Are all database queries parameterized?
-- [ ] **Performance**: Is the algorithm/query optimal? Could it be O(n²) when O(n) is possible?
+- [ ] **Performance**: Is the algorithm/query optimal? Could it be O(n^2) when O(n) is possible?
 - [ ] **Error Handling**: Are errors caught, logged with context, and handled gracefully?
 - [ ] **Logging**: Are structured logs used with correlation IDs for traceability?
 - [ ] **Tests**: Is the code testable (dependency injection)? Are edge cases covered?
@@ -317,7 +317,7 @@ Use this checklist when reviewing pull requests or planning new code:
 
 ### 10. Refactoring Guide
 
-#### Extract Method — Pull logic into named functions
+#### Extract Method -- Pull logic into named functions
 
 ```js
 // BEFORE:
@@ -445,7 +445,7 @@ describe('OrderService', () => {
 });
 ```
 
-#### Testability — Dependency Injection Enables Testing
+#### Testability -- Dependency Injection Enables Testing
 
 ```js
 // In-memory implementation for tests:
@@ -472,7 +472,7 @@ class InMemoryOrderRepository {
 #### Mocking Strategies
 
 ```js
-// 1. Interface-based mocks (preferred — no framework needed):
+// 1. Interface-based mocks (preferred -- no framework needed):
 const mockRepo = {
   save: jest.fn().mockResolvedValue(undefined),
   findById: jest.fn().mockResolvedValue(null),

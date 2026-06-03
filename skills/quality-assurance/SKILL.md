@@ -5,7 +5,7 @@ description: Expert skill for ensuring software quality through comprehensive te
 
 # Quality Assurance Skill
 
-This skill provides a rigorous framework for validating software correctness, stability, performance, and security. Quality assurance is not merely about finding bugs — it is about building confidence that the system behaves correctly, performs reliably, and remains maintainable under change. Every test should serve a purpose: catch regressions, document expected behavior, or validate a requirement.
+This skill provides a rigorous framework for validating software correctness, stability, performance, and security. Quality assurance is not merely about finding bugs -- it is about building confidence that the system behaves correctly, performs reliably, and remains maintainable under change. Every test should serve a purpose: catch regressions, document expected behavior, or validate a requirement.
 
 ## Quick Navigation
 
@@ -22,31 +22,31 @@ Detailed content is organized into reference files for progressive loading. Load
 ## Workflow Summary
 
 ### Phase 1: Requirement Review
-Review specs, identify gaps, write acceptance criteria (Given/When/Then). → See `references/qa-workflow.md` for full details
+Review specs, identify gaps, write acceptance criteria (Given/When/Then). -> See `references/qa-workflow.md` for full details
 
 ### Phase 2: Test Planning
-Determine scope, design test cases (equivalence partitioning, boundary analysis), identify test data needs. → See `references/testing-strategies.md` for test design techniques
+Determine scope, design test cases (equivalence partitioning, boundary analysis), identify test data needs. -> See `references/testing-strategies.md` for test design techniques
 
 ### Phase 2.5: Automatic Edge Case Generation
-After smoke tests pass and before full test execution, automatically generate boundary value tests. → See details below
+After smoke tests pass and before full test execution, automatically generate boundary value tests. -> See details below
 
 ### Phase 3: Test Execution
-Run automated tests, manual exploratory testing, verify edge cases, run regression, performance, and security scans. → See `references/testing-strategies.md` for test types, `references/ci-testing.md` for prioritization
+Run automated tests, manual exploratory testing, verify edge cases, run regression, performance, and security scans. -> See `references/testing-strategies.md` for test types, `references/ci-testing.md` for prioritization
 
 ### Phase 3.5: Non-Functional Testing
-Run performance, accessibility, and security checks on critical paths. → See details below
+Run performance, accessibility, and security checks on critical paths. -> See details below
 
 ### Phase 4: Bug Triage & Retesting
-Log bugs using the standard template, classify by severity/priority, assign, retest after fixes. → See `references/ci-testing.md` for bug reporting standards
+Log bugs using the standard template, classify by severity/priority, assign, retest after fixes. -> See `references/ci-testing.md` for bug reporting standards
 
 ### Phase 5: Release Sign-Off
-Verify smoke tests pass, no S1/S2 bugs open, coverage thresholds met, security scan clean. → See `references/qa-workflow.md` for the full sign-off checklist
+Verify smoke tests pass, no S1/S2 bugs open, coverage thresholds met, security scan clean. -> See `references/qa-workflow.md` for the full sign-off checklist
 
 ### Phase 5.5: Regression Impact Analysis
-After all tests pass, perform a cross-module impact analysis to identify modules that may be affected by the changes. → See details below
+After all tests pass, perform a cross-module impact analysis to identify modules that may be affected by the changes. -> See details below
 
 ### Phase 6: Post-Release Monitoring
-Monitor error rates, verify production smoke tests, review user-reported bugs. → See `references/qa-workflow.md` for monitoring guidelines
+Monitor error rates, verify production smoke tests, review user-reported bugs. -> See `references/qa-workflow.md` for monitoring guidelines
 
 ---
 
@@ -117,7 +117,7 @@ After all tests pass, perform a cross-module impact analysis to identify modules
    grep -r "import.*changed-file" src/
    grep -r "require('.*changed-file')" src/
    ```
-3. For each importing module, flag: "This change may affect [module X] — review recommended"
+3. For each importing module, flag: "This change may affect [module X] -- review recommended"
 4. Classify risk level:
    - **High**: Direct import of exported types/classes used in critical paths
    - **Medium**: Indirect import or import of utility functions
@@ -143,7 +143,7 @@ agentOutputs:
     resultSummary: "Brief summary of QA findings"
 ---
 ### Results
-#### Smoke Test: ✅/❌
+#### Smoke Test: [x]/[X]
 #### Functional Tests: N passed / N failed / N skipped
 #### Edge Cases Tested: [list of edge case categories tested]
 #### Non-Functional Issues:
@@ -170,12 +170,12 @@ agentOutputs:
 
 ## Hard Rules
 
-- ❌ NEVER skip smoke tests before full test suite execution
-- ❌ NEVER leave flaky tests in the critical CI path — quarantine them
-- ❌ NEVER deploy with known S1 (critical) bugs open
-- ✅ ALWAYS document acceptance criteria as Given/When/Then
-- ✅ ALWAYS include boundary value analysis for numeric/date inputs
-- ✅ ALWAYS run security scans for changes touching auth, input handling, or data access
+- [X] NEVER skip smoke tests before full test suite execution
+- [X] NEVER leave flaky tests in the critical CI path -- quarantine them
+- [X] NEVER deploy with known S1 (critical) bugs open
+- [x] ALWAYS document acceptance criteria as Given/When/Then
+- [x] ALWAYS include boundary value analysis for numeric/date inputs
+- [x] ALWAYS run security scans for changes touching auth, input handling, or data access
 
 ---
 
@@ -209,13 +209,13 @@ ts-node skills/scripts/quality-assurance/check-qa.ts --dir=./ --ci
 ---
 
 > **For detailed guidance**, load the appropriate reference file:
-> - `references/testing-strategies.md` — Test pyramid, functional/integration/performance/security testing, smoke tests
-> - `references/qa-workflow.md` — Full QA workflow phases, test documentation, acceptance criteria
-> - `references/ci-testing.md` — CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting
+> - `references/testing-strategies.md` -- Test pyramid, functional/integration/performance/security testing, smoke tests
+> - `references/qa-workflow.md` -- Full QA workflow phases, test documentation, acceptance criteria
+> - `references/ci-testing.md` -- CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting
 
 ## Phase 7: Reproducible Bug Evidence (NEW)
 
-Every bug discovered by QA MUST include **reproducible evidence** — the exact command, its output, and reproduction steps. Without this, the Fixer cannot reliably diagnose and fix the issue.
+Every bug discovered by QA MUST include **reproducible evidence** -- the exact command, its output, and reproduction steps. Without this, the Fixer cannot reliably diagnose and fix the issue.
 
 ### Bug Evidence Format
 
@@ -277,12 +277,12 @@ agentOutputs:
         command: "curl -s -w '%{http_code}' -X POST http://localhost:3000/api/users -H 'Content-Type: application/json' -d '{\"name\":\"Alice\"}'"
         excerpt: "HTTP 400"
         result: "passed"
-evidence:                         # NEW — top-level for cross-cutting claims
+evidence:                         # NEW -- top-level for cross-cutting claims
   - claim: "All smoke and functional tests passed"
     method: "analysis"
     source: "test"
     command: "Aggregated from individual test results"
-    excerpt: "Smoke: ✅, Functional: 5/5 pass, Edge cases: 3/3 pass"
+    excerpt: "Smoke: [x], Functional: 5/5 pass, Edge cases: 3/3 pass"
     result: "analysis_complete"
 decisions:
   - what: "Test decision description"
@@ -298,9 +298,9 @@ artifacts:
 
 ### Hard Rules Update
 
-- ❌ NEVER report a bug without reproducible evidence (command + output + reproduction steps)
-- ❌ NEVER report a test as passed without showing the command and output excerpt
-- ✅ ALWAYS include the exact command used to reproduce each bug
-- ✅ ALWAYS include the exact output/error for failed tests
-- ✅ ALWAYS include line numbers for bugs that reference specific code locations
-- ✅ ALWAYS include reproduction steps in the bug description
+- [X] NEVER report a bug without reproducible evidence (command + output + reproduction steps)
+- [X] NEVER report a test as passed without showing the command and output excerpt
+- [x] ALWAYS include the exact command used to reproduce each bug
+- [x] ALWAYS include the exact output/error for failed tests
+- [x] ALWAYS include line numbers for bugs that reference specific code locations
+- [x] ALWAYS include reproduction steps in the bug description

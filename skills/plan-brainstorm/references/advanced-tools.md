@@ -1,4 +1,4 @@
-# Advanced Tools: Weighted Decision Matrix, Hybridization & Pivoting
+﻿# Advanced Tools: Weighted Decision Matrix, Hybridization & Pivoting
 
 This reference covers three advanced techniques for when the standard brainstorming flow isn't enough. Only load this reference when the user is stuck between options or rejects all presented plans.
 
@@ -23,10 +23,10 @@ If the user is torn between plans even after seeing the comparative matrix, offe
 
 1. Let the user pick the criteria that matter most (use the Strategic Fit dimensions as a starting point: delivery speed, maintainability, scalability, ops simplicity, architecture alignment).
 2. Ask the user to assign a weight (1-5) to each criterion reflecting how important it is to them.
-3. Fill in scores for each plan using the analysis already done — or let the user adjust scores if they disagree.
+3. Fill in scores for each plan using the analysis already done -- or let the user adjust scores if they disagree.
 4. Calculate weighted totals and highlight the winner.
 
-This is not meant to override intuition — it's a tool to make implicit priorities explicit and start a conversation. If the matrix says Plan B but the user still prefers Plan A, ask why: that gap often reveals an unstated criterion.
+This is not meant to override intuition -- it's a tool to make implicit priorities explicit and start a conversation. If the matrix says Plan B but the user still prefers Plan A, ask why: that gap often reveals an unstated criterion.
 
 ---
 

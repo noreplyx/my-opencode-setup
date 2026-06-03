@@ -42,8 +42,8 @@ description: Consolidated accessibility testing tools, manual testing checklists
 
 | Guideline | Purpose |
 |-----------|---------|
-| `androidTapTargetGuideline` | All tappable widgets ≥ 48dp |
-| `iOSTapTargetGuideline` | All tappable widgets ≥ 44pt |
+| `androidTapTargetGuideline` | All tappable widgets >= 48dp |
+| `iOSTapTargetGuideline` | All tappable widgets >= 44pt |
 | `labeledTapTargetGuideline` | All tappable widgets have semantics label |
 | `ensureSemanticLabels` | No duplicate labels on same screen |
 | `contrastGuideline` | Basic color contrast check (limited) |
@@ -91,14 +91,14 @@ testWidgets('Semantics tree is correct', (tester) async {
 
 ### Flutter Manual Tests
 
-- [ ] Navigate the entire app using **TalkBack** (Android) or **VoiceOver** (iOS) — no visual guidance.
-- [ ] Test with **system font size** set to Largest (Settings → Accessibility → Font size).
-- [ ] Test with **bold text** enabled (Settings → Accessibility → Bold text).
+- [ ] Navigate the entire app using **TalkBack** (Android) or **VoiceOver** (iOS) -- no visual guidance.
+- [ ] Test with **system font size** set to Largest (Settings -> Accessibility -> Font size).
+- [ ] Test with **bold text** enabled (Settings -> Accessibility -> Bold text).
 - [ ] Test with **high contrast** enabled (Android: High contrast text; iOS: Increase Contrast).
 - [ ] Test with **reduced motion** enabled (iOS: Reduce Motion; Android: Remove animations).
 - [ ] Test with **color correction/filters** enabled (Android: Color correction; iOS: Color filters).
 - [ ] Test on **small screens** (e.g., 4.7" iPhone SE) and **large screens** (tablets).
-- [ ] Test with **orientation changes** (portrait ↔ landscape).
+- [ ] Test with **orientation changes** (portrait <-> landscape).
 - [ ] Test with a **physical keyboard** connected if your app supports it.
 - [ ] Test **custom gestures** ensure there's an alternative non-gesture path.
 

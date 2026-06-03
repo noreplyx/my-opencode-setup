@@ -18,13 +18,13 @@ Design every service as if it will be extracted into its own deployment unit. No
   return handleLegacyCheckout(request);
 
   // BAD: Coordinated deploy required
-  // Service A expects Service B to have a new endpoint — both must deploy together
+  // Service A expects Service B to have a new endpoint -- both must deploy together
   ```
 
 - **Loose Coupling via Asynchronous Communication:** Prefer events and message queues over synchronous HTTP calls for cross-service workflows. Use a message broker to decouple producers from consumers.
 
   ```js
-  // Event producer — Order Service
+  // Event producer -- Order Service
   async function createOrder(cart) {
     const order = await db.orders.create({ userId: cart.userId, items: cart.items });
     await eventBus.publish('order.created', {
@@ -36,7 +36,7 @@ Design every service as if it will be extracted into its own deployment unit. No
     return order;
   }
 
-  // Event consumer — Inventory Service (separate deployment, separate codebase)
+  // Event consumer -- Inventory Service (separate deployment, separate codebase)
   eventBus.subscribe('order.created', async (event) => {
     for (const item of event.items) {
       await inventoryRepository.decrementStock(item.sku, item.quantity);
@@ -72,7 +72,7 @@ Services must scale horizontally by adding more instances, not by making individ
 - **Statelessness:** Never store session state or user context in process memory. Use external stores (e.g. Redis, database) for any state that must survive a restart or be shared across instances.
 
   ```js
-  // GOOD: Stateless — session stored in external cache
+  // GOOD: Stateless -- session stored in external cache
   async function getSession(sessionId) {
     return cache.get(`session:${sessionId}`);
   }
@@ -81,7 +81,7 @@ Services must scale horizontally by adding more instances, not by making individ
     await cache.set(`session:${sessionId}`, data, { ttl: 3600 });
   }
 
-  // BAD: Stateful — session in local memory, lost on restart / breaks with multiple instances
+  // BAD: Stateful -- session in local memory, lost on restart / breaks with multiple instances
   const sessionStore = new Map();
   function getSession(sessionId) {
     return sessionStore.get(sessionId);
@@ -105,7 +105,7 @@ Services must scale horizontally by adding more instances, not by making individ
     }
   }
 
-  // BAD: Local lock — useless when 10 instances are running
+  // BAD: Local lock -- useless when 10 instances are running
   const paymentLocks = new Set();
   ```
 
@@ -130,7 +130,7 @@ Services must scale horizontally by adding more instances, not by making individ
 
   ```js
   process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received — draining connections');
+    logger.info('SIGTERM received -- draining connections');
     await server.close();
     logger.info('HTTP server closed');
     await db.disconnect();

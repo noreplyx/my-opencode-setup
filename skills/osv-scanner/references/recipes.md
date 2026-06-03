@@ -1,4 +1,4 @@
-# OSV-Scanner Recipe Reference
+﻿# OSV-Scanner Recipe Reference
 
 Quick copy-paste recipes for common OSV-Scanner tasks via Podman.
 
@@ -221,7 +221,7 @@ osv-scanner-docker scan source -r .
 
 # JSON report
 osv-scanner-docker --format json -L ./package-lock.json > report.json
-# Container scan — use raw podman run (see "Container Image Scanning" section)
+# Container scan -- use raw podman run (see "Container Image Scanning" section)
 podman save --format=docker-archive node:20 -o /tmp/node20.tar && \
 podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
   ghcr.io/google/osv-scanner:latest scan image --archive /tmp/node20.tar
@@ -243,15 +243,15 @@ osv-scanner-docker --version
 ```bash
 # In a script, use the exit code
 if osv-scanner-docker scan source -r --format json /src > report.json; then
-  echo "✅ No vulnerabilities found"
+  echo "[x] No vulnerabilities found"
 else
   code=$?
   if [ $code -eq 1 ]; then
-    echo "❌ Vulnerabilities found! Check report.json"
+    echo "[X] Vulnerabilities found! Check report.json"
   elif [ $code -eq 128 ]; then
-    echo "⚠️ No packages found — check scan target"
+    echo "[!] No packages found -- check scan target"
   else
-    echo "⚠️ Error (exit code: $code)"
+    echo "[!] Error (exit code: $code)"
   fi
 fi
 ```

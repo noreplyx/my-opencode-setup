@@ -7,21 +7,21 @@ description: Use this skill after parallel implementations create multiple new f
 
 ## Purpose
 
-When multiple agents implement files in parallel, each file is correct in isolation but nothing connects them. The Integrator is the "wiring layer" — it ensures all new parts plug into the existing system correctly. Without this agent, parallel dispatch creates orphaned files that don't compile because no one updated the barrel exports, DI container, or route registration.
+When multiple agents implement files in parallel, each file is correct in isolation but nothing connects them. The Integrator is the "wiring layer" -- it ensures all new parts plug into the existing system correctly. Without this agent, parallel dispatch creates orphaned files that don't compile because no one updated the barrel exports, DI container, or route registration.
 
 ## Core Principles
 
 ### 1. One Pass, All Wires
-Run a single comprehensive pass — do not iterate. The Integrator reads ALL new files, ALL modified files, and the project's existing wiring patterns, then applies all wiring changes in one shot. This avoids partial wiring states.
+Run a single comprehensive pass -- do not iterate. The Integrator reads ALL new files, ALL modified files, and the project's existing wiring patterns, then applies all wiring changes in one shot. This avoids partial wiring states.
 
 ### 2. Pattern-Match, Don't Guess
 - Read existing barrel/index files to detect the project's export style (named vs default, re-export vs direct export)
 - Read existing DI container configuration to detect registration style
 - Read existing route files to detect routing pattern
-- Match the existing style exactly — do not invent new wiring conventions
+- Match the existing style exactly -- do not invent new wiring conventions
 
 ### 3. Dry-Run Awareness
-Before modifying any file, the Integrator runs a `git diff` to understand which files were created/modified by the parallel Implementors. It does NOT modify those files — it only modifies wiring files (barrels, DI containers, route indexes, etc.)
+Before modifying any file, the Integrator runs a `git diff` to understand which files were created/modified by the parallel Implementors. It does NOT modify those files -- it only modifies wiring files (barrels, DI containers, route indexes, etc.)
 
 ---
 
@@ -88,7 +88,7 @@ export type { User, CreateUserDto } from './user.types'; // NEW
 ```
 
 **If barrel doesn't exist:**
-- Do NOT create one — the project may not use barrel files
+- Do NOT create one -- the project may not use barrel files
 - Check parent directory for a barrel that re-exports from subdirectories
 - If no barrel pattern exists anywhere in the project, skip this step
 
@@ -203,7 +203,7 @@ agentOutputs:
           from: "./user.service"
           to: "../services/user.service"
 warnings:
-  - "No barrel file found in src/services/ — skipped"
+  - "No barrel file found in src/services/ -- skipped"
 changedFiles:
   - "path/to/barrel/or/wiring/file.ts"
 artifacts:
@@ -217,23 +217,23 @@ artifacts:
 
 ## Hard Rules
 
-- ❌ NEVER modify the implementation files created by Implementors — only modify wiring files
-- ❌ NEVER create a barrel file if the project doesn't use that pattern
-- ❌ NEVER restructure existing wiring — only append to it
-- ❌ NEVER assume the DI pattern — always detect it from existing code first
-- ✅ ALWAYS detect the project's wiring conventions before making changes
-- ✅ ALWAYS run the build after wiring changes to verify imports resolve
-- ✅ ALWAYS fix broken imports before reporting completion
-- ✅ ALWAYS report which barrel files, DI registrations, and routes were modified
+- [X] NEVER modify the implementation files created by Implementors -- only modify wiring files
+- [X] NEVER create a barrel file if the project doesn't use that pattern
+- [X] NEVER restructure existing wiring -- only append to it
+- [X] NEVER assume the DI pattern -- always detect it from existing code first
+- [x] ALWAYS detect the project's wiring conventions before making changes
+- [x] ALWAYS run the build after wiring changes to verify imports resolve
+- [x] ALWAYS fix broken imports before reporting completion
+- [x] ALWAYS report which barrel files, DI registrations, and routes were modified
 
 ## Parallel Dispatch Integration
 
 The Integrator is the **merge coordinator** for parallel Implementor tasks:
 
 ```
-Implementor A ──┐
-                 ├──► Integrator ──► Build Gate
-Implementor B ──┘
+Implementor A --+
+                 +--> Integrator --> Build Gate
+Implementor B --+
 ```
 
 **Hand-off from Orchestrator:**

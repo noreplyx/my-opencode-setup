@@ -118,7 +118,7 @@ ThemeData(
   colorScheme: ColorScheme.fromSeed(
     seedColor: primaryColor,
     brightness: Brightness.light,
-    contrastLevel: 0.5, // 0.0–1.0; higher = more contrast
+    contrastLevel: 0.5, // 0.0-1.0; higher = more contrast
   ),
 )
 ```
@@ -167,7 +167,7 @@ Semantics(
   - Provide a button that moves focus to main content (hidden until focused, like HTML's skip link pattern)
 - **Modal/Dialog focus**: Flutter's `showDialog` and `showModalBottomSheet` automatically manage focus trapping. Always use these rather than custom overlay solutions.
 - **Images**: Use `Semantics(label: ...)` on `Image` widgets for informative images; `excludeSemantics` for decorative ones.
-- **CustomPaint/Canvas**: Must be wrapped in `Semantics` — canvas-rendered elements have no automatic semantics.
+- **CustomPaint/Canvas**: Must be wrapped in `Semantics` -- canvas-rendered elements have no automatic semantics.
 
 ---
 
@@ -192,7 +192,7 @@ TextField(
 
 - **Grouping related inputs**: Use `Semantics` with `sortKey` or `mergeSemantics` to group related fields. Use `Column` with `FocusTraversalGroup` for logical field ordering.
 - **Error announcements**: Wrap error text in `Semantics(liveRegion: true)` so screen readers announce validation errors immediately.
-- **Autofill**: Use `autofillHints` parameter — maps to the platform's autofill framework (Android Autofill, iOS Keychain).
+- **Autofill**: Use `autofillHints` parameter -- maps to the platform's autofill framework (Android Autofill, iOS Keychain).
 
 | Flutter `autofillHints` | HTML `autocomplete` |
 |-------------------------|---------------------|
@@ -210,13 +210,13 @@ TextField(
 ## 7. Responsive & Adaptive
 
 - **Text scaling**: Use `MediaQuery.textScaleFactorOf(context)` to respect system font size settings (iOS: Dynamic Type; Android: Font size).
-- **Avoid hardcoded font sizes** — use `Theme.of(context).textTheme` which automatically scales with system settings.
+- **Avoid hardcoded font sizes** -- use `Theme.of(context).textTheme` which automatically scales with system settings.
 
 ```dart
-// Bad — ignores system font size
+// Bad -- ignores system font size
 Text('Hello', style: TextStyle(fontSize: 16))
 
-// Good — uses theme text style (respects system scaling)
+// Good -- uses theme text style (respects system scaling)
 Text('Hello', style: Theme.of(context).textTheme.bodyLarge)
 
 // Custom with scaling factor
@@ -225,7 +225,7 @@ Text('Hello', style: TextStyle(fontSize: 16 * MediaQuery.textScaleFactorOf(conte
 
 - **`MediaQuery.alwaysUse24HourFormatOf(context)`**: Respect system time format preferences.
 - **Layout adaptation**: Use `LayoutBuilder`, `MediaQuery`, and `OrientationBuilder` to adapt to screen sizes and orientations.
-- **Minimum touch targets**: All interactive elements should be at least **48×48dp** (Material Design guideline). Use `MaterialTapTargetSize` to adjust.
+- **Minimum touch targets**: All interactive elements should be at least **48?48dp** (Material Design guideline). Use `MaterialTapTargetSize` to adjust.
 - **Gesture alternatives**: Provide long-press or button alternatives for swipe/gesture-based interactions.
 - **`MediaQuery.boldTextOf(context)`**: Detect if system bold text is enabled.
 - **`MediaQuery.accessibleNavigationOf(context)`**: Detect if TalkBack/VoiceOver (or similar) is active. Use this to conditionally simplify complex gesture interactions.
@@ -245,7 +245,7 @@ return AnimatedContainer(
 ```
 
 - **Reduced motion**: On iOS, `MediaQuery.prefersReducedMotion` maps to the "Reduce Motion" accessibility setting. On Android, use `disableAnimations`.
-- **Avoid flashing/strobing effects** (WCAG 2.3.1 — Three Flashes or Below Threshold). This applies to both platforms.
+- **Avoid flashing/strobing effects** (WCAG 2.3.1 -- Three Flashes or Below Threshold). This applies to both platforms.
 - **Provide pause/stop controls** for auto-playing animations, carousels, or videos.
 
 ---
@@ -254,13 +254,13 @@ return AnimatedContainer(
 
 Use this checklist when implementing or auditing a Flutter app:
 
-- [ ] **Semantics tree is complete**: Every interactive element has a `Semantics` label. Use `Flutter Inspector` → "Enable Semantics" to view the tree.
-- [ ] **No `excludeSemantics` on interactive elements** — only on decorative/visual-only elements.
+- [ ] **Semantics tree is complete**: Every interactive element has a `Semantics` label. Use `Flutter Inspector` -> "Enable Semantics" to view the tree.
+- [ ] **No `excludeSemantics` on interactive elements** -- only on decorative/visual-only elements.
 - [ ] **Custom `CustomPainter`/`Canvas` widgets** are wrapped in `Semantics` with proper labels.
 - [ ] **`SemanticsDelegate`**: For complex custom widgets, implement `SemanticsDelegate` to provide precise semantics.
 - [ ] **`MergeSemantics`**: Group logical units (e.g., card with title + subtitle + icon) into one focusable node.
 - [ ] **Focus order is logical**: Keyboard/d-pad navigation follows visual reading order.
-- [ ] **Touch targets ≥ 48dp** (Material tap target size).
+- [ ] **Touch targets >= 48dp** (Material tap target size).
 - [ ] **Text scales correctly**: All text uses `TextTheme` styles, not hardcoded sizes.
 - [ ] **Errors are announced**: Validation errors use `liveRegion: true`.
 - [ ] **Loading states announced**: Activity indicators have `Semantics(label: 'Loading...', liveRegion: true)`.
@@ -316,8 +316,8 @@ testWidgets('Semantics tree is correct', (tester) async {
 
 | Flutter Test Guideline | Purpose |
 |------------------------|---------|
-| `androidTapTargetGuideline` | All tappable widgets ≥ 48dp |
-| `iOSTapTargetGuideline` | All tappable widgets ≥ 44pt |
+| `androidTapTargetGuideline` | All tappable widgets >= 48dp |
+| `iOSTapTargetGuideline` | All tappable widgets >= 44pt |
 | `labeledTapTargetGuideline` | All tappable widgets have semantics label |
 | `ensureSemanticLabels` | No duplicate labels on same screen |
 | `contrastGuideline` | Basic color contrast check (limited) |
@@ -328,13 +328,13 @@ testWidgets('Semantics tree is correct', (tester) async {
 
 ### Manual Testing
 
-- Navigate the entire app using **TalkBack** (Android) or **VoiceOver** (iOS) — no visual guidance.
-- Test with **system font size** set to Largest (Settings → Accessibility → Font size).
-- Test with **bold text** enabled (Settings → Accessibility → Bold text).
+- Navigate the entire app using **TalkBack** (Android) or **VoiceOver** (iOS) -- no visual guidance.
+- Test with **system font size** set to Largest (Settings -> Accessibility -> Font size).
+- Test with **bold text** enabled (Settings -> Accessibility -> Bold text).
 - Test with **high contrast** enabled (Android: High contrast text; iOS: Increase Contrast).
 - Test with **reduced motion** enabled (iOS: Reduce Motion; Android: Remove animations).
 - Test with **color correction/filters** enabled (Android: Color correction; iOS: Color filters).
 - Test on **small screens** (e.g., 4.7" iPhone SE) and **large screens** (tablets).
-- Test with **orientation changes** (portrait ↔ landscape).
+- Test with **orientation changes** (portrait <-> landscape).
 - Test with a **physical keyboard** connected if your app supports it.
 - Test **custom gestures** ensure there's an alternative non-gesture path.

@@ -20,7 +20,7 @@ compatibility:
 
 ## Core Philosophy
 
-Architecture is about making **decisions under uncertainty** that are **costly to reverse**. The architect's job is not to produce perfect designs — it is to:
+Architecture is about making **decisions under uncertainty** that are **costly to reverse**. The architect's job is not to produce perfect designs -- it is to:
 
 1. **Understand the problem domain** deeply before proposing solutions
 2. **Surface trade-offs explicitly** so decisions are informed
@@ -56,13 +56,13 @@ Before proposing any architecture, gather sufficient context:
 5. What are the **migration constraints**? (downtime tolerance, backward compatibility, data migration)
 
 **For existing systems**, load and analyze:
-- Current `package.json` / `tsconfig.json` — understand tech stack
-- Existing module structure — identify bounded contexts
-- Current database schema — understand data relationships
+- Current `package.json` / `tsconfig.json` -- understand tech stack
+- Existing module structure -- identify bounded contexts
+- Current database schema -- understand data relationships
 
 ### Phase 2: Architectural Option Generation
 
-Generate **2-3 distinct architectural approaches**. Each option must be genuinely different in its trade-offs — not cosmetic variations of the same approach.
+Generate **2-3 distinct architectural approaches**. Each option must be genuinely different in its trade-offs -- not cosmetic variations of the same approach.
 
 **Valid option dimensions:**
 | Dimension | Example Options |
@@ -96,9 +96,9 @@ Use the **Architecture Decision Matrix** to compare options:
 | **Total** | | | **185** | | **166** |
 
 **Decision criteria:**
-- Weighted total difference < 10% → tie — use strategic alignment to break
-- Weighted total difference 10-20% → recommend the leader but note the runner-up advantages
-- Weighted total difference > 20% → clear winner
+- Weighted total difference < 10% -> tie -- use strategic alignment to break
+- Weighted total difference 10-20% -> recommend the leader but note the runner-up advantages
+- Weighted total difference > 20% -> clear winner
 
 ### Phase 4: Create Architecture Decision Records (ADRs)
 
@@ -134,7 +134,7 @@ Include relevant background: business context, technical constraints, team conte
 | Option C | ... | 3-5 bullet points | 3-5 bullet points |
 
 ## Consequences
-[Describe the implications — positive AND negative.
+[Describe the implications -- positive AND negative.
 - Positive: What opportunities does this unlock?
 - Negative: What trade-offs or future work does this create?
 - Migration: What needs to change to adopt this?]
@@ -222,7 +222,7 @@ architectureImplementation:
     - database: "PostgreSQL 16+"
     - messageQueue: "RabbitMQ or Redis Streams"
   migrationPlan:
-    phase1: "Extract user module — existing code refactoring"
+    phase1: "Extract user module -- existing code refactoring"
     phase2: "Implement event bus infrastructure"
     phase3: "Migrate notification to async processing"
   riskAreas:
@@ -255,7 +255,7 @@ Every architecture design task MUST produce these artifacts:
 | `optionsConsidered` | Number of architectural options evaluated |
 | `selectedOption` | Which option was selected |
 | `decisionConfidence` | Low/Medium/High |
-| `riskLevel` | Low/Medium/High — overall architecture risk |
+| `riskLevel` | Low/Medium/High -- overall architecture risk |
 | `migrationRequired` | Whether migration from current architecture is needed |
 | `architectureConsistencyCheck` | Whether ADRs cross-reference correctly and are internally consistent |
 
@@ -263,14 +263,14 @@ Every architecture design task MUST produce these artifacts:
 
 ## Hard Rules
 
-1. **NEVER propose a single architecture option** — always offer at least 2 distinct approaches
-2. **NEVER skip the decision matrix** — even for "obvious" choices, the matrix reveals trade-offs
-3. **NEVER skip ADR creation** — decisions without ADRs are lost knowledge
-4. **NEVER leave security out of the architecture** — security is a first-class architectural concern
-5. **NEVER produce architecture in isolation** — always reference the existing codebase and tech stack
-6. **NEVER use "it depends" without resolution** — if multiple options are viable, build a decision matrix
-7. **ALWAYS include verification criteria** — how will we know this architecture works?
-8. **ALWAYS consider migration path** — even greenfield projects will evolve
+1. **NEVER propose a single architecture option** -- always offer at least 2 distinct approaches
+2. **NEVER skip the decision matrix** -- even for "obvious" choices, the matrix reveals trade-offs
+3. **NEVER skip ADR creation** -- decisions without ADRs are lost knowledge
+4. **NEVER leave security out of the architecture** -- security is a first-class architectural concern
+5. **NEVER produce architecture in isolation** -- always reference the existing codebase and tech stack
+6. **NEVER use "it depends" without resolution** -- if multiple options are viable, build a decision matrix
+7. **ALWAYS include verification criteria** -- how will we know this architecture works?
+8. **ALWAYS consider migration path** -- even greenfield projects will evolve
 
 ---
 
@@ -280,16 +280,16 @@ When this skill is loaded by the Orchestrator:
 
 ```
 User asks "design the architecture"
-    ↓
+    v
 Orchestrator dispatches Architect subagent (loads this skill)
-    ↓
+    v
 Architect produces ADRs + diagrams + decision matrix + implementation plan
-    ↓
+    v
 Orchestrator reviews with user (interactive)
-    ↓
+    v
 User approves architecture
-    ↓
+    v
 PlanDescriber creates implementation roadmap from architecture artifacts
-    ↓
-[Standard pipeline: Implementor → Build → Lint → Security → QA → Verifier]
+    v
+[Standard pipeline: Implementor -> Build -> Lint -> Security -> QA -> Verifier]
 ```

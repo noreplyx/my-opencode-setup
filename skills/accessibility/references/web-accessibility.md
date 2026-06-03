@@ -23,7 +23,7 @@ description: Web-specific accessibility implementation details (HTML, ARIA, keyb
 ## 1. Semantic HTML
 
 - Use native HTML elements with built-in accessibility (e.g., `<button>`, `<nav>`, `<main>`, `<header>`, `<footer>`, `<article>`, `<section>`).
-- Use heading levels (`<h1>`–`<h6>`) in a logical, hierarchical order (never skip levels).
+- Use heading levels (`<h1>`-`<h6>`) in a logical, hierarchical order (never skip levels).
 - Use `<label>` elements properly associated with form inputs via `for` attribute or wrapping.
 - Use `<table>` only for tabular data, not layout. Include `<caption>`, `<thead>`, `<tbody>`, `<th>` with `scope`.
 
@@ -48,7 +48,7 @@ description: Web-specific accessibility implementation details (HTML, ARIA, keyb
 - Maintain a logical tab order matching the visual layout (use `tabindex="0"` or `tabindex="-1"`; avoid positive tabindex values).
 - Provide visible focus indicators on all interactive elements (never use `outline: none` without a replacement).
 - Implement custom keyboard navigation patterns for complex widgets (e.g., arrow key navigation in menus, tabs, grids).
-- Ensure no keyboard traps — users must be able to navigate away from any element using the keyboard.
+- Ensure no keyboard traps -- users must be able to navigate away from any element using the keyboard.
 
 ---
 
@@ -56,7 +56,7 @@ description: Web-specific accessibility implementation details (HTML, ARIA, keyb
 
 - **Color Contrast Ratio** (WCAG AA):
   - Normal text (<18pt / <14pt bold): Minimum 4.5:1
-  - Large text (≥18pt / ≥14pt bold): Minimum 3:1
+  - Large text (>=18pt / >=14pt bold): Minimum 3:1
   - UI components and graphical objects: Minimum 3:1
 - **Never** use color as the only means of conveying information (add icons, text labels, or patterns).
 - Support **high contrast mode** (`prefers-contrast: high`) and **dark mode** (`prefers-color-scheme: dark`).

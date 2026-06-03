@@ -10,18 +10,18 @@ description: Security, performance, routing & navigation, error handling, access
 **Never use `innerHTML`, `insertAdjacentHTML`, or `outerHTML` with unsanitized input.**
 
 ```js
-// ❌ BAD: XSS vulnerability
+// [X] BAD: XSS vulnerability
 function renderComment(container, html) {
   container.innerHTML = html;
 }
 
-// ✅ GOOD: Sanitize before rendering HTML
+// [x] GOOD: Sanitize before rendering HTML
 function renderSafeComment(container, html) {
   const sanitized = DOMPurify.sanitize(html);
   container.innerHTML = sanitized;
 }
 
-// ✅ BETTER: Prefer text content over HTML when possible
+// [x] BETTER: Prefer text content over HTML when possible
 function renderCommentText(container, text) {
   container.textContent = text; // Browser auto-escapes
 }
@@ -83,7 +83,7 @@ const calculateTotals = memoize((transactions) => {
   return transactions.reduce((acc, t) => acc + t.amount, 0);
 });
 
-// Debounce — prevent rapid repeated execution
+// Debounce -- prevent rapid repeated execution
 function debounce(fn, delayMs) {
   let timer;
   return function (...args) {
@@ -92,7 +92,7 @@ function debounce(fn, delayMs) {
   };
 }
 
-// Throttle — limit execution rate
+// Throttle -- limit execution rate
 function throttle(fn, limitMs) {
   let waiting = false;
   return function (...args) {
@@ -134,7 +134,7 @@ Use windowing / virtual scrolling for large lists to avoid rendering all DOM nod
 
 ```js
 /**
- * Virtual list — renders only visible items.
+ * Virtual list -- renders only visible items.
  * Production-ready: use libraries like @tanstack/virtual, or virtual-scroller.
  */
 function createVirtualList(container, { items, itemHeight, visibleHeight }) {
@@ -181,9 +181,9 @@ function createVirtualList(container, { items, itemHeight, visibleHeight }) {
 
 ### 8.1 Route Design Principles
 
-- **Flat over nested** — Prefer flat route structures to avoid deep coupling.
-- **Colocate route config** — Keep route definitions close to lazy-loaded page modules.
-- **Use URL for source of truth** — Filter, sort, and pagination state belongs in URL search params.
+- **Flat over nested** -- Prefer flat route structures to avoid deep coupling.
+- **Colocate route config** -- Keep route definitions close to lazy-loaded page modules.
+- **Use URL for source of truth** -- Filter, sort, and pagination state belongs in URL search params.
 
 ### 8.2 Client-Side Routing (History API)
 
@@ -267,7 +267,7 @@ async function renderSettingsPage(app) {
 
 ### 9.1 Error Boundary Pattern
 
-Catch rendering errors at a granular level — wrap each major section independently.
+Catch rendering errors at a granular level -- wrap each major section independently.
 
 ```js
 function withErrorBoundary(renderFn, fallbackFn) {
@@ -291,14 +291,14 @@ function withErrorBoundary(renderFn, fallbackFn) {
   };
 }
 
-// Usage — wrap each major section independently
+// Usage -- wrap each major section independently
 const safeDashboard = withErrorBoundary(renderDashboard);
 safeDashboard(document.getElementById('dashboard'));
 ```
 
 ### 9.2 Graceful Degradation
 
-Always handle the four states: loading → error → empty → success.
+Always handle the four states: loading -> error -> empty -> success.
 
 ```js
 async function renderUserProfile(container, userId) {
@@ -340,7 +340,7 @@ async function renderUserProfile(container, userId) {
 
 > **This section is covered by the dedicated `accessibility` skill.**
 >
-> For comprehensive accessibility guidance — including WCAG compliance, semantic HTML, ARIA, keyboard navigation, focus management, color contrast, screen reader support, forms, animations, and testing — load and follow the **`accessibility`** skill.
+> For comprehensive accessibility guidance -- including WCAG compliance, semantic HTML, ARIA, keyboard navigation, focus management, color contrast, screen reader support, forms, animations, and testing -- load and follow the **`accessibility`** skill.
 >
 > This skill provides both **web (HTML/CSS/JS)** and **Flutter mobile** coverage with platform-specific patterns and testing guidance.
 
@@ -352,12 +352,12 @@ For quick reference during frontend development, keep these key principles in mi
 2. **Labels**: Every form input needs an associated `<label>` or `aria-label`.
 3. **Keyboard**: All interactive elements must be reachable and operable via keyboard (Tab, Enter, Space, Arrow keys).
 4. **Focus**: Never remove `outline` without providing an alternative visible focus indicator.
-5. **Color**: Never convey information through color alone — use icons, text, or patterns as supplements.
+5. **Color**: Never convey information through color alone -- use icons, text, or patterns as supplements.
 6. **Contrast**: WCAG AA requires 4.5:1 for normal text, 3:1 for large text.
 7. **Dynamic Content**: Use `aria-live` regions for toasts, errors, and loading announcements.
 8. **Testing**: Use `axe-core` for automated a11y checks (see Section 11.3).
 
-> 🔍 **When to load the `accessibility` skill**: During UI implementation, code review, or when running accessibility audits. Load it alongside this skill for the most comprehensive frontend guidance.
+> ?? **When to load the `accessibility` skill**: During UI implementation, code review, or when running accessibility audits. Load it alongside this skill for the most comprehensive frontend guidance.
 
 ---
 
@@ -365,7 +365,7 @@ For quick reference during frontend development, keep these key principles in mi
 
 ### 11.1 Component Testing (User's Perspective)
 
-Test behavior from the user's perspective — query the rendered DOM, not implementation internals.
+Test behavior from the user's perspective -- query the rendered DOM, not implementation internals.
 
 ```js
 // Using a DOM testing library (e.g., @testing-library/dom)
@@ -475,7 +475,7 @@ For full testing matrix (screen readers, color blindness simulators, contrast an
 ### 12.1 Structured Logging
 
 ```js
-// Logger utility — never use console.log directly in production
+// Logger utility -- never use console.log directly in production
 const LOG_LEVELS = ['debug', 'info', 'warn', 'error'];
 
 class Logger {

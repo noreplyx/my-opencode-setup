@@ -1,4 +1,4 @@
-{
+﻿{
   "metadata": {
     "skill_name": "ast-grep",
     "skill_path": "/home/oat/.config/opencode/skills/ast-grep",
@@ -136,10 +136,10 @@
     }
   },
   "notes": [
-    "All 5 evals pass all assertions — ast-grep skill provides comprehensive guidance",
+    "All 5 evals pass all assertions -- ast-grep skill provides comprehensive guidance",
     "The without-skill baseline was not run separately (ast-grep CLI usage is independent of the skill file)",
     "The skill adds educational value by explaining meta-variables, rule structure, transform, etc.",
-    "Eval 5 returned empty array [] which is correct — the test file lacks ../../* imports",
+    "Eval 5 returned empty array [] which is correct -- the test file lacks ../../* imports",
     "ast-grep CLI version 0.42.3 is installed and functional"
   ]
 }

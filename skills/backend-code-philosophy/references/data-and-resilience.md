@@ -11,7 +11,7 @@ Cache aggressively but invalidate carefully. Choose strategies based on data cri
 
   ```js
   // Layer 1: In-memory cache (fastest, local to instance)
-  // Layer 2: Distributed cache (e.g. Redis — shared across instances)
+  // Layer 2: Distributed cache (e.g. Redis -- shared across instances)
   // Layer 3: Database (source of truth)
 
   async function getUserProfile(userId) {
@@ -66,7 +66,7 @@ Cache aggressively but invalidate carefully. Choose strategies based on data cri
     memoryCache.del(cacheKey);
   });
 
-  // Strategy 3: TTL-Based (simplest — let entries expire naturally)
+  // Strategy 3: TTL-Based (simplest -- let entries expire naturally)
   // Suitable for data that can be slightly stale (e.g., product catalog)
   ```
 
@@ -111,10 +111,10 @@ Abstract data access behind interfaces to decouple business logic from storage d
 - **Repository Pattern:**
 
   ```js
-  // Repository interface (domain layer — no ORM dependency)
+  // Repository interface (domain layer -- no ORM dependency)
   // Implementations: findById, findByEmail, save, softDelete
 
-  // Repository implementation (infrastructure layer — ORM-specific)
+  // Repository implementation (infrastructure layer -- ORM-specific)
   class PostgresUserRepository {
     constructor(db) {
       this.db = db;
@@ -178,14 +178,14 @@ Abstract data access behind interfaces to decouple business logic from storage d
 - **Query Optimization Tips:**
 
   ```js
-  // BAD: N+1 query — hitting DB in a loop
+  // BAD: N+1 query -- hitting DB in a loop
   const orders = await db.orders.findMany({ where: { userId } });
   for (const order of orders) {
     const items = await db.orderItems.findMany({ where: { orderId: order.id } });
     order.items = items;
   }
 
-  // GOOD: Eager loading — single query with JOIN
+  // GOOD: Eager loading -- single query with JOIN
   const ordersWithItems = await db.orders.findMany({
     where: { userId },
     include: { items: true },
@@ -217,7 +217,7 @@ Abstract data access behind interfaces to decouple business logic from storage d
 - **Transactional Boundaries:** Keep transactions as short as possible. Never hold a transaction open across external API calls or long-running operations.
 
   ```js
-  // GOOD: Narrow transaction — only DB operations inside the transaction
+  // GOOD: Narrow transaction -- only DB operations inside the transaction
   async function transferFunds(fromId, toId, amount) {
     await db.transaction(async (tx) => {
       const from = await tx.accounts.update({
@@ -236,10 +236,10 @@ Abstract data access behind interfaces to decouple business logic from storage d
     await eventBus.publish('funds.transferred', { fromId, toId, amount });
   }
 
-  // BAD: External call inside the transaction — holding locks too long
+  // BAD: External call inside the transaction -- holding locks too long
   await db.transaction(async (tx) => {
     await tx.accounts.update(...);
-    await paymentGateway.charge(amount); // ❌ External HTTP call inside transaction!
+    await paymentGateway.charge(amount); // [X] External HTTP call inside transaction!
     await tx.accounts.update(...);
   });
   ```
@@ -278,7 +278,7 @@ Backend services require multiple layers of testing to ensure correctness and re
   });
   ```
 
-- **Integration Tests:** Test against real (or containerized) dependencies — database, cache, message queue.
+- **Integration Tests:** Test against real (or containerized) dependencies -- database, cache, message queue.
 
   ```js
   describe('PostgresUserRepository (integration)', () => {
@@ -399,7 +399,7 @@ Backend services must gracefully handle failures and recover without manual inte
       return;
     }
 
-    // Unexpected errors — log and return generic 500
+    // Unexpected errors -- log and return generic 500
     logger.error({ err, requestId: request.id }, 'Unhandled server error');
     sendResponse(500, {
       success: false,
@@ -452,7 +452,7 @@ Backend services must gracefully handle failures and recover without manual inte
         if (Date.now() - this.lastFailureTime > this.resetTimeoutMs) {
           this.state = CircuitState.HALF_OPEN;
         } else {
-          throw new Error('Service unavailable — circuit breaker open');
+          throw new Error('Service unavailable -- circuit breaker open');
         }
       }
 

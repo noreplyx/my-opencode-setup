@@ -20,19 +20,19 @@
 
 ```yaml
 ---
-# ── Pipeline Identity ──
+# -- Pipeline Identity --
 pipelineId: "uuid-or-timestamp"         # Unique session identifier
 feature: "user-profile"                  # Feature being implemented
 pipelineType: "full"                     # See Pipeline Selection Protocol
-pipelineComplexity: "moderate"           # simple | moderate | complex — used for contextual circuit breaker thresholds
+pipelineComplexity: "moderate"           # simple | moderate | complex -- used for contextual circuit breaker thresholds
 pipelineConfidence: 85                   # Orchestrator's confidence (0-100) in pipeline selection
 securityProfile: "standard"              # standard | sensitive | infrastructure | security-fix
 currentStep: "implementor"               # Current agent step name
 createdAt: "2025-05-19T10:00:00Z"        # ISO-8601 timestamp
-pipelineHeartbeat: "2025-05-19T10:05:00Z" # Last activity timestamp — used for stale detection
+pipelineHeartbeat: "2025-05-19T10:05:00Z" # Last activity timestamp -- used for stale detection
 status: "running"                        # running | completed | failed
 
-# ── Agent History (append-only) ──
+# -- Agent History (append-only) --
 agentHistory:
   - step: "finder"
     agent: "ses_xxx"                     # Subagent session ID
@@ -53,7 +53,7 @@ agentHistory:
           severity: "medium"
     decisions:                           # Key decisions made during this step
       - what: "Chose Zod over Joi for input validation"
-        why: "Already in dependency tree — no new install needed"
+        why: "Already in dependency tree -- no new install needed"
         by_who: "finder"
         evidence:                        # NEW: Decision provenance
           - source: "package.json"
@@ -75,7 +75,7 @@ agentHistory:
         result: "passed"
     decisions: []
     warnings:
-      - "TypeScript strict mode not enabled — consider enabling for better type safety"
+      - "TypeScript strict mode not enabled -- consider enabling for better type safety"
     changedFiles:
       - "src/services/user.ts"
       - "src/controllers/user.ts"
@@ -131,7 +131,7 @@ agentHistory:
         source: "src/services/user.ts"
         method: "grep"
         command: "grep -n 'export.*validateEmail' src/services/user.ts"
-        excerpt: "(no match — export not found)"
+        excerpt: "(no match -- export not found)"
         result: "not_found"
     decisions: []
     warnings: []
@@ -139,7 +139,7 @@ agentHistory:
     artifacts:
       - "Verification report (sent to Orchestrator)"
 
-# ── Agent Output Contract ──
+# -- Agent Output Contract --
 # Every subagent MUST return structured output. See the Agent Output Contract section.
 agentOutputs:
   finder:
@@ -267,7 +267,7 @@ agentOutputs:
     auditTrailPath: ".opencode/audit/<pipeline-id>.audit.yaml"
     auditIntegrity: "intact" | "broken" | null
 
-# ── Evidence Quality Metrics (NEW) ──
+# -- Evidence Quality Metrics (NEW) --
 evidenceQuality:
   overallScore: 87                    # Average quality score across all agents (0-100)
   agents:
@@ -294,7 +294,7 @@ evidenceQuality:
     stale: 5
     invalidated: 2
 
-# ── Evidence Dependencies (Cross-Agent Provenance) (NEW) ──
+# -- Evidence Dependencies (Cross-Agent Provenance) (NEW) --
 evidenceDependencies:
   - dependentClaim: "UserService.createUser works (Verifier CP-003)"
     dependsOn:
@@ -309,7 +309,7 @@ evidenceDependencies:
         contentHash: "c3d4e5f6a7b8..."
     chainStatus: "verified"
 
-# ── Progressive Summaries (context window budgeting) ──
+# -- Progressive Summaries (context window budgeting) --
 summaries:
   finder: "Found User model at src/models/user.ts. Key finding: existing validation middleware."
   plandescriber: "3-phase roadmap: model, service, controller. 8 checkpoints in manifest."
@@ -317,7 +317,7 @@ summaries:
   qa: "Smoke test passed. 2 edge cases generated. 1 non-functional issue (performance)."
   verifier: "72% compliance. 2/8 checkpoints failed (CP-003, CP-007). Confidence: LOW."
 
-# ── Loaded Skills (conflict resolution) ──
+# -- Loaded Skills (conflict resolution) --
 loadedSkills:
   - name: "code-philosophy"
     sections: ["naming", "exports"]
@@ -328,10 +328,10 @@ loadedSkills:
   activeOverrides:
     - "accessibility.aria overrides code-philosophy.naming for button components"
 
-# ── Circuit Breaker State (Pattern-Based) ──
+# -- Circuit Breaker State (Pattern-Based) --
 circuitBreaker:
   state: "closed"                        # closed | open | half-open
-  complexity: "moderate"                 # mirrors pipelineComplexity — used to select contextual thresholds
+  complexity: "moderate"                 # mirrors pipelineComplexity -- used to select contextual thresholds
   thresholds:
     build:
       simple: 1
@@ -367,7 +367,7 @@ circuitBreaker:
     smokeTest: 0
     verifier: 3
 
-  # ── NEW: Pattern-Based Circuit Breaker ──
+  # -- NEW: Pattern-Based Circuit Breaker --
   patternSignatures:                    # Track DISTINCT failure patterns (deduplicated by signature hash)
     - signature: "a1b2c3d4"
       gate: "verifier"
@@ -386,7 +386,7 @@ circuitBreaker:
       firstSeen: "2026-05-19T10:30:00Z"
       lastSeen: "2026-05-19T10:30:00Z"
 
-  # ── NEW: Pattern Escalation Signals ──
+  # -- NEW: Pattern Escalation Signals --
   escalationSignals:
     sameSignatureThresholdReached: false       # true when any single signature.count >= 3
     sameClassificationThresholdReached: true    # true when any classification appears in >= 3 distinct signatures
@@ -394,7 +394,7 @@ circuitBreaker:
     totalClassificationInstances:
       plan-omission: 2
       implementation-error: 1
-    recommendedAction: "Monitor — plan-omission pattern has 2 occurrences across signatures"
+    recommendedAction: "Monitor -- plan-omission pattern has 2 occurrences across signatures"
     escalationHistory:                         # NEW: Append-only log of escalation events
       - timestamp: "2026-05-19T10:35:00Z"
         action: "escalated-to-plandescriber"
@@ -407,7 +407,7 @@ circuitBreaker:
       edge-case-miss: 3                    # Count of failures with same root cause classification
       implementation-error: 1
     autoEscalationTriggered: true          # True if pattern detection triggered auto-escalation
-    cyclePatternHistory:                   # NEW: Track Fixer→Verifier→Fixer cycles
+    cyclePatternHistory:                   # NEW: Track Fixer->Verifier->Fixer cycles
       - pattern: "fixer-verifier-loop"
         occurrences: 2
         lastOccurrence: "2026-05-19T10:35:00Z"
@@ -437,7 +437,7 @@ circuitBreaker:
     integrity: "intact" | "broken" | "not_verified"
     entryCount: 0
 
-# ── Failure Summary (only populated when circuit opens) ──
+# -- Failure Summary (only populated when circuit opens) --
 failureSummary:
   feature: "user-profile"
   pipelineType: "full"
@@ -465,18 +465,18 @@ failureSummary:
     passed: ["Build", "Lint", "Security", "Smoke Test"]
     failed: ["Verifier"]
     needsReview:
-      - "CP-003: exportExists validateEmail — partial implementation exists but incomplete"
+      - "CP-003: exportExists validateEmail -- partial implementation exists but incomplete"
 
   recommendedAction: "Revise plan to add explicit error handling checkpoints for all user service methods"
 
-# ── Git State ──
+# -- Git State --
 gitState:
   branch: "feature/user-profile"
   dirtyFiles: []
   lastCommitSha: "abc123def456"
   lastCommitMessage: "feat: add user profile service and controller"
 
-# ── Pre-Pipeline Git State (for rollback) ──
+# -- Pre-Pipeline Git State (for rollback) --
 prePipelineGitState:
   branch: "main"
   dirtyFiles: ["src/services/user.ts"]        # Files modified before pipeline started
@@ -484,7 +484,7 @@ prePipelineGitState:
   lastCommitMessage: "feat: add base services"
   stashedChanges: true | false               # Whether changes were stashed before pipeline
 
-# ── Next Objective ──
+# -- Next Objective --
 nextObjective: "Diagnose Verifier deviations and apply fixes"
 ---
 ```
@@ -624,7 +624,7 @@ Must match one of: `finder`, `brainstorm`, `planDescriber`, `implementor`, `qa`,
 Anchored evidence for each claim made during this step. Each entry includes claim, source, method, command, excerpt, and result. This enables the Truthfulness Validator to verify every claim independently.
 
 ### `agentHistory[].decisions[].evidence`
-Provenance for decisions — shows what source information led to each decision.
+Provenance for decisions -- shows what source information led to each decision.
 
 ### `agentHistory[].knowledgeGraph`
 Structured exploration output from Smart Finder (entities, relationships, hazards).
@@ -654,9 +654,9 @@ Task complexity for contextual thresholds.
 Orchestrator's confidence in pipeline selection.
 
 ### `circuitBreaker.state`
-- `closed`: Normal operation — agents execute as normal
-- `open`: Repeated failures detected — Orchestrator pauses cycling
-- `half-open`: Probation period — one retry allowed
+- `closed`: Normal operation -- agents execute as normal
+- `open`: Repeated failures detected -- Orchestrator pauses cycling
+- `half-open`: Probation period -- one retry allowed
 
 ### `circuitBreaker.patternSignatures` (NEW)
 Tracks DISTINCT failure patterns by deduplicating on a SHA256 signature hash. The signature is computed as:
@@ -670,9 +670,9 @@ Computed automatically from `patternSignatures`:
 
 | Condition | Action |
 |-----------|--------|
-| Any signature count >= 3 | Open circuit — same fix not working |
+| Any signature count >= 3 | Open circuit -- same fix not working |
 | Same classification appears in >= 3 distinct signatures | Auto-escalate to PlanDescriber |
-| Same cycle pattern (e.g., fixer→verifier→fixer) repeats >= 3 times | Escalate to PlanDescriber |
+| Same cycle pattern (e.g., fixer->verifier->fixer) repeats >= 3 times | Escalate to PlanDescriber |
 | Total distinct signatures >= 5 with mixed classifications | Flag for user review |
 
 ### `circuitBreaker.patternDetection.cyclePatternHistory` (NEW)
@@ -686,7 +686,7 @@ Tracks what was successfully delivered despite pipeline failure. Contains three 
 
 - `passed`: List of pipeline gates/steps that completed successfully (e.g., ["Build", "Lint", "Security", "Smoke Test"]). These represent work that can be retained even though the overall pipeline failed.
 - `failed`: List of gates/steps that did not pass (e.g., ["Verifier"]). These represent the blocking failures that caused circuit breaker to open.
-- `needsReview`: List of specific items that are partially implemented and need human review (e.g., "CP-003: exportExists validateEmail — partial implementation exists but incomplete"). These items are functional enough to keep but need verification/correction.
+- `needsReview`: List of specific items that are partially implemented and need human review (e.g., "CP-003: exportExists validateEmail -- partial implementation exists but incomplete"). These items are functional enough to keep but need verification/correction.
 
 ### `status` (top-level)
 - `running`: Pipeline in progress
@@ -698,7 +698,7 @@ Tracks what was successfully delivered despite pipeline failure. Contains three 
 ## Validation Rules
 
 1. `pipelineId` MUST be unique per pipeline run
-2. `agentHistory` MUST be append-only — never overwrite entries
+2. `agentHistory` MUST be append-only -- never overwrite entries
 3. `circuitBreaker.counters` MUST reset when:
    - The task passes the gate successfully
    - PlanDescriber revises the roadmap
@@ -706,7 +706,7 @@ Tracks what was successfully delivered despite pipeline failure. Contains three 
    - Orchestrator manually resets after user intervention
 4. `circuitBreaker.patternSignatures` MUST be updated every time a gate fails (with deduplication by signature hash)
 5. `circuitBreaker.escalationSignals` MUST be recalculated whenever `patternSignatures` is updated
-6. `circuitBreaker.patternDetection.cyclePatternHistory` MUST be updated when a Fixer→Verifier→Fixer cycle is detected
+6. `circuitBreaker.patternDetection.cyclePatternHistory` MUST be updated when a Fixer->Verifier->Fixer cycle is detected
 7. `failureSummary` MUST only be populated when `circuitBreaker.state` is `open`
 8. `gitState` MUST be updated at pipeline start and after any file-modifying step
 9. `agentOutputs` MUST be updated after each agent completes
@@ -734,7 +734,7 @@ Tracks what was successfully delivered despite pipeline failure. Contains three 
 
 ## New Agent Steps (Schema Additions)
 
-### `agentHistory[].step` — New Valid Values
+### `agentHistory[].step` -- New Valid Values
 Add: `integrator`, `documentor`, `acceptanceGate`
 
 These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `implementor`, `qa`, `securityScan`, `verifier`, `fixer`, `browserTester`, `documentor`.
@@ -773,7 +773,7 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
         to: "../services/user.service"
   decisions:
     - what: "Added UserService to NestJS module providers"
-      why: "Project uses NestJS DI — must register in @Module decorator"
+      why: "Project uses NestJS DI -- must register in @Module decorator"
       by_who: "integrator"
       evidence:
         - source: "src/app.module.ts"
@@ -811,13 +811,13 @@ These join the existing valid values: `finder`, `brainstorm`, `planDescriber`, `
       summary: "Added API endpoints table and configuration section"
   decisions:
     - what: "Used imperative mood for JSDoc descriptions"
-      why: "Project convention — all existing JSDoc uses imperative"
+      why: "Project convention -- all existing JSDoc uses imperative"
       by_who: "documentor"
       evidence:
         - source: "src/services/existing.service.ts"
           excerpt: "/** Validate input */"
   warnings:
-    - "README.md doesn't exist — skipped README update"
+    - "README.md doesn't exist -- skipped README update"
   changedFiles:
     - "src/services/user.service.ts"
     - "src/controllers/user.controller.ts"
@@ -890,18 +890,18 @@ circuitBreaker.patternSignatures:
 
 | Signatures Condition | Circuit State | Action |
 |----------------------|--------------|--------|
-| Any signature.count >= 3 | closed → open | Same fix not working — STOP cycling |
-| Same classification in >= 3 distinct signatures | closed → half-open | Same TYPE of failure — escalate to PlanDescriber |
-| Fixer→Verifier cycle repeats >= 3 times | closed → half-open | Loop detected — skip Fixer, go to PlanDescriber |
-| >= 5 distinct signatures, mixed classifications | closed → open | Multiple different failures — flag for user review |
-| After PlanDescriber revises plan | open → closed | Reset all counters and signatures |
+| Any signature.count >= 3 | closed -> open | Same fix not working -- STOP cycling |
+| Same classification in >= 3 distinct signatures | closed -> half-open | Same TYPE of failure -- escalate to PlanDescriber |
+| Fixer->Verifier cycle repeats >= 3 times | closed -> half-open | Loop detected -- skip Fixer, go to PlanDescriber |
+| >= 5 distinct signatures, mixed classifications | closed -> open | Multiple different failures -- flag for user review |
+| After PlanDescriber revises plan | open -> closed | Reset all counters and signatures |
 
 ## Dynamic Context Injection Metadata
 
 When dynamic context injection is used, the hand-off is recorded in `agent-context.md` with a new field:
 
 ```yaml
-# ── Context Injection Metadata ──
+# -- Context Injection Metadata --
 contextInjection:
   agent: "implementor"
   injectedSections:                  # What was included
@@ -929,9 +929,9 @@ Add these rules to the existing set (after rule 21):
 23. If `step` is `integrator`, `wiringSummary` is REQUIRED
 24. If `step` is `documentor`, `docsGenerated` is REQUIRED
 25. If `step` is `acceptanceGate`, `acceptanceResults` is REQUIRED
-26. `circuitBreaker.patternSignatures` entries MUST be deduplicated by `signature` hash — never have duplicate entries for the same signature
+26. `circuitBreaker.patternSignatures` entries MUST be deduplicated by `signature` hash -- never have duplicate entries for the same signature
 27. `circuitBreaker.escalationSignals` MUST be recalculated whenever `patternSignatures` is updated
-28. `circuitBreaker.escalationSignals.escalationHistory` MUST be append-only — never overwrite entries
+28. `circuitBreaker.escalationSignals.escalationHistory` MUST be append-only -- never overwrite entries
 29. `contextInjection` is OPTIONAL but recommended for pipelines with 4+ agents
 30. `agentHistory[].evidence` MUST be populated with at least 1 entry per step that makes substantive claims
 31. `agentHistory[].decisions[].evidence` is RECOMMENDED but not required

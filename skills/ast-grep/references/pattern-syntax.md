@@ -2,7 +2,7 @@
 
 ## Core Concept
 
-ast-grep patterns are code snippets that ast-grep parses into AST nodes. The pattern matches target code that has the **same syntactical structure** — whitespace, comments, and formatting are irrelevant.
+ast-grep patterns are code snippets that ast-grep parses into AST nodes. The pattern matches target code that has the **same syntactical structure** -- whitespace, comments, and formatting are irrelevant.
 
 ## Meta-Variables
 
@@ -15,8 +15,8 @@ Matches exactly **one** AST node.
 | Variable | Description |
 |----------|-------------|
 | `$ANYTHING` | Captures a named AST node |
-| `$_` | Non-capturing — suppresses variable tracking for speed |
-| `$_ANYTHING` | Non-capturing named — also suppresses tracking |
+| `$_` | Non-capturing -- suppresses variable tracking for speed |
+| `$_ANYTHING` | Non-capturing named -- also suppresses tracking |
 | `$_123` | Valid (digits allowed with underscore) |
 
 **Valid names**: `$META`, `$META_VAR`, `$META_VAR1`, `$_`, `$_123`, `$$`
@@ -36,10 +36,10 @@ Reusing the same meta-variable name enforces equality:
 
 ```javascript
 // Pattern: $A == $A
-a == a              // ✅ matches
-1 + 1 == 1 + 1      // ✅ matches (same subtree)
-a == b              // ❌ no match
-1 + 1 == 2          // ❌ no match (different subtrees)
+a == a              // [x] matches
+1 + 1 == 1 + 1      // [x] matches (same subtree)
+a == b              // [X] no match
+1 + 1 == 2          // [X] no match (different subtrees)
 ```
 
 ### Non-Capturing with `$_`
@@ -48,8 +48,8 @@ All meta-variables starting with `$_` suppress capture tracking:
 
 ```javascript
 // Pattern: $_FUNC($_)
-test(a)             // ✅ no capture bookkeeping
-foo(x)              // ✅
+test(a)             // [x] no capture bookkeeping
+foo(x)              // [x]
 ```
 
 This is faster because ast-grep doesn't create a HashMap for bookkeeping.

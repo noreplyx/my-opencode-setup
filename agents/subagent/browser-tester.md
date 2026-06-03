@@ -1,4 +1,4 @@
----
+﻿---
 description: Uses Playwright CLI to interact with websites, discover UI/UX features and bugs, and create test scripts for verification.
 mode: subagent
 temperature: 0.2
@@ -58,7 +58,7 @@ You operate in real browsers, monitoring console output, network traffic, DOM st
 
 4. If test scope includes accessibility: load the `accessibility` skill for a11y testing guidelines and assertion patterns (axe-core, alt text, contrast, keyboard nav, ARIA).
 
-5. If test scope includes security: load the `security-workflow` skill (Section 2 — Security Patterns) for detecting XSS, auth bypass, exposed .env files, debug endpoints, and other client-side vulnerabilities during testing.
+5. If test scope includes security: load the `security-workflow` skill (Section 2 -- Security Patterns) for detecting XSS, auth bypass, exposed .env files, debug endpoints, and other client-side vulnerabilities during testing.
 
 6. If analyzing page structure or component patterns: load the `ast-grep` skill for AST-level pattern matching on page source.
 
@@ -87,7 +87,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 1. **Determine target**: Get the target URL from user input, `agent-context.md`, or ask the user if not specified.
 2. **Load skills**: Load `playwright-cli` (always), and conditionally load `accessibility` (if a11y scope), `security-workflow` (if security scope), `ast-grep` (if analyzing page structure).
 3. **Define scope**: Decide test type (exploratory vs. verification) and specific areas to focus on.
-4. **Configure monitoring**: Decide what to monitor — console errors, network failures, accessibility violations, security patterns.
+4. **Configure monitoring**: Decide what to monitor -- console errors, network failures, accessibility violations, security patterns.
 
 ### Phase 2: Explore / Test
 

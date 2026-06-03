@@ -5,7 +5,7 @@ description: Use this skill when planning or implementing UI code (web or Flutte
 
 # Accessibility (a11y) Philosophy
 
-This skill ensures that all user interfaces — **web (HTML/CSS/JS) and Flutter mobile (Android/iOS)** — are designed and implemented to be usable by people with diverse abilities, following the Web Content Accessibility Guidelines (WCAG) and established accessibility best practices for each platform.
+This skill ensures that all user interfaces -- **web (HTML/CSS/JS) and Flutter mobile (Android/iOS)** -- are designed and implemented to be usable by people with diverse abilities, following the Web Content Accessibility Guidelines (WCAG) and established accessibility best practices for each platform.
 
 > **Common Principles**: WCAG's POUR principles (Perceivable, Operable, Understandable, Robust) apply equally to both web and mobile applications. For platform-specific details, load the appropriate reference file(s) below.
 
@@ -79,7 +79,7 @@ When applying the Accessibility skill:
 ## Core Principles Summary
 
 - **Semantic structure**: Use native HTML elements (web) or Semantics widgets (Flutter). Never skip heading levels.
-- **Labels everywhere**: Every interactive element needs an accessible label — alt text for images, aria-label or Semantics(label) for controls.
+- **Labels everywhere**: Every interactive element needs an accessible label -- alt text for images, aria-label or Semantics(label) for controls.
 - **Never rely on color alone**: Always pair color coding with icons, text labels, or patterns.
 - **Keyboard/gesture operable**: All interactive elements must be reachable via keyboard (web) or focus traversal (Flutter). No gesture traps.
 - **Sufficient contrast**: 4.5:1 minimum for normal text, 3:1 for large text and UI components.
@@ -93,13 +93,13 @@ When applying the Accessibility skill:
 
 Use this checklist when implementing or auditing a Flutter app:
 
-- [ ] **Semantics tree is complete**: Every interactive element has a `Semantics` label. Use `Flutter Inspector` → "Enable Semantics" to view the tree.
-- [ ] **No `excludeSemantics` on interactive elements** — only on decorative/visual-only elements.
+- [ ] **Semantics tree is complete**: Every interactive element has a `Semantics` label. Use `Flutter Inspector` -> "Enable Semantics" to view the tree.
+- [ ] **No `excludeSemantics` on interactive elements** -- only on decorative/visual-only elements.
 - [ ] **Custom `CustomPainter`/`Canvas` widgets** are wrapped in `Semantics` with proper labels.
 - [ ] **`SemanticsDelegate`**: For complex custom widgets, implement `SemanticsDelegate` to provide precise semantics.
 - [ ] **`MergeSemantics`**: Group logical units (e.g., card with title + subtitle + icon) into one focusable node.
 - [ ] **Focus order is logical**: Keyboard/d-pad navigation follows visual reading order.
-- [ ] **Touch targets ≥ 48dp** (Material tap target size).
+- [ ] **Touch targets >= 48dp** (Material tap target size).
 - [ ] **Text scales correctly**: All text uses `TextTheme` styles, not hardcoded sizes.
 - [ ] **Errors are announced**: Validation errors use `liveRegion: true`.
 - [ ] **Loading states announced**: Activity indicators have `Semantics(label: 'Loading...', liveRegion: true)`.
@@ -152,9 +152,9 @@ For platform-specific testing guidance and the assistive technology testing matr
 
 ## Hard Rules
 
-- ❌ **NEVER** use color as the only means of conveying information — always pair with icons, text, or patterns
-- ❌ **NEVER** remove focus outlines (`outline: none`) without providing a visible alternative
-- ❌ **NEVER** use `innerHTML`/`insertAdjacentHTML` with unsanitized user input
-- ✅ **ALWAYS** provide descriptive alt text for informative images and `alt=""` for decorative ones
-- ✅ **ALWAYS** maintain a logical heading hierarchy (never skip levels)
-- ✅ **ALWAYS** ensure keyboard accessibility for all interactive elements
+- [X] **NEVER** use color as the only means of conveying information -- always pair with icons, text, or patterns
+- [X] **NEVER** remove focus outlines (`outline: none`) without providing a visible alternative
+- [X] **NEVER** use `innerHTML`/`insertAdjacentHTML` with unsanitized user input
+- [x] **ALWAYS** provide descriptive alt text for informative images and `alt=""` for decorative ones
+- [x] **ALWAYS** maintain a logical heading hierarchy (never skip levels)
+- [x] **ALWAYS** ensure keyboard accessibility for all interactive elements

@@ -1,9 +1,9 @@
-{
+﻿{
   "expectations": [
     {"text": "Uses ast-grep rewrite (--rewrite flag or YAML fix) to perform the replacement", "passed": true, "evidence": "Created rule with fix: this.logger.error($$$ARGS)"},
     {"text": "The rewrite uses meta-variables to capture the console.error arguments", "passed": true, "evidence": "Uses $$$ARGS to capture all arguments to console.error and pass to this.logger.error"},
     {"text": "The output shows the original and transformed code", "passed": true, "evidence": "Diff output shows - console.error and + this.logger.error side by side"},
-    {"text": "The transformation preserves the arguments passed to console.error", "passed": true, "evidence": "ARGS: 'Failed to load users:' and err — both preserved in replacement"}
+    {"text": "The transformation preserves the arguments passed to console.error", "passed": true, "evidence": "ARGS: 'Failed to load users:' and err -- both preserved in replacement"}
   ],
   "summary": {"passed": 4, "failed": 0, "total": 4, "pass_rate": 1.0}
 }

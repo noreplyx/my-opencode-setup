@@ -11,11 +11,11 @@ description: Workflow protocol for the Implementor subagent. Provides step-by-st
 - Every function that touches a database, network, or filesystem MUST have explicit error handling.
 - Every public API method MUST validate its inputs.
 - Every service-level function MUST log (info on success, error on failure).
-- Every function MUST have proper TypeScript types — no `any`, no implicit returns.
+- Every function MUST have proper TypeScript types -- no `any`, no implicit returns.
 - If the plan says direct DB access, extract a repository/DAO layer.
-- Never hardcode config — use environment variables or config objects.
-- Report EVERY quality improvement in your output — the Orchestrator feeds these back to PlanDescriber.
-- Keep output focused. Quality additions are NOT scope creep — they are mandatory craftsmanship.
+- Never hardcode config -- use environment variables or config objects.
+- Report EVERY quality improvement in your output -- the Orchestrator feeds these back to PlanDescriber.
+- Keep output focused. Quality additions are NOT scope creep -- they are mandatory craftsmanship.
 - Every substantive claim in your output MUST include a `sources` block with method, command, lines, excerpt, and contentHash (see Output Format).
 
 ---
@@ -28,31 +28,31 @@ After writing code and BEFORE running the build, run this mandatory quality self
 
 | # | Check | How to Verify | Severity |
 |---|-------|--------------|----------|
-| 1 | **Error Handling** — Every async/error-prone operation has try/catch or `.catch()` | `grep` for `try {` / `catch` / `.catch(` near DB/net/fs calls | ❌ Blocking |
-| 2 | **Input Validation** — Every public function validates its parameters | `grep` for zod/joi/class-validator or `if (!x) throw` guards | ❌ Blocking |
-| 3 | **Logging** — Every public method logs entry/exit (info) or errors (error) | `grep` for `logger.info\|logger.error\|console.log\|console.error` | ❌ Blocking |
-| 4 | **Type Safety** — No `any`, no implicit return types, no untyped parameters | `grep` for `: any\|function .*(.*).*{` (check return types) | ❌ Blocking |
-| 5 | **No Direct DB in Controllers** — DB access is behind repository/DAO | `grep` for `db\.\|prisma\.\|query\|execute` (should be in services/dao) | ❌ Blocking |
-| 6 | **No Magic Values** — No hardcoded strings/numbers that should be config | Manual review for strings > 20 chars, numbers > 0 | ⚠️ Warning |
-| 7 | **Single Responsibility** — Each function does ONE thing | Manual review — split functions > 30 lines | ⚠️ Warning |
-| 8 | **Naming** — Names reveal intent (no `data`, `info`, `temp`, `x`, `foo`) | Manual review | ⚠️ Warning |
-| 9 | **Config from Env** — Secrets/config come from process.env, not hardcoded | `grep` for hardcoded passwords/keys/URLs | ❌ Blocking |
-| 10 | **Separation of Concerns** — Controllers don't do business logic, models don't handle HTTP | Manual review | ⚠️ Warning |
-| 11 | **No Dead Code** — No commented-out code, no unused imports/variables | Manual review | ⚠️ Warning |
-| 12 | **Error Messages** — Errors are descriptive and actionable, not just "Error" | Manual review | ⚠️ Warning |
-| 13 | **Parameterized Queries** — No string concatenation in SQL/NoSQL | `grep` for `` `${` `` in db queries | ❌ Blocking |
-| 14 | **DTOs/Validation Schemas** — Create DTOs/schemas for API request/response shapes | Check for exported interfaces/types/schemas | ❌ Blocking |
-| 15 | **Idempotency Consideration** — For write operations, consider idempotency (upsert, unique constraints) | Manual review for POST/PUT endpoints | ⚠️ Warning |
-| 16 | **No TODO/FIXME/HACK** — No unfinished work left in code | `grep` for `TODO\|FIXME\|HACK\|XXX` | ❌ Blocking |
-| 17 | **Bundle Size / Dependency Awareness** — No unnecessary dependencies; tree-shakeable imports | Review new imports in package.json or import statements | ⚠️ Warning |
+| 1 | **Error Handling** -- Every async/error-prone operation has try/catch or `.catch()` | `grep` for `try {` / `catch` / `.catch(` near DB/net/fs calls | [X] Blocking |
+| 2 | **Input Validation** -- Every public function validates its parameters | `grep` for zod/joi/class-validator or `if (!x) throw` guards | [X] Blocking |
+| 3 | **Logging** -- Every public method logs entry/exit (info) or errors (error) | `grep` for `logger.info\|logger.error\|console.log\|console.error` | [X] Blocking |
+| 4 | **Type Safety** -- No `any`, no implicit return types, no untyped parameters | `grep` for `: any\|function .*(.*).*{` (check return types) | [X] Blocking |
+| 5 | **No Direct DB in Controllers** -- DB access is behind repository/DAO | `grep` for `db\.\|prisma\.\|query\|execute` (should be in services/dao) | [X] Blocking |
+| 6 | **No Magic Values** -- No hardcoded strings/numbers that should be config | Manual review for strings > 20 chars, numbers > 0 | [!] Warning |
+| 7 | **Single Responsibility** -- Each function does ONE thing | Manual review -- split functions > 30 lines | [!] Warning |
+| 8 | **Naming** -- Names reveal intent (no `data`, `info`, `temp`, `x`, `foo`) | Manual review | [!] Warning |
+| 9 | **Config from Env** -- Secrets/config come from process.env, not hardcoded | `grep` for hardcoded passwords/keys/URLs | [X] Blocking |
+| 10 | **Separation of Concerns** -- Controllers don't do business logic, models don't handle HTTP | Manual review | [!] Warning |
+| 11 | **No Dead Code** -- No commented-out code, no unused imports/variables | Manual review | [!] Warning |
+| 12 | **Error Messages** -- Errors are descriptive and actionable, not just "Error" | Manual review | [!] Warning |
+| 13 | **Parameterized Queries** -- No string concatenation in SQL/NoSQL | `grep` for `` `${` `` in db queries | [X] Blocking |
+| 14 | **DTOs/Validation Schemas** -- Create DTOs/schemas for API request/response shapes | Check for exported interfaces/types/schemas | [X] Blocking |
+| 15 | **Idempotency Consideration** -- For write operations, consider idempotency (upsert, unique constraints) | Manual review for POST/PUT endpoints | [!] Warning |
+| 16 | **No TODO/FIXME/HACK** -- No unfinished work left in code | `grep` for `TODO\|FIXME\|HACK\|XXX` | [X] Blocking |
+| 17 | **Bundle Size / Dependency Awareness** -- No unnecessary dependencies; tree-shakeable imports | Review new imports in package.json or import statements | [!] Warning |
 
 ### Scoring
 
 | Condition | Action |
 |-----------|--------|
-| All ❌ Blocking checks pass (12/12) | Proceed. Include `qualitySelfReview: { passed: true, blockingItems: 12/12, warningItems: 5/5 }` |
-| Any ❌ Blocking fails | **FIX before reporting** — do NOT proceed to build |
-| Any ⚠️ Warning fails | Flag in output as `warnings` — non-blocking but noted |
+| All [X] Blocking checks pass (12/12) | Proceed. Include `qualitySelfReview: { passed: true, blockingItems: 12/12, warningItems: 5/5 }` |
+| Any [X] Blocking fails | **FIX before reporting** -- do NOT proceed to build |
+| Any [!] Warning fails | Flag in output as `warnings` -- non-blocking but noted |
 
 ### Output Format for Quality Self-Review
 
@@ -81,7 +81,7 @@ qualitySelfReview:
 
 ## Mandatory Setup
 
-1. **Load `shared-agent-workflow`** — Apply the standardized Read Context protocol, output contract format, and error taxonomy.
+1. **Load `shared-agent-workflow`** -- Apply the standardized Read Context protocol, output contract format, and error taxonomy.
 2. **Load `ast-grep`** for AST-based structural code search during implementation (useful for verifying code structure, checking for duplicate patterns, or finding similar existing implementations).
 3. **Load `code-philosophy`** (and backend/frontend variants if applicable) for code quality self-checks.
 
@@ -91,7 +91,7 @@ qualitySelfReview:
 
 You have bash access for development tasks. Follow these restrictions strictly:
 
-### ✅ Allowed Bash Operations
+### [x] Allowed Bash Operations
 
 - **Build tools**: `npm run build`, `tsc`, `tsc --incremental`, `webpack`, `vite build`, etc.
 - **Testing**: `npm test`, `jest`, `vitest`, `pytest`, etc.
@@ -101,7 +101,7 @@ You have bash access for development tasks. Follow these restrictions strictly:
 - **File operations**: `mkdir`, `cp`, `mv` for project files only
 - **Read-only inspection**: `cat`, `head`, `tail`, `ls`, `find`
 
-### ❌ Prohibited Bash Operations
+### [X] Prohibited Bash Operations
 
 - **NEVER run**: `rm -rf`, `del /F /S`, or any destructive delete commands on existing code
 - **NEVER run**: `chmod -R`, `sudo` commands
@@ -109,7 +109,7 @@ You have bash access for development tasks. Follow these restrictions strictly:
 - **NEVER run**: Commands that modify system configuration (registry, environment variables)
 - **NEVER run**: Commands that access or modify files outside the workspace directory
 
-### ⚠️ Caution Required
+### [!] Caution Required
 
 - **npm install / pip install**: Only install packages explicitly listed in the plan
 - **Git operations**: Never force push or rewrite history without explicit instruction
@@ -120,36 +120,36 @@ You have bash access for development tasks. Follow these restrictions strictly:
 ## Workflow
 
 ```
-0.   Load Shared Workflow — Load shared-agent-workflow skill
-0a.  Detect Project Commands — Find the correct build/lint/test commands
-0b.  Validate Output Contract Before Returning — Run validate-output-contract.ts on structured output
-0c.  Validate Truth of Claims — Verify claims against filesystem (score ≥ 95%)
-0d.  Pre-flight Checkpoint Commit — git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
-0e.  Plan Contract Validation — Run check-plan-contract.ts before writing any code ← NEW
-1.   Receive Plan — Review the step-by-step roadmap from PlanDescriber
-2.   Checkpoint-Driven Implementation — Implement checkpoint-by-checkpoint in dependency order ← RESTRUCTURED
+0.   Load Shared Workflow -- Load shared-agent-workflow skill
+0a.  Detect Project Commands -- Find the correct build/lint/test commands
+0b.  Validate Output Contract Before Returning -- Run validate-output-contract.ts on structured output
+0c.  Validate Truth of Claims -- Verify claims against filesystem (score >= 95%)
+0d.  Pre-flight Checkpoint Commit -- git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
+0e.  Plan Contract Validation -- Run check-plan-contract.ts before writing any code <- NEW
+1.   Receive Plan -- Review the step-by-step roadmap from PlanDescriber
+2.   Checkpoint-Driven Implementation -- Implement checkpoint-by-checkpoint in dependency order <- RESTRUCTURED
      2a.  Parse manifest into groups
      2b.  Implement + self-verify per group
      2c.  Record checkpointProgress
-3.   Security Self-Review (MANDATORY) — Run the Security Self-Review checklist (see section below)
-3a.  Quality Self-Review (MANDATORY) — Run the Quality Self-Review checklist (see section below)
-4.   Pre-Build Import Validation (MANDATORY) — Lightweight pre-check before full build
-4a.  Plan Adherence Gate — Run check-plan-adherence.ts (score must be ≥ 90%) ← NEW
-4b.  Plan Diff Report — Run plan-diff-report.ts if adherence < 90% ← NEW
-5.   Incremental Build — Prefer incremental builds (tsc --incremental, Vite, etc.)
-6.   Build & Verify (MANDATORY) — Run build command, collect full output
-7.   Lint & Verify (MANDATORY) — Run linter, fix issues, re-lint until clean
-8.   Post-Implement Contract Validation — Run check-plan-contract.ts --mode=post-implement ← NEW
-8a.  Output Contract Validation — Run validate-output-contract.ts --stdin on your structured output
-9.   Truth Validation — Run truth validator on your structured output
-10.  Report — Return structured output at the top of your message, followed by detailed summary
+3.   Security Self-Review (MANDATORY) -- Run the Security Self-Review checklist (see section below)
+3a.  Quality Self-Review (MANDATORY) -- Run the Quality Self-Review checklist (see section below)
+4.   Pre-Build Import Validation (MANDATORY) -- Lightweight pre-check before full build
+4a.  Plan Adherence Gate -- Run check-plan-adherence.ts (score must be >= 90%) <- NEW
+4b.  Plan Diff Report -- Run plan-diff-report.ts if adherence < 90% <- NEW
+5.   Incremental Build -- Prefer incremental builds (tsc --incremental, Vite, etc.)
+6.   Build & Verify (MANDATORY) -- Run build command, collect full output
+7.   Lint & Verify (MANDATORY) -- Run linter, fix issues, re-lint until clean
+8.   Post-Implement Contract Validation -- Run check-plan-contract.ts --mode=post-implement <- NEW
+8a.  Output Contract Validation -- Run validate-output-contract.ts --stdin on your structured output
+9.   Truth Validation -- Run truth validator on your structured output
+10.  Report -- Return structured output at the top of your message, followed by detailed summary
 ```
 
-### Step 0 — Load Shared Workflow
+### Step 0 -- Load Shared Workflow
 
 Load `shared-agent-workflow` skill for context reading + output contract.
 
-### Step 0a — Detect Project Commands (R5)
+### Step 0a -- Detect Project Commands (R5)
 
 Call the project command detection script to discover the correct build/lint/test commands for this project:
 
@@ -159,7 +159,7 @@ Call the project command detection script to discover the correct build/lint/tes
 
 The script returns the detected commands (e.g., `build: "npm run build"`, `lint: "eslint src/"`, `test: "vitest run"`). Use these detected commands throughout the workflow. If the script is unavailable, fall back to heuristic detection (check `package.json` scripts for `build`, `lint`, `test`).
 
-### Step 0b — Validate Output Contract Before Returning (R2)
+### Step 0b -- Validate Output Contract Before Returning (R2)
 
 After producing your structured output but BEFORE returning it to the Orchestrator, run the output contract validator:
 
@@ -178,7 +178,7 @@ EOF
 
 This validates that all required fields are present, types are correct, and the output conforms to the shared agent contract. **If validation fails, fix the output before returning.**
 
-### Step 0c — Validate Truth of Claims (R2)
+### Step 0c -- Validate Truth of Claims (R2)
 
 After output contract validation, verify your claims against the actual filesystem:
 
@@ -203,11 +203,11 @@ The truth validator:
 1. Checks that every claimed `changedFiles` entry actually exists on disk
 2. Verifies content hashes match (if provided)
 3. Validates that claimed exports actually exist in the target files
-4. Returns a truthfulness score (must be ≥ 95%)
+4. Returns a truthfulness score (must be >= 95%)
 
 **If truth score < 95%, fix the inaccuracies before returning.**
 
-### Step 0d — Pre-flight Checkpoint Commit (R7)
+### Step 0d -- Pre-flight Checkpoint Commit (R7)
 
 Before making any code changes, create a checkpoint commit for rollback safety:
 
@@ -222,7 +222,7 @@ Replace `<pipelineId>` with the actual pipeline ID from `agent-context.md`. This
 
 If the working tree is already clean (no uncommitted changes), skip this step and proceed.
 
-### Step 0e — Pre-Implementation Contract Validation (NEW)
+### Step 0e -- Pre-Implementation Contract Validation (NEW)
 
 Before writing ANY code, validate the plan contract against the project:
 
@@ -233,21 +233,21 @@ ts-node skills/scripts/orchestration/check-plan-contract.ts \
 ```
 
 This checks:
-1. Contract rules from the plan manifest — do import restrictions conflict with existing code?
-2. Checkpoint file targets — do any already exist (would cause overwrite)?
-3. Library restrictions — are disallowed libraries already in use?
+1. Contract rules from the plan manifest -- do import restrictions conflict with existing code?
+2. Checkpoint file targets -- do any already exist (would cause overwrite)?
+3. Library restrictions -- are disallowed libraries already in use?
 
 **If validation fails (exit code 1)**: Report the contract violations to the Orchestrator. Do NOT proceed with implementation until the Orchestrator updates the plan or confirms the violations are acceptable.
 
 **If validation warnings only**: Proceed with implementation but note the warnings in your structured output.
 
-**If manifest has no contractRules**: Proceed — contract validation is optional for now.
+**If manifest has no contractRules**: Proceed -- contract validation is optional for now.
 
-### Step 1 — Receive Plan
+### Step 1 -- Receive Plan
 
 Review the step-by-step roadmap from the Planner/Orchestrator. Cross-reference with the plan manifest (`plan-manifests/<feature>-manifest.json`) for verification checkpoints.
 
-### Step 2 — Checkpoint-Driven Implementation (NEW)
+### Step 2 -- Checkpoint-Driven Implementation (NEW)
 
 Do NOT write all code at once. Instead, implement checkpoint-by-checkpoint in dependency order:
 
@@ -259,14 +259,14 @@ Read the plan-manifest.json and group checkpoints by their target file. Process 
 
 1. **Implement** the code required for ALL checkpoints in this group
 2. **Self-Verify** each checkpoint using the appropriate method:
-   - `fileExists`/`fileNotExists` → `stat` / `ls`
-   - `exportExists`/`classExists`/`functionExists`/`typeExists` → `grep -n 'export ... <name>'`
-   - `methodExists` → `grep -n '<methodName>('` on the target class
-   - `handlesError` → `grep -n 'try {\|.catch('` in the target function
-   - `validatesInput` → `grep -n 'z\.\|schema\.\|\.parse('` in the target function
-   - `logsAtLevel` → `grep -n 'logger.\|console.'` in the target file
-   - `hasMiddleware` → `grep -n '<middlewareName>'` in the target file
-   - `routeExists` → `grep -n 'router.<method>\|@<Method>('` with the route path
+   - `fileExists`/`fileNotExists` -> `stat` / `ls`
+   - `exportExists`/`classExists`/`functionExists`/`typeExists` -> `grep -n 'export ... <name>'`
+   - `methodExists` -> `grep -n '<methodName>('` on the target class
+   - `handlesError` -> `grep -n 'try {\|.catch('` in the target function
+   - `validatesInput` -> `grep -n 'z\.\|schema\.\|\.parse('` in the target function
+   - `logsAtLevel` -> `grep -n 'logger.\|console.'` in the target file
+   - `hasMiddleware` -> `grep -n '<middlewareName>'` in the target file
+   - `routeExists` -> `grep -n 'router.<method>\|@<Method>('` with the route path
 3. **Record checkpointProgress** for each checkpoint:
    ```yaml
    checkpointProgress:
@@ -278,7 +278,7 @@ Read the plan-manifest.json and group checkpoints by their target file. Process 
        - id: "CP-001"
          kind: "fileExists"
          status: "implemented"
-         evidence: "stat src/services/user.ts → exists"
+         evidence: "stat src/services/user.ts -> exists"
    ```
 4. **If ANY checkpoint in the group fails** self-verification:
    - Fix the code immediately
@@ -290,15 +290,15 @@ Read the plan-manifest.json and group checkpoints by their target file. Process 
 
 Include `checkpointProgress` in your structured output (see Output Format below).
 
-### Step 3 — Security Self-Review (MANDATORY)
+### Step 3 -- Security Self-Review (MANDATORY)
 
-After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 — the canonical 17-item checklist) before proceeding to Quality Self-Review.
+After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 -- the canonical 17-item checklist) before proceeding to Quality Self-Review.
 
-### Step 3a — Quality Self-Review (MANDATORY)
+### Step 3a -- Quality Self-Review (MANDATORY)
 
-After Security Self-Review and BEFORE running the build, run the Quality Self-Review checklist (see the **Quality Self-Review Checklist** section above) against every created/modified file. All ❌ Blocking checks MUST pass before proceeding to Pre-Build Import Validation. Include `qualitySelfReview` in your structured output.
+After Security Self-Review and BEFORE running the build, run the Quality Self-Review checklist (see the **Quality Self-Review Checklist** section above) against every created/modified file. All [X] Blocking checks MUST pass before proceeding to Pre-Build Import Validation. Include `qualitySelfReview` in your structured output.
 
-### Step 4 — Pre-Build Import Validation (MANDATORY)
+### Step 4 -- Pre-Build Import Validation (MANDATORY)
 
 After writing all files but before running the full build, do a lightweight pre-check:
 
@@ -309,7 +309,7 @@ After writing all files but before running the full build, do a lightweight pre-
 
 This catches the most common build failures (wrong import paths, missing exports) in seconds instead of minutes.
 
-### Step 4.5 — Pre-Build Plan Adherence Gate (NEW)
+### Step 4.5 -- Pre-Build Plan Adherence Gate (NEW)
 
 After Pre-Build Import Validation but BEFORE the full build, run the plan adherence check:
 
@@ -329,13 +329,13 @@ This verifies that ALL plan manifest checkpoints are satisfied by the implemente
     --dir=./
   ```
 - Fix ALL failed checkpoints before proceeding to the build gate
-- Re-run check-plan-adherence.ts until score ≥ 90%
+- Re-run check-plan-adherence.ts until score >= 90%
 
-**If adherence score ≥ 90%**: Proceed to Step 5 (Incremental Build).
+**If adherence score >= 90%**: Proceed to Step 5 (Incremental Build).
 
 This gate catches plan deviations in SECONDS instead of minutes. Do NOT skip it.
 
-### Step 5 — Incremental Build
+### Step 5 -- Incremental Build
 
 Prefer incremental builds when available to reduce build time:
 - TypeScript: `tsc --incremental` (uses `.tsbuildinfo` cache)
@@ -345,17 +345,17 @@ Prefer incremental builds when available to reduce build time:
 
 Use the commands detected in **Step 0a**.
 
-### Step 6 — Build & Verify (MANDATORY)
+### Step 6 -- Build & Verify (MANDATORY)
 
-Run the build command (e.g., `npm run build`, `tsc`, `vite build`). Collect and return the **full build output** (stdout/stderr). If the build fails, report the errors and do NOT skip this step — the build MUST pass before reporting completion.
+Run the build command (e.g., `npm run build`, `tsc`, `vite build`). Collect and return the **full build output** (stdout/stderr). If the build fails, report the errors and do NOT skip this step -- the build MUST pass before reporting completion.
 
-### Step 7 — Lint & Verify (MANDATORY)
+### Step 7 -- Lint & Verify (MANDATORY)
 
-Run the linter (e.g., `eslint`, `prettier --check`, `tsc --noEmit`). Collect and return the **full lint output** (stdout/stderr). If linting fails, fix the issues and re-lint — lint MUST pass before reporting completion. If no linter is configured, report "No linter configured" and proceed.
+Run the linter (e.g., `eslint`, `prettier --check`, `tsc --noEmit`). Collect and return the **full lint output** (stdout/stderr). If linting fails, fix the issues and re-lint -- lint MUST pass before reporting completion. If no linter is configured, report "No linter configured" and proceed.
 
 Use the commands detected in **Step 0a**.
 
-### Step 8 — Post-Implement Contract Validation (NEW)
+### Step 8 -- Post-Implement Contract Validation (NEW)
 
 After the build and lint pass but before output contract validation, run the post-implement contract check:
 
@@ -367,15 +367,15 @@ ts-node skills/scripts/orchestration/check-plan-contract.ts \
 
 This verifies that the implemented code does not violate any contract rules (import restrictions, library restrictions, etc.). If violations are found, fix them before proceeding.
 
-### Step 8a — Output Contract Validation
+### Step 8a -- Output Contract Validation
 
 Run the output contract validator against your structured output (same as Step 0b but on the final output). Confirm all required fields are present and correctly typed.
 
-### Step 9 — Truth Validation
+### Step 9 -- Truth Validation
 
-Run the truth validator against your structured output (same as Step 0c but on the final output). Confirm truthfulness score ≥ 95%.
+Run the truth validator against your structured output (same as Step 0c but on the final output). Confirm truthfulness score >= 95%.
 
-### Step 10 — Report
+### Step 10 -- Report
 
 Report back to the Orchestrator with structured output at the top of your message, followed by the detailed summary. See the **Output Format** section for the required structure.
 
@@ -394,7 +394,7 @@ After completing the self-review pass and before reporting, run a mandatory secu
 - [ ] **Secrets management**: Are secrets (API keys, DB passwords, JWT secrets) accessed ONLY via environment variables (`process.env.*`)? Never hardcoded.
 - [ ] **Path traversal protection**: Are file operations using path traversal protections (`path.resolve` + prefix check)? Never trust user-provided paths directly.
 - [ ] **Authentication enforcement**: Is authentication enforced on all protected routes? Check middleware/guard placement.
-- [ ] **Authorization checks**: Is authorization checked on every resource access (not just auth — verify ownership/role)?
+- [ ] **Authorization checks**: Is authorization checked on every resource access (not just auth -- verify ownership/role)?
 - [ ] **Error message sanitization**: Are error messages sanitized (no stack traces, no internal details in production responses)?
 - [ ] **Security headers**: Are all HTTP responses setting security headers where applicable (CSP, HSTS, X-Frame-Options)?
 - [ ] **Rate limiting / input size limits**: Is there rate limiting or input size limits on user-submitted data?
@@ -408,7 +408,7 @@ After completing the self-review pass and before reporting, run a mandatory secu
 - [ ] **Prototype pollution prevention**: Is bracket notation assignment (`obj[key] = value`) used with user-controlled keys? This can pollute `__proto__`. Never do `obj[userInput] = value` without validating the key against an allowlist.
 - [ ] **NoSQL injection prevention**: If using MongoDB, Mongoose, or similar: are user inputs properly sanitized before use in `$where`, `$regex`, or query objects? Check for raw object spread (`{ ...userInput }`) in query builders.
 - [ ] **Command injection prevention**: Is user input ever passed to `exec()`, `spawn()`, `child_process`, or shell commands? If so, validate and sanitize strictly using an allowlist. Never concatenate user input into shell commands.
-- [ ] **Mass assignment prevention**: Are objects from user input spread or assigned to database models without filtering? Never do `Model.create(req.body)` — always use an allowlist like `pick(req.body, ['name', 'email'])`.
+- [ ] **Mass assignment prevention**: Are objects from user input spread or assigned to database models without filtering? Never do `Model.create(req.body)` -- always use an allowlist like `pick(req.body, ['name', 'email'])`.
 
 ### Scoring
 
@@ -453,7 +453,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `securitySelfReview` | Detailed security review results |
 | `sources` | Evidence sources for every substantive claim (see below) |
 
-### Sources Block (C1 — Every Claim Must Have Evidence)
+### Sources Block (C1 -- Every Claim Must Have Evidence)
 
 Every substantive claim in your output must include a `sources` array with provenance:
 
@@ -476,9 +476,9 @@ sources:
 ```
 
 **Requirements:**
-- Every claim that a file was created/modified → include the `stat` or `read` evidence
-- Every claim that build/lint passed → include the full command output excerpt
-- Every claim about code structure (exports, classes, methods) → include the `grep` evidence
+- Every claim that a file was created/modified -> include the `stat` or `read` evidence
+- Every claim that build/lint passed -> include the full command output excerpt
+- Every claim about code structure (exports, classes, methods) -> include the `grep` evidence
 - `contentHash` is SHA-256 of the relevant file/evidence excerpt (computed via `sha256sum` or `openssl dgst -sha256`)
 
 ### Checkpoint Progress Block
@@ -500,12 +500,12 @@ checkpointProgress:
       kind: "fileExists"
       target: "src/services/user.ts"
       status: "passed"
-      evidence: "stat src/services/user.ts → exists"
+      evidence: "stat src/services/user.ts -> exists"
     - id: "CP-003"
       kind: "handlesError"
       target: "src/services/user.ts"
       status: "passed"
-      evidence: "grep 'try {' src/services/user.ts → found at line 42"
+      evidence: "grep 'try {' src/services/user.ts -> found at line 42"
 ```
 
 ### Structured Block (placed at top of response)
@@ -534,7 +534,7 @@ selfReview:
     exports: ["UserService", "createUser"]
     classes: ["UserService"]
     diRequirements: ["UserRepository (constructor injection)"]
-    barrelExports: ["src/services/index.ts → UserService"]
+    barrelExports: ["src/services/index.ts -> UserService"]
 sources:
   - claim: "UserService created"
     file: "src/services/user.ts"
@@ -584,7 +584,7 @@ Then below, include the detailed summary as specified in `shared-agent-workflow`
 
 - **Dependent on**: PlanDescriber (must have roadmap first)
 - **Can parallelize with**: Other Implementor instances if sub-tasks operate on independent files/domains (e.g., frontend + backend simultaneously)
-- **Circuit breaker aware**: Build/lint failures increment `circuitBreaker.counters` — the Orchestrator tracks these after your report
+- **Circuit breaker aware**: Build/lint failures increment `circuitBreaker.counters` -- the Orchestrator tracks these after your report
 
 ---
 
@@ -601,7 +601,7 @@ Then below, include the detailed summary as specified in `shared-agent-workflow`
 - **MANDATORY**: You MUST run the linter after the build succeeds. Never report completion without first running and passing lint checks (or confirming no linter is configured)
 - **MANDATORY**: You MUST run the Security Self-Review checklist against all created/modified files and include the results in your report
 - **MANDATORY**: You MUST include a `sources` block with evidence for every substantive claim (method, command, lines, excerpt, contentHash)
-- **MANDATORY**: Your output MUST pass both validation gates (contract valid + truthfulness ≥ 95%) before reporting
+- **MANDATORY**: Your output MUST pass both validation gates (contract valid + truthfulness >= 95%) before reporting
 
 ---
 
@@ -611,12 +611,12 @@ In addition to code implementation, you may receive tasks to update agent permis
 
 ### Permission Update Workflow
 
-1. **Receive Request** — Orchestrator sends the skill name and which agents to update
-2. **Read Config** — Read the target agent config file (e.g., `agents/subagent/implementor.md`)
-3. **Parse Frontmatter** — Identify the `permission.skill` block in the YAML frontmatter
-4. **Add Entry** — Add `"<skill-name>": "allow"` to the `permission.skill` block (alphabetically sorted)
-5. **Preserve Format** — Maintain the exact same YAML formatting style
-6. **Verify** — Ensure the frontmatter is still valid YAML
+1. **Receive Request** -- Orchestrator sends the skill name and which agents to update
+2. **Read Config** -- Read the target agent config file (e.g., `agents/subagent/implementor.md`)
+3. **Parse Frontmatter** -- Identify the `permission.skill` block in the YAML frontmatter
+4. **Add Entry** -- Add `"<skill-name>": "allow"` to the `permission.skill` block (alphabetically sorted)
+5. **Preserve Format** -- Maintain the exact same YAML formatting style
+6. **Verify** -- Ensure the frontmatter is still valid YAML
 
 ### Example
 
@@ -654,9 +654,9 @@ And the new skill is `"payment-reconciliation"`, update to:
 
 | Script | Purpose | When to Run | Required |
 |--------|---------|------------|----------|
-| `validate-output-contract.ts --stdin` | Validates structured output has all required fields | After producing output (Steps 0b and 8) | ✅ Yes |
-| `validate-truth.ts --stdin` | Validates claims match actual filesystem state | After producing output (Steps 0c and 9) | ✅ Yes |
-| `check-plan-contract.ts --mode=pre-implement` | Validates contract rules before implementation | Before writing code (Step 0e) | ✅ Yes (if manifest has contractRules) |
-| `check-plan-contract.ts --mode=post-implement` | Validates contract rules after implementation | After build/lint pass (Step 8) | ✅ Yes (if manifest has contractRules) |
-| `check-plan-adherence.ts` | Verifies all plan manifest checkpoints are satisfied | Before full build (Step 4.5) | ✅ Yes |
-| `plan-diff-report.ts` | Detailed diff of which checkpoints passed/failed | When adherence < 90% (Step 4.5) | ⚠️ Conditional |
+| `validate-output-contract.ts --stdin` | Validates structured output has all required fields | After producing output (Steps 0b and 8) | [x] Yes |
+| `validate-truth.ts --stdin` | Validates claims match actual filesystem state | After producing output (Steps 0c and 9) | [x] Yes |
+| `check-plan-contract.ts --mode=pre-implement` | Validates contract rules before implementation | Before writing code (Step 0e) | [x] Yes (if manifest has contractRules) |
+| `check-plan-contract.ts --mode=post-implement` | Validates contract rules after implementation | After build/lint pass (Step 8) | [x] Yes (if manifest has contractRules) |
+| `check-plan-adherence.ts` | Verifies all plan manifest checkpoints are satisfied | Before full build (Step 4.5) | [x] Yes |
+| `plan-diff-report.ts` | Detailed diff of which checkpoints passed/failed | When adherence < 90% (Step 4.5) | [!] Conditional |

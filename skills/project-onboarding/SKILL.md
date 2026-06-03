@@ -26,12 +26,12 @@ Load this skill when the user expresses intent to:
 6. **Phase 5** (auto): Presents structured summary report
 
 ## Hard Rules
-- ❌ NEVER skip the Project Detection phase (Phase 1) — always read package.json first
-- ❌ NEVER proceed to documentation generation without first mapping the codebase via Finder
-- ❌ NEVER skip the verification step after generating docs — always confirm files exist
-- ✅ ALWAYS ask for user confirmation before running Phase 4 setup steps (npm install, .env creation, build)
-- ✅ ALWAYS present a structured Phase 5 report summarizing what was generated
-- ✅ ALWAYS offer to read key excerpts from generated documentation (architecture diagram, tech stack table)
+- [X] NEVER skip the Project Detection phase (Phase 1) -- always read package.json first
+- [X] NEVER proceed to documentation generation without first mapping the codebase via Finder
+- [X] NEVER skip the verification step after generating docs -- always confirm files exist
+- [x] ALWAYS ask for user confirmation before running Phase 4 setup steps (npm install, .env creation, build)
+- [x] ALWAYS present a structured Phase 5 report summarizing what was generated
+- [x] ALWAYS offer to read key excerpts from generated documentation (architecture diagram, tech stack table)
 
 ## 5-Phase Onboarding Pipeline
 
@@ -98,9 +98,9 @@ Send to Finder (after getting entry points):
 For the project at [project-root], trace the data flow for key operations:
 1. Read the main entry point file(s) identified earlier
 2. Find HTTP handler definitions (route registrations, controller methods)
-3. Trace each handler → find which service/module it calls
-4. From each service → find which repository/data-access module it calls
-5. Report the full chain: Route → Controller → Service → Repository
+3. Trace each handler -> find which service/module it calls
+4. From each service -> find which repository/data-access module it calls
+5. Report the full chain: Route -> Controller -> Service -> Repository
 ---
 Use the Onboarding Protocol section of your instructions.
 ```
@@ -185,30 +185,30 @@ After generating documentation, verify that the output files exist and have reas
 
 ---
 
-### Phase 4: Setup — Interactive Setup Steps
+### Phase 4: Setup -- Interactive Setup Steps
 
 **Goal**: Help the user get the project running locally. Each step REQUIRES user confirmation.
 
-**Step 4.1 — Check Node.js Version**
+**Step 4.1 -- Check Node.js Version**
 Action: Run `node --version` and compare against `engines.node` from package.json
 If mismatch: Warn the user but do not block
 Auto-run (no prompt needed for this check)
 
-**Step 4.2 — Prompt: Install Dependencies**
+**Step 4.2 -- Prompt: Install Dependencies**
 Ask the user: "Would you like to run `npm install` to install project dependencies?"
-If yes → Run `npm install` in the project root
-If no → Skip (note in report)
+If yes -> Run `npm install` in the project root
+If no -> Skip (note in report)
 
-**Step 4.3 — Prompt: Create .env File**
+**Step 4.3 -- Prompt: Create .env File**
 Check if `.env` exists. If not, and `.env.example` exists:
 Ask the user: "A .env.example file was found. Would you like to copy it to .env?"
-If yes → Copy `.env.example` to `.env`
-If no → Skip (note in report)
+If yes -> Copy `.env.example` to `.env`
+If no -> Skip (note in report)
 
-**Step 4.4 — Prompt: Verify Build**
+**Step 4.4 -- Prompt: Verify Build**
 Ask the user: "Would you like to run the build command to verify everything compiles?"
-If yes → Detect the build command (npm run build, npm run compile, tsc, etc.) and run it
-If no → Skip (note in report)
+If yes -> Detect the build command (npm run build, npm run compile, tsc, etc.) and run it
+If no -> Skip (note in report)
 
 **IMPORTANT**: All prompts use the `prompts` npm package. The Orchestrator should delegate this phase 
 back to the user (via the Orchestrator's own question mechanism) by describing what the script would do 
@@ -225,16 +225,16 @@ and asking for confirmation, OR run the script with the appropriate flags.
 Present a structured report to the user:
 
 ```
-## ✅ Onboarding Complete: [project-name]
+## [x] Onboarding Complete: [project-name]
 
 ### Generated Documentation
 
 | Document           | Description                                                 | Location          |
 | ------------------ | ----------------------------------------------------------- | ----------------- |
-| 📐 ARCHITECTURE.md | Tech stack, directory tree, architecture diagram, data flow | ./ARCHITECTURE.md |
-| 📖 GLOSSARY.md     | Domain terms, abbreviations, acronyms                       | ./GLOSSARY.md     |
-| 🔧 SETUP.md        | Prerequisites, installation, configuration, commands        | ./SETUP.md        |
-| 🚶 WALKTHROUGH.md  | File reading order, entry point guide, request tracing      | ./WALKTHROUGH.md  |
+| ?? ARCHITECTURE.md | Tech stack, directory tree, architecture diagram, data flow | ./ARCHITECTURE.md |
+| ?? GLOSSARY.md     | Domain terms, abbreviations, acronyms                       | ./GLOSSARY.md     |
+| ?? SETUP.md        | Prerequisites, installation, configuration, commands        | ./SETUP.md        |
+| ?? WALKTHROUGH.md  | File reading order, entry point guide, request tracing      | ./WALKTHROUGH.md  |
 
 ### Tech Stack Summary
 - **Runtime**: [Node.js vXX]

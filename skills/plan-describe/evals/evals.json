@@ -1,4 +1,4 @@
-{
+﻿{
   "skill_name": "plan-describe",
   "evals": [
     {
@@ -8,7 +8,7 @@
       "files": [
         "evals/files/feature-descriptions/user-profile-service.md"
       ],
-      "expected_output": "The output contains a valid JSON plan-manifest with at least 10 checkpoints. It includes fileExists checkpoints for the 3 new files, exportExists for UserProfileService and UserProfile, routeExists for the 3 API endpoints, validatesInput for the service methods, and handlesError for database errors. Structural checkpoints should be ordered before behavioral ones. Dependency ordering is correct (fileExists → exportExists → behavioral).",
+      "expected_output": "The output contains a valid JSON plan-manifest with at least 10 checkpoints. It includes fileExists checkpoints for the 3 new files, exportExists for UserProfileService and UserProfile, routeExists for the 3 API endpoints, validatesInput for the service methods, and handlesError for database errors. Structural checkpoints should be ordered before behavioral ones. Dependency ordering is correct (fileExists -> exportExists -> behavioral).",
       "assertions": [
         "The output is a valid JSON object with manifestVersion, planSummary, createdAt, and checkpoints fields.",
         "The manifest includes a fileExists checkpoint for src/services/user-profile-service.ts.",

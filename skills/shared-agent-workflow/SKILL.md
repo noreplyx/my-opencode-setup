@@ -1,4 +1,4 @@
-﻿---
+---
 name: shared-agent-workflow
 description: |
   Shared workflow protocol for all orchestration subagents. Use this skill at the START of every agent task to:
@@ -23,25 +23,25 @@ Understand the pipeline's current state, what came before you, and what's expect
 ### Protocol
 
 1. **Check if `agent-context.md` exists** in the workspace root
-2. If it does NOT exist â†’ continue with the context provided by the Orchestrator in the hand-off message
-3. If it DOES exist â†’ run the validation script:
+2. If it does NOT exist -> continue with the context provided by the Orchestrator in the hand-off message
+3. If it DOES exist -> run the validation script:
    ```bash
    ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md
    ```
 4. **Validate the output**:
-   - If `valid: false` â†’ report the errors to the Orchestrator and STOP â€” do not proceed
-   - If `valid: true` â†’ proceed to read the file
+   - If `valid: false` -> report the errors to the Orchestrator and STOP -- do not proceed
+   - If `valid: true` -> proceed to read the file
 5. **Read and extract** these fields from the YAML frontmatter:
 
 ```yaml
-# â”€â”€ Pipeline Identity â”€â”€
+# ---- Pipeline Identity ----
 pipelineId:        # Unique pipeline ID for logging
 feature:           # Feature name for context
 pipelineType:      # full | quick | fixer-only | etc.
 currentStep:       # Your agent's role name (confirmed by Orchestrator)
 status:            # running | completed | failed | stale
 
-# â”€â”€ Agent History â”€â”€
+# ---- Agent History ----
 agentHistory:
   - step:          # Prior agent that ran
     agent:         # Session ID
@@ -52,7 +52,7 @@ agentHistory:
     changedFiles:  # Files they modified
     artifacts:     # Outputs they produced
 
-# â”€â”€ Agent Outputs â”€â”€
+# ---- Agent Outputs ----
 agentOutputs:
   <agentName>:
     status:        # completed | failed | partial
@@ -60,22 +60,22 @@ agentOutputs:
     buildPassed:   # true | false | null
     lintPassed:    # true | false | null
 
-# â”€â”€ Circuit Breaker â”€â”€
+# ---- Circuit Breaker ----
 circuitBreaker:
   state:           # closed | open | half-open
   counters:        # build: 0, lint: 0, securityScan: 0, smokeTest: 0, verifier: 0
   thresholds:      # Maximum retries per gate (typically 3)
 
-# â”€â”€ Git State â”€â”€
+# ---- Git State ----
 gitState:
   branch:          # Current branch
   dirtyFiles:      # Files modified before this pipeline
   lastCommitSha:   # HEAD commit
 
-# â”€â”€ Next Objective â”€â”€
+# ---- Next Objective ----
 nextObjective:     # What the Orchestrator expects you to do
 
-# ── Checkpoint Progress (from Implementor) ──
+# -- Checkpoint Progress (from Implementor) --
 checkpointProgress:
   planManifest: "plan-manifests/user-profile/v1-manifest.json"
   totalCheckpoints: 12
@@ -96,23 +96,23 @@ Each agent extracts context relevant to its role:
 |-----------------|--------------------------------------------------------------------------------|-----------------------------------------------|
 | **Finder**      | Prior Finder results (avoid re-exploring)                                       | Not applicable (read-only)                     |
 | **PlanDescriber** | Finder exploration, prior PlanDescriber revisions (v1, v2...)                 | Check failureSummary for why prior plans failed |
-| **Implementor** | PlanDescriber decisions, prior Implementor attempts                             | build/lint counters â€” be careful if near limit  |
-| **Fixer**       | QA/Verifier reports, prior Fixer attempts (critical for retries)               | verifier counter â€” last attempt awareness       |
+| **Implementor** | PlanDescriber decisions, prior Implementor attempts                             | build/lint counters -- be careful if near limit  |
+| **Fixer**       | QA/Verifier reports, prior Fixer attempts (critical for retries)               | verifier counter -- last attempt awareness       |
 | **QA**          | Implementor changedFiles, security scan results                                 | smokeTest counter                               |
-| **Verifier**    | Implementor changedFiles, buildPassed/lintPassed, prior Verifier scores         | verifier counter â€” know re-verify count         |
-| **Integrator**  | Implementor changedFiles, merge check results from Phase 1 (4-pass verification) | build counter â€” runs before build               |
+| **Verifier**    | Implementor changedFiles, buildPassed/lintPassed, prior Verifier scores         | verifier counter -- know re-verify count         |
+| **Integrator**  | Implementor changedFiles, merge check results from Phase 1 (4-pass verification) | build counter -- runs before build               |
 | **BrowserTester** | Implementor changedFiles, QA results                                           | testing-related counters                        |
 | **Documentor**  | Implementor changedFiles, PlanDescriber decisions                               | Not applicable (informational only)             |
-| **Implementor**  | Plan manifest checkpoints, contract rules, checkpointProgress (from prior attempt if re-running). Prior checkpointProgress for retry awareness | Check `checkpointProgress.adherenceScore` — if prior score < 90%, know which checkpoints failed. Check `checkpointProgress.failedCheckpoints` for what to fix |
+| **Implementor**  | Plan manifest checkpoints, contract rules, checkpointProgress (from prior attempt if re-running). Prior checkpointProgress for retry awareness | Check `checkpointProgress.adherenceScore` -- if prior score < 90%, know which checkpoints failed. Check `checkpointProgress.failedCheckpoints` for what to fix |
 | **Verifier**     | CheckpointProgress from Implementor's self-verification. checkpointProgress adherenceScore for fast-pass decision | If adherenceScore >= 90%, use fast-pass mode (skip pre-verified checkpoints) |
-| **Fixer**        | CheckpointProgress from Implementor + Verifier reports | Check which checkpoints failed — focus fixes on failed checkpoints only |
+| **Fixer**        | CheckpointProgress from Implementor + Verifier reports | Check which checkpoints failed -- focus fixes on failed checkpoints only |
 | **Orchestrator** | CheckpointProgress adherenceScore for pipeline visibility | Log adherence score in pipeline report |
 
 ### Stale Context Detection
 
 If `status: "running"` and `createdAt` is more than 1 hour old:
 - The pipeline is considered STALE (crashed/interrupted)
-- Do NOT proceed â€” report to the Orchestrator and wait for instructions
+- Do NOT proceed -- report to the Orchestrator and wait for instructions
 - The Orchestrator will prompt the user before overwriting
 
 ## Step 1: Structured Output Contract
@@ -212,27 +212,27 @@ qualityDrift:
 
 After completing your task (before reporting back), if `agent-context.md` exists, update its `pipelineHeartbeat` timestamp. This prevents the stale context detector from triggering on long-running agents.
 
-You do NOT need to write the file yourself â€” report the current timestamp in your structured output and the Orchestrator will update the heartbeat.
+You do NOT need to write the file yourself -- report the current timestamp in your structured output and the Orchestrator will update the heartbeat.
 
 ## Step 3: Error Handling & Taxonomy
 
 If you encounter an error during execution:
 
 1. **Classify the error** using this taxonomy:
-   - `build_failure` â€” Compilation/type errors
-   - `lint_failure` â€” Linting violations  
-   - `import_resolution_error` â€” Import paths don't resolve
-   - `type_mismatch` â€” Type/interface mismatches
-   - `plan_omission` â€” Plan didn't specify what was needed
-   - `implementation_error` â€” Code doesn't match plan intent
-   - `edge_case_miss` â€” Missing edge case handling
-   - `integration_mismatch` â€” Cross-module inconsistency
-   - `environment_issue` â€” Missing tools, files, configs
-   - `circuit_breaker_open` â€” Pipeline blocked by circuit breaker
-   - `security_violation` â€” Security check failed
-   - `output_contract_violation` â€” Agent output format invalid
-   - `timeout` â€” Operation took too long
-   - `unknown` â€” Unclassified error
+   - `build_failure` -- Compilation/type errors
+   - `lint_failure` -- Linting violations  
+   - `import_resolution_error` -- Import paths don't resolve
+   - `type_mismatch` -- Type/interface mismatches
+   - `plan_omission` -- Plan didn't specify what was needed
+   - `implementation_error` -- Code doesn't match plan intent
+   - `edge_case_miss` -- Missing edge case handling
+   - `integration_mismatch` -- Cross-module inconsistency
+   - `environment_issue` -- Missing tools, files, configs
+   - `circuit_breaker_open` -- Pipeline blocked by circuit breaker
+   - `security_violation` -- Security check failed
+   - `output_contract_violation` -- Agent output format invalid
+   - `timeout` -- Operation took too long
+   - `unknown` -- Unclassified error
 
 2. **In your structured output**, add an `errors` field:
    ```yaml
@@ -258,15 +258,15 @@ Before reporting back, verify your structured output contains:
 - [ ] `changedFiles` (list of files you modified/created)
 - [ ] `artifacts` (list of produced outputs)
 - [ ] `warnings` (any issues you encountered)
-- [ ] `qualitySelfReview` (Implementor only) â€” passed, blockingItemsPassed, blockingItemsTotal, qualityAdditions
-- [ ] `qualityDrift` (Verifier only) â€” score, blockingPassed, blockingTotal, qualityWarnings
+- [ ] `qualitySelfReview` (Implementor only) -- passed, blockingItemsPassed, blockingItemsTotal, qualityAdditions
+- [ ] `qualityDrift` (Verifier only) -- score, blockingPassed, blockingTotal, qualityWarnings
 
 If any required field is missing, add it before reporting.
 
 ## Quick Reference for Agent-context.md Parsing
 
 ```typescript
-// Conceptual pseudocode â€” your agent doesn't run this, but follows the same logic
+// Conceptual pseudocode -- your agent doesn't run this, but follows the same logic
 
 // Step 1: Validate
 const validation = await exec('ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md');
@@ -293,9 +293,9 @@ const isReattempt = retryCount > 0;
 When the Orchestrator includes `--dry-run` in the hand-off message, your task changes from **execution** to **preview**:
 
 ### Dry-Run Rules
-1. **Perform all analysis** â€” Read context, read files, trace imports, plan changes
-2. **NEVER write files** â€” Do not create, modify, or delete any file
-3. **NEVER run bash commands** â€” No build, no lint, no test
+1. **Perform all analysis** -- Read context, read files, trace imports, plan changes
+2. **NEVER write files** -- Do not create, modify, or delete any file
+3. **NEVER run bash commands** -- No build, no lint, no test
 4. **Output a diff manifest** instead of implementation:
 
 ```yaml
@@ -313,7 +313,7 @@ dryRun:
   estimatedLOC: 145
   planAdherence: 0.92
   risks:
-    - "New dependency: zod@3.22 â€” verify bundle size impact"
+    - "New dependency: zod@3.22 -- verify bundle size impact"
   diffPreview: |
     --- a/src/controllers/index.ts
     +++ b/src/controllers/index.ts
@@ -355,11 +355,11 @@ Without standardized reproduction commands, bugs can't be reliably reproduced by
 ### When to Include
 | Scenario | Include reproduction? | Example |
 |----------|----------------------|---------|
-| Build passes | âœ… Yes (shows what command was run) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 0 }` |
-| Build fails | âœ… Yes (critical for debugging) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 2, ... }` |
-| Lint fails | âœ… Yes | `reproduction: { command: "npx eslint src/", expectedExitCode: 0, actualExitCode: 1 }` |
-| Test fails | âœ… Yes | `reproduction: { command: "npm test", expectedExitCode: 0, actualExitCode: 1 }` |
-| No command run | â­ï¸ Skip | (omit the field entirely) |
+| Build passes | ... Yes (shows what command was run) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 0 }` |
+| Build fails | ... Yes (critical for debugging) | `reproduction: { command: "npm run build", expectedExitCode: 0, actualExitCode: 2, ... }` |
+| Lint fails | ... Yes | `reproduction: { command: "npx eslint src/", expectedExitCode: 0, actualExitCode: 1 }` |
+| Test fails | ... Yes | `reproduction: { command: "npm test", expectedExitCode: 0, actualExitCode: 1 }` |
+| No command run | (skip) | (omit the field entirely) |
 
 ### Storing Reproduction Commands
 The Orchestrator will write reproduction commands to `.opencode/reproductions/<pipelineId>-<step>-<timestamp>.yaml` so they can be:
@@ -406,12 +406,12 @@ errorReproduction:
 ### When to Emit
 | Situation | Emit errorReproduction? |
 |-----------|------------------------|
-| Build command returns non-zero | âœ… Yes |
-| Lint command fails | âœ… Yes |
-| Test suite fails | âœ… Yes |
-| Unexpected file read/write error | âœ… Yes |
-| Task completes successfully | âŒ No |
-| Dry-run mode (no execution) | âŒ No |
+| Build command returns non-zero | ... Yes |
+| Lint command fails | ... Yes |
+| Test suite fails | ... Yes |
+| Unexpected file read/write error | ... Yes |
+| Task completes successfully | [X] No |
+| Dry-run mode (no execution) | [X] No |
 
 ### Why Error Packets Matter
 2. **Reproducibility**: Every error has an executable command to reproduce it
@@ -439,9 +439,9 @@ ts-node skills/scripts/orchestration/pipeline-checkpoint.ts \
 ```
 
 This creates a lightweight git commit with a structured message that enables:
-- `git log --grep="pipeline-checkpoint"` â†’ see the full pipeline timeline
-- `git diff <checkpoint-A>..<checkpoint-B>` â†’ see exactly what each agent changed
-- `git bisect` â†’ identify which agent step introduced a regression
+- `git log --grep="pipeline-checkpoint"` -> see the full pipeline timeline
+- `git diff <checkpoint-A>..<checkpoint-B>` -> see exactly what each agent changed
+- `git bisect` -> identify which agent step introduced a regression
 
 ### Important Rules
 - Checkpoints create non-push commits only (never pushed to remote)

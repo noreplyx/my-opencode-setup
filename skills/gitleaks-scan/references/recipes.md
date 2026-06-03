@@ -1,4 +1,4 @@
-# Gitleaks Recipe Reference
+﻿# Gitleaks Recipe Reference
 
 All recipes assume the shell wrapper is sourced (`source skills/gitleaks-scan/scripts/gitleaks-wrapper.sh`). Without it, prepend `podman run --rm -v "${PWD}:/src:Z" docker.io/zricethezav/gitleaks:latest` to each command.
 
@@ -121,8 +121,8 @@ echo "Running gitleaks secret scan..."
 podman run --rm -v "${PWD}:/src:Z" docker.io/zricethezav/gitleaks:latest \
   git --source=/src --staged --verbose
 if [ $? -eq 1 ]; then
-  echo "❌ Gitleaks detected secrets. Commit blocked."
+  echo "[X] Gitleaks detected secrets. Commit blocked."
   exit 1
 fi
-echo "✅ No secrets detected."
+echo "[x] No secrets detected."
 ```

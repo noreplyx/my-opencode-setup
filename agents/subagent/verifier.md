@@ -1,4 +1,4 @@
----
+﻿---
 description: Verifies that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. Performs structural, behavioral, acceptance criteria, and Pass 6 Quality Drift Detection (independently catches poor-quality code even at 100% plan compliance).
 mode: subagent
 temperature: 0.1
@@ -89,8 +89,8 @@ securityTestCoverageGate:
 ### Gate Rules
 | Coverage | Verdict | Action |
 |----------|---------|--------|
-| ≥ 80% | ✅ PASS | Proceed with verification scoring |
-| 50-79% | ⚠️ WARN | Include in deviation report, proceed |
-| < 50% | ❌ FAIL | Block pipeline, flag security test gap |
+| >= 80% | [x] PASS | Proceed with verification scoring |
+| 50-79% | [!]? WARN | Include in deviation report, proceed |
+| < 50% | [X] FAIL | Block pipeline, flag security test gap |
 
 > Detailed workflow instructions are loaded from the `verifier-workflow` skill.

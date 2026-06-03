@@ -1,6 +1,6 @@
 ---
 name: documentor
-description: Use this skill when code changes need corresponding documentation updates — inline documentation (JSDoc/TSDoc), README sections, API documentation (OpenAPI), changelog entries, and migration guides. This skill runs after implementation passes verification. It ensures documentation stays synchronized with code changes. Do NOT use for writing new project documentation from scratch — use project-onboarding for that. Trigger when the user says "update docs", "document this", "generate README", "add JSDoc", "write changelog", "generate API docs", or when a pipeline completes implementation.
+description: Use this skill when code changes need corresponding documentation updates -- inline documentation (JSDoc/TSDoc), README sections, API documentation (OpenAPI), changelog entries, and migration guides. This skill runs after implementation passes verification. It ensures documentation stays synchronized with code changes. Do NOT use for writing new project documentation from scratch -- use project-onboarding for that. Trigger when the user says "update docs", "document this", "generate README", "add JSDoc", "write changelog", "generate API docs", or when a pipeline completes implementation.
 ---
 
 # Documentation Agent Skill
@@ -12,7 +12,7 @@ The Documentor ensures that code changes are accompanied by accurate, complete, 
 ## Core Principles
 
 ### 1. Change-Driven Documentation
-- Only document what **changed** — do not regenerate entire files
+- Only document what **changed** -- do not regenerate entire files
 - Detect changes from the implementation diff relative to `git diff HEAD`
 - Focus on public API surfaces, breaking changes, and non-obvious behavior
 
@@ -51,10 +51,10 @@ git diff HEAD -- <changed-files>
 ```
 
 Categorize each change:
-- **NEW** — New file or export
-- **MODIFIED** — Changed signature or behavior
-- **DELETED** — Removed export or file
-- **UNCHANGED** — No documentation action needed
+- **NEW** -- New file or export
+- **MODIFIED** -- Changed signature or behavior
+- **DELETED** -- Removed export or file
+- **UNCHANGED** -- No documentation action needed
 
 ### Phase 1: Inline Documentation (JSDoc/TSDoc)
 
@@ -93,7 +93,7 @@ When updating README:
    - **Usage**: New exports, changed API, new CLI commands
    - **Configuration**: New env vars, config options, feature flags
    - **API**: New endpoints or changed contract
-3. Insert/update content within existing sections — do not restructure without Orchestrator approval
+3. Insert/update content within existing sections -- do not restructure without Orchestrator approval
 4. Use fenced code blocks for code examples
 5. Flag new configuration items with a `<!-- NEW -->` comment
 
@@ -102,7 +102,7 @@ When updating README:
 When routes are added or modified:
 1. Check if an OpenAPI spec exists (`**/openapi.{yaml,json}` or `**/swagger.*`)
 2. If exists: update the spec with new/modified endpoints
-3. If not exists: do NOT create a full spec — instead, generate JSDoc-based route annotations and propose them to the Orchestrator for review
+3. If not exists: do NOT create a full spec -- instead, generate JSDoc-based route annotations and propose them to the Orchestrator for review
 
 **OpenAPI update rules:**
 - Only add/modify paths that changed
@@ -142,12 +142,12 @@ All notable changes to this project will be documented in this file.
 ```
 
 **Determining entries:**
-- **Added** — NEW exports, NEW files, NEW endpoints
-- **Changed** — MODIFIED signatures, behavior changes, perf improvements
-- **Fixed** — Bugs that were fixed (from QA bug reports)
-- **Deprecated** — Exports marked with `@deprecated`
-- **Removed** — DELETED exports, DELETED endpoints
-- **Security** — Security fixes applied
+- **Added** -- NEW exports, NEW files, NEW endpoints
+- **Changed** -- MODIFIED signatures, behavior changes, perf improvements
+- **Fixed** -- Bugs that were fixed (from QA bug reports)
+- **Deprecated** -- Exports marked with `@deprecated`
+- **Removed** -- DELETED exports, DELETED endpoints
+- **Security** -- Security fixes applied
 
 ### Phase 5: Migration Guide
 
@@ -163,7 +163,7 @@ Breaking changes include:
 
 Format:
 ```markdown
-## Migration Guide: vX → vY
+## Migration Guide: vX -> vY
 
 ### Summary
 Brief description of what changed and why.
@@ -209,18 +209,18 @@ agentOutputs:
         files: ["path/to/file"]
         summary: "Description of what was documented"
     warnings:
-      - "README.md does not exist — skipped"
+      - "README.md does not exist -- skipped"
 ---
 ```
 
 ## Hard Rules
 
-- ❌ NEVER document code you haven't read and verified exists
-- ❌ NEVER delete or restructure existing README sections without Orchestrator approval
-- ❌ NEVER create a full OpenAPI spec from scratch — propose it to the Orchestrator
-- ❌ NEVER skip the changelog update if the pipeline completed successfully
-- ✅ ALWAYS run `git diff HEAD --name-status` first to determine what changed
-- ✅ ALWAYS read existing documentation before modifying it
-- ✅ ALWAYS flag missing documentation as warnings, not blockers
-- ✅ ALWAYS use imperative mood in JSDoc descriptions ("Validate input" not "Validates input")
-- ✅ ALWAYS include `@throws` for any method that can reject/throw
+- [X] NEVER document code you haven't read and verified exists
+- [X] NEVER delete or restructure existing README sections without Orchestrator approval
+- [X] NEVER create a full OpenAPI spec from scratch -- propose it to the Orchestrator
+- [X] NEVER skip the changelog update if the pipeline completed successfully
+- [x] ALWAYS run `git diff HEAD --name-status` first to determine what changed
+- [x] ALWAYS read existing documentation before modifying it
+- [x] ALWAYS flag missing documentation as warnings, not blockers
+- [x] ALWAYS use imperative mood in JSDoc descriptions ("Validate input" not "Validates input")
+- [x] ALWAYS include `@throws` for any method that can reject/throw

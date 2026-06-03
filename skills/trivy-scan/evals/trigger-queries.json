@@ -1,11 +1,11 @@
-[
+﻿[
   {"query": "Hey, I just built a podman image from my Dockerfile and want to check it for CVEs before pushing to the registry. Can you scan it?", "should_trigger": true},
   {"query": "Run trivy on my project filesystem to find vulnerabilities in our npm dependencies", "should_trigger": true},
   {"query": "Can you check our Kubernetes deployment YAMLs for security misconfigurations?", "should_trigger": true},
   {"query": "I need to generate an SBOM for our Node.js project for our SOC 2 audit. Can you help?", "should_trigger": true},
   {"query": "Scan this container image for vulnerabilities with severity critical and high only", "should_trigger": true},
   {"query": "Check if any of our Go dependencies have known CVEs using trivy", "should_trigger": true},
-  {"query": "Run a full security audit on our project — check lockfiles, IaC misconfigs, and secrets with trivy", "should_trigger": true},
+  {"query": "Run a full security audit on our project -- check lockfiles, IaC misconfigs, and secrets with trivy", "should_trigger": true},
   {"query": "We need to add vulnerability scanning to our CI pipeline. Can you show me how to run trivy in podman with exit-code 1?", "should_trigger": true},
   {"query": "I want to scan our Dockerfile and docker-compose.yml for misconfigurations", "should_trigger": true},
   {"query": "Can you check what licenses our npm dependencies use? Need to make sure they're all MIT or Apache", "should_trigger": true},

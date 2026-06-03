@@ -1,24 +1,24 @@
 ---
 name: trivy-scan
-description: "Run Trivy vulnerability, misconfiguration, secret, and license scanning on projects, container images, filesystems, and git repositories via a Podman container (no local Trivy install needed). This skill triggers automatically as a mandatory sub-scan within the orchestration pipeline Security Scan gate — alongside semgrep, gitleaks, and osv-scanner — after Build Gate + Lint Gate pass. It runs container image scans, filesystem scans, git repository scans, IaC misconfiguration checks, secret detection, SBOM generation, and license compliance checks. Use also when the user asks to scan container images for CVEs, run Trivy, check for vulnerabilities, perform container security scanning, scan Dockerfiles/Podmanfiles for misconfigurations, generate SBOMs, check software licenses, scan Kubernetes manifests, or integrate vulnerability scanning into a CI/CD pipeline. Supports multiple targets: image, filesystem, repository, and SBOM. Supports scanners: vuln, misconfig, secret, license. Supports severity filtering (CRITICAL, HIGH, MEDIUM, LOW) and multiple output formats (table, json, sarif, template)."
+description: "Run Trivy vulnerability, misconfiguration, secret, and license scanning on projects, container images, filesystems, and git repositories via a Podman container (no local Trivy install needed). This skill triggers automatically as a mandatory sub-scan within the orchestration pipeline Security Scan gate -- alongside semgrep, gitleaks, and osv-scanner -- after Build Gate + Lint Gate pass. It runs container image scans, filesystem scans, git repository scans, IaC misconfiguration checks, secret detection, SBOM generation, and license compliance checks. Use also when the user asks to scan container images for CVEs, run Trivy, check for vulnerabilities, perform container security scanning, scan Dockerfiles/Podmanfiles for misconfigurations, generate SBOMs, check software licenses, scan Kubernetes manifests, or integrate vulnerability scanning into a CI/CD pipeline. Supports multiple targets: image, filesystem, repository, and SBOM. Supports scanners: vuln, misconfig, secret, license. Supports severity filtering (CRITICAL, HIGH, MEDIUM, LOW) and multiple output formats (table, json, sarif, template)."
 ---
 
 # Trivy Scan Skill (Container-Based)
 
 ## Purpose
 
-Run [Trivy](https://github.com/aquasecurity/trivy) — the comprehensive open-source security scanner by Aqua Security — on container images, filesystems, git repositories, and IaC configurations — **all via a Podman container** with zero local installation required. Uses the official `docker.io/aquasec/trivy:latest` image.
+Run [Trivy](https://github.com/aquasecurity/trivy) -- the comprehensive open-source security scanner by Aqua Security -- on container images, filesystems, git repositories, and IaC configurations -- **all via a Podman container** with zero local installation required. Uses the official `docker.io/aquasec/trivy:latest` image.
 
 This skill is **automatically loaded by the Orchestrator** during every pipeline's Security Scan gate (after Build + Lint + Code Quality gates pass) as a **mandatory vulnerability and misconfiguration scanning sub-gate**. It runs alongside semgrep SAST, gitleaks secret scanning, and OSV dependency scanning.
 
 ## Why Container-Based?
 
-- ✅ **No local install** — no rpm/deb/apk, no Go toolchain, no version conflicts
-- ✅ **Isolated** — runs in its own environment, read-only access to project files
-- ✅ **Reproducible** — same Trivy version across all environments
-- ✅ **Auto-updates** — pull the latest image to get fresh vulnerability database & Trivy versions
-- ✅ **Official image** — 1B+ pulls, actively maintained by Aqua Security
-- ✅ **Podman-native** — works with Podman socket for local container image scanning
+- [x] **No local install** -- no rpm/deb/apk, no Go toolchain, no version conflicts
+- [x] **Isolated** -- runs in its own environment, read-only access to project files
+- [x] **Reproducible** -- same Trivy version across all environments
+- [x] **Auto-updates** -- pull the latest image to get fresh vulnerability database & Trivy versions
+- [x] **Official image** -- 1B+ pulls, actively maintained by Aqua Security
+- [x] **Podman-native** -- works with Podman socket for local container image scanning
 
 ## Quick Reference
 
@@ -75,10 +75,10 @@ Triggers **automatically** during every pipeline Security Scan gate. Also trigge
 
 This skill is for **Trivy** scanning. Do NOT use it when:
 
-- **Scanning for web application vulnerabilities** (XSS, SQLi, CSRF) — use the `owasp-zap-scan` skill instead
-- **Running SAST on source code** (pattern matching for security bugs) — use the `semgrep-scan` skill instead
-- **Scanning git history for leaked secrets** — use the `gitleaks-scan` skill instead
-- **Quick dependency audit** via OSV database — the `osv-scanner` skill (lighter weight) may be faster for just lockfile scanning
+- **Scanning for web application vulnerabilities** (XSS, SQLi, CSRF) -- use the `owasp-zap-scan` skill instead
+- **Running SAST on source code** (pattern matching for security bugs) -- use the `semgrep-scan` skill instead
+- **Scanning git history for leaked secrets** -- use the `gitleaks-scan` skill instead
+- **Quick dependency audit** via OSV database -- the `osv-scanner` skill (lighter weight) may be faster for just lockfile scanning
 
 
 ## Trivy Targets
@@ -413,7 +413,7 @@ When the user needs help interpreting Trivy scan results, structure the report l
 3. Address <N> hardcoded secrets found in <files>
 
 ### Pipeline Verdict
-- ✅ PASS / ❌ FAIL (based on severity threshold and exit code)
+- [x] PASS / [X] FAIL (based on severity threshold and exit code)
 ```
 
 ## Pipeline Integration
@@ -435,21 +435,21 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
 
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | No findings at CRITICAL/HIGH | ✅ PASS — proceed to next scan |
-| 1 | Findings detected | ❌ FAIL — block pipeline, report findings |
-| 2+ | Tool error | ⚠️ WARN — log, proceed if tool unavailable |
+| 0 | No findings at CRITICAL/HIGH | [x] PASS -- proceed to next scan |
+| 1 | Findings detected | [X] FAIL -- block pipeline, report findings |
+| 2+ | Tool error | [!] WARN -- log, proceed if tool unavailable |
 
 ### Hard Rules for Trivy
 
-- ✅ The Orchestrator MUST load `trivy-scan` skill during every pipeline as a mandatory sub-scan
-- ✅ The Trivy scan MUST use `--scanners vuln,misconfig` at minimum
-- ✅ The Trivy scan MUST use `--severity CRITICAL,HIGH` for pipeline gates
-- ✅ The Trivy scan MUST use `--exit-code 1` to block pipeline on findings
-- ✅ Always pull the image first: `podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest`
-- ✅ NEVER modify project files during scanning
-- ✅ NEVER skip the Trivy scan — it is mandatory
-- ✅ Use a persistent cache volume for the vulnerability database to speed up scans
-- ✅ For container image scanning, use Podman socket: `/run/user/$(id -u)/podman/podman.sock`
+- [x] The Orchestrator MUST load `trivy-scan` skill during every pipeline as a mandatory sub-scan
+- [x] The Trivy scan MUST use `--scanners vuln,misconfig` at minimum
+- [x] The Trivy scan MUST use `--severity CRITICAL,HIGH` for pipeline gates
+- [x] The Trivy scan MUST use `--exit-code 1` to block pipeline on findings
+- [x] Always pull the image first: `podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest`
+- [x] NEVER modify project files during scanning
+- [x] NEVER skip the Trivy scan -- it is mandatory
+- [x] Use a persistent cache volume for the vulnerability database to speed up scans
+- [x] For container image scanning, use Podman socket: `/run/user/$(id -u)/podman/podman.sock`
 
 ## Examples
 
@@ -490,7 +490,7 @@ trivy-docker fs --format cyclonedx --output /src/sbom.cdx.json /src
 trivy-docker fs --scanners vuln,misconfig --severity CRITICAL,HIGH \
   --exit-code 1 --ignore-unfixed /src
 
-# Fail only on fixed vulnerabilities (stricter — includes unfixed too)
+# Fail only on fixed vulnerabilities (stricter -- includes unfixed too)
 trivy-docker fs --scanners vuln,misconfig --severity CRITICAL,HIGH \
   --exit-code 1 /src
 

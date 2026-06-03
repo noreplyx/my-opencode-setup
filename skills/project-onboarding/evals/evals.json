@@ -1,4 +1,4 @@
-{
+﻿{
   "skill_name": "project-onboarding",
   "evals": [
     {
@@ -36,7 +36,7 @@
       "expected_output": "The output traces the request lifecycle from API route to database, identifies key files in the chain, and explains the data flow. It may generate a focused subset of onboarding docs instead of the full pipeline.",
       "assertions": [
         "The output traces data flow from entry point to database.",
-        "The output identifies specific files in the request chain (route → controller → service → repository).",
+        "The output identifies specific files in the request chain (route -> controller -> service -> repository).",
         "The output provides a clear explanation of the data flow path.",
         "The output may generate targeted documentation (e.g., a data-flow focused section) rather than the full 4-document set."
       ]

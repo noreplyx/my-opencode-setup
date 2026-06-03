@@ -1,548 +1,1092 @@
-﻿{
+{
+
   "$schema": "http://json-schema.org/draft-07/schema#",
+
   "$version": "2.0.0",
+
   "title": "Agent Output Contract Schema",
+
   "description": "Shared schema for all subagent structured output blocks. Every agent's report MUST contain a YAML block at the top conforming to this schema. Supports: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator.",
+
   "type": "object",
+
   "required": ["status", "resultSummary", "agentOutputs", "changedFiles", "artifacts", "evidence"],
+
   "properties": {
+
     "status": {
+
       "type": "string",
+
       "enum": ["completed", "failed", "partial"],
+
       "description": "Overall status of the agent task"
+
     },
+
     "resultSummary": {
+
       "type": "string",
+
       "description": "2-3 sentence summary of what was accomplished",
+
       "minLength": 10,
+
       "maxLength": 500
+
     },
+
     "pipelineError": {
+
       "type": "object",
-      "description": "Unified pipeline error taxonomy â€” standardized across all agents. Every error-producing agent MUST report pipeline errors in this format.",
+
+      "description": "Unified pipeline error taxonomy -- standardized across all agents. Every error-producing agent MUST report pipeline errors in this format.",
+
       "required": ["errorCode", "category", "severity"],
+
       "properties": {
+
         "errorCode": {
+
           "type": "string",
+
           "pattern": "^(IMP|PLN|INT|ENV|SEC|UNK)-\\d{3}$",
+
           "description": "Unique error code: IMP=implementation, PLN=plan, INT=integration, ENV=environment, SEC=security, UNK=unknown"
-        },
-        "category": {
-          "type": "string",
-          "enum": ["implementation", "plan", "integration", "environment", "security", "unknown"]
-        },
-        "severity": {
-          "type": "string",
-          "enum": ["blocking", "warning", "info"]
-        },
-        "detector": {
-          "type": "string",
-          "description": "Which agent detected this error"
-        },
-        "checkpointId": {
-          "type": "string",
-          "description": "Which plan checkpoint failed (if applicable)"
-        },
-        "rootCause": {
-          "type": "string",
-          "description": "Human-readable root cause description"
-        },
-        "reproduction": {
-          "type": "string",
-          "description": "Executable command to reproduce the error"
+
         },
 
-      }
+        "category": {
+
+          "type": "string",
+
+          "enum": ["implementation", "plan", "integration", "environment", "security", "unknown"]
+
+        },
+
+        "severity": {
+
+          "type": "string",
+
+          "enum": ["blocking", "warning", "info"]
+
+        },
+
+        "detector": {
+
+          "type": "string",
+
+          "description": "Which agent detected this error"
+
+        },
+
+        "checkpointId": {
+
+          "type": "string",
+
+          "description": "Which plan checkpoint failed (if applicable)"
+
+        },
+
+        "rootCause": {
+
+          "type": "string",
+
+          "description": "Human-readable root cause description"
+
+        },
+
+        "reproduction": {
+
+          "type": "string",
+
+          "description": "Executable command to reproduce the error"
+
+        }}
+
     },
+
     "sources": {
+
       "type": "array",
+
       "description": "VERBATIM evidence sources for EVERY substantive claim. Each source item proves HOW the agent knows what it claims. ALL agents MUST include this section.",
+
       "minItems": 1,
+
       "items": {
+
         "type": "object",
+
         "required": ["claim", "method", "command", "excerpt"],
+
         "properties": {
+
           "claim": {
+
             "type": "string",
+
             "description": "What the agent claims to be true"
+
           },
+
           "file": {
+
             "type": "string",
+
             "description": "File path the evidence comes from"
+
           },
+
           "lines": {
+
             "type": "array",
+
             "items": { "type": "integer" },
+
             "minItems": 0,
+
             "maxItems": 2,
+
             "description": "Line numbers [start, end]"
+
           },
+
           "method": {
+
             "type": "string",
+
             "enum": ["grep", "read", "glob", "stat", "test", "build", "lint", "run", "git-blame", "reason", "analysis"],
+
             "description": "How the evidence was obtained"
+
           },
+
           "command": {
+
             "type": "string",
+
             "description": "The exact command used to obtain this evidence"
+
           },
+
           "excerpt": {
+
             "type": "string",
+
             "description": "Relevant output excerpt proving the claim"
+
           },
+
           "contentHash": {
+
             "type": "string",
+
             "pattern": "^[a-f0-9]{64}$",
+
             "description": "SHA-256 hash of source file at time of evidence collection"
+
           },
+
           "exitCode": {
+
             "type": "integer",
+
             "description": "Exit code of the command (for build/lint/test evidence)"
+
           },
+
           "verifiedAt": {
+
             "type": "string",
+
             "format": "date-time",
+
             "description": "ISO-8601 timestamp when evidence was collected"
+
           }
+
         }
+
       }
+
     },
+
     "rollback": {
+
       "type": "object",
-      "description": "Rollback checkpoint â€” how to undo this agent's changes (mandatory for write-capable agents)",
+
+      "description": "Rollback checkpoint -- how to undo this agent's changes (mandatory for write-capable agents)",
+
       "properties": {
+
         "checkpointCommit": {
+
           "type": "string",
+
           "description": "SHA of the pre-agent checkpoint commit"
+
         },
+
         "rollbackCommand": {
+
           "type": "string",
+
           "description": "Command to execute rollback"
+
         },
+
         "filesChanged": {
+
           "type": "array",
+
           "items": { "type": "string" },
+
           "description": "Files that would be reverted"
+
         }
+
       }
+
     },
+
     "checkpointResults": {
+
       "type": "array",
+
       "description": "Per-checkpoint verification results with raw evidence (Verifier only)",
+
       "items": {
+
         "type": "object",
+
         "required": ["id", "type", "result", "evidence"],
+
         "properties": {
+
           "id": { "type": "string" },
+
           "type": {
+
             "type": "string",
+
             "enum": ["structural", "behavioral", "security", "acceptance"]
+
           },
+
           "result": {
+
             "type": "string",
+
             "enum": ["pass", "fail", "skipped"]
+
           },
+
           "score": {
+
             "type": "integer",
+
             "minimum": 0,
+
             "maximum": 100
+
           },
+
           "evidence": {
+
             "type": "array",
+
             "items": {
+
               "type": "object",
+
               "properties": {
+
                 "claim": { "type": "string" },
+
                 "method": {
+
                   "type": "string",
+
                   "enum": ["grep", "read", "glob", "stat", "build", "lint"]
+
                 },
+
                 "command": { "type": "string" },
+
                 "output": { "type": "string" },
+
                 "lines": {
+
                   "type": "array",
+
                   "items": { "type": "integer" }
+
                 },
+
                 "contentHash": {
+
                   "type": "string",
+
                   "pattern": "^[a-f0-9]{64}$"
+
                 }
+
               }
+
             }
+
           },
+
           "reason": {
+
             "type": "string",
+
             "description": "Human-readable explanation of pass/fail"
+
           }
+
         }
+
       }
+
     },
+
     "provenance": {
+
       "type": "object",
+
       "description": "Tracked lifecycle history for the checkpoint",
+
       "properties": {
+
         "pipelineId": {
+
           "type": "string",
+
           "description": "Unique pipeline ID for this execution"
+
         },
+
         "agentName": {
+
           "type": "string",
+
           "description": "Name of the agent that produced this output"
+
         },
+
         "sessionId": {
+
           "type": "string",
+
           "description": "Unique session identifier"
+
         },
+
         "timestamp": {
+
           "type": "string",
+
           "format": "date-time",
+
           "description": "ISO-8601 timestamp of when this output was produced"
+
         },
+
         "parentOutputs": {
+
           "type": "array",
+
           "items": { "type": "string" },
+
           "description": "References to parent agent output blocks (e.g., prior step output IDs)"
+
         },
+
         "gitHead": {
+
           "type": "string",
+
           "description": "Git HEAD SHA at time of output production"
+
         },
+
         "workspaceState": {
+
           "type": "object",
+
           "description": "Snapshot of workspace state at provenance capture",
+
           "properties": {
+
             "dirty": { "type": "boolean" },
+
             "uncommittedFiles": {
+
               "type": "array",
+
               "items": { "type": "string" }
+
             }
+
           }
+
         }
+
       },
+
       "required": ["pipelineId", "agentName", "sessionId", "timestamp"]
+
     },
+
     "validation": {
+
       "type": "object",
+
       "description": "Recursive validation of this output contract. Fields marked 'required' are checked by validate-output-contract.ts. Nested fields are validated recursively. Pattern fields use regex matching.",
+
       "properties": {
+
         "validator": {
+
           "type": "string",
+
           "description": "Path to the validation script used"
+
         },
+
         "schemaVersion": {
+
           "type": "string",
+
           "description": "Version of the schema against which this output was validated"
+
         },
+
         "passed": {
+
           "type": "boolean",
+
           "description": "Whether all validation checks passed"
+
         },
+
         "checks": {
+
           "type": "array",
+
           "items": {
+
             "type": "object",
+
             "properties": {
+
               "field": { "type": "string" },
+
               "check": { "type": "string" },
+
               "result": {
+
                 "type": "string",
+
                 "enum": ["pass", "fail", "skipped"]
+
               },
+
               "detail": { "type": "string" }
+
             },
+
             "required": ["field", "check", "result"]
+
           },
+
           "description": "Individual validation check results"
+
         }
+
       },
+
       "required": ["validator", "schemaVersion", "passed"]
+
     },
+
     "diagnostics": {
+
       "type": "array",
+
       "description": "Results from automated diagnostic tools (Fixer only)",
+
       "items": {
+
         "type": "object",
+
         "properties": {
+
           "type": { "type": "string" },
+
           "tool": { "type": "string" },
+
           "passed": { "type": "boolean" },
+
           "findings": {
+
             "type": "array",
+
             "items": { "type": "string" }
+
           },
+
           "recommendations": {
+
             "type": "array",
+
             "items": { "type": "string" }
+
           }
+
         }
+
       }
+
     },
+
     "agentOutputs": {
+
       "type": "object",
+
       "description": "Agent-specific output, keyed by agent name. Recognized agent keys include: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator.",
+
       "minProperties": 1,
+
       "additionalProperties": {
+
         "type": "object",
+
         "required": ["status", "resultSummary"],
+
         "properties": {
+
           "status": {
+
             "type": "string",
+
             "enum": ["completed", "failed", "partial"]
+
           },
+
           "resultSummary": {
+
             "type": "string",
+
             "description": "Brief summary of this agent's results"
+
           },
+
           "buildPassed": {
+
             "type": ["boolean", "null"],
+
             "description": "Whether the build passed (mandatory for Implementor, Fixer, Integrator; null for read-only agents)"
+
           },
+
           "lintPassed": {
+
             "type": ["boolean", "null"],
+
             "description": "Whether lint passed (mandatory for Implementor, Fixer, Integrator; null for read-only agents)"
+
           },
+
           "buildOutput": {
+
             "type": ["string", "null"],
+
             "description": "Full stdout + stderr from build command"
+
           },
+
           "lintOutput": {
+
             "type": ["string", "null"],
+
             "description": "Full stdout + stderr from lint command (or 'No linter configured')"
+
           },
+
           "selfReview": {
+
             "type": "object",
+
             "description": "Self-review data from Self-Reviewing Implementor",
+
             "properties": {
+
               "confidence": { "type": "integer" },
+
               "preCheckPassed": { "type": "boolean" },
+
               "scopeGuardFlags": { "type": "array", "items": { "type": "string" } },
+
               "selfReviewIssues": {
+
                 "type": "array",
+
                 "items": { "type": "string" },
+
                 "description": "Issues found during self-review, each referencing a checkpoint ID"
+
               }
+
             },
+
             "required": ["confidence", "preCheckPassed", "scopeGuardFlags"]
+
           },
+
           "importScanResults": {
+
             "type": "array",
+
             "description": "Cross-file import scan results (Integrator Phase 1 only)",
+
             "items": {
+
               "type": "object",
+
               "properties": {
+
                 "file": { "type": "string" },
+
                 "imports": {
+
                   "type": "array",
+
                   "items": {
+
                     "type": "object",
+
                     "properties": {
+
                       "path": { "type": "string" },
+
                       "resolved": { "type": "boolean" },
+
                       "symbolMatch": { "type": "boolean" }
+
                     }
+
                   }
+
                 }
+
               }
+
             }
+
           },
+
           "rootCauseAnalysis": {
+
             "type": "object",
+
             "description": "Root cause analysis (Fixer only; not used by other agents)",
+
             "properties": {
+
               "classification": {
+
                 "type": "string",
+
                 "enum": ["plan-omission", "implementation-error", "edge-case-miss", "integration-mismatch", "environment-issue"]
+
               },
+
               "primaryCause": { "type": "string" },
+
               "contributingFactors": {
+
                 "type": "array",
+
                 "items": { "type": "string" }
+
               },
+
               "fixApplied": { "type": "string" },
+
               "fixConfidence": {
+
                 "type": "integer",
+
                 "minimum": 1,
+
                 "maximum": 10
+
               },
+
               "crossModuleCheck": {
+
                 "type": "array",
+
                 "items": {
+
                   "type": "object",
+
                   "properties": {
+
                     "module": { "type": "string" },
+
                     "status": {
+
                       "type": "string",
+
                       "enum": ["unaffected", "affected", "needsReview"]
+
                     }
+
                   },
+
                   "required": ["module", "status"]
+
                 }
+
               }
+
             },
+
             "required": ["classification", "primaryCause", "fixApplied", "fixConfidence"]
+
           },
+
           "wiringSummary": {
+
             "type": "object",
+
             "description": "Wiring summary (Integrator only; not used by other agents)",
+
             "properties": {
+
               "barrelFilesUpdated": {
+
                 "type": "array",
+
                 "items": { "type": "string" },
+
                 "description": "Barrel/index files modified to include new exports"
+
               },
+
               "diRegistrationsAdded": {
+
                 "type": "array",
+
                 "items": { "type": "string" },
+
                 "description": "DI container registration statements added"
+
               },
+
               "routesAdded": {
+
                 "type": "array",
+
                 "items": {
+
                   "type": "object",
+
                   "properties": {
+
                     "method": { "type": "string" },
+
                     "path": { "type": "string" },
+
                     "handler": { "type": "string" }
+
                   },
+
                   "required": ["method", "path", "handler"]
+
                 },
+
                 "description": "Route registrations added"
+
               },
+
               "importsFixed": {
+
                 "type": "array",
+
                 "items": {
+
                   "type": "object",
+
                   "properties": {
+
                     "file": { "type": "string" },
+
                     "from": { "type": "string" },
+
                     "to": { "type": "string" }
+
                   },
+
                   "required": ["file", "from", "to"]
+
                 },
+
                 "description": "Import paths that were corrected"
+
               }
+
             },
+
             "required": ["barrelFilesUpdated", "diRegistrationsAdded", "routesAdded"]
+
           },
+
           "docsGenerated": {
+
             "type": "array",
+
             "description": "Documentation generated (Documentor only; not used by other agents)",
+
             "items": {
+
               "type": "object",
+
               "properties": {
+
                 "type": {
+
                   "type": "string",
+
                   "enum": ["inline", "readme", "api", "changelog", "migration"]
+
                 },
+
                 "files": {
+
                   "type": "array",
+
                   "items": { "type": "string" }
+
                 },
+
                 "summary": { "type": "string" }
+
               },
+
               "required": ["type", "files", "summary"]
+
             }
+
           },
+
           "acceptanceResults": {
+
             "type": "object",
+
             "description": "Acceptance criteria results (Acceptance Gate only; not used by other agents)",
+
             "properties": {
+
               "appStarted": { "type": "boolean" },
+
               "appStartDuration": { "type": "string" },
+
               "totalCheckpoints": { "type": "integer" },
+
               "passed": { "type": "integer" },
+
               "failed": { "type": "integer" },
+
               "skipped": { "type": "integer" },
+
               "details": {
+
                 "type": "array",
+
                 "items": {
+
                   "type": "object",
+
                   "properties": {
+
                     "checkpointId": { "type": "string" },
+
                     "description": { "type": "string" },
+
                     "command": { "type": "string" },
+
                     "exitCode": { "type": "integer" },
+
                     "stdout": { "type": "string" },
+
                     "stderr": { "type": "string" },
+
                     "verdict": {
+
                       "type": "string",
+
                       "enum": ["pass", "fail", "skipped"]
+
                     }
+
                   },
+
                   "required": ["checkpointId", "verdict", "exitCode"]
+
                 }
+
               }
+
             },
+
             "required": ["appStarted", "totalCheckpoints", "passed", "failed", "skipped", "details"]
+
           },
+
           "diffStats": {
+
             "type": "object",
+
             "description": "Diff statistics for file modifications (Implementor, Fixer only)",
+
             "properties": {
+
               "additions": { "type": "integer" },
+
               "deletions": { "type": "integer" },
+
               "filesChanged": { "type": "integer" }
+
             }
+
           },
+
           "evidenceMetrics": {
+
             "type": "object",
+
             "description": "Aggregated evidence quality metrics for this agent's output",
+
             "properties": {
+
               "avgQuality": { "type": "integer" },
+
               "completeness": { "type": "integer" },
+
               "precision": { "type": "integer" },
+
               "totalCount": { "type": "integer" }
+
             }
+
           }
+
         }
+
       }
+
     },
+
     "evidence": {
+
       "type": "array",
+
       "description": "Anchored evidence for every substantive claim made by this agent. ALL agents MUST provide evidence for claims about files, exports, build status, test results, and behavioral patterns. Minimum 1 evidence entry required.",
+
       "minItems": 1,
+
       "items": {
+
         "$ref": "#/properties/sources/items"
+
       }
+
     },
+
     "decisions": {
+
       "type": "array",
+
       "description": "Key decisions made during the task (required: Finder, PlanDescriber, QA, Integrator, Documentor; optional: others). Each decision MUST include evidence provenance.",
+
       "items": {
+
         "type": "object",
+
         "required": ["what", "why", "by_who"],
+
         "properties": {
+
           "what": { "type": "string", "description": "Decision description" },
+
           "why": { "type": "string", "description": "Rationale" },
+
           "by_who": { "type": "string", "description": "Agent name" },
+
           "evidence": {
+
             "type": "array",
+
             "description": "Evidence sources that informed this decision",
+
             "items": {
+
               "type": "object",
+
               "properties": {
+
                 "source": { "type": "string" },
+
                 "excerpt": { "type": "string" }
+
               }
+
             }
+
           }
+
         }
+
       }
+
     },
+
     "warnings": {
+
       "type": "array",
+
       "description": "Non-blocking issues or concerns discovered",
+
       "items": { "type": "string" }
+
     },
+
     "changedFiles": {
+
       "type": "array",
+
       "description": "Files created or modified by this agent",
+
       "items": { "type": "string" }
+
     },
+
     "artifacts": {
+
       "type": "array",
+
       "description": "Descriptions of artifacts produced (reports, manifests, test files, documentation, etc.)",
+
       "items": { "type": "string" }
+
     }
+
   }
+
 }
+

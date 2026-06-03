@@ -11,7 +11,7 @@ This document provides the complete reference for ast-grep's rule object system.
 
 ## Atomic Rules
 
-Atomic rules are the simplest rules — they match nodes based on intrinsic properties.
+Atomic rules are the simplest rules -- they match nodes based on intrinsic properties.
 
 ### `pattern`
 
@@ -129,7 +129,7 @@ all:
   - pattern: console.log($ARG)
 ```
 
-The order of sub-rules in `all` can affect evaluation — use `all` over implicit AND when order matters.
+The order of sub-rules in `all` can affect evaluation -- use `all` over implicit AND when order matters.
 
 ### `any`
 
@@ -229,17 +229,17 @@ Controls how far to search when looking for relational matches.
 | Value | Behavior |
 |-------|----------|
 | `neighbor` (default) | Stop at immediate parent (inside), immediate child (has), or adjacent sibling (precedes/follows) |
-| `end` | Search all the way — to root for `inside`, to leaf for `has`, to first/last sibling for `precedes`/`follows` |
-| `Rule` object | Stop when the surrounding node matches this rule (inclusive — if the matched node also satisfies the relational rule, the target still matches) |
+| `end` | Search all the way -- to root for `inside`, to leaf for `has`, to first/last sibling for `precedes`/`follows` |
+| `Rule` object | Stop when the surrounding node matches this rule (inclusive -- if the matched node also satisfies the relational rule, the target still matches) |
 
 ### `field`
 
 - **Available in**: `inside`, `has`
 - **Type**: `String`
 
-Restricts the relational match to a specific named child field of the target node. This is a tree-sitter concept — nodes have named children like `body`, `condition`, `name`, `value`, `arguments`, `parameters`, etc.
+Restricts the relational match to a specific named child field of the target node. This is a tree-sitter concept -- nodes have named children like `body`, `condition`, `name`, `value`, `arguments`, `parameters`, etc.
 
-Example — match only `return` inside the function body (not in nested arrow functions):
+Example -- match only `return` inside the function body (not in nested arrow functions):
 ```yaml
 rule:
   kind: return_statement
