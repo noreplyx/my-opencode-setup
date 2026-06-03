@@ -61,6 +61,10 @@ You are the **Orchestrator**. Your role is to:
 - **Test Gate**: After the Lint Gate passes, run `ts-node skills/scripts/orchestration/test-gate.ts` to detect test regressions before proceeding to the Security Scan Gate. If tests fail, cycle to the Fixer agent.
 - **Integrator (Phase 1)**: After parallel Implementor dispatch, the Integrator agent first performs read-only cross-file consistency verification (imports, type signatures, interfaces) before proceeding to Phase 2 wiring.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
+- **Plan Contract Validation**: Run `ts-node skills/scripts/orchestration/check-plan-contract.ts --manifest=<path> --mode=pre-implement` after PlanDescriber creates the plan and before dispatching Implementor, to validate contract rules.
+- **Plan Manifest Schema Validation**: Run `ts-node skills/scripts/orchestration/validate-manifest-schema.ts --manifest=<path>` immediately after PlanDescriber creates the plan manifest and **before** Plan Contract Validation. This validates the manifest's structure (checkpoints, contract rules, field types, enums) against the canonical JSON Schema. If validation fails, cycle back to PlanDescriber to fix the manifest.
+- **Plan Adherence Gate**: The Implementor runs `check-plan-adherence.ts` after implementation but before build. The adherence score is included in the Implementor's output as `checkpointProgress.adherenceScore`.
+- **Plan Diff Report**: If adherence < 90%, run `ts-node skills/scripts/orchestration/plan-diff-report.ts --manifest=<path>` to generate a detailed diff report for review.
 
 ## Guidelines
 
@@ -96,6 +100,7 @@ You are the **Orchestrator**. Your role is to:
 | Browser testing | `browser-tester` | ❌ Never |
 | Write docs | `documentor` | ❌ Never |
 | Wire imports/barrels | `integrator` | ❌ Never |
+| **Plan contract validation** | Run `check-plan-contract.ts` directly | ✅ Directly (bash) |
 | Merge coordination | `integrator` (Phase 1) | ❌ Never |
 | **Pipeline init/teardown** | — | ✅ Directly (bash) |
 | **Context validation** | — | ✅ Directly (bash) |
@@ -142,6 +147,10 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Failure Escalation | Failure Summary & Escalation |
 | Pipeline Init/Teardown | Pipeline Init & Teardown Scripts |
 | Merge Coordination | Integrator Phase 1 — 4-pass merge verification (merged: replaces former Merge Coordinator) |
+| Plan Contract Validation | check-plan-contract.ts — Pre-implementation contract rule check |
+| Plan Manifest Schema Validation | validate-manifest-schema.ts — Validate manifest structure against JSON Schema |
+| Plan Adherence Gate | check-plan-adherence.ts — Post-implementation, pre-build checkpoint verification |
+| Plan Diff Report | plan-diff-report.ts — Human-readable diff between plan and implementation |
 | Context Validation | Context Validator (validate-context.ts) |
 | Pre-Flight Security | Pre-Flight Check (step 5) |
 | Security Self-Review | Implementor's Security Self-Review (skills/implementor-workflow/SKILL.md) |
@@ -170,6 +179,10 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | **Context Validator** | Validate agent-context.md schema | `skills/scripts/orchestration/validate-context.ts` | `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` |
 
 | **Pipeline Checkpoint** | Git-based checkpoint after each agent step | `skills/scripts/orchestration/pipeline-checkpoint.ts` | `ts-node skills/scripts/orchestration/pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name>` |
+| **Plan Contract Check** | Validate contract rules before implementation | `skills/scripts/orchestration/check-plan-contract.ts` | `ts-node skills/scripts/orchestration/check-plan-contract.ts --manifest=<path> [--mode=pre-implement|post-implement]` |
+| **Plan Manifest Schema Validator** | Validate plan manifest structure before contract checks | `skills/scripts/orchestration/validate-manifest-schema.ts` | `ts-node skills/scripts/orchestration/validate-manifest-schema.ts --manifest=<path> [--schema=<path>]` |
+| **Plan Adherence Check** | Verify all checkpoints satisfied before build | `skills/scripts/orchestration/check-plan-adherence.ts` | `ts-node skills/scripts/orchestration/check-plan-adherence.ts --manifest=<path> --dir=./ [--threshold=90]` |
+| **Plan Diff Report** | Human-readable plan vs implementation diff | `skills/scripts/orchestration/plan-diff-report.ts` | `ts-node skills/scripts/orchestration/plan-diff-report.ts --manifest=<path> [--output=<path>]` |
 | **Pipeline Replay** | Re-run a pipeline from archived checkpoints | `skills/scripts/orchestration/pipeline-replay.ts` | `ts-node skills/scripts/orchestration/pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]` |
 | **Context Lock** | Advisory file lock for agent-context.md race prevention | `skills/scripts/orchestration/context-lock.ts` | `ts-node skills/scripts/orchestration/context-lock.ts acquire --pipeline-id=<id> --agent=<name> [--timeout=<ms>]` |
 | **Agent Timeout** | Heartbeat-based stale agent detection with timeout | `skills/scripts/orchestration/agent-timeout.ts` | `ts-node skills/scripts/orchestration/agent-timeout.ts watch --pipeline-id=<id> --agent=<name> --timeout=<ms>` |

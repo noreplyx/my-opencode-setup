@@ -28,6 +28,10 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning — podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
+| **Plan Contract Validation** | `check-plan-contract.ts` | Pre-implementation contract rule validation |
+| **Plan Manifest Schema Validation** | `validate-manifest-schema.ts` | Validate manifest structure against JSON Schema before contract checks |
+| **Plan Adherence Gate** | `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint verification |
+| **Plan Diff Report** | `plan-diff-report.ts` | Human-readable diff between plan and implementation |
 
 ## Core Principles
 
@@ -52,7 +56,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Finder** | Codebase exploration, research, information gathering. **Smart Finder**: Also reports proactive hazard detection (dead code, deprecated APIs, security anti-patterns). Returns structured knowledge graph. | 0.3 | Start of pipeline — gather context | Yes (self-checks findings) |
 | **Orchestrator** | Brainstorming, task assignment, coordination | 0.1 | Always — primary user interface | Yes |
 | **PlanDescriber** | Detailed implementation roadmaps + plan-manifest.json with confidence score | High | After brainstorm or direct feature request | Yes (confidence scoring) |
-| **Implementor** | Write code following the plan. **Self-Reviewing Implementor**: Pre-implementation validation, self-review pass before reporting, scope guard. | None | After plan is ready | Yes (mandatory self-review) |
+| **Implementor** | Write code following the plan. **Checkpoint-Driven Implementor**: Pre-implementation contract validation, checkpoint-by-checkpoint implementation with self-verification, pre-build plan adherence gate, scope guard. | None | After plan is ready | Yes (mandatory self-review) |
 | **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | After QA or Verifier reports issues | Yes (cross-module check) |
 | **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | After build + security scan pass | Yes (edge case generation) |
 | **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | After Acceptance Gate passes | Yes (confidence level reporting) |
@@ -207,10 +211,20 @@ The default orchestration workflow follows this sequence:
    â”‚              â””â”€â”€ CHANGELOG.md entries
    â”‚              â””â”€â”€ README updates
    â”‚              â””â”€â”€ Migration guide (if breaking changes)
-          â”‚
-8. ORCHESTRATOR ──► Archive pipeline logs and clean up,
-                     review all results, report to user
-```### When to Skip Steps
+â”‚
+ 8. ORCHESTRATOR ──► Archive pipeline logs and clean up,
+                      review all results, report to user
+```
+### Protocol Reference Quick Reference
+
+| Task | Script / Command |
+|------|-----------------|
+| Plan Contract Validation | check-plan-contract.ts — Pre-implementation contract rule check |
+| Plan Manifest Schema Validation | validate-manifest-schema.ts — Validate manifest JSON structure against canonical schema |
+| Plan Adherence Gate | check-plan-adherence.ts — Post-implementation, pre-build checkpoint verification |
+| Plan Diff Report | plan-diff-report.ts — Human-readable diff between plan and implementation |
+
+### When to Skip Steps
 - **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber â†’ Implementor â†’ Security Scan (incl. auto semgrep) â†’ QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer for the fix, then QA + Verifier.
@@ -357,6 +371,23 @@ Every implementation MUST pass through these mandatory validation gates:
 - The Orchestrator MUST inspect the lint output to confirm no errors before proceeding to QA
 - If the project has no linter configured, the Implementor should report "No linter configured" and proceed
 - The Implementor's report MUST include lint output alongside build output so the Orchestrator can confirm both gates passed
+
+### Plan Adherence Gate (NEW)
+
+After the Implementor writes code and before the Build Gate, the Plan Adherence Gate verifies the implementation matches the plan:
+
+| Gate | Who Runs It | What It Checks | Failure Action |
+|------|-------------|----------------|----------------|
+| **Plan Contract Validation** | Implementor (Step 0e) | Contract rules are valid, checkpoint targets don't conflict | Block implementation — report to Orchestrator for plan revision |
+| **Plan Adherence Gate** | Implementor (Step 4.5) | Every checkpoint in plan manifest is satisfied (score ≥ 90%) | Fix missing checkpoints before proceeding to build |
+
+**Protocol:**
+- The Implementor MUST run `validate-manifest-schema.ts --manifest=<manifest-path>` before check-plan-contract to validate the manifest's JSON structure against the canonical schema. If this fails, the manifest has structural issues — do NOT proceed to contract validation.
+- The Implementor MUST run `check-plan-contract.ts --mode=pre-implement` before writing code
+- The Implementor MUST use checkpoint-driven implementation (self-verify per checkpoint group)
+- The Implementor MUST run `check-plan-adherence.ts` before the build
+- If adherence score < 90%, use `plan-diff-report.ts` to identify gaps
+- The adherence score is reported in `checkpointProgress.adherenceScore`
 
 **Security Scan Protocol:**
 - After build + lint pass, the Orchestrator delegates the Security Scan to an appropriate subagent (e.g., Fixer with `security-scan` skill loaded, or a dedicated security subagent). The Orchestrator NEVER runs the scan directly.
@@ -1846,6 +1877,9 @@ This skill includes executable scripts for project initialization, consistency c
 |--------|---------|-------|
 | `validate-output-contract.ts` | Validates subagent output against structured output contract schemas | `ts-node <skills-dir>/scripts/orchestration/validate-output-contract.ts --file=<path> \| --pipeline \| --agent=<name>` |
 | `test-pipeline.ts` | E2E test harness exercising all orchestration components | `ts-node <skills-dir>/scripts/orchestration/test-pipeline.ts [--test=<name>]` |
+| `check-plan-contract.ts` | Pre-implementation plan contract validation — runs contract rules before coding | `ts-node skills/scripts/orchestration/check-plan-contract.ts` |
+| `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint adherence verification | `ts-node skills/scripts/orchestration/check-plan-adherence.ts` |
+| `plan-diff-report.ts` | Human-readable diff between plan and implementation | `ts-node skills/scripts/orchestration/plan-diff-report.ts` |
 
 ### Consistency Checks
 Run after implementation to ensure code style consistency:

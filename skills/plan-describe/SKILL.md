@@ -37,6 +37,27 @@ Convert the deep dive into a linear sequence of actionable tasks.
   - Define the specific test cases (unit, integration, E2E) that must pass.
   - Specify the exact commands to run for linting and type-checking.
 
+### ❌ Constraints Section (MANDATORY)
+
+Every roadmap MUST include a "What NOT to Do" section with at least 5 constraints. These become `pattern_forbidden` contract rules in the manifest.
+
+```markdown
+## ❌ Constraints (Violations Are Blocking)
+
+1. **Do NOT** add any new npm dependencies without explicit plan approval
+2. **Do NOT** modify existing tests unless the plan specifies it
+3. **Do NOT** use `any` types — use proper generics or `unknown`
+4. **Do NOT** skip error handling on any async operation
+5. **Do NOT** create barrel files manually — the Integrator handles this
+6. **Do NOT** put business logic in controllers
+7. **Do NOT** hardcode environment-specific values
+8. **Do NOT** add console.log — use proper logger
+```
+
+**Hard Rule**: Every roadmap MUST include:
+- At least 5 constraint items
+- Each constraint maps to a `pattern_forbidden` or `import_restriction` contract rule in the manifest
+
 ### 4. Definition of Done
 
 For each phase and the overall feature, clearly define what "done" means. This prevents scope creep and gives the implementor a clear exit criterion.
@@ -150,6 +171,48 @@ The manifest must follow this JSON structure:
 |---|---|---|
 | `selfReviewCheckpoint` | A meta-checkpoint for the Implementor to self-verify | `prompt`: what to check, `method`: "grep" / "read" / "reason" |
 
+#### contractRules (NEW)
+
+Each plan manifest MUST include a `contractRules` array at the top level alongside `checkpoints`. These are machine-executable rules that constrain what the Implementor can and cannot do.
+
+```json
+{
+  "manifestVersion": 1,
+  "planSummary": "...",
+  "contractRules": [
+    {
+      "id": "CR-001",
+      "type": "import_restriction",
+      "severity": "blocking",
+      "description": "No direct DB access in controllers — all DB access must go through Repository layer",
+      "rule": "grep -n 'db\\.\\|prisma\\.\\|query\\|execute' src/controllers/*.ts",
+      "expectedResult": "no_matches"
+    }
+  ]
+}
+```
+
+**Available contract rule types:**
+
+| Type | Purpose | Example Rule | expectedResult |
+|------|---------|--------------|----------------|
+| `import_restriction` | Prohibit importing certain modules/patterns | `grep -n 'db.query' src/controllers/*.ts` | `no_matches` |
+| `import_required` | Require specific imports/patterns | `grep -rn 'UserRepository' src/services/user.ts` | `matches_found` |
+| `library_restriction` | Only allow specified libraries for a concern | `grep -rn 'from.*joi' src/ --include='*.ts'` | `no_matches` |
+| `method_must_exist` | Enforce a specific public API method exists | `grep -n 'public async createUser' src/services/user.ts` | `matches_found` |
+| `pattern_must_exist` | Require a code pattern (try/catch, logger, etc.) | `grep -n 'try {' src/services/user.ts` | `matches_found` |
+| `pattern_forbidden` | Prohibit a code pattern (any types, eval, etc.) | `grep -n ': any' src/ --include='*.ts'` | `no_matches` |
+| `naming_convention` | Enforce naming rules | `grep -n 'class.*Service' src/services/*.ts` | `matches_found` |
+
+**Severity levels:**
+- `blocking` — The pipeline MUST NOT proceed if this rule fails. Violation → Fixer cycle.
+- `warning` — Non-blocking. Flagged in report but doesn't block the pipeline.
+
+**Hard Rule**: Every manifest MUST have at least 3 contract rules per file being modified:
+- At least 1 `import_restriction` rule (e.g., "no direct DB access")
+- At least 1 `import_required` rule (e.g., "must use repository pattern")
+- At least 1 `pattern_forbidden` rule (e.g., "no `any` types")
+
 #### Dependency Mapping
 - Use `dependsOn` to express ordering: if checkpoint A must pass before B can be verified, set B's `dependsOn: ["CP-00A"]`
 - File existence checks should be dependencies of export/behavioral checks within that file
@@ -174,6 +237,21 @@ Schema addition:
 ```
 
 When incrementing the manifest version, always document the diff in the `changes` array. If there is no previous version (first manifest), omit the `changes` field or set it to an empty array.
+
+#### Manifest Schema Validation (MANDATORY)
+
+After generating the plan manifest, the PlanDescriber MUST validate it against the canonical JSON Schema:
+
+```bash
+ts-node skills/scripts/orchestration/validate-manifest-schema.ts --manifest=plan-manifests/<feature-name>-manifest.json
+```
+
+**Rules:**
+- The validator checks all structural requirements: required fields, field types, ID patterns (`^CP-\d{3}$`, `^CR-\d{3}$`), enum values, and conditional fields per `verify.kind`
+- If validation fails: fix the manifest to match the schema before proceeding
+- The Orchestrator will run this validation as a gate before dispatching Implementor, so the manifest MUST be schema-valid when submitted
+
+**Schema reference:** `plan-manifests/plan-manifest.schema.json`
 
 #### Hard Rule
 - ❌ NEVER skip producing the manifest. Every roadmap MUST have a corresponding manifest.
@@ -276,6 +354,9 @@ Before finalizing a roadmap, verify:
 - [ ] Every modified file has ≥ 1 logsAtLevel checkpoint
 - [ ] The plan specifies a repository/DAO layer, not direct DB access
 - [ ] DTOs/interfaces are defined as separate checkpoints
+- [ ] At least 3 contract rules defined per modified file
+- [ ] At least 5 "What NOT to Do" constraints documented
+- [ ] Each constraint maps to a contract rule
 
 ## Hard Rules
 - ❌ NEVER skip the Plan Analysis phase — always decompose the plan first
