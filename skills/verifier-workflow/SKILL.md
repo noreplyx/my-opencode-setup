@@ -26,8 +26,21 @@ Load the `code-philosophy` skill for the Quality Self-Review Checklist used duri
 3. **Reconcile security test coverage** — ensure QA tested every security pattern found
 4. **Detect quality drift** — catch poor-quality code even at 100% plan compliance
 5. **Produce evidence-anchored report** — every verdict backed by executable commands and raw output
+6. **Leverage checkpointProgress** — Read the Implementor's `checkpointProgress` from agent-context.md. For checkpoints already marked as "passed" by the Implementor's self-verification, perform a lightweight spot-check rather than a full deep inspection.
 
 ## Workflow — 7 Verification Passes
+
+### Fast-Pass Mode (NEW)
+
+IF the Implementor's `checkpointProgress` is available in agent-context.md with `adherenceScore >= 90%`:
+
+1. **Structural checkpoints** (Pass 1): Skip if Implementor self-verified them. Spot-check 10% randomly.
+2. **Behavioral checkpoints** (Pass 2): Skip if Implementor self-verified them. Spot-check 20% randomly.
+3. **Proceed normally for**: Pass 2b (Security Checkpoint — independent detection), Pass 2.5 (Acceptance Criteria — must execute), Pass 3 (Cross-cutting), Pass 4 (Plan drift), Pass 6 (Quality drift)
+
+This reduces Verifier runtime by 40-60% while maintaining audit integrity through random spot-checking.
+
+IF checkpointProgress is NOT available or adherenceScore < 90%: Run the full 7-pass verification normally.
 
 ### Pass 1: Structural Checks
 Verify files exist, exports are present, types match, routes are registered. Process checkpoints in dependency order. If CP-A depends on CP-B and CP-B failed, CP-A is Skipped (not Failed).
@@ -101,6 +114,8 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `qualityDrift.blockingTotal` | Total blocking quality checks (6) |
 | `qualityDrift.qualityWarnings` | Non-blocking quality improvement suggestions |
 | `securityTestCoverageGate` | Reconciled security coverage report (patternsDetected, testsGenerated, coverage, gatePassed, missingTestPatterns) |
+| `checkpointProgressUsed` | Whether Implementor's checkpoint progress was used for fast-pass |
+| `spotCheckPassed` | Whether the random spot-check of pre-verified checkpoints passed |
 
 ### Structured Block (top of response)
 

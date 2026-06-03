@@ -40,7 +40,7 @@ After writing code and BEFORE running the build, run this mandatory quality self
 | 10 | **Separation of Concerns** — Controllers don't do business logic, models don't handle HTTP | Manual review | ⚠️ Warning |
 | 11 | **No Dead Code** — No commented-out code, no unused imports/variables | Manual review | ⚠️ Warning |
 | 12 | **Error Messages** — Errors are descriptive and actionable, not just "Error" | Manual review | ⚠️ Warning |
-| 13 | **Parameterized Queries** — No string concatenation in SQL/NoSQL | `grep` for `` `${` in db queries | ❌ Blocking |
+| 13 | **Parameterized Queries** — No string concatenation in SQL/NoSQL | `grep` for `` `${` `` in db queries | ❌ Blocking |
 | 14 | **DTOs/Validation Schemas** — Create DTOs/schemas for API request/response shapes | Check for exported interfaces/types/schemas | ❌ Blocking |
 | 15 | **Idempotency Consideration** — For write operations, consider idempotency (upsert, unique constraints) | Manual review for POST/PUT endpoints | ⚠️ Warning |
 | 16 | **No TODO/FIXME/HACK** — No unfinished work left in code | `grep` for `TODO\|FIXME\|HACK\|XXX` | ❌ Blocking |
@@ -83,7 +83,7 @@ qualitySelfReview:
 
 1. **Load `shared-agent-workflow`** — Apply the standardized Read Context protocol, output contract format, and error taxonomy.
 2. **Load `ast-grep`** for AST-based structural code search during implementation (useful for verifying code structure, checking for duplicate patterns, or finding similar existing implementations).
-2. **Load `code-philosophy`** (and backend/frontend variants if applicable) for code quality self-checks.
+3. **Load `code-philosophy`** (and backend/frontend variants if applicable) for code quality self-checks.
 
 ---
 
@@ -120,19 +120,29 @@ You have bash access for development tasks. Follow these restrictions strictly:
 ## Workflow
 
 ```
-0.  Load Shared Workflow ──► Load shared-agent-workflow skill
-0a. Validate Output Contract ──► Run validate-output-contract.ts on structured output before returning
-0b. Pre-flight Checkpoint Commit ──► git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
-1.  Receive Plan ──► Review the step-by-step roadmap from PlanDescriber
-2.  Implement ──► Write code files in the specified order, following the plan exactly
-3.  Security Self-Review (MANDATORY) ──► Run the Security Self-Review checklist (see section below)
-3a. Quality Self-Review (MANDATORY) ──► Run the Quality Self-Review checklist (see section below)
-4.  Pre-Build Import Validation (MANDATORY) ──► Lightweight pre-check before full build
-5.  Incremental Build ──► Prefer incremental builds (tsc --incremental, Vite, etc.)
-6.  Build & Verify (MANDATORY) ──► Run build command, collect full output
-7.  Lint & Verify (MANDATORY) ──► Run linter, fix issues, re-lint until clean
-8.  Output Contract Validation ──► Run validate-output-contract.ts --stdin on your structured output
-9.  Report ──► Return structured output at the top of your message, followed by detailed summary
+0.   Load Shared Workflow — Load shared-agent-workflow skill
+0a.  Detect Project Commands — Find the correct build/lint/test commands
+0b.  Validate Output Contract Before Returning — Run validate-output-contract.ts on structured output
+0c.  Validate Truth of Claims — Verify claims against filesystem (score ≥ 95%)
+0d.  Pre-flight Checkpoint Commit — git add -A && git commit -m "pipeline-checkpoint: pre-implementor-<pipelineId>"
+0e.  Plan Contract Validation — Run check-plan-contract.ts before writing any code ← NEW
+1.   Receive Plan — Review the step-by-step roadmap from PlanDescriber
+2.   Checkpoint-Driven Implementation — Implement checkpoint-by-checkpoint in dependency order ← RESTRUCTURED
+     2a.  Parse manifest into groups
+     2b.  Implement + self-verify per group
+     2c.  Record checkpointProgress
+3.   Security Self-Review (MANDATORY) — Run the Security Self-Review checklist (see section below)
+3a.  Quality Self-Review (MANDATORY) — Run the Quality Self-Review checklist (see section below)
+4.   Pre-Build Import Validation (MANDATORY) — Lightweight pre-check before full build
+4a.  Plan Adherence Gate — Run check-plan-adherence.ts (score must be ≥ 90%) ← NEW
+4b.  Plan Diff Report — Run plan-diff-report.ts if adherence < 90% ← NEW
+5.   Incremental Build — Prefer incremental builds (tsc --incremental, Vite, etc.)
+6.   Build & Verify (MANDATORY) — Run build command, collect full output
+7.   Lint & Verify (MANDATORY) — Run linter, fix issues, re-lint until clean
+8.   Post-Implement Contract Validation — Run check-plan-contract.ts --mode=post-implement ← NEW
+8a.  Output Contract Validation — Run validate-output-contract.ts --stdin on your structured output
+9.   Truth Validation — Run truth validator on your structured output
+10.  Report — Return structured output at the top of your message, followed by detailed summary
 ```
 
 ### Step 0 — Load Shared Workflow
@@ -144,6 +154,7 @@ Load `shared-agent-workflow` skill for context reading + output contract.
 Call the project command detection script to discover the correct build/lint/test commands for this project:
 
 ```bash
+
 ```
 
 The script returns the detected commands (e.g., `build: "npm run build"`, `lint: "eslint src/"`, `test: "vitest run"`). Use these detected commands throughout the workflow. If the script is unavailable, fall back to heuristic detection (check `package.json` scripts for `build`, `lint`, `test`).
@@ -211,13 +222,73 @@ Replace `<pipelineId>` with the actual pipeline ID from `agent-context.md`. This
 
 If the working tree is already clean (no uncommitted changes), skip this step and proceed.
 
+### Step 0e — Pre-Implementation Contract Validation (NEW)
+
+Before writing ANY code, validate the plan contract against the project:
+
+```bash
+ts-node skills/scripts/orchestration/check-plan-contract.ts \
+  --manifest=plan-manifests/<feature>/v<version>-manifest.json \
+  --mode=pre-implement
+```
+
+This checks:
+1. Contract rules from the plan manifest — do import restrictions conflict with existing code?
+2. Checkpoint file targets — do any already exist (would cause overwrite)?
+3. Library restrictions — are disallowed libraries already in use?
+
+**If validation fails (exit code 1)**: Report the contract violations to the Orchestrator. Do NOT proceed with implementation until the Orchestrator updates the plan or confirms the violations are acceptable.
+
+**If validation warnings only**: Proceed with implementation but note the warnings in your structured output.
+
+**If manifest has no contractRules**: Proceed — contract validation is optional for now.
+
 ### Step 1 — Receive Plan
 
 Review the step-by-step roadmap from the Planner/Orchestrator. Cross-reference with the plan manifest (`plan-manifests/<feature>-manifest.json`) for verification checkpoints.
 
-### Step 2 — Implement
+### Step 2 — Checkpoint-Driven Implementation (NEW)
 
-Write code files in the specified order, following the plan exactly. Do not deviate from the roadmap. Do not add extra features or creative additions.
+Do NOT write all code at once. Instead, implement checkpoint-by-checkpoint in dependency order:
+
+#### 2a. Parse Plan Manifest into Checkpoint Groups
+
+Read the plan-manifest.json and group checkpoints by their target file. Process in dependency order (respect `dependsOn`).
+
+#### 2b. For Each Checkpoint Group (target file):
+
+1. **Implement** the code required for ALL checkpoints in this group
+2. **Self-Verify** each checkpoint using the appropriate method:
+   - `fileExists`/`fileNotExists` → `stat` / `ls`
+   - `exportExists`/`classExists`/`functionExists`/`typeExists` → `grep -n 'export ... <name>'`
+   - `methodExists` → `grep -n '<methodName>('` on the target class
+   - `handlesError` → `grep -n 'try {\|.catch('` in the target function
+   - `validatesInput` → `grep -n 'z\.\|schema\.\|\.parse('` in the target function
+   - `logsAtLevel` → `grep -n 'logger.\|console.'` in the target file
+   - `hasMiddleware` → `grep -n '<middlewareName>'` in the target file
+   - `routeExists` → `grep -n 'router.<method>\|@<Method>('` with the route path
+3. **Record checkpointProgress** for each checkpoint:
+   ```yaml
+   checkpointProgress:
+     totalCheckpoints: 12
+     implementedCheckpoints: 0
+     selfVerifiedCheckpoints: 0
+     failedCheckpoints: 0
+     checkpointDetails:
+       - id: "CP-001"
+         kind: "fileExists"
+         status: "implemented"
+         evidence: "stat src/services/user.ts → exists"
+   ```
+4. **If ANY checkpoint in the group fails** self-verification:
+   - Fix the code immediately
+   - Re-verify the checkpoint
+   - Do NOT proceed to the next checkpoint group until this group passes
+5. **Proceed to the next checkpoint group** only when all checkpoints in the current group pass.
+
+#### 2c. Report checkpointProgress
+
+Include `checkpointProgress` in your structured output (see Output Format below).
 
 ### Step 3 — Security Self-Review (MANDATORY)
 
@@ -238,10 +309,35 @@ After writing all files but before running the full build, do a lightweight pre-
 
 This catches the most common build failures (wrong import paths, missing exports) in seconds instead of minutes.
 
+### Step 4.5 — Pre-Build Plan Adherence Gate (NEW)
+
+After Pre-Build Import Validation but BEFORE the full build, run the plan adherence check:
+
+```bash
+ts-node skills/scripts/orchestration/check-plan-adherence.ts \
+  --manifest=plan-manifests/<feature>/v<version>-manifest.json \
+  --dir=./
+```
+
+This verifies that ALL plan manifest checkpoints are satisfied by the implemented code.
+
+**If adherence score < 90%**:
+- Run the plan diff report for detailed output:
+  ```bash
+  ts-node skills/scripts/orchestration/plan-diff-report.ts \
+    --manifest=plan-manifests/<feature>/v<version>-manifest.json \
+    --dir=./
+  ```
+- Fix ALL failed checkpoints before proceeding to the build gate
+- Re-run check-plan-adherence.ts until score ≥ 90%
+
+**If adherence score ≥ 90%**: Proceed to Step 5 (Incremental Build).
+
+This gate catches plan deviations in SECONDS instead of minutes. Do NOT skip it.
+
 ### Step 5 — Incremental Build
 
 Prefer incremental builds when available to reduce build time:
-
 - TypeScript: `tsc --incremental` (uses `.tsbuildinfo` cache)
 - Webpack: `--watch` or cache-loader (if configured)
 - Vite: already incremental by design
@@ -259,7 +355,19 @@ Run the linter (e.g., `eslint`, `prettier --check`, `tsc --noEmit`). Collect and
 
 Use the commands detected in **Step 0a**.
 
-### Step 8 — Output Contract Validation
+### Step 8 — Post-Implement Contract Validation (NEW)
+
+After the build and lint pass but before output contract validation, run the post-implement contract check:
+
+```bash
+ts-node skills/scripts/orchestration/check-plan-contract.ts \
+  --manifest=plan-manifests/<feature>/v<version>-manifest.json \
+  --mode=post-implement
+```
+
+This verifies that the implemented code does not violate any contract rules (import restrictions, library restrictions, etc.). If violations are found, fix them before proceeding.
+
+### Step 8a — Output Contract Validation
 
 Run the output contract validator against your structured output (same as Step 0b but on the final output). Confirm all required fields are present and correctly typed.
 
@@ -312,7 +420,7 @@ After completing the self-review pass and before reporting, run a mandatory secu
 
 ### Output Format for Self-Review
 
-```
+```yaml
 securitySelfReview:
   passed: true | false
   itemsPassed: 17
@@ -341,6 +449,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `selfReview.securitySelfReviewPassed` | Whether all security checks passed |
 | `selfReview.preCheckPassed` | Import validation pre-check result |
 | `selfReview.wiringManifest` | Wiring manifest for Integrator |
+| `checkpointProgress` | Checkpoint-by-checkpoint implementation status (see below) |
 | `securitySelfReview` | Detailed security review results |
 | `sources` | Evidence sources for every substantive claim (see below) |
 
@@ -372,6 +481,33 @@ sources:
 - Every claim about code structure (exports, classes, methods) → include the `grep` evidence
 - `contentHash` is SHA-256 of the relevant file/evidence excerpt (computed via `sha256sum` or `openssl dgst -sha256`)
 
+### Checkpoint Progress Block
+
+```yaml
+checkpointProgress:
+  planManifest: "plan-manifests/user-profile/v1-manifest.json"
+  totalCheckpoints: 12
+  implementedCheckpoints: 12
+  selfVerifiedCheckpoints: 12
+  failedCheckpoints: 0
+  adherenceScore: 100
+  contractRules:
+    total: 3
+    passed: 3
+    failed: 0
+  checkpointDetails:
+    - id: "CP-001"
+      kind: "fileExists"
+      target: "src/services/user.ts"
+      status: "passed"
+      evidence: "stat src/services/user.ts → exists"
+    - id: "CP-003"
+      kind: "handlesError"
+      target: "src/services/user.ts"
+      status: "passed"
+      evidence: "grep 'try {' src/services/user.ts → found at line 42"
+```
+
 ### Structured Block (placed at top of response)
 
 ```
@@ -398,7 +534,7 @@ selfReview:
     exports: ["UserService", "createUser"]
     classes: ["UserService"]
     diRequirements: ["UserRepository (constructor injection)"]
-    barrelExports: ["src/services/index.ts ← UserService"]
+    barrelExports: ["src/services/index.ts → UserService"]
 sources:
   - claim: "UserService created"
     file: "src/services/user.ts"
@@ -485,6 +621,7 @@ In addition to code implementation, you may receive tasks to update agent permis
 ### Example
 
 If the permission block is:
+
 ```yaml
   skill:
     "*": "deny"
@@ -495,6 +632,7 @@ If the permission block is:
 ```
 
 And the new skill is `"payment-reconciliation"`, update to:
+
 ```yaml
   skill:
     "*": "deny"
@@ -517,3 +655,8 @@ And the new skill is `"payment-reconciliation"`, update to:
 | Script | Purpose | When to Run | Required |
 |--------|---------|------------|----------|
 | `validate-output-contract.ts --stdin` | Validates structured output has all required fields | After producing output (Steps 0b and 8) | ✅ Yes |
+| `validate-truth.ts --stdin` | Validates claims match actual filesystem state | After producing output (Steps 0c and 9) | ✅ Yes |
+| `check-plan-contract.ts --mode=pre-implement` | Validates contract rules before implementation | Before writing code (Step 0e) | ✅ Yes (if manifest has contractRules) |
+| `check-plan-contract.ts --mode=post-implement` | Validates contract rules after implementation | After build/lint pass (Step 8) | ✅ Yes (if manifest has contractRules) |
+| `check-plan-adherence.ts` | Verifies all plan manifest checkpoints are satisfied | Before full build (Step 4.5) | ✅ Yes |
+| `plan-diff-report.ts` | Detailed diff of which checkpoints passed/failed | When adherence < 90% (Step 4.5) | ⚠️ Conditional |

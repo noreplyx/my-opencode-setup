@@ -6,22 +6,24 @@
  * and computes quality scores.
  *
  * Quality score formula:
- *   planQualityScore = (complianceScore * 0.6)
- *     + ((1 - failed/total) * 100 * 0.3)
- *     + (1 - planOmissions/total) * 100 * 0.1
+ *   planQualityScore = (complianceScore * 0.5)        // plan compliance (0.7 if no contract rules)
+ *     + ((1 - failed/total) * 100 * 0.2)              // checkpoint pass rate
+ *     + (1 - planOmissions/total) * 100 * 0.1          // plan omissions
+ *     + (contractRulesPassed/contractRulesTotal)*100*0.2  // contract rule pass rate
  *
  * Usage:
  *   [runtime] plan-quality-score.ts --record --pipeline-id=<id> --feature=<name>
  *     --compliance-score=<N> --total-checkpoints=<N> --failed=<N>
  *     --skipped=<N> --plan-omissions=<N>
+ *     [--contract-rules-total=<N> --contract-rules-passed=<N> --contract-rules-failed=<N>]
  *   [runtime] plan-quality-score.ts --query --feature=<name>
  *   [runtime] plan-quality-score.ts --report
  *   [runtime] plan-quality-score.ts --query-plan-describer
  *
  * Exit codes:
- *   0 = success (or quality >= 85 for --query-plan-describer)
- *   1 = error (or quality 70-85 for --query-plan-describer / warning)
- *   2 = quality < 70 for --query-plan-describer (escalation trigger)
+ *   0 = success (or quality >= 85 for --query-plan-describer / pass for --check-contract-rules)
+ *   1 = error (or quality 70-85 for --query-plan-describer / warning for --check-contract-rules)
+ *   2 = quality < 70 for --query-plan-describer / fail for --check-contract-rules (escalation trigger)
  */
 
 import * as fs from 'fs';
@@ -48,6 +50,9 @@ interface PlanQualityEntry {
   failedCheckpoints: number;
   skippedCheckpoints: number;
   planOmissions: number;
+  contractRulesTotal: number;
+  contractRulesPassed: number;
+  contractRulesFailed: number;
   planQualityScore: number;
 }
 
@@ -83,6 +88,9 @@ function serializeYaml(data: PlanQualityData): string {
     lines.push(`    failedCheckpoints: ${entry.failedCheckpoints}`);
     lines.push(`    skippedCheckpoints: ${entry.skippedCheckpoints}`);
     lines.push(`    planOmissions: ${entry.planOmissions}`);
+    lines.push(`    contractRulesTotal: ${entry.contractRulesTotal}`);
+    lines.push(`    contractRulesPassed: ${entry.contractRulesPassed}`);
+    lines.push(`    contractRulesFailed: ${entry.contractRulesFailed}`);
     lines.push(`    planQualityScore: ${entry.planQualityScore}`);
   }
 
@@ -160,6 +168,12 @@ function deserializeYaml(raw: string): PlanQualityData {
           currentEntry.skippedCheckpoints = parseInt(trimmed.replace('skippedCheckpoints: ', ''), 10);
         } else if (trimmed.startsWith('planOmissions: ')) {
           currentEntry.planOmissions = parseInt(trimmed.replace('planOmissions: ', ''), 10);
+        } else if (trimmed.startsWith('contractRulesTotal: ')) {
+          currentEntry.contractRulesTotal = parseInt(trimmed.replace('contractRulesTotal: ', ''), 10);
+        } else if (trimmed.startsWith('contractRulesPassed: ')) {
+          currentEntry.contractRulesPassed = parseInt(trimmed.replace('contractRulesPassed: ', ''), 10);
+        } else if (trimmed.startsWith('contractRulesFailed: ')) {
+          currentEntry.contractRulesFailed = parseInt(trimmed.replace('contractRulesFailed: ', ''), 10);
         } else if (trimmed.startsWith('planQualityScore: ')) {
           currentEntry.planQualityScore = parseFloat(trimmed.replace('planQualityScore: ', ''));
         }
@@ -273,6 +287,9 @@ function cmdRecord(
   failed: number,
   skipped: number,
   planOmissions: number,
+  contractRulesTotal: number,
+  contractRulesPassed: number,
+  contractRulesFailed: number,
 ): void {
   if (totalCheckpoints <= 0) {
     console.error('Error: --total-checkpoints must be > 0');
@@ -280,14 +297,25 @@ function cmdRecord(
   }
 
   // Calculate plan quality score
-  const complianceComponent = complianceScore * 0.6;
+  let complianceWeight: number;
+  let contractRulesComponent: number;
+
+  if (contractRulesTotal > 0) {
+    complianceWeight = 0.5;
+    contractRulesComponent = (contractRulesPassed / contractRulesTotal) * 100 * 0.2;
+  } else {
+    complianceWeight = 0.7;
+    contractRulesComponent = 0;
+  }
+
+  const complianceComponent = complianceScore * complianceWeight;
   const failedRate = failed / totalCheckpoints;
-  const checkpointComponent = (1 - failedRate) * 100 * 0.3;
+  const checkpointComponent = (1 - failedRate) * 100 * 0.2;
   const omissionRate = planOmissions / totalCheckpoints;
   const omissionComponent = (1 - omissionRate) * 100 * 0.1;
 
   const planQualityScore = Math.round(
-    (complianceComponent + checkpointComponent + omissionComponent) * 100,
+    (complianceComponent + checkpointComponent + omissionComponent + contractRulesComponent) * 100,
   ) / 100;
 
   const entry: PlanQualityEntry = {
@@ -299,6 +327,9 @@ function cmdRecord(
     failedCheckpoints: failed,
     skippedCheckpoints: skipped,
     planOmissions,
+    contractRulesTotal,
+    contractRulesPassed,
+    contractRulesFailed,
     planQualityScore,
   };
 
@@ -317,6 +348,12 @@ function cmdRecord(
       compliance: Math.round(complianceComponent * 100) / 100,
       checkpoints: Math.round(checkpointComponent * 100) / 100,
       planOmissions: Math.round(omissionComponent * 100) / 100,
+      contractRules: Math.round(contractRulesComponent * 100) / 100,
+    },
+    contractRules: {
+      total: contractRulesTotal,
+      passed: contractRulesPassed,
+      failed: contractRulesFailed,
     },
   }));
 }
@@ -457,6 +494,69 @@ function cmdQueryPlanDescriber(): void {
   }
 }
 
+function cmdCheckContractRules(feature: string): void {
+  const data = loadData();
+  const featureEntries = data.entries.filter(e => e.feature === feature);
+
+  if (featureEntries.length === 0) {
+    console.log(JSON.stringify({
+      ok: true,
+      action: 'check-contract-rules',
+      feature,
+      found: false,
+      totalEntries: 0,
+      avgContractRulePassRate: null,
+      verdict: 'no_data',
+    }));
+    process.exit(0);
+    return;
+  }
+
+  // Compute average contract rule pass rate across all entries
+  let totalContractRulesTotal = 0;
+  let totalContractRulesPassed = 0;
+
+  for (const entry of featureEntries) {
+    if (entry.contractRulesTotal > 0) {
+      totalContractRulesTotal += entry.contractRulesTotal;
+      totalContractRulesPassed += entry.contractRulesPassed;
+    }
+  }
+
+  const avgPassRate = totalContractRulesTotal > 0
+    ? Math.round((totalContractRulesPassed / totalContractRulesTotal) * 10000) / 100
+    : 100; // No contract rules recorded — assume pass
+
+  let exitCode: number;
+  let verdict: string;
+
+  if (avgPassRate >= 80) {
+    exitCode = 0;
+    verdict = 'pass';
+  } else if (avgPassRate >= 60) {
+    exitCode = 1;
+    verdict = 'warning';
+  } else {
+    exitCode = 2;
+    verdict = 'fail';
+  }
+
+  console.log(JSON.stringify({
+    ok: true,
+    action: 'check-contract-rules',
+    feature,
+    found: true,
+    totalEntries: featureEntries.length,
+    avgContractRulePassRate: avgPassRate,
+    contractRulesTotal: totalContractRulesTotal,
+    contractRulesPassed: totalContractRulesPassed,
+    verdict,
+    threshold: '>=80% = pass (exit 0), 60-80% = warning (exit 1), <60% = fail (exit 2)',
+  }));
+
+  process.exit(exitCode);
+}
+
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
@@ -471,9 +571,11 @@ function parseArgs(): void {
     console.log('  [runtime] plan-quality-score.ts --record --pipeline-id=<id> --feature=<name>');
     console.log('    --compliance-score=<N> --total-checkpoints=<N> --failed=<N>');
     console.log('    --skipped=<N> --plan-omissions=<N>');
+    console.log('    [--contract-rules-total=<N> --contract-rules-passed=<N> --contract-rules-failed=<N>]');
     console.log('  [runtime] plan-quality-score.ts --query --feature=<name>');
     console.log('  [runtime] plan-quality-score.ts --report');
     console.log('  [runtime] plan-quality-score.ts --query-plan-describer');
+    console.log('  [runtime] plan-quality-score.ts --check-contract-rules --feature=<name>');
     process.exit(0);
   }
 
@@ -494,6 +596,9 @@ function parseArgs(): void {
     const failedStr = get('--failed=');
     const skippedStr = get('--skipped=');
     const planOmissionsStr = get('--plan-omissions=');
+    const contractRulesTotalStr = get('--contract-rules-total=');
+    const contractRulesPassedStr = get('--contract-rules-passed=');
+    const contractRulesFailedStr = get('--contract-rules-failed=');
 
     if (!pipelineId || !feature || !complianceScoreStr || !totalCheckpointsStr || !failedStr || !skippedStr || !planOmissionsStr) {
       console.error('Error: --record requires --pipeline-id=<id> --feature=<name> --compliance-score=<N> --total-checkpoints=<N> --failed=<N> --skipped=<N> --plan-omissions=<N>');
@@ -505,13 +610,16 @@ function parseArgs(): void {
     const failed = parseInt(failedStr, 10);
     const skipped = parseInt(skippedStr, 10);
     const planOmissions = parseInt(planOmissionsStr, 10);
+    const contractRulesTotal = contractRulesTotalStr ? parseInt(contractRulesTotalStr, 10) : 0;
+    const contractRulesPassed = contractRulesPassedStr ? parseInt(contractRulesPassedStr, 10) : 0;
+    const contractRulesFailed = contractRulesFailedStr ? parseInt(contractRulesFailedStr, 10) : 0;
 
-    if (isNaN(complianceScore) || isNaN(totalCheckpoints) || isNaN(failed) || isNaN(skipped) || isNaN(planOmissions)) {
+    if (isNaN(complianceScore) || isNaN(totalCheckpoints) || isNaN(failed) || isNaN(skipped) || isNaN(planOmissions) || isNaN(contractRulesTotal) || isNaN(contractRulesPassed) || isNaN(contractRulesFailed)) {
       console.error('Error: All numeric arguments must be valid numbers');
       process.exit(1);
     }
 
-    cmdRecord(pipelineId, feature, complianceScore, totalCheckpoints, failed, skipped, planOmissions);
+    cmdRecord(pipelineId, feature, complianceScore, totalCheckpoints, failed, skipped, planOmissions, contractRulesTotal, contractRulesPassed, contractRulesFailed);
     return;
   }
 
@@ -534,6 +642,16 @@ function parseArgs(): void {
   // --query-plan-describer
   if (hasFlag('--query-plan-describer')) {
     cmdQueryPlanDescriber();
+    return;
+  }
+
+  // --check-contract-rules
+  if (hasFlag('--check-contract-rules')) {
+    if (!feature) {
+      console.error('Error: --check-contract-rules requires --feature=<name>');
+      process.exit(1);
+    }
+    cmdCheckContractRules(feature);
     return;
   }
 

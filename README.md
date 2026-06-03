@@ -31,7 +31,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor → Integrator (Phase 1: verify + Phase 2: wire) → Build Gate + Lint Gate → Test Gate → Security Scan → QA → Acceptance Gate → Verifier → Documentor → Orchestrator (report)
+Finder → Orchestrator (brainstorm) → PlanDescriber → Implementor (checkpoint-driven: contract validation → implement per-checkpoint → self-verify → adherence gate) → Integrator → Build Gate → Lint Gate → Test Gate → Security Scan → QA → Acceptance Gate → Verifier (fast-pass if adherence ≥ 90%) → Documentor → Orchestrator (report)
                                                                                          →                                              →
                                                                                      Fixer (feedback loop)                       Debug (after 3 Fixers)
 ``````
@@ -212,6 +212,9 @@ This section documents improvements implemented on top of the base system.
 | **cost-tracker.ts** | Pipeline cost estimation â€” tracks agent output tokens, estimates API costs, cleanup old records | `skills/scripts/orchestration/cost-tracker.ts` |
 | **dependency-check.ts** | Pre-flight dependency verification â€” checks tool availability, validates script references in SKILL.md | `skills/scripts/orchestration/dependency-check.ts` |
 | **auto-rollback.ts** | Automated rollback on consecutive failures â€” checks out pre-pipeline git state, creates rollback records | `skills/scripts/orchestration/auto-rollback.ts` |
+| `check-plan-contract.ts` | Pre-implementation plan contract validation â€” runs contract rules before coding | `skills/scripts/orchestration/check-plan-contract.ts` |
+| `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint adherence verification (score â‰¥ 90%) | `skills/scripts/orchestration/check-plan-adherence.ts` |
+| `plan-diff-report.ts` | Human-readable diff report between plan manifest and implementation | `skills/scripts/orchestration/plan-diff-report.ts` |
 | **pipeline-visualizer.ts** | Generates Mermaid.js pipeline flowcharts from agent history â€” color-coded by pass/fail/partial | `skills/scripts/orchestration/pipeline-visualizer.ts` |
 | **skill-drift-detector.ts** | Detects skill drift by comparing SHA-256 hashes against `skills-lock.json` â€” alerts on tampered/stale skills | `skills/scripts/orchestration/skill-drift-detector.ts` |
 | **validate-transition.ts** | Pipeline state machine — enforces valid agent step transitions | `skills/scripts/orchestration/validate-transition.ts` |
@@ -235,6 +238,7 @@ This section documents improvements implemented on top of the base system.
 | **Pipeline visualization** | Auto-generated Mermaid.js diagrams from agent history |
 | **Skill drift detection** | SHA-256 hash comparison alerts on tampered or stale agent skills |
 | **Trivy + OWASP ZAP pipeline integration** | Trivy auto-loaded as mandatory sub-scan in Security Gate. OWASP ZAP available as optional post-deployment DAST scan. |
+| **Plan Adherence Gate** | Three new scripts (`check-plan-contract.ts`, `check-plan-adherence.ts`, `plan-diff-report.ts`) enforce plan-following: pre-implementation contract validation, checkpoint-by-checkpoint implementation with self-verification, and pre-build adherence score (â‰¥ 90%). |
 
 ### Quick Reference
 
@@ -262,5 +266,10 @@ npx ts-node skills/scripts/orchestration/auto-rollback.ts --check --pipeline-id=
 # Visualization & Drift
 npx ts-node skills/scripts/orchestration/pipeline-visualizer.ts --from-context=agent-context.md
 npx ts-node skills/scripts/orchestration/skill-drift-detector.ts --check
+
+# Plan Adherence (NEW)
+npx ts-node skills/scripts/orchestration/check-plan-contract.ts --manifest=plan-manifests/<feature>/v1-manifest.json --mode=pre-implement
+npx ts-node skills/scripts/orchestration/check-plan-adherence.ts --manifest=plan-manifests/<feature>/v1-manifest.json --dir=./
+npx ts-node skills/scripts/orchestration/plan-diff-report.ts --manifest=plan-manifests/<feature>/v1-manifest.json
 ```
 

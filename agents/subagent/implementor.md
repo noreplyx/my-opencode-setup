@@ -76,7 +76,27 @@ NEVER ship code that cuts corners on error handling, input validation, or type s
 | `qualitySelfReview.warningItemsPassed` | Number of warning quality checks passed |
 | `qualitySelfReview.warningItemsTotal` | Total warning quality checks (5) |
 | `qualitySelfReview.qualityAdditions` | Quality improvements made beyond what the plan specified |
+| `checkpointProgress` | Checkpoint-by-checkpoint implementation status with adherence score |
+| `checkpointProgress.totalCheckpoints` | Total checkpoints from plan manifest |
+| `checkpointProgress.implementedCheckpoints` | Checkpoints implemented |
+| `checkpointProgress.selfVerifiedCheckpoints` | Checkpoints verified by self-review |
+| `checkpointProgress.failedCheckpoints` | Checkpoints that failed self-verification |
+| `checkpointProgress.adherenceScore` | Plan adherence percentage (0-100) |
+| `checkpointProgress.contractRules.total` | Total contract rules |
+| `checkpointProgress.contractRules.passed` | Contract rules that passed |
+| `checkpointProgress.contractRules.failed` | Contract rules that failed |
+| `preBuildAdherence.passed` | Whether pre-build adherence gate passed (true/false) |
+| `preBuildAdherence.score` | Pre-build adherence score |
 
 ## Note
 
 Detailed workflow instructions are loaded from the `implementor-workflow` skill. Load it for the full protocol.
+
+## Updated Workflow
+
+The Implementor now follows a checkpoint-driven workflow:
+1. **Plan Contract Validation** (Step 0e) — Validate contract rules before coding
+2. **Checkpoint-Driven Implementation** (Step 2) — Implement + self-verify per checkpoint group
+3. **Pre-Build Plan Adherence Gate** (Step 4.5) — Verify all checkpoints before build
+
+See `skills/implementor-workflow/SKILL.md` for the full detailed workflow.

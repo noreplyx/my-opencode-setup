@@ -74,6 +74,18 @@ gitState:
 
 # â”€â”€ Next Objective â”€â”€
 nextObjective:     # What the Orchestrator expects you to do
+
+# ── Checkpoint Progress (from Implementor) ──
+checkpointProgress:
+  planManifest: "plan-manifests/user-profile/v1-manifest.json"
+  totalCheckpoints: 12
+  passedCheckpoints: 12
+  failedCheckpoints: 0
+  adherenceScore: 100
+  contractRules:
+    total: 3
+    passed: 3
+    failed: 0
 ```
 
 ### What to Extract for Your Agent
@@ -91,6 +103,10 @@ Each agent extracts context relevant to its role:
 | **Integrator**  | Implementor changedFiles, merge check results from Phase 1 (4-pass verification) | build counter â€” runs before build               |
 | **BrowserTester** | Implementor changedFiles, QA results                                           | testing-related counters                        |
 | **Documentor**  | Implementor changedFiles, PlanDescriber decisions                               | Not applicable (informational only)             |
+| **Implementor**  | Plan manifest checkpoints, contract rules, checkpointProgress (from prior attempt if re-running). Prior checkpointProgress for retry awareness | Check `checkpointProgress.adherenceScore` — if prior score < 90%, know which checkpoints failed. Check `checkpointProgress.failedCheckpoints` for what to fix |
+| **Verifier**     | CheckpointProgress from Implementor's self-verification. checkpointProgress adherenceScore for fast-pass decision | If adherenceScore >= 90%, use fast-pass mode (skip pre-verified checkpoints) |
+| **Fixer**        | CheckpointProgress from Implementor + Verifier reports | Check which checkpoints failed — focus fixes on failed checkpoints only |
+| **Orchestrator** | CheckpointProgress adherenceScore for pipeline visibility | Log adherence score in pipeline report |
 
 ### Stale Context Detection
 

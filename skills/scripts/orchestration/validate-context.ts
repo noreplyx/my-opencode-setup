@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
  * agent-context.md Validator
- * 
+ *
  * Validates that agent-context.md conforms to the AgentContext schema.
  * Types are inlined to avoid runtime import issues (ts-node / ESM compat).
  * When updating the schema in shared/types.ts, also update the validation
  * arrays below (REQUIRED_FIELDS, VALID_PIPELINE_TYPES, etc.) to stay in sync.
  * Called by every agent at step 0 before reading context.
- * 
+ *
  * Usage: [runtime] skills/scripts/orchestration/validate-context.ts [--context=agent-context.md]
- * 
+ *
  * Returns: JSON with valid (boolean), errors (string[]), warnings (string[])
  * Exit code: 0 = valid, 1 = invalid
  */
@@ -58,6 +58,11 @@ const REQUIRED_FIELDS: Array<{ field: string; type: string; description: string 
   { field: 'nextObjective', type: 'string', description: 'Next task objective' },
 ];
 
+const OPTIONAL_FIELDS: Array<{ field: string; type: string; description: string }> = [
+  { field: 'pipelineHeartbeat', type: 'string', description: 'Last heartbeat timestamp' },
+  { field: 'checkpointProgress', type: 'object', description: 'Checkpoint-by-checkpoint implementation status from Implementor' },
+];
+
 const VALID_PIPELINE_TYPES: PipelineType[] = [
   'full', 'quick', 'fixer-only', 'documentation',
   'parallel', 'tdd', 'refactor', 'micro-pipeline', 'research',
@@ -97,26 +102,26 @@ function parseYamlSimple(yaml: string): Record<string, unknown> {
 
   // First pass: detect indentation
   const indentSize = detectIndent(lines);
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    
+
     const indent = line.search(/\S|$/);
-    
+
     // Pop stack until we find the right parent
     while (indentStack.length > 0 && indentStack[indentStack.length - 1] >= indent) {
       stack.pop();
       indentStack.pop();
     }
-    
+
     const colonIdx = trimmed.indexOf(':');
     if (colonIdx === -1) continue;
-    
+
     const key = trimmed.slice(0, colonIdx).trim();
     const value = trimmed.slice(colonIdx + 1).trim();
-    
+
     if (value === '' || value === '|' || value === '>') {
       // Object or array starts
       const newObj: Record<string, unknown> = {};
@@ -125,7 +130,7 @@ function parseYamlSimple(yaml: string): Record<string, unknown> {
       stack.push({ key, obj: newObj });
       indentStack.push(indent);
       currentIndent = indent;
-      
+
       // Handle inline arrays: key:\n  - item1\n  - item2
       if (i + 1 < lines.length) {
         const nextLine = lines[i + 1];
@@ -142,7 +147,7 @@ function parseYamlSimple(yaml: string): Record<string, unknown> {
       parent[key] = parseScalar(value);
     }
   }
-  
+
   return result;
 }
 
@@ -162,7 +167,7 @@ function parseScalar(value: string): unknown {
   if (value === 'false') return false;
   if (/^\d+$/.test(value)) return parseInt(value, 10);
   if (/^\d+\.\d+$/.test(value)) return parseFloat(value);
-  if ((value.startsWith('"') && value.endsWith('"')) || 
+  if ((value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))) {
     return value.slice(1, -1);
   }
@@ -186,7 +191,7 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
       errors.push(`Missing required field: "${req.field}" (${req.description})`);
       continue;
     }
-    
+
     if (req.type === 'string' && typeof value !== 'string') {
       errors.push(`Field "${req.field}" must be a string, got ${typeof value}`);
     } else if (req.type === 'array' && !Array.isArray(value)) {
@@ -214,11 +219,11 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
   // 5. Validate circuitBreaker
   if (obj.circuitBreaker && typeof obj.circuitBreaker === 'object') {
     const cb = obj.circuitBreaker as Record<string, unknown>;
-    
+
     if (cb.state && !VALID_CIRCUIT_BREAKER_STATES.includes(cb.state as CircuitBreakerState)) {
       errors.push(`Invalid circuitBreaker.state: "${cb.state}". Must be one of: ${VALID_CIRCUIT_BREAKER_STATES.join(', ')}`);
     }
-    
+
     if (cb.counters && typeof cb.counters === 'object') {
       for (const gate of VALID_CIRCUIT_BREAKER_GATES) {
         const val = (cb.counters as Record<string, unknown>)[gate];
@@ -227,7 +232,7 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
         }
       }
     }
-    
+
     if (cb.thresholds && typeof cb.thresholds === 'object') {
       for (const gate of VALID_CIRCUIT_BREAKER_GATES) {
         const val = (cb.thresholds as Record<string, unknown>)[gate];
@@ -281,7 +286,63 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
     }
   }
 
-  // 9. Validate timestamp fields
+  // 9. Validate optional fields (present, but not required)
+  for (const opt of OPTIONAL_FIELDS) {
+    const value = obj[opt.field];
+    if (value === undefined || value === null) continue;
+
+    if (opt.type === 'string' && typeof value !== 'string') {
+      errors.push(`Field "${opt.field}" must be a string, got ${typeof value}`);
+    } else if (opt.type === 'object' && (typeof value !== 'object' || Array.isArray(value) || value === null)) {
+      errors.push(`Field "${opt.field}" must be an object, got ${typeof value}`);
+    }
+  }
+
+  // 10. Validate checkpointProgress (optional)
+  if (obj.checkpointProgress && typeof obj.checkpointProgress === 'object') {
+    const cpp = obj.checkpointProgress as Record<string, unknown>;
+
+    if (cpp.adherenceScore !== undefined && typeof cpp.adherenceScore !== 'number') {
+      errors.push('checkpointProgress.adherenceScore must be a number');
+    }
+    if (cpp.totalCheckpoints !== undefined && typeof cpp.totalCheckpoints !== 'number') {
+      errors.push('checkpointProgress.totalCheckpoints must be a number');
+    }
+    if (cpp.passedCheckpoints !== undefined && typeof cpp.passedCheckpoints !== 'number') {
+      errors.push('checkpointProgress.passedCheckpoints must be a number');
+    }
+    if (cpp.adherenceScore !== undefined && typeof cpp.adherenceScore === 'number' &&
+        (cpp.adherenceScore < 0 || cpp.adherenceScore > 100)) {
+      errors.push('checkpointProgress.adherenceScore must be between 0 and 100');
+    }
+    if (cpp.totalCheckpoints !== undefined && typeof cpp.totalCheckpoints === 'number' &&
+        cpp.passedCheckpoints !== undefined && typeof cpp.passedCheckpoints === 'number' &&
+        cpp.passedCheckpoints > cpp.totalCheckpoints) {
+      errors.push('checkpointProgress.passedCheckpoints cannot exceed totalCheckpoints');
+    }
+    if (cpp.planManifest !== undefined && typeof cpp.planManifest !== 'string') {
+      errors.push('checkpointProgress.planManifest must be a string');
+    }
+  }
+
+  // 11. Validate contractRules (optional, may appear in checkpointProgress)
+  if (obj.checkpointProgress && typeof obj.checkpointProgress === 'object') {
+    const cpp = obj.checkpointProgress as Record<string, unknown>;
+    if (cpp.contractRules && typeof cpp.contractRules === 'object') {
+      const cr = cpp.contractRules as Record<string, unknown>;
+      if (cr.total !== undefined && typeof cr.total !== 'number') {
+        errors.push('checkpointProgress.contractRules.total must be a number');
+      }
+      if (cr.passed !== undefined && typeof cr.passed !== 'number') {
+        errors.push('checkpointProgress.contractRules.passed must be a number');
+      }
+      if (cr.failed !== undefined && typeof cr.failed !== 'number') {
+        errors.push('checkpointProgress.contractRules.failed must be a number');
+      }
+    }
+  }
+
+  // 12. Validate timestamp fields
   if (obj.createdAt && typeof obj.createdAt === 'string') {
     if (!/^\d{4}-\d{2}-\d{2}T/.test(obj.createdAt)) {
       warnings.push('createdAt does not appear to be ISO-8601 format');
@@ -296,12 +357,12 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
   };
 }
 
-// ── CLI Entry Point ──────────────────────────────────────────────
+// ── CLI Entry Point ───────────────────────────────────────────────
 
 function main(): void {
   const args = process.argv.slice(2);
   const contextPath = args.find(a => a.startsWith('--context='))?.split('=')[1] || 'agent-context.md';
-  
+
   if (!fs.existsSync(contextPath)) {
     const result: ValidationResult = {
       valid: false,
@@ -311,11 +372,12 @@ function main(): void {
     console.log(JSON.stringify(result, null, 2));
     process.exit(1);
   }
-  
+
   const content = fs.readFileSync(contextPath, 'utf-8');
   const hash = computeHash(content);
+
   const { frontmatter } = parseFrontmatter(content);
-  
+
   if (!frontmatter) {
     const result: ValidationResult = {
       valid: false,
@@ -326,14 +388,14 @@ function main(): void {
     console.log(JSON.stringify(result, null, 2));
     process.exit(1);
   }
-  
+
   const parsed = parseYamlSimple(frontmatter);
-  
+
   // Merge list-valued fields (YAML lists like agentHistory)
   // This is a simplification — the parseYamlSimple handles basic cases
   const result = validateContext(parsed);
   result.fileHash = hash;
-  
+
   console.log(JSON.stringify(result, null, 2));
   process.exit(result.valid ? 0 : 1);
 }
