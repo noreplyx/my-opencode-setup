@@ -1,11 +1,11 @@
----
+﻿---
 name: orchestration
-description: Use this skill to orchestrate multiple agents to resolve complex problems and achieve overarching goals.
+description: Use this skill to orchestrate multiple agents to resolve complex problems and achieve overarching goals. This skill now uses modular reference docs for deep protocol details — load the skill for the nav hub, then load individual reference docs as needed.
 ---
 
 # Skill: orchestration
 
-## Quick Reference -- New in v2.0
+## Quick Reference — New in v2.0
 
 | Improvement | Script/Skill | Purpose |
 |-------------|-------------|---------|
@@ -14,24 +14,34 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Shared Test Manifest** | `shared-test-manifest.ts` | QA + Browser Tester coordination |
 | **Unified Error Taxonomy** | `unified-pipeline-error-schema.ts` | Typed PipelineError with 30 error codes |
 | **Agent Readiness Check** | `check-agent-readiness.ts` | Pre-flight agent permission verification |
+| **Provenance Tracker** | `provenance-tracker.ts` | File-level checkpoint lifecycle tracking |
 | **Implementor Workflow** | `skills/implementor-workflow/SKILL.md` | Decoupled workflow for Implementor |
 | **Fixer Workflow** | `skills/fixer-workflow/SKILL.md` | Decoupled workflow for Fixer |
-| **Finder Workflow** | `skills/finder-workflow/SKILL.md` | Decoupled workflow for Finder -- exploration methodology, hazard detection, evidence gathering |
+| **Finder Workflow** | `skills/finder-workflow/SKILL.md` | Decoupled workflow for Finder — exploration methodology, hazard detection, evidence gathering |
 | **QA Workflow** | `skills/qa-workflow/SKILL.md` | Decoupled workflow for QA |
 | **Verifier Workflow** | `skills/verifier-workflow/SKILL.md` | Decoupled workflow for Verifier |
 | **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
-| **Gitleaks Secret Scan** | skills/gitleaks-scan/SKILL.md | Auto-loaded secret scanning (no user trigger needed) |
-| **Trivy Vulnerability & Misconfig Scan** | skills/trivy-scan/SKILL.md | Auto-loaded vulnerability and IaC misconfiguration scanning (no user trigger needed). Scans filesystem for CVEs + IaC misconfigs via podman. |
-| **OWASP ZAP DAST Scan** | skills/owasp-zap-scan/SKILL.md | Post-deployment web application DAST scanning  baseline, full active, and API scans via podman (optional pipeline step). |
-| **PMD Code Quality Scan** | skills/pmd-scan/SKILL.md | MANDATORY  auto-loaded code quality analysis after Lint Gate. Detects unused vars, empty catch blocks, code style issues, duplicate code (CPD). Runs via podman (no local install needed). Violations block the pipeline. **Note**: PMD primarily targets Java/Apex projects; for pure JS/TS projects, consider skipping or using an alternative linter. |
-| **Pipeline Gitleaks Scan** | `pipeline-gitleaks.ts` | Automated gitleaks secret scanning  podman check, image pull, run, parse, report |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
-| **ast-grep (Agent Tool)** | skills/ast-grep/SKILL.md | On-demand structural search, lint, and rewrite tool for subagents (Finder, PlanDescriber, Implementor, Fixer). Not a pipeline gate. |
-| **Plan Contract Validation** | `check-plan-contract.ts` | Pre-implementation contract rule validation |
-| **Plan Manifest Schema Validation** | `validate-manifest-schema.ts` | Validate manifest structure against JSON Schema before contract checks |
-| **Plan Adherence Gate** | `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint verification |
-| **Plan Diff Report** | `plan-diff-report.ts` | Human-readable diff between plan and implementation |
+| **Plan Manifest Generator** | `plan-manifest-generator.ts` | Structured plan-manifest.json with acceptance criteria |
+| **Pipeline Selection Classifier** | `pipeline-selector.ts` | Auto-classifies task type → pipeline type |
+| **Smart Circuit Breaker** | Enhanced `circuit-breaker` in references | Failure signature tracking, pattern detection, contextual thresholds |
+| **Hand-off Completeness Check** | `check-handoff.ts` | Validates mandatory hand-off fields before dispatch |
+| **Evidence Contract** | Evidence arrays in every agent output | Anchored, verifiable evidence for every claim |
+| **Decision Provenance** | `evidence` field in every `decisions` entry | Source citations for every architectural decision |
+| **Dynamic Context Injection** | Per-agent context filtering | 30-50% token savings per hand-off |
+| **Progressive Summarization** | `summaries` field in agent-context.md | Summarizes older outputs as pipeline progresses |
+| **Granular Archival** | `.opencode/pipeline-logs/` | Full output archived, summaries retained |
+| **Pattern-Based Circuit Breaker** | Failure signatures + cycle detection | Smarter escalation than simple counters |
+| **Contextual Thresholds** | Varies by task complexity (simple/moderate/complex) | Build: 1/2/3 attempts; Verifier: 1/2/3 |
+| **Counter Decay** | Auto-decay by 1 every 24h | Prevents stale failure accumulation |
+| **Security-Specific Thresholds** | Per pipeline profile (Standard/Sensitive/Infrastructure/Security Fix) | supplyChainThreshold: 1-3 |
+| **Audit Trail** | `audit-log.ts` | Tamper-evident hash chain |
+| **Agent Timeout** | `agent-timeout.ts` | Heartbeat-based timeout detection |
+| **Context Lock** | `context-lock.ts` | Race prevention lock |
+| **Automated Gitleaks** | `pipeline-gitleaks.ts` | Automated gitleaks scanning |
+| **V2 Extended Output Schemas** | Fixer Root Cause, QA Security Coverage, Verifier Drift Detection | Standardized new fields |
+| **Pipeline Log Archiving** | `pipeline-teardown.ts` | Full log archival + agent-context.md cleanup |
 
 ## Core Principles
 
@@ -51,2403 +61,375 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 
 ## Agent Roles
 
-For the complete agent roles reference, see `references/agent-roles.md`.
+| Agent | Purpose | Reasoning Effort | Self-Review? |
+|-------|---------|-----------------|--------------|
+| **Finder** | Codebase exploration, research, information gathering. **Smart Finder**: Also reports proactive hazard detection (dead code, deprecated APIs, security anti-patterns). Returns structured knowledge graph. | 0.3 | Yes |
+| **Orchestrator** | Brainstorming, task assignment, coordination | 0.1 | Yes |
+| **PlanDescriber** | Detailed implementation roadmaps + plan-manifest.json with confidence score | High | Yes |
+| **Implementor** | Write code following the plan. **Self-Reviewing Implementor**: Pre-implementation validation, self-review pass before reporting, scope guard. | None | Yes (mandatory) |
+| **Fixer** | Debug and fix bugs. **Root Cause Classifier**: Categorizes bugs into taxonomy (plan-omission, implementation-error, edge-case-miss, integration-mismatch, environment-issue). Reports fix confidence score. | High | Yes |
+| **QA** | Smoke tests, bug discovery, coverage analysis. **Proactive QA**: Auto-generates edge case tests, runs non-functional checks (perf, a11y, security), performs regression impact analysis. | 0.1 | Yes |
+| **Verifier** | Compare implementation against plan manifest. **Plan Diff Verifier**: Also suggests missing checkpoints, detects plan drift, performs cross-file consistency checks. | 0.1 | Yes |
+| **Security Scan** | Dependency vulnerability scan, secrets scan, anti-pattern scan, **+ auto-loaded semgrep SAST scan**. Reports risk-level classified findings with auto-remediation suggestions. | Read-only | N/A |
+| **Browser Tester** | Playwright CLI browser automation, UI bug discovery | 0.2 | No |
+| **Documentor** | Project documentation, API docs, inline comments, ADRs | 0.2 | Yes |
+| **Integrator** | Verifies cross-file consistency and wires new files into the project: updates barrel files, DI registrations, route wiring, and fixes import paths. Phase 1: read-only verification. Phase 2: write wiring. | 0.1 | Yes |
 
-Key agents: Finder (research), PlanDescriber (roadmaps), Implementor (code), Fixer (debug), QA (testing), Verifier (compliance), Integrator (wiring), Documentor (docs), Browser Tester (UI testing).
+> See `references/agent-roles.md` for the complete reference.
 
 ## Standard Workflow Pipeline
 
-The default orchestration workflow follows this sequence:
-
 ```
-1. FINDER --> Explore codebase, gather context, research dependencies
-    |
-2. ORCHESTRATOR --> Brainstorm with user interactively, explore ideas, converge on direction
-    |
-3. PLAN DESCRIBER --> Create detailed, step-by-step implementation roadmap
-    |     +-- Also produces plan-manifest.json for verification
-    |
-4. IMPLEMENTOR --> Write code strictly following the plan (can dispatch multiple Implementors in parallel)
-    |
-+------+------+
-  v INTEGRATOR  v (MERGED -- Phase 1: 4-pass merge verification + Phase 2: wiring)
-  |  Phase 1: Verify cross-file  |
-  |  consistency (imports, type  |
-  |  signatures, interfaces, re-  |
-  |  exports). Score 0.0-1.0.  |
-  |  Phase 2: Wire barrels, DI,  |
-  |  routes, fix import paths.  |
-  +------+------+
-    | (verification issues -> Fixer, re-run Integrator Phase 1)
-    | (wiring issues -> Integrator fixes Phase 2; build verifies)
-v
-
-  +------+------+
-  v BUILD CHECK v (MANDATORY)
-  |  Implementor MUST run build |
-  |  and return full build output|
-  +------+------+
-    | (build fails -> Implementor fixes, rebuilds)
-    v
-+------+------+
-  v LINT GATE  v (MANDATORY if linter configured)
-  |  Implementor MUST run linter |
-  |  (eslint, prettier --check,  |
-  |  tsc --noEmit, etc.)   |
-  +------+------+
-    | (lint fails -> Implementor fixes, re-lints)
-    v
-  +------+------+
-  v CODE   v (MANDATORY)
-  |  QUALITY    |
-  |  GATE     |
-  |  1. Load pmd-scan  |
-  |   skill    |
-  |  2. Run PMD check  |
-  |   (rulesets)   |
-  |  3. Run CPD check  |
-  |   (duplicates)  |
-  +------+------+
-    | (violations -> FAIL the gate; block pipeline)
-    v
-  +------+------+
-  v TEST   v (MANDATORY)
-  |  GATE     |
-  |  Run test-gate.ts  |
-  |  -> npm test / jest |
-  |  / vitest run  |
-  |  -> detect test   |
-  |  regressions   |
-  +------+------+
-    | (tests fail -> cycle to Fixer)
-    v
-  +------+------+
-  v SECURITY  v (MANDATORY)
-  |  SCAN GATE    |
-  |  1. Load security-scan  |
-  |   -> npm audit,   |
-  |   secrets, anti-  |
-  |   pattern scan   |
-  |  2. * Auto-load    |
-  |   semgrep-scan skill  |
-  |   -> SAST rules   |
-  |  3. * Auto-load    |
-  |   gitleaks-scan skill |
-  |   -> secret detection  |
-  |  4. * Auto-load    |
-  |   trivy-scan skill  |
-  |   -> vulnerab. + IaC  |
-  |   misconfig scanning  |
-  +------+------+
-    | (vulns, SAST, secrets, or misconfigs -> block pipeline)
-    v
-5. QA --> Test, validate, report results
-    |
-  +------+------+
-  v SMOKE TEST  v
-  | QA runs smoke test to |
-  | confirm app is runnable|
-  +------+------+
-    |
-  +------+------+
-  v FIXER LOOP  v (feedback cycle)
-  | QA found bugs -> cycle |
-  | to FIXER for diagnosis |
-  | and fix     |
-  +------+------+
-    |
-  +------+------+
-  v ACCEPTANCE  v (NEW -- business scenario verification)
-  |  GATE  |
-  |  Execute acceptanceCriteria|
-  |  checkpoints from manifest |
-  +------+------+
-    |
-  +------+------+
-  v SECURITY  v
-  | TEST   |
-  | COVERAGE  |
-  | GATE   |
-  | QA reports  |
-  | coverage >=  |
-  | 80% or   |
-  | Verifier  |
-  | cross-checks|
-  +------+------+
-    | (coverage < 50% -> cycle to QA)
-    v
-    | (failures -> cycle to Fixer with test output)
-    v
-6. VERIFIER --> Compare implementation against plan manifest
-  |     +-- Structural checks (Pass 1)
-  |     +-- Behavioral checks (Pass 2)
-  |     +-- Acceptance criteria checks (Pass 2.5)
-  |     +-- Security Test Coverage Cross-Check (Pass 2.6)
-  |     +-- Cross-cutting checks (Pass 3)
-  |     +-- Plan drift detection (Pass 4)
-    |
-  +------+------+
-  v FEEDBACK  v
-  | If QA found bugs -> cycle to FIXER
-  | If Acceptance Gate failed -> cycle to FIXER
-  | If Security Test Coverage Gate failed -> cycle to QA
-  | If Verifier score < 80% -> cycle to FIXER
-  | Fixer: diagnose root cause, apply fix, rebuild, re-lint
-  |    -> then back to Acceptance Gate -> Verifier
-  +------+------+
-    |
-7. DOCUMENTOR --> Create/update documentation for the (now verified) implementation
-  |     +-- JSDoc/TSDoc on new/modified exports
-  |     +-- CHANGELOG.md entries
-  |     +-- README updates
-  |     +-- Migration guide (if breaking changes)
-|
- 8. ORCHESTRATOR --> Archive pipeline logs and clean up,
-       review all results, report to user
+1. FINDER ──► Explore codebase, gather context, research dependencies
+          │
+2. ORCHESTRATOR ──► Brainstorm with user interactively, explore ideas, converge on direction
+          │
+3. PLAN DESCRIBER ──► Create detailed, step-by-step implementation roadmap
+          │              └──► Also produces plan-manifest.json for verification
+          │
+4. IMPLEMENTOR ──► Write code strictly following the plan (can dispatch multiple Implementors in parallel)
+           │
+    ┌──────┴──────────────┐
+    ▼ INTEGRATOR (Phase 1: Verify)     ▼
+    │  Verify cross-file imports,       │
+    │  type signatures, interfaces       │
+    └────────┬───────────┘
+           │ (inconsistencies found → Fixer, then re-run Integrator Phase 1)
+           ▼
+    ┌──────┴──────────────┐
+    ▼ INTEGRATOR (Phase 2: Wire)        ▼
+    │  Update barrel files,              │
+    │  DI registrations, routes          │
+    └────────┬───────────┘
+           │ (wiring issues → Integrator fixes; build verifies)
+           ▼
+   ┌──────┴──────┐
+   ▼ BUILD CHECK ▼ (MANDATORY)
+   │  Implementor MUST run build │
+   │  and return full build output│
+   └──────┬──────┘
+          │ (build fails → Implementor fixes, rebuilds)
+          ▼
+   ┌──────┴──────┐
+   ▼ LINT GATE   ▼ (MANDATORY if linter configured)
+   │  Implementor MUST run linter │
+   │  (eslint, prettier --check,  │
+   │   tsc --noEmit, etc.)        │
+   └──────┬──────┘
+          │ (lint fails → Implementor fixes, re-lints)
+          ▼
+   ┌──────┴──────┐
+   ▼ TEST GATE   ▼ (MANDATORY)
+   │  Implementor MUST run the   │
+   │  project test suite and     │
+   │  report results. Falls back │
+   │  gracefully if no test      │
+   │  framework detected.        │
+   └──────┬──────┘
+          │ (tests fail → cycle to Fixer)
+          ▼
+   ┌──────┴──────┐
+   ▼ SECURITY    ▼ (MANDATORY)
+   │  SCAN GATE           │
+   │  1. Load security-scan  │
+   │     → npm audit,        │
+   │       secrets, anti-    │
+   │       pattern scan      │
+   │  2. ★ Auto-load         │
+   │     semgrep-scan skill  │
+   │     → SAST rules (no    │
+   │       user trigger)     │
+   └──────┬──────┘
+          │ (High/Crit vulns or SAST → block pipeline)
+          ▼
+5. QA ──► Test, validate, report results
+          │
+   ┌──────┴──────┐
+   ▼ SMOKE TEST  ▼
+   │ QA runs smoke test to │
+   │ confirm app is runnable│
+   └──────┬──────┘
+          │
+   ┌──────┴──────┐
+   ▼ FIXER LOOP  ▼ (feedback cycle)
+   │ QA found bugs → cycle │
+   │ to FIXER for diagnosis │
+   │ and fix                │
+   └──────┬──────┘
+          │
+    ┌──────┴──────┐
+    ▼ ACCEPTANCE  ▼ (NEW — business scenario verification)
+    │  GATE  │
+    │  Execute acceptanceCriteria│
+    │  checkpoints from manifest │
+    └──────┬──────┘
+           │
+    ┌──────┴──────┐
+    ▼ SECURITY    ▼
+    │ TEST        │
+    │ COVERAGE    │
+    │ GATE        │
+    │ QA reports  │
+    │ coverage ≥  │
+    │ 80% or      │
+    │ Verifier    │
+    │ cross-checks│
+    └──────┬──────┘
+           │ (coverage < 50% → cycle to QA)
+           ▼
+           │ (failures → cycle to Fixer with test output)
+           ▼
+6. VERIFIER ──► Compare implementation against plan manifest
+   │              └──► Structural checks (Pass 1)
+   │              └──► Behavioral checks (Pass 2)
+   │              └──► Acceptance criteria checks (Pass 2.5)
+   │              └──► Security Test Coverage Cross-Check (Pass 2.6)
+   │              └──► Cross-cutting checks (Pass 3)
+   │              └──► Plan drift detection (Pass 4)
+          │
+   ┌──────┴──────┐
+   ▼ FEEDBACK    ▼
+   │ If QA found bugs → cycle to FIXER
+   │ If Acceptance Gate failed → cycle to FIXER
+   │ If Security Test Coverage Gate failed → cycle to QA
+   │ If Verifier score < 80% → cycle to FIXER
+   │ Fixer: diagnose root cause, apply fix, rebuild, re-lint
+   │         → then back to Acceptance Gate → Verifier
+   └──────┬──────┘
+          │
+7. DOCUMENTOR ──► Create/update documentation for the (now verified) implementation
+   │              └──► JSDoc/TSDoc on new/modified exports
+   │              └──► CHANGELOG.md entries
+   │              └──► README updates
+   │              └──► Migration guide (if breaking changes)
+          │
+8. ORCHESTRATOR ──► Run pipeline-teardown (archive logs),
+                      review all results, report to user
 ```
-### Protocol Reference Quick Reference
-
-| Task | Script / Command |
-|------|-----------------|
-| Plan Contract Validation | check-plan-contract.ts  Pre-implementation contract rule check |
-| Plan Manifest Schema Validation | validate-manifest-schema.ts  Validate manifest JSON structure against canonical schema |
-| Plan Adherence Gate | check-plan-adherence.ts  Post-implementation, pre-build checkpoint verification |
-| Plan Diff Report | plan-diff-report.ts  Human-readable diff between plan and implementation |
 
 ### When to Skip Steps
-- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber -> Implementor -> Security Scan (incl. auto semgrep) -> QA.
+- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber → Implementor → Security Scan (incl. auto semgrep) → QA.
 - **Exploratory/research tasks**: Use only Finder, report findings directly to user.
 - **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer for the fix, then QA + Verifier.
-- **Trivial config changes**: Skip all gates -- just delegate to Implementor.
-- **Documentation updates**: Use Documentor only -- no plan, no tests, no verification.
+- **Trivial config changes**: Skip all gates — just delegate to Implementor.
+- **Documentation updates**: Use Documentor only — no plan, no tests, no verification.
 
 ### When to Use Specialized Pipelines
 
-Beyond the standard workflow, these specialized pipelines are available for specific use cases:
-
-**TDD Pipeline (Test-Driven Development)**:
+**TDD Pipeline:**
 ```
-PlanDescriber --> QA (write tests first) --> Implementor --> Build --> Lint --> Security Scan --> Verifier
+PlanDescriber ──► QA (write tests first) ──► Implementor ──► Build ──► Lint ──► Security Scan ──► Verifier
 ```
-Use when: The feature is well-understood but correctness is critical. Tests are written BEFORE implementation. Implementor must pass all pre-written tests.
 
-**Parallel Micro-Pipeline (Frontend + Backend Split)**:
+**Parallel Micro-Pipeline (Frontend + Backend Split):**
 ```
-Pipeline A: PlanDescriber(frontend) -> Implementor(frontend) -> Build(frontend)
-Pipeline B: PlanDescriber(backend) -> Implementor(backend) -> Build(backend)
-                |                    |
-                +-------- MERGE -----+
-                           |
-                    Integration QA -> Full Verifier
+Pipeline A: PlanDescriber(frontend) → Implementor(frontend) → Build(frontend)
+Pipeline B: PlanDescriber(backend) → Implementor(backend) → Build(backend)
+                     ↓                        ↓
+                  ──── MERGE ──── Integration QA → Full Verifier
 ```
-Use when: A feature has a clear frontend/backend boundary with no shared data dependency. Both pipelines run simultaneously. The Orchestrator waits for both to reach the MERGE gate. Each micro-pipeline gets its own `agent-context.md` (suffixed: `-frontend`, `-backend`).
 
-### Pre-Flight Check (Automated)
+### Pre-Flight Check
 
-Before starting any pipeline, the Orchestrator MUST run the automated pipeline-init script:
-
+Before starting any pipeline, the Orchestrator MUST run:
 ```bash
 ts-node skills/scripts/orchestration/pipeline-init.ts --feature=<name> --pipeline-type=<type>
 ```
 
-This script performs:
-1. **Pre-Flight Checks**: git status (dirty files, branch, last commit SHA), project compilation check (`npm run build` with tail), stale `agent-context.md` detection (>1 hour old with "running" status)
-2. **agent-context.md Creation**: Writes the full initial YAML frontmatter (pipeline identity, circuit breaker with complexity-based thresholds, git state, empty agent history)
-3. **Pipeline Logs Directory**: Creates `.opencode/pipeline-logs/` if it doesn't exist
-4. **Run pre-flight security check (NEW)**: Before any code changes or npm install, verify:
-  - `package-lock.json` integrity (not tampered with since last commit)
-  - Run `npm audit signatures` if available (verify registry signatures)
-  - Check lockfile age  if last `npm audit` was > 7 days, warn about stale audit
-  - These checks protect against supply chain attacks before any `npm install` runs during the build gate
+This performs:
+1. **Pre-Flight Checks**: git status (dirty files, branch, last commit SHA), project compilation check, stale `agent-context.md` detection (>1h old with "running" status)
+2. **agent-context.md Creation**: Writes full YAML frontmatter (pipeline identity, circuit breaker with complexity-based thresholds, git state, empty agent history)
+3. **Pipeline Logs Directory**: Creates `.opencode/pipeline-logs/` if needed
+4. **Pre-flight security check**: `package-lock.json` integrity, `npm audit signatures`, lockfile age check (>7 days since last audit)
+5. **Agent Readiness Check**: Verifies agent configs, tool permissions, skill access:
+   ```bash
+   ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=<type>
+   ```
 
-5. **Agent Readiness Check (NEW)**: After the security check, run the automated agent readiness verification:
+**When to Skip**: For trivial quick-fix tasks, the Orchestrator may skip full pre-flight and create a minimal `agent-context.md` manually.
 
-  ```bash
-  ts-node skills/scripts/orchestration/check-agent-readiness.ts --agents=<agent1,agent2,...>
-  ```
+### Pipeline Teardown
 
-  Or for pipeline-type-based selection:
-  ```bash
-  ts-node skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=<type>
-  ```
-
-  This verifies:
-  - Required agent config files exist
-  - Agents have the correct tool permissions (write, bash, edit)
-  - Agents have the required skill access (shared-agent-workflow, code-philosophy, etc.)
-  - If any agent is not ready, the pipeline is blocked with a clear error message
-
-### Pre-Flight Report
-The script prints a summary report that the Orchestrator should relay to the user, including:
-- [x] / [ ] / ! for each pre-flight check
-- Created files
-- A go/no-go recommendation
-
-### When to Skip
-If the project is clearly in good shape (user just asked for a quick fix) and the feature is trivial, the Orchestrator MAY skip the full pre-flight check and simply create a minimal `agent-context.md` manually.
-
-### Evidence Validation Gate (NEW)
-
-After EVERY agent returns its output (before updating agent-context.md), the Orchestrator MUST run the Evidence Validation Gate:
-
+After every pipeline completes (success or failure), the Orchestrator MUST run:
 ```bash
-# Step 1: Validate output contract structure
-ts-node skills/scripts/orchestration/validate-output-contract.ts --file=<agent-output-file>
-
-# Step 2: Validate truthfulness of claims (re-verify against filesystem)
-
-# Step 3: Score evidence quality
+ts-node skills/scripts/orchestration/pipeline-teardown.ts --feature=<name> --pipeline-type=<type> --result=pass|fail|partial --duration-minutes=<N>
 ```
 
-#### Gate Rules
-| Check | Pass | Fail |
-|-------|------|------|
-| Output contract schema | All required fields present | Missing required fields -> cycle back to agent |
-| Truthfulness score | >= 95% | < 95% -> return refuted claims to agent for correction |
-| Evidence quality score | >= 70 | < 70 -> warn Orchestrator, add evidence requirements to next hand-off |
+This performs:
+1. Reads agent-context.md, extracts pipeline state, circuit breaker history, agent outputs
+2. Archives raw outputs to `.opencode/pipeline-logs/<pipelineId>/`
+3. Deletes or preserves agent-context.md
 
-#### Circuit Breaker for Evidence Quality
-If an agent submits evidence quality < 70 for 3 consecutive attempts:
-1. First low quality: Warn agent with specific feedback
-2. Second low quality: Cycle back with explicit evidence template
-3. Third low quality: Open circuit breaker -> escalate to Orchestrator
+## Gates & Validation
 
-### Pipeline Teardown (Automated)
+See the following reference docs for detailed gate protocols:
+- **[references/pipeline-gates.md](references/pipeline-gates.md)** — Complete gate protocols: Build Gate, Lint Gate, Code Quality Gate, Test Gate, Security Scan (incl. gitleaks, semgrep, trivy), Smoke Test, Security Test Coverage Gate, Acceptance Gate
+- **[references/agent-context-lifecycle.md](references/agent-context-lifecycle.md)** — agent-context.md schema, lifecycle, stale detection
+- **[references/error-taxonomy.md](references/error-taxonomy.md)** — Unified PipelineError types, output contract validation
+- **[references/output-verification.md](references/output-verification.md)** — Structured output contracts, per-agent responsibilities, rejection protocol
+- **[references/pipeline-selection.md](references/pipeline-selection.md)** — Pipeline type classification, quick presets, when to skip steps, skill loading
 
-After every pipeline completes (success or failure), the Orchestrator runs the automated pipeline-teardown script:
-
-```bash
-ts-node skills/scripts/orchestration/pipeline-teardown.ts --feature=<name> --pipeline-type=<type> --result=pass|fail|partial --duration-minutes=<N> --files-changed=<file1,file2,...> [--failed-gates=<gate1,gate2,...>]
-```
-
-This script:
-1. Reads agent-context.md and archives pipeline state
-2. Archives Raw Outputs to `.opencode/pipeline-logs/<pipelineId>/`
-3. Cleans up agent-context.md
-
-### Build Gate & Smoke Test Requirements
-
-Every implementation MUST pass through these mandatory validation gates:
-
-| Gate     | Who Runs It  | What It Checks            | Failure Action          |
-|------------------|---------------|---------------------------------------------------------|-------------------------------------------------|
-| **Build Gate**  | Implementor  | Code compiles without errors (e.g., `npm run build`, `tsc`) | Implementor fixes and rebuilds before proceeding |
-| **Lint Gate**  | Implementor  | Code passes linter/style checks (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) | Implementor fixes lint errors before proceeding |
-| **Code Quality** | Delegated subagent (with pmd-scan skill) | PMD static analysis + CPD duplicate detection for ALL projects via podman (auto-detects Java/Apex/JS/Kotlin/Swift/PLSQL). Loads `pmd-scan` skill. Loads after Lint Gate, before Security Scan. | Violations -> FAIL the gate (block pipeline) |
-| **Security Scan**| Delegated subagent (with security-scan skill) | npm audit + secrets + anti-pattern + **auto semgrep SAST + gitleaks secret scan + trivy vuln/misconfig scan** | Report findings; Orchestrator decides to fix, except, or block |
-| **Smoke Test**  | QA    | Application boots/starts without crashing, or module loads cleanly | QA reports as Critical bug; cycle to Fixer   |
-| **Security Test Coverage Gate**| Orchestrator + Verifier | QA-generated security regression tests cover >= 80% of detected security patterns | Coverage < 50% -> cycle back to QA; 50-79% -> warn and proceed with Verifier flagging
-| **Plan Verify**  | Verifier   | Code matches plan-manifest.json checkpoints (structural + behavioral) | Score < 80% -> cycle to Fixer; 3 attempts -> PlanDescriber |
-
-**Build Gate Protocol:**
-- The Implementor MUST run the build command after writing code
-  - `import-error` -> route to **Integrator** (fix import paths)
-  - `type-error` -> route to **Fixer** (fix type signatures)
-  - `syntax-error` -> route to **Implementor** (fix syntax)
-  - `config-error` -> route to **Orchestrator** (fix tsconfig/ESLint config)
-  - `dependency-error` -> route to **user** (fix package.json)
-  - `lint-error` -> route to **Implementor** (fix code style)
-  - `test-failure` -> route to **Fixer** (fix test assertions)
-  - `missing-export` -> route to **Implementor** (add missing export)
-  - `duplicate-identifier` -> route to **Implementor** (remove duplicate)
-  - `unknown-error` -> route to **Implementor** (manual review)
-
-- The Implementor MUST return the full build output (stdout + stderr) to the Orchestrator
-- If the build fails, the Implementor MUST fix the issue and rebuild before reporting completion
-- The Orchestrator MUST inspect the build output to confirm success before proceeding to QA
-
-**Lint Gate Protocol:**
-- The Implementor MUST run lint commands (e.g., `eslint`, `prettier --check`, `tsc --noEmit`) after the build passes
-- The Implementor MUST return the full lint output (stdout + stderr) to the Orchestrator
-- If linting fails, the Implementor MUST fix the issues and re-lint before reporting completion
-- The Orchestrator MUST inspect the lint output to confirm no errors before proceeding to QA
-- If the project has no linter configured, the Implementor should report "No linter configured" and proceed
-- The Implementor's report MUST include lint output alongside build output so the Orchestrator can confirm both gates passed
-
-### Plan Adherence Gate (NEW)
-
-After the Implementor writes code and before the Build Gate, the Plan Adherence Gate verifies the implementation matches the plan:
+### Gate Summary Table
 
 | Gate | Who Runs It | What It Checks | Failure Action |
-|------|-------------|----------------|----------------|
-| **Plan Contract Validation** | Implementor (Step 0e) | Contract rules are valid, checkpoint targets don't conflict | Block implementation  report to Orchestrator for plan revision |
-| **Plan Adherence Gate** | Implementor (Step 4.5) | Every checkpoint in plan manifest is satisfied (score >= 90%) | Fix missing checkpoints before proceeding to build |
+|---|---|---|---|
+| Build Gate | Implementor | Code compiles | Fix and rebuild |
+| Lint Gate | Implementor | Linter/style checks | Fix lint errors |
+| Code Quality | Subagent with pmd-scan | PMD + CPD duplicate detection | FAIL gate |
+| Test Gate | Implementor | npm test / jest / vitest | Cycle to Fixer |
+| Security Scan | Subagent with security-scan | npm audit, secrets, SAST, supply chain | Report/block |
+| Smoke Test | QA | App boots without crashing | Critical → Fixer |
+| Security Test Cov. Gate | QA + Verifier | >=80% security test coverage | <50% → QA loop |
+| Plan Verify | Verifier | Plan manifest compliance >=80% | <80% → Fixer loop |
 
-**Protocol:**
-- The Implementor MUST run `validate-manifest-schema.ts --manifest=<manifest-path>` before check-plan-contract to validate the manifest's JSON structure against the canonical schema. If this fails, the manifest has structural issues  do NOT proceed to contract validation.
-- The Implementor MUST run `check-plan-contract.ts --mode=pre-implement` before writing code
-- The Implementor MUST use checkpoint-driven implementation (self-verify per checkpoint group)
-- The Implementor MUST run `check-plan-adherence.ts` before the build
-- If adherence score < 90%, use `plan-diff-report.ts` to identify gaps
-- The adherence score is reported in `checkpointProgress.adherenceScore`
+### Error Routing Table
 
-**Security Scan Protocol:**
-- After build + lint pass, the Orchestrator delegates the Security Scan to an appropriate subagent (e.g., Fixer with `security-scan` skill loaded, or a dedicated security subagent). The Orchestrator NEVER runs the scan directly.
-- Scan includes: npm audit, secrets scan, anti-pattern scan, git history secret scan
-- **The delegated subagent auto-loads semgrep-scan for SAST analysis** (no user trigger needed)
-- **The delegated subagent also auto-loads gitleaks-scan for secret detection** (no user trigger needed)
-- **The delegated subagent also auto-loads trivy-scan for vulnerability + IaC misconfiguration scanning** (no user trigger needed). Runs via podman: `podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src`
-- **For post-deployment DAST, the Orchestrator may optionally load owasp-zap-scan** when a test deployment URL is available
-- **Additionally, the delegated subagent auto-loads and runs pmd-scan for code quality analysis**  detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Violations FAIL the pipeline gate.
-- **Alternatively**, the delegated subagent may run the automated gitleaks scan script: `ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" --verbose --fail-on-leaks`  handles podman check, image pull, scan, parsing, and structured JSON report
-- High/Critical dependency vulnerabilities -> FAIL the gate (block pipeline)
-- Install scripts detected in dependencies -> FAIL the gate (block pipeline)
-- Secrets/anti-pattern findings -> WARN (non-blocking, report findings)
-- SAST findings from semgrep: Critical/High -> FAIL the gate; Medium -> WARN; Low -> INFO
-- Secret findings from gitleaks (exit code 1) -> FAIL the gate (block pipeline)
-- Trivy findings at CRITICAL/HIGH severity -> FAIL the gate (block pipeline)
-- The Security Scan MUST NOT modify any files
+| Build Error Type | Route To |
+|---|---|
+| `import-error` | **Integrator** (fix import paths) |
+| `type-error` | **Fixer** (fix type signatures) |
+| `syntax-error` | **Implementor** (fix syntax) |
+| `config-error` | **Orchestrator** (fix tsconfig/ESLint config) |
+| `dependency-error` | **User** (fix package.json) |
+| `lint-error` | **Implementor** (fix code style) |
+| `test-failure` | **Fixer** (fix test assertions) |
+| `missing-export` | **Implementor** (add missing export) |
+| `duplicate-identifier` | **Implementor** (remove duplicate) |
+| `unknown-error` | **Implementor** (manual review) |
 
-#### Automated Gitleaks Scan Script (NEW)
+## Agent Hand-off & Feedback
 
-The delegated subagent can run gitleaks via the automated script instead of manually loading and invoking the skill:
+See **[references/agent-handoff.md](references/agent-handoff.md)** for:
+- Complete hand-off checklist (8 steps)
+- Evidence format with content hashes
+- All example hand-offs (PlanDescriber, Verifier, Fixer, Documentor)
+- Evidence Hand-off Protocol
+- Fixer Feedback Loop (9-step protocol)
+- Root Cause Classifier (5 categories)
+- Fix Confidence Score (1-10 scale)
 
-```bash
-ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" [options]
-```
-
-**What it does automatically:**
-1. Checks podman availability (exits 2 if missing, with install instructions)
-2. Checks if container image exists locally; pulls it if missing (unless `--no-pull`)
-3. Runs gitleaks in git mode (full history scan) with configurable options
-4. Parses JSON output and classifies findings by severity (critical/high/medium/low)
-5. Returns structured JSON report to stdout for machine consumption
-6. Exits 0 (no leaks), 1 (leaks detected), or 2 (tool error)
-
-**Options:**
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--workspace=<path>` | `$PWD` | Workspace root to scan |
-| `--mode=<mode>` | `git` | Scan mode: git, dir, or stdin |
-| `--verbose` | off | Enable verbose gitleaks output |
-| `--report-format=<fmt>` | `json` | Output format: json, csv, sarif, junit |
-| `--no-banner` | true | Suppress gitleaks banner |
-| `--baseline=<path>` | none | Baseline for incremental scanning |
-| `--config=<path>` | none | Custom .gitleaks.toml config |
-| `--ignore=<path>` | none | .gitleaksignore file path |
-| `--max-target-mb=<N>` | 50 | Max target file size in MB |
-| `--fail-on-leaks` | true | Exit 1 if leaks found (default) |
-| `--no-fail-on-leaks` | false | Exit 0 even if leaks found (informational) |
-| `--timeout=<N>` | 300 | Timeout in seconds |
-| `--image=<name>` | docker.io/zricethezav/gitleaks:latest | Container image |
-| `--no-pull` | false | Skip pulling the container image |
-| `--markdown` | false | Output human-readable markdown report |
-
-**Pipeline integration:**
-
-> **Platform Note**: On Windows (PowerShell), use the commands below. On Linux/macOS (bash), substitute `$LASTEXITCODE` -> `$?` and use `jq` instead of `ConvertFrom-Json`.
-
-```powershell
-# Standard call in Security Scan gate (Windows/PowerShell):
-$result = & ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="$PWD" --verbose 2>&1
-$exit_code = $LASTEXITCODE
-if ($exit_code -eq 1) {
-  Write-Host "[ ] Gitleaks secret scan FAILED  pipeline blocked"
-  $result | ConvertFrom-Json | Select-Object -ExpandProperty findings
-} elseif ($exit_code -eq 2 -or $exit_code -eq 255) {
-  Write-Host "! Gitleaks tool error  review and proceed"
-}
-```
-
-**Exit code mapping:**
-| Code | Meaning | Pipeline Action |
-|------|---------|-----------------|
-| 0 | No leaks | [x] PASS  proceed to next scan |
-| 1 | Leaks detected | [ ] FAIL  block pipeline, report findings |
-| 2 | Tool error (podman missing, image pull failed) | ! WARN  log, proceed if gitleaks unavailable |
-| 124 | Scan timeout | ! WARN  increase --timeout or reduce scan scope |
-| 255 | Gitleaks crash/error | ! WARN  log error, proceed if gitleaks unavailable |
-
-**Hard Rules:**
-- [x] The Orchestrator SHOULD use `pipeline-gitleaks.ts` instead of manually running podman commands
-- [x] The script MUST be called with `--fail-on-leaks` (default) to properly block on secrets
-- [x] The output MUST be parsed to extract findings for the combined Security Scan report
-- [x] NEVER modify project files during scanning  the script is read-only by design
-
-
-#### Re-Audit on Dependency Change (NEW)
-If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` during the pipeline:
-1. The dependency scan MUST be re-run after the modification
-2. This applies to the Fixer agent -- if Fixer installs/updates a package, the security scan must run again
-3. The Orchestrator checks `changedFiles` from Fixer/Implementor -- if any dependency file is in the list, the security scan gate is re-triggered before proceeding to QA
-
-**Smoke Test Protocol:**
-- QA MUST run a simple smoke test (build is already verified by Implementor's Build Gate)
-- The smoke test should be fast (< 10 seconds) and provide high confidence the application is runnable
-- If the smoke test fails, QA reports it as a Critical severity bug
-- The Orchestrator reviews the report and cycles to the **Fixer agent** for diagnosis and fix
-- After Fixer applies the fix, QA re-runs the smoke test
-
-**Security Test Coverage Gate (NEW):**
-- After QA completes all testing (smoke, unit, security regression), the Orchestrator MUST review QA's `securityTestCoverage` output
-- The QA agent reports: number of security patterns detected, tests generated, coverage percentage, and gate pass/fail status
-- The Verifier cross-references QA's report during Pass 2b and includes a `securityTestCoverageGate` in its output
-
-**Coverage Gate Rules:**
-| Coverage | Verdict | Action |
-|----------|---------|--------|
-| >= 80% | [x] PASS | Proceed to Acceptance Gate |
-| 50-79% | [!] WARN | Include in deviation report, proceed |
-| < 50% | [ ] FAIL | Block pipeline -- cycle back to QA with instruction to generate missing security tests |
-
-**Integration with Pipeline:**
-```
-Build Gate -> Lint Gate -> Code Quality Gate (pmd-scan ! MANDATORY) -> Test Gate (test-gate.ts) -> Security Scan (security-scan + * semgrep-scan + * gitleaks-scan + * trivy-scan) -> QA (smoke + security regression) -> SECURITY TEST COVERAGE GATE -> Acceptance Gate -> Verifier
-```
-
-**Enforcement:**
-- The Orchestrator checks QA's `securityTestCoverage.gatePassed` field
-- If `gatePassed: false` and coverage < 50%: the pipeline is blocked, and QA must be re-invoked with instructions to create the missing security regression tests
-- If `gatePassed: false` but coverage 50-79%: the pipeline proceeds with a warning; the Verifier flags this in its final report
-
-**Verifier Cross-Check (NEW):**
-After the Acceptance Gate passes, the Verifier performs an additional validation step during Pass 2b:
-1. Run Security Checkpoint Auto-Detection (Section 2 of `security-workflow`) on all modified files
-2. Read QA's `securityTestCoverage` from the agent context
-3. Cross-reference: every security pattern detected by the Verifier should have a corresponding test generated by QA
-4. Report missing test coverage in `securityTestCoverageGate` field
-5. If coverage < 50% after cross-reference: Verifier reports failure and the pipeline cycles to Fixer/QA
-
-
-### Shared Test Manifest (NEW)
-When QA and Browser Tester run in parallel, use the shared test manifest to coordinate:
-
-```bash
-# Generate from plan manifest
-ts-node skills/scripts/orchestration/shared-test-manifest.ts --generate --manifest=... --feature=<name> --out=.opencode/test-manifest.yaml
-
-# Check status
-ts-node skills/scripts/orchestration/shared-test-manifest.ts --status
-
-# QA marks logic tests complete
-ts-node skills/scripts/orchestration/shared-test-manifest.ts --complete --test-type=logic --test-file=tests/unit/... --result=pass
-
-# Browser Tester marks UI tests complete
-ts-node skills/scripts/orchestration/shared-test-manifest.ts --complete --test-type=ui --test-file=tests/e2e/... --result=pass
-
-# Wait for all to finish before proceeding to Verifier
-ts-node skills/scripts/orchestration/shared-test-manifest.ts --wait --timeout=300000
-```
-
-This prevents the race condition where "QA passed but Browser Tester was never run."
-
-## Agent Hand-off Protocol
-
-### Hand-off Checklist (Enhanced)
-When passing work from one agent to the next, the Orchestrator MUST include:
-
-1. **Context Summary**: What was done in the previous step(s)
-2. **Artifacts**: Relevant file paths, outputs, or data produced
-3. **Previous Evidence**: Structured evidence from prior agent(s) with content hashes:
-  ```
-  Previous Evidence (from <agent>):
-   - Claim: <claim>
-   Source: <file>, Lines [start, end]
-   ContentHash: <sha256>
-   Method: grep/read/stat
-   Command: <exact command>
-   Excerpt: "<relevant output>"
-   Result: found/passed
-  ```
-4. **Clear Objective**: Exactly what the next agent should do
-5. **Constraints**: Any boundaries, rules, or restrictions
-6. **Expected Output**: What the agent should return/report (structured output contract with evidence)
-7. **Evidence Requirements**: "Include evidence for every substantive claim with contentHash, line numbers, exact commands, and verbatim excerpts"
-8. **Visual Generation**: After the agent returns, generate the appropriate pipeline visualization
-
-### Example Hand-off
-```
-Orchestrator to PlanDescriber:
-"After brainstorming with the user, we've agreed on Option B (modular monolith approach).
-Finder has analyzed the codebase (see files: src/services/user.ts, src/models/user.ts).
-Please create a detailed implementation roadmap for adding user profile management,
-following the code-philosophy and backend-code-philosophy skills.
-Focus on: data models, service layer, and API endpoints."
-```
-
-### Verifier -> Fixer Hand-off
-When the Verifier reports a score < 80%, the Orchestrator delegates to the Fixer:
-
-1. **Deviation Report**: The Verifier's detailed checkpoint results and failure reasons
-2. **Plan Manifest**: Path to the plan manifest for reference
-3. **Implementation Context**: What was supposed to be implemented
-4. **QA Results**: Smoke test result (should have passed)
-5. **Clear Objective**: "Diagnose the root cause of these deviations and apply targeted fixes"
-6. **Expected Output**: Root cause analysis, fix description, build + lint output
-
-Example:
-```
-Orchestrator to Fixer:
-"The Verifier reported 72% compliance on the user-profile feature.
-Plan manifest: plan-manifests/user-profile/v1-manifest.json
-Deviations:
-- CP-003: exportExists 'validateEmail' -- not found in src/services/user.ts
-- CP-007: handlesError 'createUser' -- no error handling for duplicate email
-
-QA smoke test passed. Build and lint passed.
-Please diagnose the root cause and apply targeted fixes."
-```
-
-### Verifier Hand-off
-When passing from QA to Verifier, include:
-1. **Plan Manifest Path**: Path to the `plan-manifest.json` file produced by PlanDescriber
-2. **Implementation Summary**: Brief summary of what was implemented
-3. **QA Results**: Summary of QA's smoke test and any bug reports
-4. **Clear Objective**: "Verify that the implementation matches all structural and behavioral checkpoints in the plan manifest"
-5. **Expected Output**: Compliance score, pass/fail/skipped breakdown, deviation report
-
-Example:
-```
-Orchestrator to Verifier:
-"The plan manifest is at plan-manifests/user-profile-manifest.json.
-Implementation added UserService with createUser and getUser methods.
-QA smoke test passed. Security scan passed (no High/Critical vulnerabilities).
-Please verify all checkpoints in the manifest and report the compliance score."
-```
-
-### Evidence Hand-off Protocol (NEW)
-
-When handing off between agents, the Orchestrator MUST include structured evidence from the PRIOR agent's work:
-
-**Format:**
-```markdown
-Previous Evidence:
-  - Claim: "User model exists at src/models/user.ts"
-  Source: src/models/user.ts, Lines 5-20
-  ContentHash: a1b2c3d4e5f6...
-  Method: grep
-  Command: grep -n 'interface User' src/models/user.ts
-  Excerpt: "interface User { email: string; name: string; }"
-  Result: found
-  - Claim: "Validation middleware exists"
-  Source: src/middleware/validation.ts, Lines 1-50
-  Method: read
-  Command: head -50 src/middleware/validation.ts
-  Excerpt: "export function validateRequest(...)"
-  Result: found
-```
-
-This ensures downstream agents have verified facts, not paraphrased summaries.
-
-## Fixer Feedback Loop
-
-When QA discovers bugs or Verifier finds deviations, use this iterative refinement cycle:
+### Feedback Loop Summary
 
 ```
-QA/Verifier reports issues --> Orchestrator reviews --> Fixer diagnoses & fixes --> QA re-verifies
-                       |
-                      +------+------+
-                      v RE-VERIFY  v
-                      | Fixer rebuilds|
-                      | + re-lints  |
-                      | -> re-smoke  |
-                      | -> re-verify  |
-                      +------+------+
+QA/Verifier reports → Orchestrator reviews → Fixer diagnoses & fixes → QA re-verifies → Verifier re-verifies
 ```
-
-### Feedback Loop Protocol
-1. **QA/Verifier Reports**: Returns detailed report with issues
-2. **Orchestrator Reviews**: Orchestrator reads the report and inspects relevant code
-3. **Orchestrator Delegates to Fixer**: Sends bug report + context + plan manifest to Fixer
-4. **Fixer Diagnoses**: Fixer uses high reasoning effort to trace root cause
-5. **Fixer Applies Fix**: Minimal targeted fix, no scope creep
-6. **Fixer Builds & Lints**: Build and lint MUST pass
-7. **Orchestrator Re-invokes QA**: Sends QA back to verify the fix
-8. **After QA passes**: Re-invoke Verifier to check against plan manifest
-9. **Loop Repeats**: Continue until all gates pass or escalation threshold reached
 
 ### Escalation Criteria
+
 If the same issue resurfaces after 3 Fixer attempts, escalate back to PlanDescriber for roadmap revision.
 
-### Context Preservation
-When cycling back to Fixer, use `task_id` (ses_xxx) to preserve conversation context with the prior Fixer session so the agent retains memory of what it diagnosed.
+## Circuit Breaker
+
+See **[references/circuit-breaker.md](references/circuit-breaker.md)** for:
+- 3-state circuit breaker (Closed/Open/Half-Open)
+- Escalation limits and contextual thresholds
+- Counter decay (24h)
+- Security-specific thresholds
+- Semantic circuit breaker (failure signature tracking)
+- Agent Action Audit Trail (tamper-evident audit log)
+- Evidence Validation Gate (truthfulness checks, evidence quality scoring)
+- Cross-Agent Evidence Provenance tracking
+- Failure Summary Format
+- Standardized Error Format
+
+## Parallel Dispatch
+
+See **[references/parallel-dispatch.md](references/parallel-dispatch.md)** for:
+- Parallelism verification protocol
+- Decision tree (fallback)
+- Automated dispatch manifest generation
+- Integrator Phase 1 merge verification (4-pass)
+- Shared Test Manifest for QA + Browser Tester coordination
+
+## Context Optimization
+
+See:
+- **[references/context-budgeting.md](references/context-budgeting.md)** — Progressive summarization, per-agent context filtering, granular archival strategy
+- **[references/smart-finder.md](references/smart-finder.md)** — Proactive hazard detection, knowledge graph output, familiarity scoring
+- **[references/self-reviewing-implementor.md](references/self-reviewing-implementor.md)** — Pre-implementation validation, self-review pass, scope guard
+
+## Plan Manifest & Coverage
+
+### Plan Manifest Versioning
 
-
-## Agent Action Audit Trail (NEW)
-
-### Purpose
-Every agent action that modifies files, installs dependencies, or changes configuration is recorded in a **tamper-evident audit log**. This provides:
-- Immutable record of what each agent did during the pipeline
-- Hash chain integrity -- tampering is detectable
-- Forensic evidence if an agent goes rogue
-
-### Audit Log Tool
-```bash
-# Initialize audit log for a pipeline
-ts-node skills/scripts/orchestration/audit-log.ts init --pipeline-id=<id> --feature=<name>
-
-# Append an action entry
-ts-node skills/scripts/orchestration/audit-log.ts append \
-  --pipeline-id=<id> \
-  --agent=<agent-name> \
-  --action=<action-type> \
-  --details=<json> \
-  --file-hashes=<json>
-
-# Verify chain integrity
-ts-node skills/scripts/orchestration/audit-log.ts verify --pipeline-id=<id>
-
-# Print human-readable report
-ts-node skills/scripts/orchestration/audit-log.ts report --pipeline-id=<id>
-```
-
-### Valid Action Types
-| Action | Description | Requires file-hashes |
-|--------|-------------|---------------------|
-| `file_write` | Agent created a file | Yes |
-| `file_modify` | Agent modified a file | Yes |
-| `file_delete` | Agent deleted a file | No |
-| `npm_install` | Agent installed/updated packages | No |
-| `build` | Agent ran the build | No |
-| `lint` | Agent ran the linter | No |
-| `security_scan` | Security scan was run | No |
-| `qa_test` | QA ran tests | No |
-| `git_commit` | Agent committed changes | No |
-| `config_change` | Agent modified config | Yes |
-
-### When to Log
-The Orchestrator records audit entries after each agent completes:
-1. Parse the agent's `changedFiles` from structured output
-2. For each changed file, compute SHA-256 hash
-3. Append audit entry with action type matching the agent's role
-4. After the pipeline ends, run `verify` to confirm chain integrity
-
-### Location
-Audit logs are stored at `.opencode/audit/<pipeline-id>.audit.yaml`
-
-### Stale Audit Log Cleanup
-Audit logs older than 30 days should be archived or deleted during pipeline teardown.
-
-## Unified Error Taxonomy (NEW)
-
-All pipeline errors are now standardized across all agents using the canonical `PipelineError` type defined in `unified-pipeline-error-schema.ts`. This replaces the previous stringly-typed error classifications.
-
-### Error Code Categories
-| Prefix | Category | Example |
-|--------|----------|---------|
-| PLN | Plan | PLN-001: Missing checkpoint |
-| IMP | Implementation | IMP-001: Missing export |
-| INT | Integration | INT-001: Broken import |
-| ENV | Environment | ENV-001: Missing tool |
-| SEC | Security | SEC-001: Critical vulnerability |
-
-### Fixer Classification -> Error Code Mapping
-| Fixer Classification | Mapped Error Code |
-|---------------------|-------------------|
-| plan-omission | PLN-001 or PLN-002 |
-| implementation-error | IMP-001, IMP-002, or IMP-003 |
-| edge-case-miss | IMP-004 or IMP-005 |
-| integration-mismatch | INT-001, INT-002, or INT-003 |
-| environment-issue | ENV-001, ENV-002, or ENV-003 |
-
-### Usage
-```bash
-# Look up an error code
-ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --lookup=IMP-001
-
-# Validate an error object
-ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --validate
-
-# Classify a fixer root cause
-ts-node skills/scripts/orchestration/unified-pipeline-error-schema.ts --classify="Missing export in user.ts" --fixer-classification=implementation-error
-```
-
-## Parallel Dispatch Workflow
-
-### Parallelism Verification Protocol (NEW)
-Before every parallel dispatch decision, the Orchestrator MUST run the parallelism check script as step 0:
-
-```bash
-```
-
-The script's output (SINGLE_FILE, PARALLEL, SEQUENTIAL, HYBRID) is the primary decision driver. Fall back to the manual decision tree only if the script is unavailable.
-
-### Automatic Parallelism Detection (NEW)
-Before deciding whether to dispatch tasks in parallel, the Orchestrator runs an automated dependency check:
-
-1. **Collect planned files**: From the plan manifest, extract all target files and their checkpoints
-2. **Scan for shared dependencies**: For each pair of files, `grep` for cross-references:
-  ```
-  grep "from '" src/services/user.ts | grep "types"
-  # If file A imports from file B -> sequential
-  # If no cross-imports -> candidates for parallelism
-  ```
-3. **Check for shared state**: Look for shared global state, module-level variables, or singletons
-4. **Decision**: 
-  - No shared deps, no shared state -> DISPATCH PARALLEL
-  - Shared deps but different files -> DISPATCH PARALLEL with merge notes
-  - Shared state or same file -> DISPATCH SEQUENTIAL
-
-### Automated Script
-Use the parallelism detection script to get an automated recommendation:
-```bash
-```
-
-This script reads the manifest, scans files for cross-references using grep/rg, builds a dependency graph using Kahn's algorithm, detects shared state patterns, and outputs a recommendation:
-- **SINGLE_FILE**: Single target -- no decision needed
-- **PARALLEL**: No cross-references -- safe to dispatch simultaneously
-- **SEQUENTIAL**: Chain dependency detected -- must run one phase after another
-- **HYBRID**: Multi-phase with parallel groups within each phase
-
-Run this script before making parallelism decisions. Fall back to the decision tree below if the script is unavailable.
-
-### Decision Tree (fallback when script is unavailable)
-Before dispatching parallel tasks, answer these questions in order:
-
-1. **Are the sub-tasks truly independent?**
-  - Do they operate on different files? -> Yes/No
-  - Do they have no output dependencies on each other? -> Yes/No
-  - Can they be verified independently? -> Yes/No
-  - If ALL YES -> Proceed to question 2. If ANY NO -> Dispatch sequentially.
-
-2. **Will parallel execution cause merge conflicts?**
-  - Will multiple agents write to the same file? -> If YES, dispatch sequentially unless using an Integrator (Phase 1 merge check)
-  - Will one agent's output change the API contract another depends on? -> If YES, dispatch sequentially
-
-3. **What's the complexity of each sub-task?**
-  - Simple (< 5 files each) -> safe to parallelize
-  - Complex (> 5 files each) -> may benefit from sequential focus
-
-### Example: Parallel Dispatch
-```markdown
-Orchestrator to Implementor (instance 1):
-"Create src/types/user.ts with User and CreateUserDto interfaces."
-
-Orchestrator to Implementor (instance 2):
-"Create src/services/user.ts with UserService class."
-
-Orchestrator to Implementor (instance 3):
-"Create src/controllers/user.ts with UserController class."
-```
-
-When all 3 return, check:
-- Imports between files reference the correct paths
-- Types used in services match types defined in types file
-- Controller methods match service method signatures
-
-### Automated Dispatch Manifest Generation (NEW)
-```bash
-ts-node skills/scripts/orchestration/parallel-dispatch.ts --manifest=plan-manifests/<feature>/v<version>-manifest.json --pipeline-id=<id>
-```
-
-This creates per-phase dispatch manifests at `.opencode/dispatch/<pipelineId>/phase-<N>.json` with:
-- File-level checkpoint breakdown
-- Agent instructions
-- Phase dependency ordering
-- Post-phase actions (mergeAfter, integrateAfter)
-
-Use `--dry-run` to preview, `--plan` for human-readable output, and `--verify` for consistency checking.
-
-### Merge Verification (Part of Integrator Phase 1)
-
-Cross-file consistency verification is now part of **Integrator Phase 1** (read-only audit). The Integrator performs a 4-pass merge check:
-1. **Import Path Verification** -- Trace every `from '...'` import, resolve relative paths
-2. **Type Signature Alignment** -- Compare import vs export names
-3. **Interface Contract Verification** -- Parameter count, required vs optional, return types
-4. **Re-export Completeness** -- Barrel file re-exports for all new modules
-
-A consistency score (0.0-1.0) is calculated. If `blocking: true`, the Orchestrator dispatches a Fixer before proceeding to Phase 2 (wiring). If `blocking: false`, Phase 2 proceeds.
-
-See `agents/subagent/integrator.md` for the full protocol.
-
-## Agent Context (`agent-context.md`)
-
-The Orchestrator maintains a **single unified state file** at `agent-context.md` in the workspace root. This file merges the former `agent-context.md` (pipeline history) and `agent-status.json` (circuit breaker + failure summaries) into one source of truth.
-
-### Canonical Schema Reference
-For the complete schema definition, field types, validation rules, and lifecycle, see:
- `skills/orchestration/references/agent-context-schema.md`
-
-### Purpose
-- **Single source of truth**: No split-brain between two files -- circuit breaker state, agent history, git state, and failure summaries live in one place.
-- **State preservation**: Each agent knows what was done before them, what the circuit breaker state is, and what's expected next.
-- **Cycle-back memory**: When Fixer or other agents cycle back, they see the full attempt history and failure context.
-- **Cross-agent consistency**: All agents read the same unified state -- no sync issues.
-
-### Format
-The file uses YAML frontmatter (machine-readable) + Markdown body (human-readable):
-
-```yaml
----
-# -- Pipeline Identity --
-pipelineId: "uuid-or-timestamp"
-feature: "user-profile"
-pipelineType: "full"
-currentStep: "fixer"
-status: "running"
-createdAt: "2025-05-19T10:00:00Z"
-
-# -- Agent History (append-only) --
-agentHistory:
-  - step: "finder"
-  agent: "ses_xxx"
-  result: "completed"
-  summary: "Found existing User model at src/models/user.ts"
-  decisions:
-   - what: "Chose Zod over Joi for input validation"
-   why: "Already in dependency tree"
-   by_who: "finder"
-  warnings:
-   - "src/models/user.ts uses `any` type for email field"
-  changedFiles: []
-  artifacts:
-   - "Exploration report"
-
-  - step: "planDescriber"
-  agent: "ses_yyy"
-  result: "completed"
-  summary: "Created roadmap: 3 phases, 8 steps"
-  decisions:
-   - what: "Split into 3 phases (model, service, controller)"
-   why: "Clear dependency ordering"
-   by_who: "planDescriber"
-  warnings: []
-  changedFiles:
-   - "plan-manifests/user-profile/v1-manifest.json"
-  artifacts:
-   - "Roadmap"
-   - "plan-manifests/user-profile/v1-manifest.json"
-
-  - step: "implementor"
-  agent: "ses_zzz"
-  result: "completed"
-  summary: "Created src/services/user.ts, src/controllers/user.ts"
-  decisions: []
-  warnings:
-   - "TypeScript strict mode not enabled"
-  changedFiles:
-   - "src/services/user.ts"
-   - "src/controllers/user.ts"
-  artifacts:
-   - "src/services/user.ts"
-   - "src/controllers/user.ts"
-
-# -- Agent Output Contract Data --
-agentOutputs:
-  finder:
-  status: "completed"
-  resultSummary: "Found existing User model"
-  buildPassed: null
-  lintPassed: null
-  implementor:
-  status: "completed"
-  resultSummary: "Created user service and controller"
-  buildPassed: true
-  lintPassed: true
-  buildOutput: "[full stdout + stderr]"
-  lintOutput: "[full stdout + stderr]"
-
-# -- Circuit Breaker State --
-circuitBreaker:
-  state: "closed"
-  counters:
-  build: 0
-  lint: 0
-  securityScan: 0
-  smokeTest: 0
-  verifier: 0
-  thresholds:
-  build: 3
-  lint: 3
-  securityScan: 3
-  smokeTest: 3
-  verifier: 3
-
-# -- Git State --
-gitState:
-  branch: "feature/user-profile"
-  dirtyFiles: []
-  lastCommitSha: "abc123def456"
-
-# -- Next Objective --
-nextObjective: "Fix Verifier deviations (CP-003, CP-007)"
----
-```
-
-### Lifecycle
-1. **Created** by Orchestrator at pipeline start (via `pipeline-init.ts`)
-2. **Updated** before each agent hand-off with `nextObjective` and relevant artifacts
-3. **Updated** with `pipelineHeartbeat` timestamp every time the file is written (enables stale detection)
-4. **Read** by each agent at startup (step 0 in their workflow)
-5. **Appended** by Orchestrator after each agent completes (add to `agentHistory`, update `circuitBreaker`, update `agentOutputs`)
-6. **Archived** when the pipeline ends (by `pipeline-teardown.ts` -- writes to `.opencode/pipeline-logs/`)
-7. **Deleted** after archival (by `pipeline-teardown.ts`)
-
-**Stale Context Detection**: If `agent-context.md` exists with `status: "running"` and `createdAt` is more than 1 hour old:
-- The pipeline is considered STALE (crashed/interrupted mid-pipeline)
-- The Orchestrator MUST detect this in the pre-flight check (`pipeline-init.ts` already checks this)
-- The Orchestrator MUST prompt the user before overwriting or cleaning up
-- If the user approves cleanup: archive the stale context to `.opencode/pipeline-logs/stale-<pipelineId>/`, then proceed with a fresh pipeline
-
-## Pipeline Selection Protocol
-
-### Task Type Classification
-When the user makes a request, classify it into one of these pipeline types:
-
-| Task Type | Description | Pipeline | Skip Finder? |
-|-----------|-------------|----------|--------------|
-| **New Feature (known)** | Adding a new feature in a familiar domain | Full or Standard | Yes, if domain is well-understood |
-| **New Feature (unknown)** | Adding a new feature in an unfamiliar domain | Full | No |
-| **Bug Fix (known cause)** | Fixing a bug with identified root cause | Fixer -> QA -> Verifier | Yes |
-| **Bug Fix (unknown cause)** | Investigating and fixing a bug | Finder -> Fixer -> QA -> Verifier | No |
-| **Research** | Understanding existing code, exploring options | Finder only | N/A |
-| **Refactor** | Restructuring without changing behavior | PlanDescriber -> Implementor -> Security (incl. semgrep) -> QA -> Verifier | Yes |
-| **Config Change** | Simple config or dependency changes | Implementor only | Yes |
-| **Security Fix** | Patching a vulnerability | Implementor -> Security Scan (with semgrep) -> QA -> Verifier | Yes |
-| **UI Bug** | Visual or behavioral bug in frontend | Browser Tester -> Fixer -> QA | Yes (if root cause known) |
-| **Quick Fix** | One-line fix, config change, typo | Ultra-Quick: Implementor -> Build | Yes |
-| **Small Feature** | Small feature with known domain | Quick: Implementor -> Build -> Lint -> QA | Yes |
-| **Parallel Feature** | Feature with independent sub-components | Implementor (parallel) -> Integrator -> Build -> Lint -> Security (incl. semgrep) -> QA -> Verifier | Yes |
-| **New Feature (TDD)** | Adding a tested feature with tests written first | PlanDescriber -> QA (tests) -> Implementor -> Build -> Lint -> Security -> Verifier | Yes |
-| **Micro-Pipeline** | Feature with clear frontend/backend split | Parallel PlanDescriber(frontend+backend) -> Parallel Implementor -> Merge QA -> Verifier | No (needs Finder to identify split) |
-| **Documentation** | Updating docs, README, API docs, or inline comments | Documentor -> report to user | Yes |
-
-### When to Load Skills
-| Pipeline Step | Skill to Load | Why |
-|---------------|---------------|-----|
-| Brainstorming | `plan-brainstorm` | Structured option exploration |
-| Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
-| Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
-| Implementation | `accessibility` | When building UI components |
-| Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` + `trivy-scan` (all auto-loaded) or `security-workflow` | Dependency + SAST + secret + vuln/misconfig scanning (semgrep + gitleaks + trivy auto-triggered) |
-| OWASP ZAP DAST | `owasp-zap-scan` (optional, post-deployment) | Web application DAST scanning  baseline/full/API scans. Requires running app URL. |
-| Code Quality Gate | `pmd-scan` | MANDATORY  Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL. Detects unused vars, empty catch blocks, code style issues, and duplicate code via CPD. Loaded by Orchestrator after Lint Gate, before Security Scan. Violations block the pipeline. |
-| QA | `quality-assurance` | Testing methodology and reporting |
-| Verification | `plan-verification` | Plan compliance checking |
-| Browser Testing | `playwright-cli` | Browser automation |
-| Documentation | `api-documentation` | README, API docs, inline comments, ADRs |
-| Pre-Flight | `smart-finder` | Proactive hazard detection |
-
-### Minimal Pipeline Rule
-Always select the shortest pipeline that can safely complete the task. Every extra agent adds latency and potential for error. When in doubt, ask the user.
-
-Documentation updates: Use Documentor only -- no plan, no tests, no verification. This is the shortest possible pipeline.
-
-### Quick Pipeline Presets
-
-For faster iteration on simple tasks, use these minimal pipelines:
-
-| Pipeline Type | Steps | When to Use | Includes Documentor? |
-|--------------|-------|-------------|---------------------|
-| **Ultra-Quick** | Implementor -> Build | Typo fixes, one-line changes, config edits, package.json updates | [ ] No |
-| **Quick** | Implementor -> Build -> Lint -> QA | Small bug fix with known cause, trivial feature addition | [ ] No |
-| **Review** | Implementor -> Build -> Lint -> Security -> QA | Small feature that needs the safety net but no plan needed | [ ] No |
-| **Standard** | PlanDescriber -> Implementor -> Build -> Lint -> Security (incl. semgrep) -> QA -> Verifier -> Documentor | New feature in a familiar domain | [x] Yes |
-| **Full** | Finder -> Brainstorm -> PlanDescriber -> Implementor (parallel) -> Integrator -> Build -> Lint -> Security (incl. semgrep) -> QA -> Verifier -> Documentor | New feature in unfamiliar domain, complex changes, or parallel sub-tasks | [x] Yes |
-| **Fixer-Only** | Fixer -> Build -> Lint -> Test -> QA -> Verifier | Bug with known root cause | [ ] No |
-| **Research** | Finder -> report to user | Understanding code, exploring options | [ ] No |
-| **Docs** | Documentor -> report to user | Documentation only | N/A |
-
-
-> **Note**: All pipelines that include both `QA` and `Verifier` implicitly include the **Security Test Coverage Gate** between them. QA reports `securityTestCoverage`, the Orchestrator validates >= 80% coverage, and Verifier cross-checks during Pass 2.6. See the [Security Test Coverage Gate](#security-test-coverage-gate-new) section for full details.
-**Selection Rule**: Always choose the shortest viable pipeline. The Orchestrator should ask: "Can this task be done with an Ultra-Quick pipeline?" If yes, use it. If the task proves more complex mid-pipeline, escalate to the next level.
-
-## Plan Manifest Versioning
-
-### Naming Convention
 Store manifests under `plan-manifests/<feature>/v<version>-manifest.json`:
 - `plan-manifests/user-profile/v1-manifest.json`
 - `plan-manifests/user-profile/v2-manifest.json`
 
-### Version Rules
-- Start at `v1` for the initial roadmap creation
-- On revision (e.g., after Verifier fails and Orchestrator requests re-plan), increment to `v2`, `v3`, etc.
-- **Never overwrite a previous version** -- always create a new numbered version
+**Version Rules:**
+- Start at `v1` for initial roadmap creation
+- On revision, increment to `v2`, `v3`, etc.
+- **Never overwrite a previous version** — always create a new numbered version
 - Each manifest's `manifestVersion` field must match the file version number
 
-### Why Version?
-Versioning preserves a history of what the plan looked like at each iteration. When the Verifier runs manifest diffing (Pass 3), it can compare v1 against v2 to show exactly what changed between iterations.
+### Coverage Analysis
 
-## Coverage Analysis
-
-QA's coverage analysis is a mandatory gate. After smoke test passes, QA runs coverage analysis.
-
-### Coverage Thresholds
 | Project Type | Minimum Line Coverage | Critical Paths (auth, payment) |
-|--------------|----------------------|--------------------------------|
-| Library   | 70%      | 90%        |
-| Application  | 60%      | 85%        |
-| Prototype  | 40% (informational)  | N/A        |
-
-### Coverage Analysis Protocol
-- Run the appropriate coverage tool for the project stack
-- Parse the report to identify uncovered lines and files
-- Include coverage data in the QA report's Quality Metrics section
-- If coverage is below threshold, the Orchestrator decides whether to:
-  - Add tests to raise coverage (delegate to Implementor or Fixer)
-  - File an exception (for prototypes or low-risk areas)
-  - Block the pipeline
-
-### Coverage Auto-Loop (NEW)
-When coverage is below the minimum threshold, instead of asking the user, the Orchestrator runs an automated coverage improvement loop:
-
-1. QA reports coverage percentage and lists uncovered files/lines
-2. If coverage >= threshold -> proceed normally
-3. If coverage < threshold -> Orchestrator dispatches Implementor with a focused task:
-  "Add tests for uncovered lines in [file list] to reach [threshold]% coverage. Focus on: [uncovered lines]."
-4. Implementor writes the tests and reports completion
-5. Re-run QA coverage analysis
-6. Loop until: coverage >= threshold (success) OR 3 attempts exhausted (failure)
-7. If 3 attempts fail -> escalate to user with summary of attempted coverage gains
-
-### Reporting Format
-| File      | % Coverage | Uncovered Lines | Risk  |
-|----------------------|------------|-----------------|--------|
-| src/services/user.ts | 85%   | 45-48, 102   | Medium |
-| **Coverage Summary** | **72%**  | **12 uncovered** | **[!] Below threshold (70%)** |
-
-## Expanded Verification Scope (Verifier Pass 3)
-
-When the Verifier achieves 100% compliance on Pass 1 + Pass 2, or when explicitly requested by the Orchestrator, perform additional cross-cutting consistency checks:
-
-### Pass 3 -- Cross-cutting Checks
-- **Naming Convention Consistency**: Verify files follow project naming conventions (PascalCase for classes/components, camelCase for functions/variables)
-- **Import Style Consistency**: Check that imports are grouped consistently (external first, then internal) and use consistent module resolution
-- **Error Handling Pattern Consistency**: Verify that error handling is consistent across similar files (e.g., all repository methods use `try/catch` with `logger.error`)
-- **Export Pattern Consistency**: Check that exports use a consistent style (named exports preferred, no mixed default/named in the same module)
-
-### Pass 4 -- Completeness Check
-- **File Completeness**: Compare the list of files the plan said would be created/modified against actual git diff
-- **Scope Creep Detection**: Verify no extra files were created beyond what the plan specified
-- **Deletion Check**: Verify no files were deleted without plan authorization
-
-### Verifier Scope Boundary
-All Verifier suggested checkpoints have a `scope` field:
-
-| Scope | Source | Effect on Pipeline |
-|-------|--------|--------------------|
-| `manifest` | From the plan manifest | FAILURE reduces compliance score; can block pipeline |
-| `suggested` | Auto-detected (security, patterns) | FAILURE is informational; does NOT reduce compliance score |
-
-Only `scope: "manifest"` checkpoints count toward the 80% compliance threshold. `scope: "suggested"` findings are reported to the Orchestrator as warnings but do not block the pipeline.
-
-## Failure Summary Format
-
-When the circuit breaker opens (retry threshold reached), the Orchestrator produces a structured failure summary in `agent-context.md`'s YAML frontmatter under the `failureSummary` field:
-
-```json
-{
-  "feature": "user-profile",
-  "pipelineType": "full",
-  "failedStep": "verifier",
-  "attempts": 3,
-  "rootCause": {
-  "primary": "PlanDescriber omitted error handling checkpoint for duplicate email scenario",
-  "contributing": [
-   "Implementor followed plan exactly but plan was incomplete",
-   "Fixer attempted fix 3 times but kept missing the root cause because the plan never specified the error scenario"
-  ]
-  },
-  "attemptsLog": [
-  { "attempt": 1, "agent": "implementor", "result": "build pass, verifier 72%", "fix": "added validateEmail export" },
-  { "attempt": 2, "agent": "fixer", "result": "build pass, verifier 82%", "fix": "added error handling for createUser" },
-  { "attempt": 3, "agent": "fixer", "result": "build pass, verifier 78%", "fix": "added additional error cases" }
-  ],
-  "recommendedAction": "Revise plan to add explicit error handling checkpoints for all user service methods",
-  "circuitBreakerState": {
-  "build": 0,
-  "lint": 0,
-  "securityScan": 0,
-  "smokeTest": 0,
-  "verifier": 3
-  }
-}
-```
-
-### When to Produce
-- After any gate fails and reaches 3 attempts
-- Written to `agent-context.md`'s YAML frontmatter under the `failureSummary` field
-- Also presented to the user as a structured markdown report (not raw JSON)
-
-### User Report Format
-```markdown
-## ! Pipeline Failure: user-profile
-
-| Field | Value |
-|-------|-------|
-| Feature | user-profile |
-| Pipeline | full |
-| Failed Step | verifier (3 attempts) |
-| Attempts | 3 |
-
-### Root Cause Analysis
-**Primary**: PlanDescriber omitted error handling checkpoint for duplicate email scenario.
-**Contributing**: Implementor followed plan exactly but plan was incomplete.
-
-### Attempts Log
-1. **Implementor**: build pass, verifier 72% -- added validateEmail export
-2. **Fixer**: build pass, verifier 82% -- added error handling for createUser
-3. **Fixer**: build pass, verifier 78% -- added additional error cases
-
-### Recommended Action
-Revise the plan to add explicit error handling checkpoints for all user service methods.
-
-### Next Steps
-I'll escalate to PlanDescriber for a roadmap revision. After the plan is updated, we'll retry implementation. Shall I proceed?
-```
-
-### Standardized Error Format
-
-All agents should report failures using this structured format for consistent parsing:
-
-```yaml
-errors:
-  - code: "BUILD_FAILED"
-  step: "npm run build"
-  details: "TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'"
-  file: "src/services/user.ts"
-  line: 47
-  severity: "error"   # error | warning
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `code` | [x] | Machine-readable error code (SCREAMING_SNAKE_CASE) |
-| `step` | [x] | The pipeline step that produced the error (e.g., "npm run build", "eslint src/", "QA smoke test") |
-| `details` | [x] | Human-readable error message with context |
-| `file` | [ ] | File path where the error occurred (if applicable) |
-| `line` | [ ] | Line number in the file (if applicable) |
-| `severity` | [x] | "error" (blocking) or "warning" (non-blocking) |
-
-**Common error codes**:
-| Code | Meaning |
-|------|---------|
-| `BUILD_FAILED` | TypeScript/Webpack/Vite compilation error |
-| `LINT_FAILED` | ESLint/Prettier style violation |
-| `TEST_FAILED` | Unit/integration test assertion failure |
-| `SMOKE_FAILED` | Application failed to start/boot |
-| `SECURITY_HIGH` | npm audit High severity vulnerability |
-| `SECURITY_CRITICAL` | npm audit Critical severity vulnerability |
-| `SECRETS_FOUND` | Hardcoded credentials detected |
-| `VERIFIER_LOW_SCORE` | Compliance score below 80% threshold |
-| `IMPORT_MISMATCH` | Cross-file import path or symbol mismatch |
-| `TYPE_MISMATCH` | Type signature mismatch between modules |
-| `MISSING_EXPORT` | Expected export not found in module |
-
----
-
-## Agent Output Contract
-
-Every subagent MUST return structured output in this format within their final report to enable the Orchestrator to programmatically update `agent-context.md`.
-
-### Standard Output Schema
-Every agent's final report to the Orchestrator MUST contain a structured code block at the top:
-
-```
----
-status: "completed" | "failed" | "partial"
-resultSummary: "2-3 sentence summary of what was accomplished"
-agentOutputs:
-  <agent-name>:
-  status: "completed" | "failed" | "partial"
-  resultSummary: "Brief summary"
-  buildPassed: true | false | null
-  lintPassed: true | false | null
-  buildOutput: "Full stdout + stderr" | null
-  lintOutput: "Full stdout + stderr" | null
-decisions:
-  - what: "Decision description"
-  why: "Rationale"
-  by_who: "<agent-name>"
-warnings:
-  - "Non-blocking issue"
-changedFiles:
-  - "path/to/file.ts"
-artifacts:
-  - "Description of artifact"
----
-```
-
-### Per-Agent Responsibility
-
-| Agent | Must Report `buildPassed`/`lintPassed`? | Must Report `decisions`? | Must Report `changedFiles`? | Must Report Enhanced Fields? |
-|---|---|---|---|---|
-| **Finder** | No (read-only) | Yes (exploration direction) | No | Yes -- `knowledgeGraph` (entities, relationships, hazards) |
-| **PlanDescriber** | No | Yes (architectural decisions) | Yes (plan manifest) | Yes -- `confidence` in plan phases |
-| **Implementor** | Yes (mandatory) | No | Yes (all files written) | Yes -- `selfReview` (confidence, preCheckPassed, scopeGuardFlags) |
-| **QA** | No | Yes (test decisions) | Yes (test files created/modified) | Yes -- edge cases tested, non-functional issues, regression impact |
-| **Verifier** | No (read-only) | No | No | Yes -- `suggestedCheckpoints`, `driftDetection` |
-| **Fixer** | Yes (mandatory) | Yes (root cause classification) | Yes (files modified) | Yes -- `rootCauseAnalysis` (classification, primaryCause, contributingFactors, fixApplied, fixConfidence, crossModuleCheck) |
-| **Browser Tester** | No | No | Yes (test scripts, screenshots) | No |
-| **Integrator Phase 1** | No | Yes (merge decisions) | No | Yes  import scan results, cross-file consistency report, consistency score |
-| **Documentor** | No | Yes (documentation format/structure decisions) | Yes (documentation files created/modified) | No |
-
-## Smart Finder Protocol
-
-The Finder agent operates in "Smart" mode with these enhanced capabilities:
-
-### 1. Proactive Hazard Detection
-While exploring the codebase for the requested information, the Finder automatically flags:
-- **Dead code**: Unused exports, uncalled functions, orphaned modules
-- **Deprecated APIs**: Usage of deprecated libraries, methods, or patterns
-- **Security anti-patterns**: `eval()`, `innerHTML`, hardcoded secrets
-- **Missing error handling**: Functions that can throw but aren't wrapped
-- **Type safety issues**: `any` types, missing null checks, implicit `any`
-
-These are returned as "incidental findings" alongside the primary exploration report.
-
-### 2. Structured Knowledge Graph Output
-The Finder returns findings in a structured format that the Orchestrator can programmatically use:
-
-```
----
-status: "completed"
-resultSummary: "Found 3 entry points, traced 2 data flows, detected 1 hazard"
-agentOutputs:
-  finder:
-  status: "completed"
-  resultSummary: "Found entry points and data flows"
----
-### Knowledge Graph
-entities:
-  - name: "UserService"
-  type: "class"
-  file: "src/services/user.ts"
-  exports: ["UserService", "createUser", "getUser"]
-  - name: "UserController"
-  type: "class" 
-  file: "src/controllers/user.ts"
-  exports: ["UserController"]
-relationships:
-  - from: "UserController"
-  to: "UserService"
-  type: "imports"
-  details: "UserController imports and calls UserService methods"
-  - from: "UserService"
-  to: "UserModel"
-  type: "imports"
-  details: "UserService uses UserModel for database operations"
-entryPoints:
-  - path: "src/index.ts"
-  type: "server"
-  description: "Express app entry point"
-dataFlows:
-  - route: "POST /api/users"
-  chain: "UserController.createUser -> UserService.createUser -> UserModel.save"
-hazards:
-  - file: "src/services/user.ts"
-  line: 42
-  type: "security"
-  severity: "medium"
-  description: "User input passed directly to database query without sanitization"
-```
-
-### 3. Context-Aware Depth
-- In unfamiliar code areas (no git history or low test coverage): Explore deeply (trace 3+ levels of imports)
-- In well-known modules (frequently committed, high test coverage): Stay shallow (1 level)
-- Signal = git log frequency + test file existence + last modified date
-
-### Familiarity Scoring (NEW)
-The Orchestrator computes module familiarity scores during pipeline initialization and passes them to the Finder:
-
-| Score Range | Meaning | Exploration Depth |
-|-------------|---------|-------------------|
-| 1-4 | Unknown/new module (< 5 commits, no tests) | Deep (3+ levels of imports) |
-| 5-7 | Moderate activity (5-20 commits, some tests) | Moderate (2 levels) |
-| 8-10 | Well-known (20+ commits, test suite exists) | Shallow (1 level) |
-
-The score is computed by `computeFamiliarityScore()` in `pipeline-init.ts` based on:
-- Git commit frequency on the module path
-- Presence of test files (`.test.*`, `.spec.*`)
-
-The Finder uses this score to decide how deep to explore.
-
----
-
-## Self-Reviewing Implementor Protocol
-
-The Implementor operates with a mandatory self-review cycle:
-
-### 1. Pre-Implementation Validation
-Before writing any code, the Implementor MUST:
-1. Read the full plan roadmap and plan-manifest.json
-2. Identify any gaps or contradictions in the checkpoints
-3. Check: "Do I have enough context to implement this?" If not, report back with specific questions
-4. Verify that the target files don't already exist with conflicting content
-5. Report an "implementation readiness" status before proceeding
-
-### 2. Self-Review Pass
-After implementing all code changes, the Implementor runs a self-review:
-1. Re-read its own code against each plan checkpoint
-2. Score itself: "I am X% confident this matches the plan"
-3. If self-confidence < 90%: re-read the plan and fix discrepancies before reporting
-4. If self-confidence >= 90%: report completion with confidence score
-
-### 3. Scope Guard
-The Implementor actively resists scope creep:
-- If the user's or Orchestrator's prompt mentions functionality NOT in the plan, the Implementor MUST flag it:
-  "The prompt mentions feature X, but the plan does not include it. Should I implement it anyway or stick to the plan?"
-- The Implementor does NOT implement unplanned features without explicit Orchestrator confirmation
-- If a change would affect files outside the plan's scope, flag before proceeding
-
-### 4. Self-Review Output
-The Implementor includes in its output:
-
-```
-selfReview:
-  confidence: 95
-  preCheckPassed: true
-  preCheckNotes: "All checkpoints are consistent. No conflicting files found."
-  scopeGuardFlags: []
-  selfReviewIssues:
-  - "Checkpoint CP-005 (handlesError for createUser): Error handling present but uses console.error instead of logger.error. Acceptable since logger import wasn't specified in plan."
-  buildPassed: true
-  lintPassed: true
-  buildOutput: "[excerpt]"
-  lintOutput: "[excerpt]"
-```
-
----
-
-## Root Cause Classifier (Fixer Protocol)
-
-When the Fixer receives a bug report or Verifier deviation, it MUST classify the root cause before applying any fix:
-
-### Root Cause Taxonomy
-
-| Category | Definition | Example | Escalation Path |
-|----------|-----------|---------|----------------|
-| **plan-omission** | The plan didn't specify this behavior | "Plan had no checkpoint for handling duplicate email" | Escalate to PlanDescriber after 2nd occurrence |
-| **implementation-error** | The code doesn't match the plan spec | "Method signature doesn't match plan" | Fix and continue in current pipeline |
-| **edge-case-miss** | The plan covered it but the implementation missed an edge case | "Function works for valid input but fails on empty string" | Fix and add test for edge case |
-| **integration-mismatch** | Two modules don't agree on interface | "Service returns User but controller expects UserDTO" | Fix the interface contract |
-| **environment-issue** | Build/lint/tooling problem | "TypeScript strict mode catches type error that wasn't in plan" | Fix config or code |
-
-### Fix Confidence Score
-After applying a fix, the Fixer reports:
-- **Confidence level**: 1-10
-  - 8-10: "Highly confident -- fix addresses root cause, cross-module check passed"
-  - 5-7: "Moderately confident -- fix addresses symptoms, root cause may be deeper"
-  - 1-4: "Low confidence -- fix is a workaround, root cause may be elsewhere"
-- **Cross-module check**: Did the fix break anything in other modules?
-  - Use `grep` to find files that import/modify the same symbols
-  - Run affected module's tests if available
-  - Report: "Cross-module check: [module X] unaffected, [module Y] may need review"
-
-### Fixer Output with Classification (inside structured output block)
-The Fixer includes `rootCauseAnalysis` inside the `---` structured output block, NOT as a separate section:
-
-```
----
-status: "completed"
-resultSummary: "Fixed 2 deviations: CP-003 and CP-007"
-agentOutputs:
-  fixer:
-  status: "completed"
-  resultSummary: "Fixed duplicate email handling in createUser"
-  buildPassed: true
-  lintPassed: true
-  buildOutput: "[full stdout + stderr]"
-  lintOutput: "[full stdout + stderr]"
-  rootCauseAnalysis:
-   classification: "implementation-error"
-   primaryCause: "createUser method didn't handle the case where email is already registered"
-   contributingFactors:
-   - "Plan checkpoint CP-005 specified try/catch but didn't specify which errors to catch"
-   fixApplied: "Added duplicate email check before insert"
-   fixConfidence: 8
-   crossModuleCheck:
-   - module: "src/controllers/user.ts"
-    status: "unaffected"
-   - module: "src/routes/userRoutes.ts"
-    status: "unaffected"
-decisions: []
-warnings:
-  - "No side effects detected in cross-module check"
-changedFiles:
-  - "src/services/user.ts"
-artifacts:
-  - "Fixer report with root cause analysis, fix description, build/lint output"
----
-
-## Output Verification
-
-### Structured Output Enforcement
-Every subagent output MUST be validated against the structured output contract before the Orchestrator considers the task complete. Use the validation script:
-
-```bash
-# Validate a single agent output file
-ts-node skills/scripts/orchestration/validate-output-contract.ts --file=<path-to-agent-output>
-
-# Validate all agent outputs in agent-context.md
-ts-node skills/scripts/orchestration/validate-output-contract.ts --pipeline
-
-# Check against a specific agent schema
-ts-node skills/scripts/orchestration/validate-output-contract.ts --agent=fixer
-```
-
-The validator checks:
-1. YAML frontmatter is parseable
-2. All required fields are present for the agent type
-3. Field types are correct (boolean, string, array, null)
-4. Enhanced fields (rootCauseAnalysis, selfReview, knowledgeGraph) match their schemas
-
-### Rejection Protocol
-If validation fails (exit code != 0):
-1. **Reject the output**: Do NOT update `agent-context.md` with invalid data
-2. **Report to agent**: Send the validation errors back to the agent with clear instructions on what's missing
-3. **One retry**: Allow the agent one attempt to fix the output format
-4. **Escalate**: If the agent fails to produce valid output twice, report to user
-
-### Orchestrator Verification Steps
-After receiving a valid agent output, the Orchestrator MUST:
-1. Parse the structured output fields from the agent's report
-2. Cross-reference `changedFiles` against actual disk state (using read/glob/grep)
-3. Cross-reference `buildPassed`/`lintPassed` against raw output excerpts
-4. Append the agent's results to `agentHistory` in `agent-context.md`
-5. Update `circuitBreaker.counters` if the gate failed
-6. Update `agentOutputs.<agent-name>` with the structured data
-7. Save the updated `agent-context.md` with fresh `pipelineHeartbeat`
-8. **Validate agent output contract (NEW)**: Run `ts-node skills/scripts/orchestration/validate-output-contract.ts --agent-context=agent-context.md` to programmatically verify that each agent's structured output claims match reality (files exist, build/lint claims are consistent with output text, no path traversal in claimed paths)
-
-### Automated Output Contract Validation (NEW)
-After every agent hand-off, the Orchestrator MUST run automated output contract validation as a gate:
-
-1. After the agent returns its structured output, immediately run:
-  ```bash
-  ts-node skills/scripts/orchestration/validate-output-contract.ts --pipeline
-  ```
-2. If exit code is 0 (valid): Proceed -- all output fields are correctly formatted
-3. If exit code is not 0 (invalid):
-  - **Reject the output**: Do NOT update `agent-context.md`
-  - **Send errors back**: Include the validation error messages in the hand-off
-  - **One retry**: Allow the agent one attempt to fix the output format
-  - **Escalate**: If the agent fails twice, report to the user with the validation failures
-4. This validation is MANDATORY and cannot be skipped
-
-## Orchestrator as Brainstormer
-
-The Orchestrator serves as the **primary brainstorming partner** for the user. This is by design:
-
-### Why the Orchestrator handles brainstorming
-- **Real-time interaction**: The Orchestrator can have a live back-and-forth conversation with the user
-- **Immediate iteration**: Ideas can be explored, rejected, or refined on the fly
-- **Context retention**: The Orchestrator holds all project context and can connect brainstorming to execution seamlessly
-
-### Workflow
-1. Orchestrator brainstorms **interactively** with the user
-2. Orchestrator formalizes the plan and proceeds to delegation
-
-## Agent Timeout & Circuit Breaker
-
-### Timeout Policy
-- Each agent task should complete within a reasonable timeframe
-- The Orchestrator monitors task duration and may abort tasks that exceed expected time
-- If a subagent times out, the Orchestrator restarts the task with a fresh agent session
-- Repeated timeouts (> 2) for the same task indicate a deeper issue -- escalate to PlanDescriber
-
-### Circuit Breaker Pattern
-The system includes a circuit breaker to prevent infinite agent loops:
-
-| State | Meaning | Action |
 |---|---|---|
-| **Closed** | Normal operation | Agents execute as normal |
-| **Open** | Repeated failures detected | Orchestrator pauses cycling to the same agent for the same issue |
-| **Half-Open** | Probation period | Orchestrator allows one retry to test if the issue is resolved |
+| Library | 70% | 90% |
+| Application | 60% | 85% |
+| Prototype | 40% (informational) | N/A |
 
-### Escalation Limits
-- **Same bug reappears**: 3 Fixer attempts -> escalate to PlanDescriber for roadmap revision
-- **Same agent fails consecutively**: 3 failures -> Orchestrator pauses that agent path and reviews manually
-- **Verifier score < 80%**: 3 Fixer re-verification failures -> escalate to PlanDescriber for roadmap revision
-- **Security Scan fails**: 3 attempts -> escalate to user for direction
-- **Total pipeline retries**: If total retries across all gates exceed 5, Orchestrator pauses and reports to user
+**Coverage Auto-Loop:** If coverage < threshold, Orchestrator dispatches Implementor to add tests, then re-runs QA. After 3 failed attempts, escalate to user.
 
-### Circuit Breaker Workflow
+### Acceptance Criteria Integration
+
 ```
-1. Agent task fails (build, lint, smoke test, security scan, or verification)
-2. Orchestrator records the failure in a counter for that specific check
-3. If counter < threshold (3), Orchestrator cycles back:
-  - Build/lint failures -> cycle to Implementor
-  - QA smoke test failures -> cycle to Fixer
-  - Verifier deviations -> cycle to Fixer
-  - Security scan failures -> cycle to user for direction
-4. If counter >= threshold, Orchestrator opens the circuit:
-  a. Pauses further retries for that specific check
-  b. Escalates to PlanDescriber if the root cause is plan-related
-  c. Escalates to Fixer if code-related (with root cause analysis)
-  d. Reports to user with failure summary and escalation decision
-5. After PlanDescriber revises the plan, Orchestrator resets the circuit (Half-Open)
-6. One retry is allowed -- if it passes, circuit closes; if it fails, circuit opens again
+Build Gate → Lint Gate → Security Scan → QA → ACCEPTANCE GATE → SECURITY TEST COVERAGE GATE → Verifier → Documentor
 ```
 
-### Counter Reset & Decay
-Circuit breaker counters are reset when:
-- The task passes the gate successfully
-- PlanDescriber revises the roadmap
-- Fixer successfully resolves the root cause
-- The Orchestrator manually resets after user intervention
+**Acceptance Gate Protocol:** Check manifest for `acceptanceCriteria` checkpoints. If none exist, skip. If any fail, cycle to Fixer.
 
-**Counter Decay**: Counters auto-decay by 1 every 24 hours (computed at pipeline start by reading `circuitBreaker.lastFailure.timestamp`).
-- This prevents stale failures from accumulating across different features
-- The total-pipeline-retry counter has NO decay (it's a global safety limit)
-- Decay is computed by the Orchestrator at pipeline start: if `lastFailure` is > 24h old, decrement the counter (min 0)
+### Pipeline Order Fix (Documentor after Verifier)
 
-**When decay meets threshold**: If a counter decays from 2 to 1 overnight but the same checkpoint fails again, the counter goes to 2 again (not 3). This means the agent gets one more attempt than it would without decay -- fair because the first failures were on a different feature.
-
-### Security-Specific Thresholds (NEW)
-The circuit breaker now supports security-specific contextual thresholds:
-
-| Pipeline Profile | securityScan Threshold | Supply Chain Threshold | evidenceQuality Threshold | Description |
-|-----------------|----------------------|----------------------|--------------------------|-------------|
-| Standard | 3 | 1 | 3 | Default for most features |
-| Sensitive (auth, payments, PII) | 3 | 3 | 3 | More lenient -- supply chain issues can be fixed |
-| Infrastructure | 3 | 3 | 3 | Security-critical config changes |
-| Security Fix | 3 | 3 | 3 | Fixes for known vulns -- chain issues expected |
-
-The security profile is set based on the feature type in the pipeline selection:
-- Features touching auth, payment, PII, or security -> "Sensitive"
-- Config/deployment changes -> "Infrastructure"
-- Security vulnerability fixes -> "Security Fix"
-- All others -> "Standard"
-
----
-
-## Context Window Budgeting
-
-### Problem
-Long pipelines accumulate massive context: every agent's full output, build logs (often 1000+ lines), lint output, QA reports, and Verifier reports. By step 6, the Orchestrator's context window is polluted with noise from step 1.
-
-### Solution: Progressive Summarization
-
-As the pipeline progresses, systematically summarize older agent outputs:
-
-| Step | After Completion | Summarize What | Target Length |
-|------|-----------------|----------------|---------------|
-| Finder -> PlanDescriber | Finder output | Full exploration report | 3-5 bullet points |
-| PlanDescriber -> Implementor | PlanDescriber output | Full roadmap | 3-5 sentence summary + manifest path |
-| Implementor -> QA | Implementor output | Build/lint output | "Build passed" or "Build failed: [key errors only]" |
-| QA -> Verifier | QA output | Bug report + edge case findings | "2 bugs found (1 critical, 1 minor)" |
-| Verifier -> Orchestrator | Verifier output | Full deviation report | "3 deviations: CP-003, CP-007, CP-012" |
-
-### Summary Format
-Store summaries in `agent-context.md` under a `summaries` field:
-
-```yaml
-summaries:
-  finder: "Found User model at src/models/user.ts. Key finding: existing validation middleware in src/middleware/validate.ts."
-  plandescriber: "3-phase roadmap: model, service, controller. 8 checkpoints in manifest."
-  implementor: "Build passed (1 warning). Lint passed. Created src/services/user.ts, src/controllers/user.ts."
-  qa: "Smoke test passed. 2 edge cases generated. 1 non-functional issue (performance)."
-  verifier: "72% compliance. 2/8 checkpoints failed (CP-003, CP-007). Confidence: LOW."
+**Corrected order:**
 ```
-
-### How to Use
-- Before dispatching the next agent, the Orchestrator uses summaries (not raw agent output) for context
-- The full raw output is still stored in `agentHistory` for debugging
-- When cycle-back happens (e.g., Fixer revisits), give them the full context of their OWN previous attempt + summaries of everything else
-
-### Granular Archival Strategy
-
-For very long pipelines (8+ steps), even summaries accumulate. Use this graduated archival strategy:
-
-| Pipeline Step | What's Retained | What's Summarized | What's Archived |
-|--------------|----------------|-------------------|-----------------|
-| Steps 1-3 | Full context | Nothing | Nothing |
-| Steps 4-5 | Full for current step + summaries for past steps | Finder, Brainstorm | Raw output moved to `.opencode/pipeline-logs/` |
-| Steps 6+ | Summary only for steps 1-3 | PlanDescriber, Implementor | Archived to logs directory |
-| Fixer loop | Fixer's own prior attempts: FULL context | Everything before Fixer | Archived |
-| Verifier | Verifier report (full) + latest Fixer output (full) | Steps before the fix cycle | Archived |
-
-**Archival process**:
-1. The Orchestrator writes the raw output to `.opencode/pipeline-logs/<pipelineId>/<agent-name>-<step>.md`
-2. The summary replaces the raw output in `agent-context.md`'s `summaries` field
-3. When the Orchestrator needs to cycle back to an agent, it reads the archived file from logs first, then supplements with summaries
-
-**Fixer cycle-back rule**: When cycling back to Fixer, ALWAYS give them the full context of their OWN previous attempt (all raw output) plus summaries of everything else. Fixer needs to see what it tried before to avoid repeating mistakes.
-
----
-
-## Skill Loading Conflict Resolution
-
-For the complete skill conflict resolution reference (priority table, conflict rules, logging format), see `references/skill-conflict-resolution.md`.
-
-Quick summary: Accessibility > Security > Backend > Frontend > Planning > Verification > QA > General. See the reference for full details.
-
----
-
-## Smart Circuit Breaker Thresholds
-
-### Contextual Thresholds
-Fixed thresholds (3 attempts for everything) are replaced with contextual thresholds:
-
-| Gate | Simple Task | Moderate Task | Complex Task |
-|------|------------|---------------|--------------|
-| Build | 1 | 2 | 3 |
-| Lint | 1 | 2 | 3 |
-| Security Scan | 1 | 2 | 3 |
-| Smoke Test | 1 | 2 | 3 |
-| Verifier | 1 (single file) | 2 (2-3 files) | 3 (4+ files) |
-| Evidence Quality | 2 | 3 | 4 |
-
-**Task complexity classification:**
-- **Simple**: Config change, single file, < 50 lines changed
-- **Moderate**: 2-3 files, new feature in familiar domain
-- **Complex**: 4+ files, new domain, cross-module changes
-
-### Pattern Detection
-The circuit breaker now detects failure patterns across gates:
-- If Fixer fails on 3 different bugs in the same pipeline with the same classification (`edge-case-miss`), auto-escalate to PlanDescriber after attempt 2 (not 3)
-- If the same checkpoint fails across 2 different attempts, flag as "persistent deviation" and escalate sooner
-- If build fails on 3 different modules sequentially, escalate to user (may be a toolchain issue, not implementation)
-
-### Graceful Degradation
-When a gate fails after max attempts, the pipeline still delivers partial results:
-- "Plan verification failed (72%), but build and smoke tests pass. Here's what was implemented and what needs review."
-- Generate a "partial delivery report" with:
-  - [x] What passed
-  - [ ] What failed
-  -  What needs human review
-- Do NOT delete files or undo work on partial failure -- the user may want to keep working changes
-
-### Threshold Database
-Store contextual thresholds in `.opencode/thresholds.yaml`:
-
-```yaml
-taskComplexity:
-  default: "moderate"
-  overrides:
-  - pattern: "config"
-   complexity: "simple"
-  - pattern: "feature/.*"
-   complexity: "complex"
+QA → Acceptance Gate → Security Test Coverage Gate → Verifier → Documentor → Orchestrator
 ```
+Documenting code before it's verified is wasteful — always verify first, then document.
 
----
-
-## Pipeline Type Auto-Classification
-
-### Uncertainty Detection
-Before starting, the Orchestrator assesses its confidence in pipeline selection:
-
-| Confidence | Action |
-|------------|--------|
-| 90-100% (High) | Proceed with selected pipeline |
-| 70-89% (Medium) | Run a quick Finder pre-check, then re-assess |
-| < 70% (Low) | Ask user: "I think this is [pipeline type]. I'm [X]% confident. Would you like me to investigate first, or proceed?" |
-
-Confidence is calculated based on:
-- How many pipeline types match the user's request? (1 match = high, 3+ matches = low)
-- How well does the user's language match the pipeline descriptions? (exact match = high, vague = low)
-
-### Mid-Flow Pipeline Switching
-If during execution the Orchestrator discovers the task is different than expected:
-1. **Finder discovers scope is much larger**: Switch from "Fixer-only" to "Full pipeline"
-2. **Implementor finds existing code does something unexpected**: Switch from "New Feature" to "Refactor"
-3. **QA discovers the bug is actually a design issue**: Switch from "Bug Fix" to "PlanDescriber revision"
-
-Switching protocol:
-1. Pause current agent
-2. Update pipeline type in `agent-context.md`
-3. Inform user: "The task turned out to be more complex than expected. Switching from [old] to [new] pipeline."
-4. Insert the new step into the sequence (e.g., call PlanDescriber before continuing with Implementor)
-
----
-
-## Tier 4: Quality-of-Life Improvements
-
-### 1. Hand-off Templating (Auto-Generated)
-Rather than manually writing hand-offs, the Orchestrator auto-generates them from `agent-context.md`:
-
-Template format:
-```
-Orchestrator to {agent}:
-"Context: {previous step} completed -- {summary from agent-context.md summaries}.
-Artifacts: {changedFiles from agent-context.md agentHistory[-1]}.
-Objective: {derived from nextObjective in agent-context.md}.
-Constraints: {derived from circuit breaker state, loaded skills}.
-Expected Output: {per the Agent Output Contract for this agent role}.
-Remember to return structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts)."
-```
-
-The Orchestrator fills in the `{placeholders}` from the current `agent-context.md` state, ensuring consistency.
-
-### 2. Timeout Warnings
-Before hard-aborting a stuck agent, send a warning message:
-- If an agent has been running > 5 minutes without reporting, send: "You've been running for 5+ minutes. What's your status? Are you making progress or blocked?"
-- If the agent responds: Continue waiting
-- If no response within 60 seconds: Abort and restart with fresh session
-- After 2 timeouts for the same agent in the same pipeline: Escalate to user
-
-### 3. Build/Lint Output Diffing
-When Implementor reports build errors in a cycle-back, show only NEW errors vs the previous run:
-- Store previous build output in `agent-context.md` as `buildHistory`
-- Compare with current output using line-level diff
-- Report: "3 new errors (not present in last build run), 2 errors resolved since last run"
-- This prevents the user from re-reading 200 lines of build output to find what changed
-
-### 4. One-Click Rollback
-If a pipeline fails or the user is unhappy, offer automated rollback:
-- "Roll back all files changed in this session?" offers:
-  1. `git checkout -- {files}` for uncommitted changes
-  2. `git revert {commit}` for committed changes
-  3. "Delete newly created files" option
-- The rollback command is presented to the user for confirmation before execution
-
----
-
-## ast-grep: Agent Tool for Structural Code Operations
-
-### Purpose
-ast-grep (sg) is an AST-level (tree-sitter) structural code search, lint, and rewrite tool. Unlike text-based grep, it understands code structure  matching AST nodes, not lines. It is available as an **on-demand tool** for subagents, not as a pipeline gate.
-
-### When Subagents Should Use ast-grep
-
-ast-grep excels at tasks that require **understanding code structure**, not just matching text:
-
-| Agent | Use Case | Example |
-|-------|----------|---------|
-| **Finder** | Structural codebase exploration | "Find all classes decorated with @Injectable that use constructor injection" |
-| **PlanDescriber** | Pattern discovery before planning | "Find all existing service patterns that handle errors similarly"  AST-aware grep reveals structural consistency |
-| **Implementor** | Refactoring & codemods | "Rename getUser to fetchUser across all call sites"  ast-grep -p '.getUser()' --rewrite '.fetchUser()' |
-| **Fixer** | Pattern-based bug fixes | "Find all empty catch blocks and add logging" |
-| **QA** | Test pattern verification | "Verify all tested functions follow the arrange-act-assert pattern" |
-
-### When NOT to Use ast-grep
-
-- **Simple keyword search**: Use grep or rg  ast-grep is overkill
-- **Line-based pattern matching**: grep is faster for simple text patterns
-- **Already covered by ESLint/TypeScript**: no-console, explicit-function-return-type, no-explicit-any are already enforced by the Lint Gate
-
-### How to Invoke
-
-Subagents load skill("ast-grep") when they need to perform structural code analysis. The Orchestrator does NOT auto-load this skill during the pipeline  it is triggered by subagent task requirements.
-
-### Quick Reference
-
-| Task | Command |
-|------|---------|
-| Find function calls matching a pattern | sg -p 'console.log($ARG)' -l ts |
-| Find all arrow functions | sg -p '$ARG => $BODY' -l ts |
-| Find imports from specific module | sg -p 'import { $$$ } from "lodash"' -l ts |
-| Rename a function across all files | sg -p 'oldName($)' --rewrite 'newName($)' -l ts -U |
-| Find empty catch blocks | sg scan --inline-rules "id: empty-catch language: TypeScript rule: {kind: catch_clause has: {pattern: {}}}" |
-
-Full documentation, including YAML rule creation, transforms, stdin mode, and JSON output, is available in skills/ast-grep/SKILL.md.
-
-## Tooling (Project & Consistency Tools)
-
-This skill includes executable scripts for project initialization, consistency checking, output validation, parallelism analysis, and pipeline testing.
-
-### Available Scripts
+## Tooling
 
 | Script | Purpose | Usage |
-|--------|---------|-------|
-| `validate-output-contract.ts` | Validates subagent output against structured output contract schemas | `ts-node <skills-dir>/scripts/orchestration/validate-output-contract.ts --file=<path> \| --pipeline \| --agent=<name>` |
-| `test-pipeline.ts` | E2E test harness exercising all orchestration components | `ts-node <skills-dir>/scripts/orchestration/test-pipeline.ts [--test=<name>]` |
-| `check-plan-contract.ts` | Pre-implementation plan contract validation  runs contract rules before coding | `ts-node skills/scripts/orchestration/check-plan-contract.ts` |
-| `check-plan-adherence.ts` | Post-implementation, pre-build checkpoint adherence verification | `ts-node skills/scripts/orchestration/check-plan-adherence.ts` |
-| `plan-diff-report.ts` | Human-readable diff between plan and implementation | `ts-node skills/scripts/orchestration/plan-diff-report.ts` |
-
-### Consistency Checks
-Run after implementation to ensure code style consistency:
-```bash
-```
-
-### Output Contract Validation
-Run to validate agent output format:
-```bash
-# Validate entire pipeline outputs
-ts-node skills/scripts/orchestration/validate-output-contract.ts --pipeline
-
-# Validate a specific agent's output file
-ts-node skills/scripts/orchestration/validate-output-contract.ts --file=agent-output.yaml
-```
-
-### Parallelism Analysis
-Before parallel dispatch decisions:
-```bash
-```
-
-### Pipeline Testing
-Run the E2E test suite to verify orchestration components:
-```bash
-ts-node skills/scripts/orchestration/test-pipeline.ts
-```
-
-### Reference Files
-
-| File | Purpose |
-|------|---------|
-| `references/agent-context-schema.md` | Canonical schema for `agent-context.md` YAML frontmatter -- field types, validation rules, lifecycle |
-
-## Dynamic Context Injection (NEW)
-
-### Problem
-The Orchestrator's naive hand-off (dumping all of agent-context.md to every agent) wastes significant tokens. An Implementor doesn't need the Finder's full exploration log -- it just needs the roadmap and manifest. A Fixer cycling back doesn't need QA's non-functional findings -- it needs the bug report.
-
-### Solution: Per-Agent Context Filtering
-For each hand-off, inject only what the receiving agent actually needs:
-
-| Agent Receiving | Gets | Doesn't Get |
-|-----------------|------|-------------|
-| **PlanDescriber** | Finder's knowledge graph + decision history | Full Finder exploration report, old plan manifests |
-| **Implementor** | Plan roadmap + plan-manifest.json + current git state | QA reports, Verifier reports from prior iterations |
-| **Integrator** | List of all files created/modified by parallel Implementors + project wiring convention detection | Finder exploration logs, brainstorm notes |
-| **Fixer** (1st cycle) | Bug report or Verifier deviation report + plan manifest + changed files | Full QA output, build logs from other pipelines |
-| **Fixer** (cycle-back) | Same as 1st + its OWN previous rootCauseAnalysis + the circuit breaker state | Everything else |
-| **QA** | Plan summary + changed files list + build/lint output | Finder exploration, brainstorm notes, plan manifest details |
-| **Verifier** | Plan manifest + implementation summary + build/lint confirmation + acceptance criteria | Finder exploration, brainstorm notes |
-| **Documentor** | Git diff of changed files + QA report + plan manifest summary | Full QA test details, Verifier breakdown, circuit breaker state |
-| **Security Scan** | Project type + lockfile path + list of target source directories + semgrep SAST rules | Everything else (read-only agent) |
-| **Browser Tester** | Routes/changed UI components + app URL | Plan details, QA test internals |
-
-### Implementation
-When constructing a hand-off prompt to any agent, the Orchestrator:
-
-1. **Reads** `agent-context.md` for history
-2. **Extracts** only the relevant entries from `agentOutputs` and `agentHistory`
-3. **Summarizes** everything else into 1-2 bullet points
-4. **Writes** the hand-off with: Objective + Relevant Artifacts + Constraint + Expected Output
-5. **Stores** the full context in `agent-context.md` for future debugging
-
-**Example** -- Hand-off to Implementor (NOT including Finder exploration):
-```
-Orchestrator to Implementor:
-"Implement the user-profile feature following the roadmap below.
-
-Relevant context:
-- Plan manifest: plan-manifests/user-profile/v1-manifest.json
-- Existing User model found at: src/models/user.ts
-- Key decision: using Zod for validation (already in dependency tree)
-
-[full roadmap + manifest checkpoints inline]
-
-Return your results with the structured output contract..."
-```
-
-**Example** -- NOT this (current, inefficient):
-```
-Orchestrator to Implementor:
-"Here is the full agent-context.md with 1500 lines of history.
-Also here is the Finder's 200-line exploration report.
-Also here is the brainstorming transcript.
-Oh and the roadmap is somewhere in here too.
-
-[800 lines of irrelevant context]
-
-Go implement the feature."
-```
-
-### Benefits
-- Saves 30-50% of context window per hand-off
-- Agents receive clearer, more focused instructions
-- Reduces agent confusion from irrelevant data
-- Faster agent response times (less context to process)
-
----
-
-
-## Semantic Circuit Breaker (NEW -- replaces simple counter-based breaker)
-
-### Problem
-The simple circuit breaker tracks failure counts per gate but doesn't understand *why* failures occur. Three `verifier` failures might all have different root causes. Each failure is treated identically, leading to premature or delayed escalation.
-
-### Solution: Failure Signature Tracking
-
-Each failure is hashed into a `failureSignature` based on:
-- `agent` -- Which agent failed
-- `gate` -- Which gate (build, lint, security, smoke, verifier)
-- `classification` -- Root cause classification (from Fixer)
-- `primaryCause` -- Normalized root cause description
-
-```
-failureSignature = SHA256(agent + ":" + gate + ":" + classification + ":" + primaryCause)
-```
-
-### Circuit Breaker State (updated schema)
-
-```yaml
-circuitBreaker:
-  state: "closed"
-  # -- OLD: Simple counters --
-  counters:
-  build: 0
-  lint: 0
-  verifier: 0
-  # -- NEW: Per-signature tracking --
-  signatures:    # Tracks distinct failure signatures
-  - signature: "a1b2c3d4..."
-   gate: "verifier"
-   agent: "implementor"
-   classification: "implementation-error"
-   primaryCause: "Missing export for validateEmail"
-   count: 2
-   lastSeen: "2026-05-19T10:30:00Z"
-  - signature: "e5f6g7h8..."
-   gate: "verifier"
-   agent: "fixer"
-   classification: "plan-omission"
-   primaryCause: "Plan did not specify duplicate email handling"
-   count: 1
-   lastSeen: "2026-05-19T10:35:00Z"
-```
-
-### Escalation Rules
-
-| Condition | Action |
-|-----------|--------|
-| Same signature count >= 3 | Open circuit -- the same fix isn't working |
-| Different signatures, total >= 3 | Do NOT open circuit -- different problems each time, keep trying |
-| Same classification count >= 3 | Auto-escalate to PlanDescriber -- the root cause category keeps recurring |
-| Mixed signatures + mixed classifications >= 5 | Open circuit -- too many distinct failures, need user intervention |
-
-### Benefits over Simple Counter
-- **Prevents premature escalation**: 3 unique failures (each with a different root cause) shouldn't stop the pipeline
-- **Prevents under-escalation**: 3 identical failures (same missing export, same classification) signal the same fix isn't working
-- **Provides actionable data**: The failure signature list tells the Orchestrator exactly which root causes are recurring
-- **Enables pattern-aware escalation**: If "edge-case-miss" keeps appearing across different features, that's a PlanDescriber training issue
-
----
-
-## Acceptance Criteria Integration (NEW)
-
-### Pipeline Addition
-Acceptance criteria (`type: "acceptance"` checkpoints in the plan manifest) add a new gate to the pipeline:
-
-```
-Build Gate -> Lint Gate -> Security Scan -> QA -> ACCEPTANCE GATE -> SECURITY TEST COVERAGE GATE -> Verifier -> Documentor
-```
-
-### Acceptance Gate Protocol
-The Acceptance Gate runs after QA smoke test passes and before Verification:
-
-1. **Check manifest** for `acceptanceCriteria` checkpoints
-2. **If none exist**: Skip gate with note "No acceptance criteria in manifest"
-3. **If acceptance criteria exist**:
-  - Start the application (`npm run start` or equivalent)
-  - Wait for health check to pass (max 30 seconds)
-  - For each `acceptanceCriteria` checkpoint:
-   - Execute the `testCommand`
-   - Capture exit code + stdout/stderr
-   - Record: Pass / Fail / Skipped
-  - Stop the application
-
-### Passing/Blocking
-| Outcome | Result |
-|---------|--------|
-| All acceptance criteria pass | [x] Gate passes -- proceed to Verifier |
-| Any acceptance criteria fail | [ ] Gate blocks -- cycle to Fixer with the failed test output |
-| App could not be started |  Gate skipped -- proceed with warning |
-
-### Weight in Overall Score
-Acceptance criteria carry double weight in the Verifier's compliance score (see plan-verification skill for formula).
-
----
-
-## Pipeline Order Fix (Documentor after Verifier)
-
-### Current (Incorrect)
-```
-QA -> Documentor -> Verifier -> Orchestrator
-```
-
-### Problem
-Documenting code before it's verified is wasteful. If Verifier fails at 72%, the Documentor's changelog entries and README updates are based on code that may need to be rewritten.
-
-### Corrected (Updated)
-```
-QA -> Acceptance Gate -> Security Test Coverage Gate -> Verifier -> Documentor -> Orchestrator
-```
-
-### Rationale
-1. **Verify first**: Ensure code works correctly before documenting it
-2. **Document stable APIs**: Only document exports and behavior that pass verification
-3. **Changelog accuracy**: Only write changelog entries for code that's been verified
-4. **README accuracy**: Only update README for features that actually pass verification
-
-### Hand-off Changes
-```
-Verifier -> Documentor:
-"The user-profile feature has passed all gates including verification (100% compliance).
-Plan manifest checkpoints all pass. QA smoke test passed. Acceptance criteria passed.
-
-Changed files:
-- src/services/user.service.ts (NEW)
-- src/controllers/user.controller.ts (NEW)
-- src/types/user.types.ts (NEW)
-
-Please update:
-1. JSDoc on all new exports
-2. README.md with new API endpoints
-3. CHANGELOG.md with [Unreleased] entries
-4. No migration guide needed (no breaking changes)"
-```
-
----
-
-## Integrator Agent (NEW -- runs after parallel Implementor dispatch)
-
-### Integrator  Unified Merge + Wiring Agent
-
-The Integrator now handles both cross-file consistency verification (Phase 1) and wiring (Phase 2) in a single agent. This replaces the former separate Merge Coordinator + Integrator split, eliminating ~90% overlap between the two agents.
-
----
-
-## Pipeline Selection Protocol Update (includes Documentor and Integrator)
-
-### Updated Pipeline Table
-
-| Task Type | Pipeline | Includes Code Quality? | Includes Documentor? | Includes Integrator? | Includes Acceptance Gate? |
-|-----------|----------|----------------------|---------------------|---------------------|--------------------------|
-| **New Feature (known)** | Standard | [x] Always | [x] Yes | [x] If parallel dispatch | [x] Yes |
-| **New Feature (unknown)** | Full | [x] Always | [x] Yes | [x] If parallel dispatch | [x] Yes |
-| **Bug Fix (known cause)** | Fixer -> QA -> Verifier -> Documentor | [ ] No | [x] Yes | [ ] No | [ ] No |
-| **Bug Fix (unknown cause)** | Finder -> Fixer -> QA -> Verifier -> Documentor | [ ] No | [x] Yes | [ ] No | [ ] No |
-| **Research** | Finder only | [ ] No | [ ] No | [ ] No | [ ] No |
-| **Refactor** | PlanDescriber -> Implementor -> Security (incl. semgrep) -> QA -> Verifier -> Documentor | [x] Always | [x] Yes | [ ] No | [ ] No |
-| **Config Change** | Implementor -> Documentor | [ ] No | [x] Yes | [ ] No | [ ] No |
-| **Security Fix** | Implementor -> Security Scan (with semgrep) -> QA -> Verifier -> Documentor | [ ] No | [x] Yes | [ ] No | [ ] No |
-| **UI Bug** | Browser Tester -> Fixer -> QA -> Verifier -> Documentor | [ ] No | [x] Yes | [ ] No | [ ] No |
-
----
-
-## Output Contract Update (includes new agents)
-
-### Per-Agent Responsibility Update
-
-| Agent | Must Report `buildPassed`/`lintPassed`? | Must Report `decisions`? | Must Report `changedFiles`? |
-|-------|----------------------------------------|--------------------------|-----------------------------|
-| **Finder** | No (read-only) | Yes (exploration direction) | No |
-| **PlanDescriber** | No | Yes (architectural decisions) | Yes (plan manifest) |
-| **Implementor** | Yes (mandatory) | No | Yes (all files written) |
-| **Integrator** | Yes (mandatory -- build verifies wiring) | Yes (wiring decisions) | Yes (wiring files modified) |
-| **QA** | No | Yes (test decisions) | Yes (test files) |
-| **Verifier** | No (read-only) | No | No |
-| **Fixer** | Yes (mandatory) | Yes (root cause classification) | Yes (files modified) |
-| **Documentor** | No | Yes (documentation structure decisions) | Yes (doc files modified) |
-| **Browser Tester** | No | No | Yes (test scripts) |
-| **Security Scan** | No | No | No (read-only) |
-
-
-## Evidence Contract Protocol (NEW)
-
-### Purpose
-Every agent claim must be backed by **anchored evidence** that can be independently verified. This transforms the system from "trust-based" to "verify-based." Without evidence, the Orchestrator has no way to distinguish a correct agent output from a hallucinated one.
-
-### The Evidence Contract
-Every subagent's output MUST include an `evidence` array (at the agentOutputs level, and optionally at the top level). Each evidence entry MUST include:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `claim` | [x] | What the agent claims to be true (e.g., "File X exists", "Build passed", "Export Y found") |
-| `source` | [x] | File path, or "build"/"lint"/"test" for non-file evidence |
-| `lines` | [ ] | Specific line numbers [start, end] |
-| `method` | [x] | How the evidence was obtained: `grep`, `read`, `stat`, `glob`, `test`, `build`, `lint`, `run`, `analysis` |
-| `command` | [x] | The exact command that was run to obtain this evidence |
-| `excerpt` | [x] | Relevant output excerpt proving the claim (even for failures -- show what was found instead of what was expected) |
-| `result` | [x] | `found`, `not_found`, `passed`, `failed`, `exists`, `not_exists`, `verified`, `analysis_complete` |
-
-### When Evidence Is Required
-
-| Agent Type | Minimum Evidence Entries | What to Provide Evidence For |
-|------------|------------------------|------------------------------|
-| **Finder** | 1 per finding | File existence, export patterns, hazards found. Each "found X at path Y" claim needs grep/read evidence showing X. |
-| **PlanDescriber** | 0 (plans are prescriptive) | N/A -- but decision provenance is recommended |
-| **Implementor** | 1 per changed file + 1 for build + 1 for lint | File creation (stat), exports (grep), build pass (build), lint pass (lint) |
-| **Fixer** | 1 per root cause + 1 for fix + 1 for build + 1 for lint | Evidence of the bug (read/grep), evidence of the fix (read/grep to show the change), build and lint verification |
-| **QA** | 1 per bug + 1 per smoke test + 1 per edge case category | Each bug needs reproduction command + output. Each test pass needs verification command. |
-| **Verifier** | 1 per checkpoint | Every individual checkpoint verdict must include the grep/stat/read output that proves it |
-| **Browser Tester** | 1 per test scenario | Screenshot paths, script execution output |
-| **Documentor** | 1 per documentation file changed | Verify the documentation was written correctly (read the file) |
-| **Integrator** | 1 per wiring change + 1 for build | Barrel file change verified (grep), DI registration verified (read), build pass |
-| **Integrator (Phase 1)** | 1 per file pair checked | Import resolution evidence for each cross-file check |
-
-### Evidence Validation Gate
-
-After every agent completes, the Orchestrator MUST run the Truthfulness Validator:
-
-```bash
-```
-
-Or for a full pipeline audit:
-```bash
-```
-
-If any evidence is refuted (claim does not match reality), the pipeline should:
-1. **Route back to the agent** for correction if it's a minor, fixable issue
-2. **Escalate to user** if the agent fabricated evidence (refuted claims suggest hallucination)
-
-### Evidence Scoring
-
-The Truthfulness Validator produces a score (0-100%) for each agent:
-- **>= 95%**: [x] Pass -- evidence is reliable
-- **70-94%**: ! Warning -- some evidence is missing or unverifiable
-- **< 70%**: [ ] Fail -- significant evidence issues, route back to agent or escalate
-
-## Hand-off Completeness Protocol (NEW)
-
-### Purpose
-Before dispatching any subagent, the Orchestrator MUST verify that the hand-off includes all required context. Incomplete hand-offs are the #1 source of agents producing wrong results.
-
-### Pre-Dispatch Check
-
-Before every agent dispatch, run the hand-off completeness checker:
-
-```bash
-ts-node skills/scripts/orchestration/check-handoff.ts --agent=<agent-name> --context="<handoff-text>"
-```
-
-The checker validates these fields for every agent:
-
-| Field | Mandatory | Description |
-|-------|-----------|-------------|
-| **contextSummary** | [x] | Summary of what was done in the previous step(s) |
-| **artifacts** | [x] | Relevant file paths, outputs, or data produced |
-| **clearObjective** | [x] | Exactly what the next agent should do (must contain an action verb) |
-| **constraints** | [x] | Any boundaries, rules, or restrictions (must contain "must not", "avoid", "only", etc.) |
-| **expectedOutput** | [x] | What the agent should return/report (must reference output format) |
-| **evidenceFromPriorAgent** | [x] | Citations and evidence from the prior agent's work |
-
-Plus agent-specific fields:
-
-| Agent | Mandatory Additional Fields |
-|-------|----------------------------|
-| **Implementor** | Plan manifest path, target files, definition of done (build/lint commands) |
-| **Verifier** | Plan manifest path, acceptance criteria |
-| **Fixer** | Deviation report (checkpoint failures), root cause information |
-| **QA** | Smoke test command, test scope |
-| **Integrator** | Parallel file list, wiring conventions |
-| **Documentor** | Changed files list, documentation types to update |
-| **Finder** | Research questions, codebase scope |
-| **PlanDescriber** | Brainstorm outcome (chosen option), existing codebase context |
-
-### Auto-Fill Protocol
-
-If the hand-off is missing a mandatory field, the Orchestrator MUST:
-1. Detect the missing field (from the checker's output)
-2. Auto-fill it from available context (agent-context.md, plan manifest, prior agent output)
-3. Re-run the checker to confirm completeness
-4. If auto-fill is impossible, ask the user for clarification
-
-## Pattern-Based Circuit Breaker (Enhanced)
-
-### Purpose
-The old circuit breaker tracked simple retry counts (build: 3, lint: 3, etc.). The enhanced version tracks **failure patterns** -- distinct signatures of what failed and why -- to make smarter escalation decisions. This prevents infinite Fixer->Verifier loops by detecting the pattern and routing directly to PlanDescriber.
-
-### Signature-Based Failure Tracking
-
-Each failure generates a SHA256-based signature:
-```
-signature = SHA256(gate + ":" + agent + ":" + classification + ":" + primaryCause)[:8]
-```
-
-Example:
-```yaml
-circuitBreaker:
-  patternSignatures:
-  - signature: "a1b2c3d4"
-   gate: "verifier"
-   agent: "fixer"
-   classification: "plan-omission"
-   primaryCause: "Plan did not specify duplicate email handling"
-   count: 2     # Incremented when same signature repeats
-   firstSeen: "2026-05-19T10:25:00Z"
-   lastSeen: "2026-05-19T10:35:00Z"
-```
-
-### Escalation Logic
-
-| Condition | Circuit State | Action |
-|-----------|--------------|--------|
-| Any single signature.count >= 3 | closed -> open | Same fix not working -- STOP cycling. Escalate to user. |
-| Same classification appears in >= 3 distinct signatures | closed -> half-open | Same TYPE of failure. Escalate to PlanDescriber for plan revision. |
-| Fixer->Verifier cycle repeats >= 3 times (detected from cyclePatternHistory) | closed -> half-open | Loop detected. Skip Fixer and go directly to PlanDescriber. |
-| >= 5 distinct signatures with mixed classifications | closed -> open | Multiple different failures. Flag for user review. |
-| After PlanDescriber revises the plan | open -> closed | Reset all counters and signatures. Fresh start. |
-
-### Cycle Pattern Detection
-
-The circuit breaker tracks agent dispatch sequences to detect loops:
-
-```yaml
-cyclePatternHistory:
-  - pattern: "fixer-verifier-loop"
-  occurrences: 2
-  lastOccurrence: "2026-05-19T10:35:00Z"
-  recommendedAction: "escalate-to-plandescriber"
-```
-
-Detection logic:
-1. After each agent completes, check if the last 2-3 steps form a repeating pattern
-2. Patterns: fixer->verifier->fixer, implementor->build->fixer->build, etc.
-3. If same pattern repeats >= 2 times -> record in cyclePatternHistory
-4. If any pattern reaches >= 3 occurrences -> trigger escalation
-
-### Integration with Pre-Flight
-
-The `pipeline-init.ts` script now initializes the pattern-based circuit breaker:
-```yaml
-circuitBreaker:
-  patternSignatures: []
-  escalationSignals:
-  sameSignatureThresholdReached: false
-  sameClassificationThresholdReached: false
-  totalDistinctSignatures: 0
-  totalClassificationInstances: {}
-  recommendedAction: "No failures yet"
-  escalationHistory: []
-  patternDetection:
-  cyclePatternHistory: []
-```
-
-## Parallel Dispatch Version Contracts (NEW)
-
-### Purpose
-When dispatching multiple Implementors in parallel, each creates files that may depend on types/interfaces from other files. Version contracts prevent integration issues by ensuring each file declares what versions of dependencies it expects, and the Integrator verifies they match (Phase 1).
-
-### Version Contract Format
-
-Each file created by a parallel Implementor includes an `@contract` comment at the top:
-
-```typescript
-// @contract version 1.0
-// @exports: UserService, CreateUserDto, UserResponse
-// @depends: types/user.types.ts@^1.0 (User, CreateUserDto)
-```
-
-When the Integrator runs Phase 1, it:
-1. Extracts all `@contract` comments from all new files
-2. Verifies that each `@depends` entry matches a corresponding `@exports` entry in another file
-3. Checks version compatibility (semver range matching)
-4. Reports any mismatches
-
-### Contract Format Specification
-
-```typescript
-// @contract <semver-version>
-// @exports: <comma-separated-export-names>
-// @depends: <file-path>@<semver-range> (<comma-separated-symbol-names>)
-// @depends: <file-path>@<semver-range> (<comma-separated-symbol-names>)
-```
-
-Rules:
-- `@contract` is the version of THIS file (what it exports)
-- `@depends` lists dependencies on OTHER files with expected version ranges
-- Each `@depends` includes the file path, version range (semver), and symbols needed
-- Multiple `@depends` lines are allowed
-- The contract block MUST be at the top of the file (first 10 lines)
-
-### Integrator Phase 1 Integration
-
-The Integrator now checks these contracts (Phase 1):
-
-```yaml
-# In Integrator output:
-contractVerification:
-  totalContracts: 3
-  matched: 3
-  mismatched: 0
-  warnings: []
-  details:
-  - file: "src/types/user.types.ts"
-   version: "1.0"
-   exports: ["User", "CreateUserDto", "UserResponse"]
-  - file: "src/services/user.service.ts"
-   version: "1.0"
-   depends:
-   - target: "src/types/user.types.ts"
-    expectedRange: "^1.0"
-    resolved: "1.0"
-    status: "matched"
-  - file: "src/controllers/user.controller.ts"
-   version: "1.0"
-   depends:
-   - target: "src/services/user.service.ts"
-    expectedRange: "^1.0"
-    resolved: "1.0"
-    status: "matched"
-```
-
-### When to Use
-
-| Dispatch Mode | Version Contracts Required? |
-|---------------|---------------------------|
-| Single Implementor | No (no merge needed) |
-| Parallel Implementors (independent files) | [x] Yes -- ensures cross-file type compatibility |
-| Parallel Implementors (with Integrator Phase 1) | [x] Yes -- Integrator Phase 1 checks contracts |
-| Sequential Implementors | No (files built on each other directly) |
-
-### Hard Rules
-- [ ] NEVER dispatch parallel Implementors without @contract annotations in all new files
-- [ ] NEVER skip Integrator Phase 1's contract verification when using parallel dispatch
-- [x] ALWAYS include @contract/@exports/@depends in every new file from parallel dispatch
-- [x] ALWAYS use semver ranges (@^1.0, @~1.0, @1.0.0) for dependency versions
-- [x] ALWAYS report contract mismatches as blocking issues (prevent proceeding to Build Gate)
-
-## Orchestration Workflow Update
-
-The full pipeline sequence now includes evidence, hand-off checking, and pattern-based circuit breaker:
-
-```
-PRE-FLIGHT:
-  Pipeline init -> Hand-off check pre-dispatch for every agent
-  v
-EVIDENCE CONTRACT:
-  Every agent -> Evidence in output -> Truthfulness validation
-  v
-HAND-OFF COMPLETENESS:
-  Before every dispatch -> check-handoff.ts -> auto-fill missing fields
-  v
-PATTERN-BASED CIRCUIT BREAKER:
-  Failure -> Generate signature -> Check escalation thresholds -> Route correctly
-  Detects fixer->verifier loops -> Routes to PlanDescriber instead
-  v
-PARALLEL DISPATCH:
-  @contract annotations -> Integrator Phase 1 verifies -> Block on mismatch
-```
-
-### Hand-off Checklist (Updated with Evidence)
-
-When passing work from one agent to the next, the Orchestrator MUST include:
-
-1. **Context Summary**: What was done in the previous step(s), with evidence citations
-2. **Artifacts**: Relevant file paths, outputs, or data produced
-3. **Previous Evidence**: Structured evidence from prior agent(s) with content hashes:
-  ```
-  Previous Evidence (from <agent>):
-   - Claim: <claim>
-   Source: <file>, Lines [start, end]
-   ContentHash: <sha256>
-   Method: grep/read/stat
-   Command: <exact command>
-   Excerpt: "<relevant output>"
-   Result: found/passed
-  ```
-4. **Clear Objective**: Exactly what the next agent should do
-5. **Constraints**: Any boundaries, rules, or restrictions
-6. **Expected Output**: What the agent should return/report (including evidence requirements)
-7. **Agent Output Format reminder**: "Return your results with the structured output contract (status, resultSummary, evidence, decisions, warnings, changedFiles, artifacts, buildPassed/lintPassed where applicable)"
-8. **Evidence Minimum**: "Provide at least <N> evidence entries: one per <claim-type>"
-9. **Evidence Requirements**: "Include evidence for every substantive claim with contentHash, line numbers, exact commands, and verbatim excerpts"
-10. **Run Hand-off Check**: Before dispatch, run `check-handoff.ts`
-11. **Visual Generation**: After the agent returns, generate the appropriate pipeline visualization
-
-### Example Hand-off with Evidence
-
-```
-Orchestrator to Implementor:
-"After brainstorming and planning, we've agreed on the user-profile feature.
-Plan manifest: plan-manifests/user-profile/v1-manifest.json
-Target files: src/services/user.ts, src/controllers/user.ts
-
-Prior evidence from Finder:
-- Evidence: User model exists at src/models/user.ts (line 5: interface User)
-- Evidence: Zod is already in the dependency tree (package.json: "zod": "^3.22.0")
-
-Your task:
-1. Create src/services/user.ts with UserService class (exports: createUser, getUser)
-2. Create src/controllers/user.ts with UserController (handlers for POST/GET)
-
-Constraints:
-- Must NOT modify src/models/user.ts (it already exists)
-- Must use Zod for input validation (not Joi -- it's not installed)
-
-Expected output:
-- Structured YAML with evidence for each file created, build pass, lint pass
-- Minimum 3 evidence entries: 2x fileExists (stat), 1x buildPass (build)
-
-Definition of Done:
-- Build passes: npm run build
-- Lint passes: npm run lint (or 'No linter configured')
-- Files exist with correct exports
-
+|---|---|---|
+| pipeline-init.ts | Pipeline init + pre-flight | `ts-node .../pipeline-init.ts --feature=...` |
+| pipeline-teardown.ts | Pipeline teardown + archive | `ts-node .../pipeline-teardown.ts --feature=...` |
+| validate-context.ts | Validate agent-context.md | `ts-node .../validate-context.ts --context=agent-context.md` |
+| validate-output-contract.ts | Validate agent output contract | `ts-node .../validate-output-contract.ts --pipeline` |
+| check-plan-contract.ts | Pre-implement contract validation | `ts-node .../check-plan-contract.ts --manifest=...` |
+| check-plan-adherence.ts | Post-implement adherence gate | `ts-node .../check-plan-adherence.ts --manifest=... --dir=./` |
+| plan-diff-report.ts | Plan vs implementation diff | `ts-node .../plan-diff-report.ts --manifest=...` |
+| validate-manifest-schema.ts | Validate manifest JSON structure | `ts-node .../validate-manifest-schema.ts --manifest=...` |
+| parallel-dispatch.ts | Generate parallel dispatch manifests | `ts-node .../parallel-dispatch.ts --manifest=...` |
+| shared-test-manifest.ts | Coordinated QA + Browser testing | `ts-node .../shared-test-manifest.ts --generate ...` |
+| pipeline-checkpoint.ts | Git checkpoint after each step | `ts-node .../pipeline-checkpoint.ts --pipeline-id=...` |
+| pipeline-replay.ts | Re-run from checkpoints | `ts-node .../pipeline-replay.ts --pipeline-id=...` |
+| audit-log.ts | Tamper-evident audit trail | `ts-node .../audit-log.ts init ...` |
+| agent-timeout.ts | Heartbeat-based timeout detection | `ts-node .../agent-timeout.ts watch ...` |
+| context-lock.ts | Race prevention lock | `ts-node .../context-lock.ts acquire ...` |
+| test-gate.ts | Automated test regression detection | `ts-node .../test-gate.ts` |
+| pipeline-gitleaks.ts | Automated gitleaks scanning | `ts-node .../pipeline-gitleaks.ts --workspace=...` |
+| check-agent-readiness.ts | Pre-flight agent verification | `ts-node .../check-agent-readiness.ts --agents=...` |
+| unified-pipeline-error-schema.ts | Error code lookup | `ts-node .../unified-pipeline-error-schema.ts --lookup=...` |
+| provenance-tracker.ts | Checkpoint lifecycle tracking | `ts-node .../provenance-tracker.ts --implement --manifest=...` |
+| check-handoff.ts | Hand-off completeness validation | `ts-node .../check-handoff.ts --agent=<name> --context="..."` |
+
+## Reference Files
+
+| File | Content |
+|---|---|
+| `references/pipeline-gates.md` | Build, Lint, Code Quality, Test, Security, Smoke, Coverage, Acceptance gates |
+| `references/pipeline-selection.md` | Pipeline types, presets, skill loading |
+| `references/agent-handoff.md` | Hand-off protocol, evidence format, fixer feedback loop |
+| `references/circuit-breaker.md` | Circuit breaker, audit trail, failure summary, error format |
+| `references/parallel-dispatch.md` | Parallel dispatch, merge verification, shared test manifest |
+| `references/error-taxonomy.md` | Unified error types, output contract validation |
+| `references/output-verification.md` | Structured output contracts, per-agent responsibilities |
+| `references/context-budgeting.md` | Progressive summarization, per-agent filtering, archival |
+| `references/smart-finder.md` | Hazard detection, knowledge graph, familiarity scoring |
+| `references/self-reviewing-implementor.md` | Pre-validation, self-review, scope guard |
+| `references/agent-context-lifecycle.md` | agent-context.md schema, lifecycle, stale detection |
+| `references/agent-context-schema.md` | Canonical schema (pre-existing) |
+| `references/agent-roles.md` | Agent roles reference (pre-existing) |
+| `references/output-schema.json` | Output JSON schema (pre-existing) |
+| `references/skill-conflict-resolution.md` | Skill loading conflict resolution (pre-existing) |
