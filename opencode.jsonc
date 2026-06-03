@@ -20,6 +20,12 @@
       "type": "local",
       "command": ["bunx", "-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
       "enabled": true
+    },
+    "github": {
+      "type": "remote",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": true,
+      "oauth": true
     }
   }
 }
