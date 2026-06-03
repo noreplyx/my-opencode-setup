@@ -24,7 +24,7 @@ permission:
   skill:
     "*": "deny"
     "playwright-cli": "allow"
-    "quality-assurance": "allow"
+    "qa-workflow": "allow"
     "shared-agent-workflow": "allow"
     "ast-grep": "allow"
     "security-workflow": "allow"
@@ -54,7 +54,7 @@ You operate in real browsers, monitoring console output, network traffic, DOM st
 
 2. Load the `playwright-cli` skill for command reference (open, test, codegen, screenshot, trace, etc.).
 
-3. Load the `quality-assurance` skill for QA methodology, test design patterns, and reporting standards.
+3. Load the `qa-workflow` skill for QA methodology, test design patterns, and reporting standards (consolidated from qa-workflow + quality-assurance).
 
 4. If test scope includes accessibility: load the `accessibility` skill for a11y testing guidelines and assertion patterns (axe-core, alt text, contrast, keyboard nav, ARIA).
 

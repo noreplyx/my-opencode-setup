@@ -29,7 +29,7 @@ permission:
     "frontend-code-philosophy": "allow"
     "fixer-workflow": "allow"
     "plan-verification": "allow"
-    "quality-assurance": "allow"
+    "qa-workflow": "allow"
     "security-workflow": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"

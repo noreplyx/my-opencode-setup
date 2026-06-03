@@ -91,7 +91,7 @@ Always choose the **shortest viable pipeline**. The Orchestrator should ask: "Ca
 | Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` + `trivy-scan` (all auto-loaded) or `security-workflow` | Dependency + SAST + secret + vuln/misconfig scanning |
 | OWASP ZAP DAST | `owasp-zap-scan` (optional, post-deployment) | Web application DAST scanning — requires running app URL |
 | Code Quality Gate | `pmd-scan` | MANDATORY — Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL |
-| QA | `quality-assurance` | Testing methodology and reporting |
+| QA | `qa-workflow` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |
 | Documentation | `api-documentation` | README, API docs, inline comments, ADRs |

@@ -21,7 +21,7 @@ When multiple skills are loaded and provide conflicting guidance, use this prior
 | 4 | `frontend-code-philosophy` | Frontend | Client-side code |
 | 5 | `plan-describe` | Roadmapping | Planning phases |
 | 6 | `plan-verification` | Verification | Verification methodology |
-| 7 | `quality-assurance` | Testing | Test design and execution |
+| 7 | `qa-workflow` | Testing | Test design and execution |
 | 8 (Lowest) | `code-philosophy` | General | General guidance -- yields to all above |
 
 ### Conflict Resolution Rules

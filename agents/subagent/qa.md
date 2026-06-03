@@ -26,7 +26,6 @@ permission:
     "accessibility": "allow"
     "ast-grep": "allow"
     "security-scan": "allow"
-    "quality-assurance": "allow"
     "qa-workflow": "allow"
     "security-workflow": "allow"
     "shared-agent-workflow": "allow"
@@ -43,12 +42,11 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 ## Mandatory Setup
 
 1. Load `shared-agent-workflow` for Read Context protocol and output contract
-2. Load `qa-workflow` for the full QA testing workflow (project detection, smoke tests, test discovery, coverage, security regression tests)
-3. Load `quality-assurance` for QA methodology
-4. Load `security-workflow` for:
+2. Load `qa-workflow` for the full QA testing workflow and methodology (unified skill, consolidated from qa-workflow + quality-assurance)
+3. Load `security-workflow` for:
    - **Section 3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
    - **Section 3 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
-5. Load `accessibility` if testing frontend components
+4. Load `accessibility` if testing frontend components
 
 ## Output Fields
 

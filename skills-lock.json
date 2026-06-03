@@ -31,13 +31,7 @@
                                            "skillPath":  "skills/code-philosophy/SKILL.md",
                                            "computedHash":  "a69037cc7bbcf928be279c94a487ce9886128220cccb5a4e735ee439dd6a8dc7"
                                        },
-                   "devops-cicd":  {
-                                       "source":  "local",
-                                       "sourceType":  "local",
-                                       "skillPath":  "skills/devops-cicd/SKILL.md",
-                                       "computedHash":  "512d948c79b0be6f27747fc118267c4b0e7432f3fc45f8af5194914bff3ae721"
-                                   },
-                   "documentor":  {
+"documentor":  {
                                       "source":  "local",
                                       "sourceType":  "local",
                                       "skillPath":  "skills/documentor/SKILL.md",
@@ -188,7 +182,7 @@
                                              "computedHash":  "be62d9263fc157d4d4fb72b78025057d0c46f76ee23ec6b768dfb6028e1fa607"
                                          },
                    "architecture-workflow":  {
-                                                 "computedHash":  "0000000000000000000000000000000000000000000000000000000000000000",
+                                                 "computedHash":  "a6d557636d21e33d4695331220371efda7813e4331f59eaa2e596580c9d9f477",
                                                  "source":  "local",
                                                  "sourceType":  "local",
                                                  "skillPath":  "skills/architecture-workflow/SKILL.md"
