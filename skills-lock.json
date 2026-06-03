@@ -186,6 +186,12 @@
                                              "sourceType":  "local",
                                              "skillPath":  "skills/verifier-workflow/SKILL.md",
                                              "computedHash":  "be62d9263fc157d4d4fb72b78025057d0c46f76ee23ec6b768dfb6028e1fa607"
-                                         }
+                                         },
+                   "architecture-workflow":  {
+                                                 "computedHash":  "0000000000000000000000000000000000000000000000000000000000000000",
+                                                 "source":  "local",
+                                                 "sourceType":  "local",
+                                                 "skillPath":  "skills/architecture-workflow/SKILL.md"
+                                             }
                }
 }
