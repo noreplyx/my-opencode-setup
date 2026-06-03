@@ -30,7 +30,7 @@ permission:
     "implementor-workflow": "allow"
     "playwright-cli": "allow"
     "pmd-scan": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
 reasoningEffort: "none"
@@ -56,7 +56,7 @@ NEVER ship code that cuts corners on error handling, input validation, or type s
 
 1. Load `shared-agent-workflow` for Read Context protocol, output contract, error taxonomy.
 2. Load `implementor-workflow` for the full detailed workflow (Bash Safety Rules, 8-step Workflow, Security Self-Review, Pre-Build Import Validation, Build & Lint, Permission Updates, Hard Rules).
-3. Load `security-workflow` for Section 1 (Security Self-Review Checklist) -- the canonical 17-item checklist.
+3. Load `security-scan` for §B.1 (Security Self-Review Checklist) -- the canonical 17-item checklist.
 4. Load `code-philosophy` (and backend/frontend variants as applicable) for code quality self-checks.
 
 ## Role-Specific Output Fields
@@ -100,3 +100,5 @@ The Implementor now follows a checkpoint-driven workflow:
 3. **Pre-Build Plan Adherence Gate** (Step 4.5) -- Verify all checkpoints before build
 
 See `skills/implementor-workflow/SKILL.md` for the full detailed workflow.
+
+

@@ -26,7 +26,7 @@ permission:
     "shared-agent-workflow": "allow"
     "plan-verification": "allow"
     "code-philosophy": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "security-scan": "allow"
 agentVersion: "2.1.0"
 lastModified: "2026-05-21"
@@ -42,7 +42,7 @@ You have `reasoningEffort: "high"` and run AUTOMATED diagnostic scripts before d
 
 1. Load the `shared-agent-workflow` skill for context reading and output contract
 2. Load the `plan-verification` skill to understand checkpoint scoring
-3. Load the `security-workflow` skill (Section 5 -- severity classification, Section 6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
+3. Load the `security-scan` skill (§B.5 -- severity classification, §B.6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
 
 ## Output Format
 
@@ -55,3 +55,5 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `rootCauseAnalysis` | Ranked root cause with evidence and fix recommendations |
 
 > Note: Detailed workflow instructions are loaded from workflow skill when available.
+
+

@@ -1,4 +1,4 @@
----
+﻿---
 name: verifier-workflow
 description: Workflow protocol for the Verifier subagent. Provides 7-pass verification methodology (structural, behavioral, acceptance criteria, security checkpoint, cross-cutting, plan drift, quality drift), evidence anchoring, security test coverage reconciliation, and structured output contract. Load this skill when dispatching the Verifier agent.
 ---
@@ -13,7 +13,7 @@ Load the `shared-agent-workflow` skill to apply the standardized Read Context pr
 
 Load the `plan-verification` skill for the primary verification methodology -- this is the canonical reference for all 7 verification passes, scoring rules, checkpoint format, evidence anchoring, and report templates.
 
-Load the `security-workflow` skill for:
+Load the `security-scan` skill for:
 - **Section 2** (Security Checkpoint Auto-Detection Table): Used during Pass 2b to independently detect security anti-patterns in modified files
 - **Section 3** (Security Regression Test Generation Table): Used to cross-reference QA's generated security tests against independently detected patterns
 
@@ -58,7 +58,7 @@ Execute `testCommand` from each acceptance-type checkpoint. Start the app if nee
 **Evidence**: Capture exit code + stdout/stderr of the test command.
 
 ### Pass 2b: Security Checkpoint Auto-Detection
-Using Section 2 of `security-workflow` skill, independently scan every modified/created file for 13 security anti-patterns (SQL injection, SSRF, prototype pollution, etc.). Report findings as `suggestedCheckpoints`.
+Using §B.2 of `security-scan` skill, independently scan every modified/created file for 13 security anti-patterns (SQL injection, SSRF, prototype pollution, etc.). Report findings as `suggestedCheckpoints`.
 
 **Evidence**: `grep` output for each security pattern; mark detected patterns by file and line.
 
@@ -166,7 +166,7 @@ artifacts: ["Verification report"]
 After Pass 2b, reconcile independently detected security patterns against QA's reported `securityTestCoverage`:
 
 1. Read QA's `securityTestCoverage` from `agent-context.md` (`agentOutputs.qa` or `agentHistory`)
-2. Independently detect security patterns using `security-workflow` Section 2
+2. Independently detect security patterns using `security-scan` §B.2
 3. Cross-reference: `patternsDetected = max(verifierPatterns, qaPatterns)`
 4. Calculate: `coverage = testsGenerated / patternsDetected ? 100`
 
@@ -194,7 +194,7 @@ The Verifier uses these standard error codes in its structured output:
 
 ## Hard Rules
 
-- [x] You MUST load `shared-agent-workflow`, `plan-verification`, `security-workflow`, and `code-philosophy` before starting
+- [x] You MUST load `shared-agent-workflow`, `plan-verification`, `security-scan`, and `code-philosophy` before starting
 - [x] You MUST process checkpoints in dependency order
 - [x] You MUST skip dependent checkpoints when their dependency fails
 - [x] You MUST run all 7 verification passes (no skipping)
@@ -205,3 +205,5 @@ The Verifier uses these standard error codes in its structured output:
 - [X] NEVER modify implementation code or plan manifests
 - [X] NEVER run destructive commands, install packages, or write to git
 - [X] NEVER skip evidence anchoring -- every claim must have a source
+
+

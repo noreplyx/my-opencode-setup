@@ -1,4 +1,4 @@
----
+﻿---
 name: finder-workflow
 description: Workflow protocol for the Finder subagent. Provides codebase exploration methodology, proactive hazard detection, exploration caching, structured evidence gathering, and output contract. Load this skill when dispatching the Finder agent.
 ---
@@ -12,7 +12,7 @@ The Finder Workflow skill defines the standardized codebase exploration methodol
 ## Mandatory Setup
 
 1. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
-2. Load the `security-workflow` skill (Section 2 -- Security Checkpoint Auto-Detection) for proactive security hazard detection during exploration.
+2. Load the `security-scan` skill (§B.2 -- Security Checkpoint Auto-Detection) for proactive security hazard detection during exploration.
 3. Load the `ast-grep` skill for AST-based structural code search when text-based grep is insufficient (e.g., finding specific function calls with certain argument patterns, nested code structures, or multi-line constructs).
 4. Load the `code-philosophy` skill (and `backend-code-philosophy` / `frontend-code-philosophy` if applicable) for code quality and architecture pattern awareness.
 
@@ -209,7 +209,7 @@ After completing the targeted search, perform a proactive scan for potential iss
 - Deprecated modules or apis (`@deprecated` JSDoc tags)
 - Unused imports or variables
 
-**Security Anti-Pattern Detection** (using Section 2 of `security-workflow`):
+**Security Anti-Pattern Detection** (using §B.2 of `security-scan`):
 - Hardcoded secrets: `grep('api[_-]?key|secret|password|token', 'src/')` -- but skip test files and mocks
 - Unsafe patterns: `eval(`, `innerHTML`, `dangerouslySetInnerHTML`
 - Missing input validation on user-facing endpoints
@@ -302,3 +302,4 @@ When reporting findings, include these fields per the `shared-agent-workflow` ou
 | `projectStructure` | High-level project structure map |
 | `totalFilesScanned` | Number of files examined |
 | `totalFindings` | Count of findings reported |
+

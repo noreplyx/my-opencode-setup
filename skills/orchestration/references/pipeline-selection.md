@@ -1,4 +1,4 @@
-# Pipeline Selection Reference
+﻿# Pipeline Selection Reference
 
 ## Pipeline Type Classification Table
 
@@ -88,9 +88,9 @@ Always choose the **shortest viable pipeline**. The Orchestrator should ask: "Ca
 | Plan Describer | `plan-describe` + `code-philosophy` | Comprehensive roadmap creation |
 | Implementation | `code-philosophy`, `backend-code-philosophy`, `frontend-code-philosophy` | Code quality adherence |
 | Implementation (UI) | `accessibility` | When building UI components |
-| Security Scan | `security-scan` + `semgrep-scan` + `gitleaks-scan` + `trivy-scan` (all auto-loaded) or `security-workflow` | Dependency + SAST + secret + vuln/misconfig scanning |
-| OWASP ZAP DAST | `owasp-zap-scan` (optional, post-deployment) | Web application DAST scanning — requires running app URL |
-| Code Quality Gate | `pmd-scan` | MANDATORY — Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL |
+| Security Scan | `security-scan` (unified — includes knowledge + tool execution) + `semgrep-scan` + `gitleaks-scan` + `trivy-scan` (all auto-loaded) | Dependency + SAST + secret + vuln/misconfig scanning |
+| OWASP ZAP DAST | `owasp-zap-scan` (optional, post-deployment) | Web application DAST scanning â€” requires running app URL |
+| Code Quality Gate | `pmd-scan` | MANDATORY â€” Static code analysis for Java/Apex/JS/Kotlin/Swift/PLSQL |
 | QA | `qa-workflow` | Testing methodology and reporting |
 | Verification | `plan-verification` | Plan compliance checking |
 | Browser Testing | `playwright-cli` | Browser automation |

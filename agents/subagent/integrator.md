@@ -25,7 +25,7 @@ permission:
     "*": "deny"
     "code-philosophy": "allow"
     "integrator": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "3.0.0"
@@ -45,7 +45,7 @@ Phase 1 replaces the former standalone Merge Coordinator step. Phase 1 runs firs
 ## Mandatory Setup
 
 1. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
-2. Load `security-workflow` Section 2 (Security patterns) to understand auth middleware, security header, and route protection patterns when wiring routes.
+2. Load `security-scan` §B.2 (Security patterns) to understand auth middleware, security header, and route protection patterns when wiring routes.
 3. Load the `integrator` skill for the complete wiring workflow and pattern-matching guidance.
 4. Load `code-philosophy` for code quality self-checks during wiring.
 
@@ -375,3 +375,4 @@ When the Orchestrator dispatches multiple Implementor instances in parallel, thi
 5. Run Phase 3 only after all Implementor instances complete and blocking is cleared.
 
 The Integrator is the merge coordinator. It handles the verification that was previously split across two agents, providing a single unified output to the Orchestrator.
+

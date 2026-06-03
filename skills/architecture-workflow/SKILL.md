@@ -1,4 +1,4 @@
----
+﻿---
 name: architecture-workflow
 description: Use this skill when the user asks for architecture design, system design, architectural decisions, high-level technical planning, C4 diagrams, trade-off analysis between architectural patterns (microservices vs monolith, etc.), or creating Architecture Decision Records (ADRs). Also use it when the user says "design the system", "architect this", "what architecture should I use", "plan the architecture", "ADR", "system architecture diagram", or any request about structuring a software system at the component/service/module level. Do NOT use this skill for simple implementation planning (use plan-describe instead) or for brainstorming (use plan-brainstorm instead).
 
@@ -12,7 +12,7 @@ compatibility:
     - grep
   skills:
     - code-philosophy (load for architecture alignment with codebase conventions)
-    - security-workflow (load Section 2 for security architecture checkpoints)
+    - security-scan (load §B.2 for security architecture checkpoints)
     - shared-agent-workflow (load for standardized output contract format)
 ---
 
@@ -197,7 +197,7 @@ graph TB
 
 ### Phase 6: Security Architecture Review
 
-Load `security-workflow` Section 2 and ensure every ADR addresses these security checkpoints:
+Load `security-scan` §B.2 and ensure every ADR addresses these security checkpoints:
 
 | Security Concern | ADR Must Address |
 |-----------------|------------------|
@@ -293,3 +293,4 @@ PlanDescriber creates implementation roadmap from architecture artifacts
     v
 [Standard pipeline: Implementor -> Build -> Lint -> Security -> QA -> Verifier]
 ```
+

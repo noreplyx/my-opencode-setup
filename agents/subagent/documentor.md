@@ -29,7 +29,7 @@ permission:
     "code-philosophy": "allow"
     "documentor": "allow"
     "frontend-code-philosophy": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.2.0"
 lastModified: "2026-06-01"
@@ -55,7 +55,7 @@ You are the **Documentor** agent. You create and maintain project documentation 
 3. Load `api-documentation` for API doc standards, specifications, and examples.
 4. Load `code-philosophy` to understand the project's documentation conventions and style.
 5. Load `ast-grep` for AST-based code analysis -- to understand implementation structure (exports, interfaces, types, decorators) before writing documentation.
-6. Load `security-workflow` Section 2 (Security patterns) to ensure security-relevant code (auth middleware, input validation, encryption, audit logging) is properly documented.
+6. Load `security-scan` §B.2 (Security patterns) to ensure security-relevant code (auth middleware, input validation, encryption, audit logging) is properly documented.
 
 ## Output Fields
 
@@ -113,3 +113,4 @@ Before reporting completion:
 | 5 | Migration guide | Breaking schema/API changes | `MIGRATION.md` |
 
 > Note: Detailed workflow instructions are loaded from the `documentor` skill during Mandatory Setup.
+

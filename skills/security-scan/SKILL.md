@@ -1,13 +1,13 @@
 ﻿---
 name: security-scan
 description: |
-  UNIFIED SECURITY SKILL (consolidated from security-scan + security-workflow)
+  CANONICAL SECURITY SKILL — unified (knowledge workflows + tool execution)
 
   Provides:
   - Tool Execution: semgrep SAST, gitleaks secrets, Trivy vuln/misconfig, OSV-Scanner deps,
-    anti-pattern scan, supply chain, SBOM, git history secrets (from security-scan)
+    anti-pattern scan, supply chain, SBOM, git history secrets
   - Knowledge & Workflows: self-review checklist, auto-detection tables, regression test generation,
-    severity classification, anti-pattern fixes, parallel scan, structured reporting (from security-workflow)
+    severity classification, anti-pattern fixes, parallel scan, structured reporting
 
   Auto-loaded by Orchestrator after Build+Lint+Code Quality gates pass.
   Subagents load relevant sections for their role.
@@ -15,7 +15,7 @@ description: |
 
 # UNIFIED SECURITY SKILL
 
-> **Consolidated from** `security-scan` (tool execution) and `security-workflow` (knowledge/workflows).
+> **Canonical skill** — unified from `security-scan` (tool execution) and the now-deprecated `security-workflow` (knowledge/workflows).
 > This is the canonical security skill. The old skills remain in place for backward compatibility.
 > All subagents MUST load this skill when performing security-sensitive work.
 
@@ -40,15 +40,15 @@ description: |
 | §A.12 | Anti-Pattern Scan | security-scan | Security Scanner |
 | §A.13 | Git History Secret Scan | security-scan | Security Scanner |
 | §A.14 | Auto-Remediation Suggestions | security-scan | Implementor, Fixer |
-| [§B](#part-b-knowledge--workflows) | Knowledge & Workflows | security-workflow | All Subagents |
-| §B.1 | Security Self-Review Checklist | security-workflow | Implementor, Fixer |
-| §B.2 | Security Auto-Detection Table | security-workflow | Verifier |
-| §B.3 | Security Regression Tests | security-workflow | QA, Verifier |
-| §B.4 | Security Test Coverage Gate | security-workflow | QA, Verifier, Orchestrator |
-| §B.5 | Severity Classification | security-workflow | All |
-| §B.6 | Anti-Pattern Fixes | security-workflow | Implementor, Fixer |
-| §B.7 | Structured Report Output | security-workflow | All (output contract) |
-| §B.8 | Agent Workflow Integration | security-workflow | All |
+| [§B](#part-b-knowledge--workflows) | Knowledge & Workflows | security-scan (unified) | All Subagents |
+| §B.1 | Security Self-Review Checklist | security-scan (unified) | Implementor, Fixer |
+| §B.2 | Security Auto-Detection Table | security-scan (unified) | Verifier |
+| §B.3 | Security Regression Tests | security-scan (unified) | QA, Verifier |
+| §B.4 | Security Test Coverage Gate | security-scan (unified) | QA, Verifier, Orchestrator |
+| §B.5 | Severity Classification | security-scan (unified) | All |
+| §B.6 | Anti-Pattern Fixes | security-scan (unified) | Implementor, Fixer |
+| §B.7 | Structured Report Output | security-scan (unified) | All (output contract) |
+| §B.8 | Agent Workflow Integration | security-scan (unified) | All |
 | [§C](#part-c-hard-rules) | Hard Rules | Both | All |
 | [§D](#part-d-related-skills) | Related Skills | Both | All |
 
@@ -56,7 +56,7 @@ description: |
 
 # Part A: Pipeline & Tool Execution
 
-> Origin: `security-scan` skill — automated tool execution, lazy-loading, parallel dispatch.
+> Origin: `security-scan` (unified) — automated tool execution, lazy-loading, parallel dispatch.
 
 ## A.1 Purpose
 
@@ -461,7 +461,7 @@ Remediation is **not** performed automatically by the scan — these suggestions
 
 # Part B: Knowledge & Workflows
 
-> Origin: `security-workflow` skill — self-review, auto-detection, regression tests, severity classification, anti-pattern fixes, reporting.
+> Origin: `security-scan` (unified) — self-review, auto-detection, regression tests, severity classification, anti-pattern fixes, reporting.
 
 ## B.1 Security Self-Review Checklist
 
@@ -757,7 +757,7 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 
 # Part C: Hard Rules
 
-> Combined rules from both `security-scan` and `security-workflow`.
+> Combined rules from the unified `security-scan` skill.
 
 ## Pipeline & Execution Rules
 
@@ -806,11 +806,15 @@ This format is consumed by the QA agent for test generation, the Verifier for sc
 | `gitleaks-scan` | Gitleaks secret scanning (lazy-loaded when git history exists) — `skills/gitleaks-scan/SKILL.md` |
 | `trivy-scan` | Trivy vulnerability & misconfiguration scanning (lazy-loaded when artifacts/lockfiles exist) — `skills/trivy-scan/SKILL.md` |
 | `osv-scanner` | OSV-Scanner dependency vulnerability scanning (lazy-loaded when lockfile exists) — `skills/osv-scanner/SKILL.md` |
-| `security-workflow` | **Legacy skill** — kept for backward compatibility; use this unified skill instead |
-| `security-scan` | **Legacy skill (this file)** — this is the canonical location |
+| `security-workflow` | **Deprecated** — redirect only at `skills/security-workflow/SKILL.md` |
+| `security-scan` (this file) | **Canonical unified skill** — the single source of truth for all security concerns |
 | `code-philosophy` | General coding standards — this skill provides the security-specific subset |
 | `backend-code-philosophy` | Backend-specific coding philosophy — security is part of that |
 | `frontend-code-philosophy` | Frontend-specific coding philosophy — includes XSS, CSP, DOM security |
 | `shared-agent-workflow` | Startup protocol and output contract — this skill is loaded AFTER `shared-agent-workflow` |
 | `validate-output-contract.ts` | Agent output contract validation (cross-checks claims vs disk) — `skills/scripts/orchestration/validate-output-contract.ts` |
 | `audit-log.ts` | Tamper-evident agent action audit log (hash chain) — `skills/scripts/orchestration/audit-log.ts` |
+
+
+
+

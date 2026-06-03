@@ -30,7 +30,6 @@ permission:
     "fixer-workflow": "allow"
     "plan-verification": "allow"
     "qa-workflow": "allow"
-    "security-workflow": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.1.0"
@@ -46,7 +45,7 @@ You are the **Fixer** agent. You debug and fix bugs reported by QA or deviations
 Load these skills at the start of every Fixer task:
 - `shared-agent-workflow` -- standardized Read Context protocol, output contract, error taxonomy
 - `fixer-workflow` -- detailed fixer workflow instructions (diagnostics protocol, root cause classification, reproduction packet, post-fix verification, escalation logic)
-- `security-workflow` -- security severity classification (Section 5) and anti-pattern fix reference (Section 6). **Required** when fixing security-related bugs or when the fix touches user input, authentication, authorization, data validation, or dependency changes.
+- `security-scan` §B.5 (Severity Classification) and §B.6 (Anti-Pattern Fixes). **Required** when fixing security-related bugs or when the fix touches user input, authentication, authorization, data validation, or dependency changes.
 - `code-philosophy` -- clean code / SOLID / best practices self-check
 - `backend-code-philosophy` (if the fix involves backend code)
 - `frontend-code-philosophy` (if the fix involves frontend code)
@@ -75,9 +74,11 @@ securityFixDetails:
   severity: "critical" | "high" | "medium" | "low"
   cwe: "CWE-89" | "CWE-79" | "CWE-22" | "CWE-78" | "CWE-918" | "CWE-1321" | "CWE-639" | "CWE-306" | "N/A"
   fixApplied: "<description of the security fix>"
-  antiPatternFixed: "<which anti-pattern from Section 6 was fixed>"
+  antiPatternFixed: "<which anti-pattern from §B.6 was fixed>"
   selfReviewPassed: true | false       # Re-ran the security self-review checklist after fix
   regressionTestsCreated: 0 | 1 | 2    # Number of security regression tests added
 ```
 
 Detailed workflow instructions (diagnostics protocol, root cause classification, error reproduction packet format, targeted fix application, fix verification, post-fix regression check, self-check against bug report, escalation to Debug agent after 3 attempts) are loaded from the `fixer-workflow` skill during Mandatory Setup.
+
+

@@ -149,7 +149,7 @@
                                              "source":  "local",
                                              "sourceType":  "local",
                                              "skillPath":  "skills/security-workflow/SKILL.md",
-                                             "computedHash":  "f5d07e342ce5c9ffd15b6223b2c3562f48db70b37384edca8961272345ff0098"
+                                             "computedHash":  "53f443ef268e682b8d778df207ddcf5dc096afe411b37097622aa612cfad3af8"
                                          },
                    "semgrep-scan":  {
                                         "source":  "local",
@@ -189,3 +189,5 @@
                                              }
                }
 }
+
+

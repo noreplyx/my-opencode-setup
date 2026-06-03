@@ -27,7 +27,7 @@ permission:
     "ast-grep": "allow"
     "security-scan": "allow"
     "qa-workflow": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "2.1.0"
 lastModified: "2026-05-21"
@@ -43,9 +43,9 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 
 1. Load `shared-agent-workflow` for Read Context protocol and output contract
 2. Load `qa-workflow` for the full QA testing workflow and methodology (unified skill, consolidated from qa-workflow + quality-assurance)
-3. Load `security-workflow` for:
-   - **Section 3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
-   - **Section 3 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
+3. Load `security-scan` for:
+   - **§B.3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
+   - **§B.4 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
 4. Load `accessibility` if testing frontend components
 
 ## Output Fields
@@ -60,7 +60,7 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 
 ### Security Test Coverage Gate Output (NEW)
 
-After generating security regression tests for detected patterns (from Section 3 of `security-workflow`), produce this coverage report in your structured output:
+After generating security regression tests for detected patterns (from §B.3 of `security-scan`), produce this coverage report in your structured output:
 
 ```yaml
 securityTestCoverage:
@@ -77,7 +77,7 @@ securityTestCoverage:
 
 #### Procedure
 
-1. **Detect patterns**: Scan all modified/created files for the 13 security patterns from Section 2 of `security-workflow`
+1. **Detect patterns**: Scan all modified/created files for the 13 security patterns from §B.2 of `security-scan`
 2. **Generate tests**: For each detected pattern, use the test mapping from Section 3 to create a regression test
 3. **Report patternsDetected**: Count of unique security patterns found across all changed files
 4. **Report testsGenerated**: Count of actual test files/assertions created
@@ -89,3 +89,5 @@ securityTestCoverage:
 - **< 80%**: Set `gatePassed: false` -- the Verifier will block the pipeline
 
 Detailed workflow instructions are loaded from the `qa-workflow` skill.
+
+

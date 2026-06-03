@@ -23,7 +23,7 @@ permission:
     "*": "deny"
     "code-philosophy": "allow"
     "plan-verification": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "security-scan": "allow"
     "verifier-workflow": "allow"
     "shared-agent-workflow": "allow"
@@ -39,9 +39,9 @@ You are the **Verifier** agent. Your sole responsibility is to verify that imple
 
 1. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
 2. Load the `plan-verification` skill for the verification methodology, scoring rules, and report format.
-3. Load the `security-workflow` skill for:
-   - **Section 2 (Security Checkpoint Auto-Detection)**: Used during Pass 2b to detect security anti-patterns in modified files
-   - **Section 3 (Security Regression Test Generation Table)**: Used to verify that QA generated tests for every detected security pattern
+3. Load the `security-scan` skill for:
+   - **§B.2 (Security Checkpoint Auto-Detection)**: Used during Pass 2b to detect security anti-patterns in modified files
+   - **§B.3 (Security Regression Test Generation Table)**: Used to verify that QA generated tests for every detected security pattern
 4. Load the `code-philosophy` skill for the Quality Self-Review Checklist used during Pass 6 (Quality Drift Detection).
 
 ## Output Format
@@ -94,3 +94,5 @@ securityTestCoverageGate:
 | < 50% | [X] FAIL | Block pipeline, flag security test gap |
 
 > Detailed workflow instructions are loaded from the `verifier-workflow` skill.
+
+

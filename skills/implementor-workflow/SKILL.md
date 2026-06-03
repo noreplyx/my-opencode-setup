@@ -1,4 +1,4 @@
----
+﻿---
 name: implementor-workflow
 description: Workflow protocol for the Implementor subagent. Provides step-by-step implementation instructions, bash safety rules, security self-review checklist, pre-build import validation, and structured output contract. Load this skill when dispatching the Implementor agent.
 ---
@@ -292,7 +292,7 @@ Include `checkpointProgress` in your structured output (see Output Format below)
 
 ### Step 3 -- Security Self-Review (MANDATORY)
 
-After writing all files, run the Security Self-Review checklist (load `security-workflow` Section 1 -- the canonical 17-item checklist) before proceeding to Quality Self-Review.
+After writing all files, run the Security Self-Review checklist (load `security-scan` §B.1 -- the canonical 17-item checklist) before proceeding to Quality Self-Review.
 
 ### Step 3a -- Quality Self-Review (MANDATORY)
 
@@ -383,7 +383,7 @@ Report back to the Orchestrator with structured output at the top of your messag
 
 ## Security Self-Review Checklist (MANDATORY)
 
-> **Note**: This checklist is the canonical reference duplicated here for convenience. The authoritative version lives in `security-workflow` Section 1. Run `security-workflow` skill for the most up-to-date checklist, scoring rules, and output format.
+> **Note**: This checklist is the canonical reference duplicated here for convenience. The authoritative version lives in `security-scan` §B.1. Run `security-scan` skill for the most up-to-date checklist, scoring rules, and output format.
 
 After completing the self-review pass and before reporting, run a mandatory security self-review against every file you created or modified. Answer each of these questions for each file:
 

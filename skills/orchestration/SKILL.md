@@ -20,7 +20,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Finder Workflow** | `skills/finder-workflow/SKILL.md` | Decoupled workflow for Finder — exploration methodology, hazard detection, evidence gathering |
 | **QA Workflow** | `skills/qa-workflow/SKILL.md` | Decoupled workflow for QA |
 | **Verifier Workflow** | `skills/verifier-workflow/SKILL.md` | Decoupled workflow for Verifier |
-| **Security Workflow** | `skills/security-workflow/SKILL.md` | Shared security patterns for all agents |
+| **Security Scan (Unified)** | `skills/security-scan/SKILL.md` | Unified security: self-review, auto-detection, regression tests, severity, anti-pattern fixes, tool execution (SAST, secrets, deps, supply chain) |
 | **Semgrep SAST Scan** | skills/semgrep-scan/SKILL.md | Auto-loaded SAST analysis (no user trigger needed) |
 | **Output Schema v2** | `references/output-schema.json` | Adds sources, pipelineError, rollback, checkpointResults |
 | **Plan Manifest Generator** | `plan-manifest-generator.ts` | Structured plan-manifest.json with acceptance criteria |

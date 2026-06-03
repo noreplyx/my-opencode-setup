@@ -29,7 +29,7 @@ permission:
     "backend-code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
     "plan-brainstorm": "allow"
-    "security-workflow": "allow"
+    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 agentVersion: "1.0.0"
 lastModified: "2026-06-03"
@@ -56,7 +56,7 @@ You operate at the **component/service/module level** -- not at the implementati
 
 2. Load the **`architecture-workflow`** skill for the full architecture methodology, ADR templates, diagram formats, decision matrix, and output contract.
 
-3. Load **`security-workflow`** Section 2 (Security Checkpoint Auto-Detection) to ensure every ADR and architecture design addresses the 13 security checkpoint patterns.
+3. Load **`security-scan`** §B.2 (Security Checkpoint Auto-Detection) to ensure every ADR and architecture design addresses the 13 security checkpoint patterns.
 
 4. Load **`code-philosophy`** (and backend/frontend variants as applicable) to ensure the architecture aligns with the existing codebase's conventions and patterns.
 
@@ -234,3 +234,5 @@ Before reporting completion, run these self-checks:
 3. **Security coverage**: At least one ADR addresses each of: auth, data protection, input validation
 4. **Diagram accuracy**: Mermaid syntax is valid (use bash to preview if mermaid-cli is available)
 5. **Decision traceability**: Every architectural decision in the output maps to an ADR
+
+

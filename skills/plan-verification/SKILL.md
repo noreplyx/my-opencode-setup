@@ -1,6 +1,6 @@
----
+﻿---
 name: plan-verification
-description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds (structural, behavioral, acceptance criteria, security test coverage cross-check), a compliance scoring methodology, a standard report format, and detailed per-checkpoint results. Requires `security-workflow` for Pass 2.6 (Security Test Coverage Cross-Check).
+description: Use this skill to verify that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. It provides verification kinds (structural, behavioral, acceptance criteria, security test coverage cross-check), a compliance scoring methodology, a standard report format, and detailed per-checkpoint results. Requires `security-scan` §B.2-§B.4 for Pass 2.6 (Security Test Coverage Cross-Check).
 ---
 
 # Plan Verification Skill
@@ -132,7 +132,7 @@ During both structural and behavioral passes, perform cross-file checks to ensur
 After acceptance criteria verification (or after Pass 2 if no acceptance criteria exist), perform a security test coverage reconciliation:
 
 1. **Read QA output**: Extract `securityTestCoverage` from the QA agent's structured output (in agent-context.md or the Orchestrator's hand-off)
-2. **Run Security Checkpoint Auto-Detection**: Use Section 2 of `security-workflow` skill to scan all modified/created files for security patterns
+2. **Run Security Checkpoint Auto-Detection**: Use §B.2 of `security-scan` skill to scan all modified/created files for security patterns
 3. **Cross-reference**: Compare your detected patterns against QA's `securityTestCoverage.patternsDetected` and `securityTestCoverage.testsGenerated`
 4. **Calculate independent coverage**: Run your own detection and compare
 5. **Report discrepancies**: If you find security patterns that QA did not test, flag them
@@ -609,7 +609,7 @@ Add to the Verifier's role-specific output fields table in the agent config:
 ### Hard Rules Update (Security Test Coverage)
 
 - [x] ALWAYS run Pass 2.6 (Security Test Coverage Cross-Check) after Pass 2.5
-- [x] ALWAYS load `security-workflow` skill for Section 2 (Security Checkpoint Auto-Detection)
+- [x] ALWAYS load `security-scan` skill for §B.2 (Security Checkpoint Auto-Detection)
 - [x] ALWAYS report `securityTestCoverageGate` in structured output
 - [X] NEVER skip the security test coverage cross-check -- this gate prevents unchecked security patterns from reaching production
 - [X] NEVER accept QA's test count as the sole truth -- independently verify by running your own pattern detection
@@ -658,3 +658,4 @@ artifacts:
   - "Verification report"
 ---
 ```
+
