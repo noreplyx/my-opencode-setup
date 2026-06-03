@@ -6,6 +6,8 @@ reasoningEffort: 0.3
 textVerbosity: "medium"
 tools:
   searxng: true
+  clickup: true
+  github: true
   write: false
   edit: false
   bash: false
