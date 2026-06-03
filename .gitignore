@@ -1,3 +1,22 @@
-# Gitleaks eval generated artifacts - auto-generated scan outputs, not source code
+# Temporary / debug files
+tmp_*
+*.bak
+*.pyc
+__pycache__/
+
+# Pipeline runtime artifacts
+.opencode/pipeline-logs/
+.opencode/audit/
+.opencode/dispatch/
+agent-context.md
+
+# Evaluation generated artifacts
 skills/gitleaks-scan-workspace/
+skills/**/evals/**/outputs/
+
+# Dependencies
 node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
