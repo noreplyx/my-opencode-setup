@@ -28,10 +28,11 @@ permission:
     "plan-describe": "allow"
     "code-philosophy": "allow"
     "frontend-code-philosophy": "allow"
+    "qa-workflow": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
-agentVersion: "2.1.0"
-lastModified: "2026-05-21"
+agentVersion: "2.2.0"
+lastModified: "2026-06-05"
 ---
 
 # Plan Describer Agent

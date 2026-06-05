@@ -10,7 +10,7 @@ tools:
   glob: true
   grep: true
   skill: true
-  task: true
+  task: false
   lsp: true
   question: false
   webfetch: false
@@ -19,7 +19,6 @@ tools:
 permission:
   task:
     "*": "deny"
-    "subagent/browser-tester": "allow"
   skill:
     "*": "deny"
     "accessibility": "allow"
@@ -31,12 +30,11 @@ permission:
     "playwright-cli": "allow"
     "pmd-scan": "allow"
     "security-scan": "allow"
-    "security-scan": "allow"
     "shared-agent-workflow": "allow"
 reasoningEffort: "none"
 textVerbosity: "low"
-agentVersion: "2.1.0"
-lastModified: "2026-05-21"
+agentVersion: "2.2.0"
+lastModified: "2026-06-05"
 ---
 
 ## Role

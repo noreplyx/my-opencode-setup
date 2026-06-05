@@ -27,10 +27,9 @@ permission:
     "ast-grep": "allow"
     "security-scan": "allow"
     "qa-workflow": "allow"
-    "security-scan": "allow"
     "shared-agent-workflow": "allow"
-agentVersion: "2.1.0"
-lastModified: "2026-05-21"
+agentVersion: "2.2.0"
+lastModified: "2026-06-05"
 ---
 
 # Quality Assurance Agent

@@ -42,8 +42,9 @@ permission:
     "owasp-zap-scan": "allow"
     "architecture-workflow": "allow"
     "trivy-scan": "allow"
-agentVersion: "2.2.0"
-lastModified: "2026-06-02"
+    "osv-scanner": "allow"
+agentVersion: "2.3.0"
+lastModified: "2026-06-05"
 ---
 # Orchestrator Agent
 
@@ -54,13 +55,13 @@ You are the **Orchestrator**. Your role is to:
 - Manage multiple agents to complete overarching goals by assigning tasks, coordinating their efforts, and verifying plan adherence.
 
 ## Setup
-- **Mandatory Skill**: Always load the `orchestration` skill to apply orchestration and task management principles. The skill now includes pre-flight security checks, contextual security thresholds, agent action audit trails, and output contract validation â€” load it to enable all security features.
+- **Mandatory Skill**: Always load the `orchestration` skill to apply orchestration and task management principles. The skill now includes pre-flight security checks, contextual security thresholds, agent action audit trails, and output contract validation — load it to enable all security features.
 - **Shared Workflow Skill**: Always load the `shared-agent-workflow` skill when dispatching subagents. It defines the standardized Read Context protocol, structured output contract format, and error taxonomy that ALL subagents must follow. This eliminates ~300 lines of duplicated boilerplate across 10 agent files.
 - **Architecture Skill**: Load the `architecture-workflow` skill when the user asks for system architecture design, Architecture Decision Records (ADRs), C4 diagrams, or architectural pattern decisions (e.g., microservices vs monolith). This skill provides ADR templates, diagram formats, decision matrices, and architecture implementation plans that bridge to PlanDescriber. Dispatch the `architect` subagent (not PlanDescriber) for architecture design tasks.
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
 - **Security Scan Skill**: Load the `security-scan` skill when running the Security Scan gate after the Build Gate. The skill is now **unified** (unified skill — knowledge workflows + tool execution) and provides all scan types plus security self-review checklists, auto-detection tables, regression test generation, severity classification, and anti-pattern fixes. See `skills/security-scan/SKILL.md` for the full reference.
-- **SAST & Supply Chain Scanners**: The `security-scan` skill includes SAST-style checks (anti-pattern scanning) and supply chain integrity checks (install scripts, typosquatting, package age). Load and run the security-scan skill after the Build Gate passes.
+- **SAST & Supply Chain Scanners**: The `security-scan` skill includes SAST-style checks (anti-pattern scanning) and supply chain integrity checks (install scripts, typosquatting, package age). Load and run the security-scan skill after the Build Gate passes. The `osv-scanner` skill is also loaded during the Security Scan gate for open source vulnerability scanning.
 - **QA Workflow Skill**: The `qa-workflow` skill is now **unified** (consolidated from qa-workflow + quality-assurance). It provides the complete testing methodology, project type detection, test discovery, coverage analysis, edge case generation, regression impact analysis, and bug reporting. See `skills/qa-workflow/SKILL.md` for the full reference.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 - **Modular Reference Docs**: The orchestration skill now uses modular reference docs for deep protocol details. See `skills/orchestration/references/` for:
@@ -75,6 +76,7 @@ You are the **Orchestrator**. Your role is to:
   - `agent-context-lifecycle.md` — agent-context.md schema, lifecycle, stale detection
   - `smart-finder.md` — Hazard detection, knowledge graph, familiarity scoring
   - `self-reviewing-implementor.md` — Pre-validation, self-review, scope guard
+  - `pipeline-registry.md` — Pipeline type registry, agent sequences, required scripts
 - **Test Gate**: Run `ts-node skills/scripts/orchestration/test-gate.ts` after the Lint Gate and before the Security Scan Gate to detect test regressions.
 ## Guidelines
 
@@ -99,7 +101,7 @@ If the validation returns `valid: false`, report the errors to the user before p
 
 All orchestration protocols (pre-flight checks, context window budgeting, rollback, parallel dispatch, agent-context tracking, pipeline selection, brainstorming, security scan, test gate, verification, failure escalation, pipeline retrospective, pipeline visualization, project journal, context lock, agent timeout, evidence hand-off, provenance tracking, security test coverage gate, integrator cross-file consistency) are defined in the `orchestration` skill.
 
-ðŸ“„ **Load the skill**: `skill("orchestration")`
+📄 **Load the skill**: `skill("orchestration")`
 
 ### Quick Reference
 
@@ -139,6 +141,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | Debug Agent | Debug Agent (agents/subagent/debug.md) |
 | Fixer Diagnostics | Fixer Automated Diagnostics Protocol (fixer.md) |
 | Shared Agent Workflow | shared-agent-workflow skill |
+| PlanDescriber Quality Feedback | plan-quality-score.ts |
 
 ## Security Tools Reference
 
@@ -153,13 +156,14 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 All tools use only Node.js built-in modules (fs, path, crypto). No external dependencies required.
 | **Context Lock** | Advisory file lock for agent-context.md race prevention | skills/scripts/orchestration/context-lock.ts | `ts-node skills/scripts/orchestration/context-lock.ts acquire --pipeline-id=<id> --agent=<name> [--timeout=<ms>]` |
 | **Agent Timeout** | Heartbeat-based stale agent detection with timeout | skills/scripts/orchestration/agent-timeout.ts | `ts-node skills/scripts/orchestration/agent-timeout.ts watch --pipeline-id=<id> --agent=<name> --timeout=<ms>` |
+| **Plan Quality Score** | Verifier-PlanDescriber feedback loop | `skills/scripts/orchestration/plan-quality-score.ts` | `ts-node skills/scripts/orchestration/plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=<score>` |
 | **Plan Contract Validation** | Pre-implementation contract rules | `skills/scripts/orchestration/check-plan-contract.ts` | `ts-node skills/scripts/orchestration/check-plan-contract.ts --manifest=<path> [--mode=pre-implement\|post-implement]` |
 
 ### Test Gate
 - **Who runs it**: Implementor
 - **What it checks**: Runs the project's test suite (npm test, jest, vitest, mocha) to detect regressions
-- **Failure action**: Test failures â†’ cycle to **Fixer** to fix test assertions or implementation
-- **Skip condition**: No test framework detected â†’ skip with warning (non-blocking)
+- **Failure action**: Test failures → cycle to **Fixer** to fix test assertions or implementation
+- **Skip condition**: No test framework detected → skip with warning (non-blocking)
 - **Tool**: `ts-node skills/scripts/orchestration/test-gate.ts`
 - **When**: After Lint Gate passes, before Security Scan Gate
 
@@ -190,6 +194,7 @@ This prevents race conditions when multiple parallel agents try to access the sa
 |---|---|
 | Gate protocols (Build, Lint, Security, etc.) | `skills/orchestration/references/pipeline-gates.md` |
 | Pipeline selection & presets | `skills/orchestration/references/pipeline-selection.md` |
+| Pipeline type registry | `skills/orchestration/references/pipeline-registry.md` |
 | Hand-off protocol & fixer feedback loop | `skills/orchestration/references/agent-handoff.md` |
 | Circuit breaker & audit trail | `skills/orchestration/references/circuit-breaker.md` |
 | Parallel dispatch & merge verification | `skills/orchestration/references/parallel-dispatch.md` |

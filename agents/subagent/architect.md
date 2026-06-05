@@ -12,7 +12,7 @@ tools:
   glob: true
   grep: true
   skill: true
-  task: true
+  task: false
   lsp: true
   question: true
   webfetch: false
@@ -21,7 +21,6 @@ tools:
 permission:
   task:
     "*": "deny"
-    "subagent/finder": "allow"
   skill:
     "*": "deny"
     "architecture-workflow": "allow"
@@ -31,8 +30,8 @@ permission:
     "plan-brainstorm": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
-agentVersion: "1.0.0"
-lastModified: "2026-06-03"
+agentVersion: "1.1.0"
+lastModified: "2026-06-05"
 ---
 
 # Architect Agent
