@@ -1,6 +1,24 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to the OpenCode AI Agent System are documented in this file.
+
+## [2.4.0] - 2026-06-05
+
+### Added
+- **Mandatory Gates Policy**: PlanDescriber, Security Scan Gate, and Verifier Gate are now mandatory for EVERY pipeline that creates or modifies code
+- **Pipeline Type Quick Selection table** (`README.md`, `orchestrator.md`): Quick-reference table mapping task types to pipelines with gate enforcement
+- **Security-hardened pipeline sequences** in `pipeline-registry.md`: Fixer-only and trivial pipelines now enforce Security Scan + Verifier gates
+- **Parallel pipeline security**: Both branches of parallel pipelines now independently run Security Scan + Verifier before merge
+
+### Changed
+- **pipeline-registry.md**: Added Mandatory Gates Policy section, updated all pipeline sequences to enforce PlanDescriber + Security Scan + Verifier
+- **orchestrator.md**: Added Mandatory Gates Policy section with enforcement rules
+- **README.md**: Replaced "Skip Shortcuts" with comprehensive Pipeline Type Quick Selection table showing gate enforcement per pipeline type
+
+### Security
+- Hardened fixer-only pipeline: now runs Security Scan + Verifier
+- Hardened trivial pipeline: now runs PlanDescriber + Security Scan + Verifier (minimum)
+- Parallel pipelines now enforce Security Scan + Verifier on each branch independently
 
 ## [2.3.0] - 2026-06-05
 
@@ -35,3 +53,4 @@ All notable changes to the OpenCode AI Agent System are documented in this file.
 ### Security
 - OSV-Scanner now auto-loaded during Security Scan gate for open source vulnerability scanning
 - Pre-flight security checks include lockfile integrity and npm audit signatures
+

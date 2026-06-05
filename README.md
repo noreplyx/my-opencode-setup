@@ -62,14 +62,22 @@ The **Fixer** agent is called when QA discovers bugs or Verifier finds deviation
 
 **Escalation**: If the same issue persists after 3 Fixer attempts, the Orchestrator escalates to PlanDescriber for roadmap revision.
 
-### Skip Shortcuts
+### Pipeline Type Quick Selection
 
-- **Simple/familiar tasks**: Skip Finder, go directly to PlanDescriber -> Implementor -> Security Scan -> QA
-- **Exploratory/research tasks**: Use only Finder, report findings directly
-- **Bug fixes (known root cause)**: Skip PlanDescriber, go directly to Fixer -> QA -> Verifier
-- **Trivial config changes**: Skip all gates -- just delegate to Implementor
-- **UI/website testing**: Use Browser Tester to explore, find bugs, and verify UI implementations
-- **Documentation updates**: Run Documentor after any pipeline that created/modified code
+| Task Type | Pipeline | PlanDescriber | Security Scan | Verifier | Can Skip |
+|-----------|----------|:---:|:---:|:---:|----------|
+| **New feature** | full | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | (none) |
+| **Simple/familiar** | quick | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder |
+| **Bug fix (known root cause)** | fixer-only | ✅ plan exists | ✅ MANDATORY | ✅ MANDATORY | Finder, PlanDescriber |
+| **Trivial config change** | trivial | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder, Build, Lint, Test, QA |
+| **Test-driven feature** | tdd | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder |
+| **Large feature (split)** | parallel | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder (optional) |
+| **UI/website testing** | browser-test | ❌ no code | ❌ no code | ❌ no code | All |
+| **Exploratory/research** | exploratory | ❌ no code | ❌ no code | ❌ no code | All except Finder |
+| **Documentation update** | documentation | ❌ no code | ❌ no code | ❌ no code | All except Documentor |
+| **Architecture design** | architecture | ❌ no code | ❌ no code | ❌ no code | All except Architect |
+
+> **Hard rule**: PlanDescriber, Security Scan Gate, and Verifier Gate are **mandatory** for ANY pipeline that creates or modifies code. The Orchestrator MUST NOT skip them. Pipelines that produce zero code changes (exploratory, documentation, architecture, browser-test) are exempt.
 
 ### Pre-Flight Check
 

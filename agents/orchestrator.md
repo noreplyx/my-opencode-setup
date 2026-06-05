@@ -167,7 +167,32 @@ All tools use only Node.js built-in modules (fs, path, crypto). No external depe
 - **Tool**: `ts-node skills/scripts/orchestration/test-gate.ts`
 - **When**: After Lint Gate passes, before Security Scan Gate
 
+### Mandatory Gates Policy
 
+The following three gates are **MANDATORY for every pipeline that creates or modifies code**:
+
+| Gate | Why Mandatory | Exception |
+|------|---------------|-----------|
+| **PlanDescriber** | Every code change must follow a structured plan manifest with verifiable checkpoints | Fixer-only (plan already exists); exploratory/documentation/architecture (no code written) |
+| **Security Scan Gate** | Every code change must be scanned for vulnerabilities, secrets, and anti-patterns | Exploratory/documentation/architecture (no functional code) |
+| **Verifier Gate** | Every implementation must be verified against its plan manifest for compliance | Exploratory/documentation/architecture (no code to verify) |
+
+**Enforcement rules:**
+1. **Never skip PlanDescriber** if the task involves creating or modifying code
+2. **Never skip the Security Scan gate** after any code change
+3. **Never skip the Verifier gate** after any implementation step
+4. If a pipeline type historically skipped these gates (fixer-only, trivial), the Orchestrator adds them back
+5. These gates apply to **both primary and parallel pipeline branches**
+6. The Verifier output is recorded via `plan-quality-score.ts` to feed back into PlanDescriber quality tracking
+
+See `skills/orchestration/references/pipeline-registry.md` for per-pipeline-type gate enforcement details.
+
+### PlanDescriber Quality Feedback Loop
+After Verifier completes, run the plan quality score check:
+```bash
+ts-node skills/scripts/orchestration/plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=<score> --plan-omissions=<count>
+```
+If PlanDescriber's quality score drops below 70% (queried via `--query-plan-describer`), the Orchestrator escalates to the user for plan revision rather than cycling back to PlanDescriber automatically. This prevents infinite loops where PlanDescriber produces the same low-quality plan.
 
 ### Agent Timeout Gate
 After dispatching a subagent via the task tool, set a timeout watch:

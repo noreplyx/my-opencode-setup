@@ -2,19 +2,36 @@
 
 This document is the canonical index of all pipeline types, their agent sequences, required scripts, and expected outputs.
 
+## Mandatory Gates Policy
+
+The following three gates are **MANDATORY for every pipeline that creates or modifies code**:
+
+| Gate | Why Mandatory | Exception |
+|------|---------------|-----------|
+| **PlanDescriber** | Every code change must follow a structured plan manifest with verifiable checkpoints | Fixer-only (plan already exists), exploratory, documentation, architecture pipelines |
+| **Security Scan Gate** | Every code change must be scanned for vulnerabilities, secrets, and anti-patterns | Exploratory, documentation, architecture pipelines (no functional code) |
+| **Verifier Gate** | Every implementation must be verified against its plan manifest for compliance | Exploratory, documentation, architecture pipelines (no code to verify) |
+
+**Enforcement rules:**
+1. Orchestrator MUST NOT skip PlanDescriber if the task involves creating or modifying code
+2. Orchestrator MUST NOT skip the Security Scan gate after any code change
+3. Orchestrator MUST NOT skip the Verifier gate after any implementation step
+4. If a pipeline type historically skipped these gates (fixer-only, trivial), the Orchestrator adds them back
+5. These gates apply to both primary and parallel pipeline branches
+
 ## Pipeline Types
 
 | Pipeline Type | Description | When to Use |
 |---|---|---|
 | **full** | Complete pipeline with all gates | New features, complex changes |
 | **quick** | Skip Finder, go directly to PlanDescriber | Simple/familiar tasks |
-| **fixer-only** | Skip PlanDescriber, go directly to Fixer | Bug fixes with known root cause |
-| **trivial** | Skip all gates, delegate to Implementor | Config changes, simple edits |
+| **fixer-only** | Fix existing code — Security Scan + Verifier gates added | Bug fixes with known root cause |
+| **trivial** | Minimal code change — PlanDescriber + Security Scan + Verifier added | Config changes, simple edits |
 | **tdd** | Tests written before implementation | Test-driven development |
 | **parallel** | Frontend + backend split with merge | Large features with clear boundaries |
-| **exploratory** | Finder only, report findings directly | Research tasks |
-| **documentation** | Documentor only | Documentation updates |
-| **architecture** | Architect only | System design, ADRs, C4 diagrams |
+| **exploratory** | Finder only, report findings directly (no code written) | Research tasks |
+| **documentation** | Documentor only (no code written) | Documentation updates |
+| **architecture** | Architect only (no code written) | System design, ADRs, C4 diagrams |
 
 ## Agent Sequences
 
@@ -30,23 +47,33 @@ Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor -> Integrato
 PlanDescriber -> Implementor -> Security Scan -> QA -> Verifier -> Documentor -> Orchestrator
 ```
 
-### Fixer-Only Pipeline
+### Fixer-Only Pipeline (SECURITY-HARDENED)
 
 ```
-Fixer -> QA -> Verifier -> Documentor -> Orchestrator
+Fixer -> Security Scan -> QA -> Verifier -> Documentor -> Orchestrator
 ```
+
+> **Security note**: PlanDescriber is skipped because the plan manifest already exists from the original pipeline. Security Scan and Verifier are MANDATORY — every bug fix must be scanned for vulnerabilities and verified against the plan.
+
+### Trivial Pipeline (SECURITY-HARDENED)
+
+```
+PlanDescriber -> Implementor -> Security Scan -> Verifier -> Orchestrator
+```
+
+> **Security note**: Even trivial config changes must have a lightweight plan manifest (minimum: changed files + acceptance criteria), pass security scan, and pass verifier gate. Build/Lint/Test/QA gates may be skipped for non-functional changes.
 
 ### TDD Pipeline
 
 ```
-PlanDescriber -> QA (write tests first) -> Implementor -> Build -> Lint -> Security Scan -> Verifier
+PlanDescriber -> QA (write tests first) -> Implementor -> Build -> Lint -> Test Gate -> Security Scan -> Verifier -> Documentor -> Orchestrator
 ```
 
 ### Parallel Pipeline
 
 ```
-Pipeline A: PlanDescriber(frontend) -> Implementor(frontend) -> Build(frontend)
-Pipeline B: PlanDescriber(backend) -> Implementor(backend) -> Build(backend)
+Pipeline A: PlanDescriber(frontend) -> Implementor(frontend) -> Build(frontend) -> Security Scan(frontend) -> Verifier(frontend)
+Pipeline B: PlanDescriber(backend) -> Implementor(backend) -> Build(backend) -> Security Scan(backend) -> Verifier(backend)
                      |                        |
                   --- MERGE --- Integration QA -> Full Verifier -> Documentor -> Orchestrator
 ```
@@ -55,6 +82,18 @@ Pipeline B: PlanDescriber(backend) -> Implementor(backend) -> Build(backend)
 
 ```
 Architect -> (PlanDescriber if implementation follows) -> Orchestrator
+```
+
+### Exploratory Pipeline
+
+```
+Finder -> Orchestrator (report findings)
+```
+
+### Documentation Pipeline
+
+```
+Documentor -> Orchestrator
 ```
 
 ## Required Scripts Per Step
