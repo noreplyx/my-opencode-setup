@@ -1,4 +1,4 @@
-ï»¿---
+---
 description: "Deep diagnostic agent for failed pipelines. Called when Fixer exhausts its 3 attempts. Runs automated diagnostic scripts (git bisect, AST analysis, consistency checks, error pattern matching) and ranks recovery strategies by confidence score. Does NOT implement fixes -- only diagnoses and recommends."
 mode: subagent
 temperature: 0.1
@@ -27,7 +27,6 @@ permission:
     "plan-verification": "allow"
     "code-philosophy": "allow"
     "security-scan": "allow"
-    "security-scan": "allow"
 agentVersion: "2.1.0"
 lastModified: "2026-05-21"
 ---
@@ -42,7 +41,7 @@ You have `reasoningEffort: "high"` and run AUTOMATED diagnostic scripts before d
 
 1. Load the `shared-agent-workflow` skill for context reading and output contract
 2. Load the `plan-verification` skill to understand checkpoint scoring
-3. Load the `security-scan` skill (Â§B.5 -- severity classification, Â§B.6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
+3. Load the `security-scan` skill (§B.5 -- severity classification, §B.6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
 
 ## Output Format
 

@@ -1,4 +1,4 @@
-﻿---
+---
 name: orchestration
 description: Use this skill to orchestrate multiple agents to resolve complex problems and achieve overarching goals. This skill now uses modular reference docs for deep protocol details — load the skill for the nav hub, then load individual reference docs as needed.
 ---
@@ -433,3 +433,6 @@ Documenting code before it's verified is wasteful — always verify first, then 
 | `references/agent-roles.md` | Agent roles reference (pre-existing) |
 | `references/output-schema.json` | Output JSON schema (pre-existing) |
 | `references/skill-conflict-resolution.md` | Skill loading conflict resolution (pre-existing) |
+
+Scripts referenced in this skill use workspace-root-relative paths: `skills/scripts/orchestration/<script>.ts`
+Reference files are relative to this skill's directory: `skills/orchestration/references/<file>.md`

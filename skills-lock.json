@@ -1,4 +1,4 @@
-﻿{
+{
     "version":  2,
     "skills":  {
                    "accessibility":  {
@@ -137,7 +137,8 @@
                                              "source":  "local",
                                              "sourceType":  "local",
                                              "skillPath":  "skills/quality-assurance/SKILL.md",
-                                             "computedHash":  "2ca3fba439a3d30b2596102592821abc1c011d813c04fb1960f8800a0ccc1991"
+                                             "computedHash":  "2ca3fba439a3d30b2596102592821abc1c011d813c04fb1960f8800a0ccc1991",
+                                              "deprecated": true
                                          },
                    "security-scan":  {
                                          "source":  "local",
@@ -149,7 +150,8 @@
                                              "source":  "local",
                                              "sourceType":  "local",
                                              "skillPath":  "skills/security-workflow/SKILL.md",
-                                             "computedHash":  "53f443ef268e682b8d778df207ddcf5dc096afe411b37097622aa612cfad3af8"
+                                             "computedHash":  "53f443ef268e682b8d778df207ddcf5dc096afe411b37097622aa612cfad3af8",
+                                              "deprecated": true
                                          },
                    "semgrep-scan":  {
                                         "source":  "local",
@@ -189,5 +191,6 @@
                                              }
                }
 }
+
 
 
