@@ -41,6 +41,43 @@ The Implementor's report MUST include lint output alongside build output so the 
 
 ---
 
+## Security Self-Review Gate
+
+### Who Runs It
+
+The Implementor runs this gate AFTER completing the Quality Self-Review but BEFORE running the build. It validates that the mandatory 17-item security + quality self-review checklist was completed and passed.
+
+### What It Checks
+
+| Check | Field | Expected |
+|-------|-------|----------|
+| Implementor completed | `agentOutputs.implementor.status` | `"completed"` |
+| Security items checked | `selfReview.securityItemsPassed` | `> 0` |
+| Security items total | `selfReview.securityItemsTotal` | `> 0` |
+| Security review passed | `selfReview.securitySelfReviewPassed` | `true` |
+| Security review (alt) | `securitySelfReview.passed` | `true` |
+
+### Enforcement Command
+
+```bash
+ts-node skills/scripts/orchestration/security-self-review-gate.ts --enforce --pipeline-id=<pipeline-id>
+```
+
+### Failure Action
+
+If the security self-review gate fails:
+- A BLOCK file is written to `.opencode/gates/BLOCK-<pipeline-id>.gate`
+- The pipeline is BLOCKED until the Implementor fixes the failing security items
+- The Implementor must re-run the 17-item Quality Self-Review checklist, fix all blocking items, then re-report
+
+### When to Skip
+
+- If the Implementor has not yet run (no implementor output in agent-context.md), the gate is skipped
+- Documentation-only and exploratory pipelines skip this gate
+- Fixer pipelines skip this gate (Fixer has its own security self-review)
+
+---
+
 ## Code Quality Gate
 
 - Load the `pmd-scan` skill: static analysis + CPD (copy-paste detection) duplicate detection via podman

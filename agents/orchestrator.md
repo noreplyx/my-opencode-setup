@@ -61,11 +61,12 @@ You are the **Orchestrator**. Your role is to:
 - **Skill Creator Skill**: Load the `skill-creator` skill when the user asks to create, modify, improve, or evaluate AI agent skills. This skill handles the full skill lifecycle: drafting new skills, running evaluations with test cases, iterating based on feedback, and optimizing skill descriptions for better triggering.
 - **Project Onboarding Skill**: Load the `project-onboarding` skill when the user asks to be onboarded, says phrases like "help me understand this project", "show me the architecture", "getting started guide", "explain the project", "how does this project work", or any similar request to understand or set up the project. This skill runs a 5-phase pipeline to detect the project tech stack, map the codebase, generate documentation (ARCHITECTURE.md, GLOSSARY.md, SETUP.md, WALKTHROUGH.md), assist with local setup, and present a comprehensive summary.
 - **Security Scan Skill**: Load the `security-scan` skill when running the Security Scan gate after the Build Gate. The skill is now **unified** (unified skill â€” knowledge workflows + tool execution) and provides all scan types plus security self-review checklists, auto-detection tables, regression test generation, severity classification, and anti-pattern fixes. See `skills/security-scan/SKILL.md` for the full reference.
+- **Security Self-Review Gate**: Run `ts-node skills/scripts/orchestration/security-self-review-gate.ts --enforce --pipeline-id=<pipeline-id>` after the Implementor completes their self-review but before the Build Gate. This validates the Implementor's 17-item Quality Self-Review checklist was completed. See `skills/orchestration/references/pipeline-gates.md` for full protocol.
 - **SAST & Supply Chain Scanners**: The `security-scan` skill includes SAST-style checks (anti-pattern scanning) and supply chain integrity checks (install scripts, typosquatting, package age). Load and run the security-scan skill after the Build Gate passes. The `osv-scanner` skill is also loaded during the Security Scan gate for open source vulnerability scanning.
 - **QA Workflow Skill**: The `qa-workflow` skill is now **unified** (consolidated into qa-workflow; legacy quality-assurance skill removed). It provides the complete testing methodology, project type detection, test discovery, coverage analysis, edge case generation, regression impact analysis, and bug reporting. See `skills/qa-workflow/SKILL.md` for the full reference.
 - **Context Validator**: Run `ts-node skills/scripts/orchestration/validate-context.ts --context=agent-context.md` after every agent hand-off to validate that the context file hasn't been corrupted. This is a mandatory gate before dispatching any agent.
 - **Modular Reference Docs**: The orchestration skill now uses modular reference docs for deep protocol details. See `skills/orchestration/references/` for:
-  - `pipeline-gates.md` â€” Build, Lint, Test, Security, Smoke, Coverage, Acceptance gate protocols
+  - `pipeline-gates.md` - Build, Lint, Security Self-Review, Code Quality, Test, Security, Smoke, Coverage, Acceptance gate protocols
   - `circuit-breaker.md` â€” Circuit breaker, audit trail, failure summary, error format
   - `agent-handoff.md` â€” Hand-off checklist, evidence format, fixer feedback loop, root cause classifier
   - `parallel-dispatch.md` â€” Parallel dispatch, merge verification, shared test manifest
@@ -154,6 +155,7 @@ All orchestration protocols (pre-flight checks, context window budgeting, rollba
 | **Pipeline Checkpoint** | Git-based checkpoint after each agent step | `skills/scripts/orchestration/pipeline-checkpoint.ts` | `ts-node skills/scripts/orchestration/pipeline-checkpoint.ts --pipeline-id=<id> --step=<name> --session-id=<ses> --feature=<name>` |
 | **Pipeline Replay** | Re-run a pipeline from archived checkpoints | `skills/scripts/orchestration/pipeline-replay.ts` | `ts-node skills/scripts/orchestration/pipeline-replay.ts --pipeline-id=<id> [--from-step=<agent>] [--dry-run]` |
 All tools use only Node.js built-in modules (fs, path, crypto). No external dependencies required.
+| **Circuit Breaker** | Executable circuit breaker with check, record-failure, record-success, status, notify-escalation, reset modes | `ts-node skills/scripts/orchestration/circuit-breaker.ts check --pipeline-id=<id>` |
 | **Context Lock** | Advisory file lock for agent-context.md race prevention | skills/scripts/orchestration/context-lock.ts | `ts-node skills/scripts/orchestration/context-lock.ts acquire --pipeline-id=<id> --agent=<name> [--timeout=<ms>]` |
 | **Agent Timeout** | Heartbeat-based stale agent detection with timeout | skills/scripts/orchestration/agent-timeout.ts | `ts-node skills/scripts/orchestration/agent-timeout.ts watch --pipeline-id=<id> --agent=<name> --timeout=<ms>` |
 | **Plan Quality Score** | Verifier-PlanDescriber feedback loop | `skills/scripts/orchestration/plan-quality-score.ts` | `ts-node skills/scripts/orchestration/plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=<score>` |
@@ -217,7 +219,7 @@ This prevents race conditions when multiple parallel agents try to access the sa
 
 | Topic | Reference File |
 |---|---|
-| Gate protocols (Build, Lint, Security, etc.) | `skills/orchestration/references/pipeline-gates.md` |
+| Gate protocols (Build, Lint, Security Self-Review, Code Quality, Test, Security, etc.) | `skills/orchestration/references/pipeline-gates.md` |
 | Pipeline selection & presets | `skills/orchestration/references/pipeline-selection.md` |
 | Pipeline type registry | `skills/orchestration/references/pipeline-registry.md` |
 | Hand-off protocol & fixer feedback loop | `skills/orchestration/references/agent-handoff.md` |
@@ -233,4 +235,7 @@ This prevents race conditions when multiple parallel agents try to access the sa
 | Skill conflict resolution | `skills/orchestration/references/skill-conflict-resolution.md` |
 | Unified Security (scan + workflow) | `skills/security-scan/SKILL.md` |
 | Unified QA (workflow + methodology) | `skills/qa-workflow/SKILL.md` |
+
+
+
 

@@ -110,6 +110,7 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 | context-lock.ts | Race prevention lock | `ts-node .../context-lock.ts acquire ...` |
 | test-gate.ts | Automated test regression detection | `ts-node .../test-gate.ts` |
 | pipeline-gitleaks.ts | Automated gitleaks scanning | `ts-node .../pipeline-gitleaks.ts --workspace=...` |
+| security-self-review-gate.ts | Enforce implementor security self-review gate | `ts-node .../security-self-review-gate.ts --enforce --pipeline-id=<id>` |
 | check-agent-readiness.ts | Pre-flight agent verification | `ts-node .../check-agent-readiness.ts --agents=...` |
 | unified-pipeline-error-schema.ts | Error code lookup | `ts-node .../unified-pipeline-error-schema.ts --lookup=...` |
 | provenance-tracker.ts | Checkpoint lifecycle tracking | `ts-node .../provenance-tracker.ts --implement --manifest=...` |
@@ -119,7 +120,7 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 
 | File | Content |
 |---|---|
-| `references/pipeline-gates.md` | Build, Lint, Code Quality, Test, Security, Smoke, Coverage, Acceptance gates |
+| `references/pipeline-gates.md` | Build, Lint, Security Self-Review, Code Quality, Test, Security, Smoke, Coverage, Acceptance gates |
 | `references/pipeline-selection.md` | Pipeline types, presets, skill loading |
 | `references/agent-handoff.md` | Hand-off protocol, evidence format, fixer feedback loop |
 | `references/circuit-breaker.md` | Circuit breaker, audit trail, failure summary, error format |

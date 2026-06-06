@@ -38,7 +38,7 @@ The following three gates are **MANDATORY for every pipeline that creates or mod
 ### Full Pipeline
 
 ```
-Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Test Gate -> Security Scan -> QA (smoke test + coverage) -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator (report)
+Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Security Self-Review Gate -> Test Gate -> Security Scan -> QA (smoke test + coverage) -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator (report)
 ```
 
 ### Quick Pipeline
@@ -107,8 +107,9 @@ Documentor -> Orchestrator
 | **Integrator** | (none) | Cross-file consistency verification + wiring |
 | **Build Gate** | (none) | `npm run build` or `npx tsc --noEmit` |
 | **Lint Gate** | (none) | `npx eslint`, `npx prettier --check`, etc. |
+| **Security Self-Review** | `security-self-review-gate.ts` | Enforce implementor security self-review |
 | **Test Gate** | `test-gate.ts` | Automated test regression detection |
-| **Security Scan** | `pipeline-gitleaks.ts`, `security-self-review-gate.ts` | Gitleaks scanning, security self-review enforcement |
+| **Security Scan** | `pipeline-gitleaks.ts` | Gitleaks scanning, vulnerability scanning |
 | **QA** | (none) | Smoke test, coverage analysis, bug discovery |
 | **Acceptance Gate** | (none) | Acceptance criteria checkpoints from plan manifest |
 | **Verifier** | `plan-quality-score.ts` | Record plan quality score for PlanDescriber feedback |
