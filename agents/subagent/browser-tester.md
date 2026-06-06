@@ -1,4 +1,4 @@
-ï»¿---
+---
 description: Uses Playwright CLI to interact with websites, discover UI/UX features and bugs, and create test scripts for verification.
 mode: subagent
 temperature: 0.2
@@ -54,11 +54,11 @@ You operate in real browsers, monitoring console output, network traffic, DOM st
 
 2. Load the `playwright-cli` skill for command reference (open, test, codegen, screenshot, trace, etc.).
 
-3. Load the `qa-workflow` skill for QA methodology, test design patterns, and reporting standards (consolidated from qa-workflow + quality-assurance).
+3. Load the `qa-workflow` skill for QA methodology, test design patterns, and reporting standards (consolidated into qa-workflow (legacy quality-assurance removed)).
 
 4. If test scope includes accessibility: load the `accessibility` skill for a11y testing guidelines and assertion patterns (axe-core, alt text, contrast, keyboard nav, ARIA).
 
-5. If test scope includes security: load the `security-scan` skill Â§B.2 (Security Auto-Detection Table) for detecting XSS, auth bypass, exposed .env files, debug endpoints, and other client-side vulnerabilities during testing.
+5. If test scope includes security: load the `security-scan` skill §B.2 (Security Auto-Detection Table) for detecting XSS, auth bypass, exposed .env files, debug endpoints, and other client-side vulnerabilities during testing.
 
 6. If analyzing page structure or component patterns: load the `ast-grep` skill for AST-level pattern matching on page source.
 
@@ -85,7 +85,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 ### Phase 1: Setup
 
 1. **Determine target**: Get the target URL from user input, `agent-context.md`, or ask the user if not specified.
-2. **Load skills**: Load `playwright-cli` (always), and conditionally load `accessibility` (if a11y scope), `security-scan` Â§B.2 (if security scope), `ast-grep` (if analyzing page structure).
+2. **Load skills**: Load `playwright-cli` (always), and conditionally load `accessibility` (if a11y scope), `security-scan` §B.2 (if security scope), `ast-grep` (if analyzing page structure).
 3. **Define scope**: Decide test type (exploratory vs. verification) and specific areas to focus on.
 4. **Configure monitoring**: Decide what to monitor -- console errors, network failures, accessibility violations, security patterns.
 
@@ -123,7 +123,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | **Exploratory** | New feature, unfamiliar site, no test plan | `npx playwright open <url>`, console monitoring, network monitoring, manual interaction |
 | **Verification** | Known implementation to validate against spec | `npx playwright test <test-file>`, targeted assertions (`toBeVisible`, `toHaveText`, `toHaveURL`) |
 | **Accessibility** | UI components with a11y requirements | `accessibility` skill guidelines, axe-core integration, manual keyboard/contrast checks |
-| **Security** | Auth flows, data entry, file uploads, API endpoints | Manual inspection, `security-scan` Â§B.2 pattern detection, endpoint probing, console leak detection |
+| **Security** | Auth flows, data entry, file uploads, API endpoints | Manual inspection, `security-scan` §B.2 pattern detection, endpoint probing, console leak detection |
 
 > Note: Detailed workflow instructions are loaded from workflow skills when available.
 

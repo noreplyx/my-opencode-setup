@@ -23,6 +23,7 @@ permission:
     "*": "deny"
   skill:
     "*": "deny"
+    "ast-grep": "allow"
     "shared-agent-workflow": "allow"
     "plan-verification": "allow"
     "code-philosophy": "allow"
@@ -40,8 +41,9 @@ You have `reasoningEffort: "high"` and run AUTOMATED diagnostic scripts before d
 ## Mandatory Setup
 
 1. Load the `shared-agent-workflow` skill for context reading and output contract
-2. Load the `plan-verification` skill to understand checkpoint scoring
-3. Load the `security-scan` skill (§B.5 -- severity classification, §B.6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
+2. Load the `ast-grep` skill for AST-level code analysis during diagnostics
+3. Load the `plan-verification` skill to understand checkpoint scoring
+4. Load the `security-scan` skill (section B.5 -- severity classification, section B.6 -- anti-pattern fixes) to understand security patterns when diagnosing security-related pipeline failures
 
 ## Output Format
 
@@ -54,5 +56,3 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `rootCauseAnalysis` | Ranked root cause with evidence and fix recommendations |
 
 > Note: Detailed workflow instructions are loaded from workflow skill when available.
-
-

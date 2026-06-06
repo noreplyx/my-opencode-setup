@@ -125,7 +125,7 @@ The pipeline includes a circuit breaker to prevent infinite agent loops:
 | `security-scan` | Orchestrator | Dependency vulnerability scanning, secrets detection, anti-pattern checks |
 | `plan-describe` | PlanDescriber | Detailed implementation roadmap creation |
 | `plan-verification` | Verifier | Plan-to-implementation verification, compliance scoring |
-| `qa-workflow` | QA, Browser Tester | Software testing, bug discovery, quality standards (consolidated from qa-workflow + quality-assurance) |
+| `qa-workflow` | QA, Browser Tester | Software testing, bug discovery, quality standards (consolidated into qa-workflow (legacy quality-assurance removed)) |
 | `code-philosophy` | Implementor, Fixer, PlanDescriber | SOLID, clean code, clean architecture, security |
 | `backend-code-philosophy` | Implementor, Fixer, PlanDescriber | Backend principles: scaling, caching, database patterns |
 | `frontend-code-philosophy` | Implementor, Fixer, PlanDescriber | Frontend principles: rendering, state management, a11y |

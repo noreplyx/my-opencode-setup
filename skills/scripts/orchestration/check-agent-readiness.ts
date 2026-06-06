@@ -182,13 +182,13 @@ const SKILL_REQUIREMENTS: SkillRequirement[] = [
   // Implementor needs code-philosophy
   { agent: 'implementor',        skill: 'code-philosophy', expectedAccess: 'allow' },
 
-  // Fixer needs code-philosophy, plan-verification, quality-assurance
+  // Fixer needs code-philosophy, plan-verification, qa-workflow
   { agent: 'fixer',              skill: 'code-philosophy', expectedAccess: 'allow' },
   { agent: 'fixer',              skill: 'plan-verification', expectedAccess: 'allow' },
-  { agent: 'fixer',              skill: 'quality-assurance', expectedAccess: 'allow' },
+  { agent: 'fixer',              skill: 'qa-workflow',        expectedAccess: 'allow' },
 
-  // QA needs quality-assurance
-  { agent: 'qa',                 skill: 'quality-assurance', expectedAccess: 'allow' },
+  // QA needs qa-workflow
+  { agent: 'qa',                 skill: 'qa-workflow',        expectedAccess: 'allow' },
 
   // Verifier needs plan-verification
   { agent: 'verifier',           skill: 'plan-verification', expectedAccess: 'allow' },

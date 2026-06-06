@@ -1,4 +1,4 @@
-ï»¿---
+---
 description: QA agent specialized in ensuring software quality through comprehensive testing, bug discovery, and adherence to quality standards.
 mode: subagent
 temperature: 0.1
@@ -41,10 +41,10 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 ## Mandatory Setup
 
 1. Load `shared-agent-workflow` for Read Context protocol and output contract
-2. Load `qa-workflow` for the full QA testing workflow and methodology (unified skill, consolidated from qa-workflow + quality-assurance)
+2. Load `qa-workflow` for the full QA testing workflow and methodology (unified skill, consolidated into qa-workflow (legacy quality-assurance removed))
 3. Load `security-scan` for:
-   - **Â§B.3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
-   - **Â§B.4 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
+   - **§B.3 (Security Regression Test Generation Table)** -- generate tests for each detected security pattern
+   - **§B.4 (Security Test Coverage Gate)** -- produce the coverage report that Verifier uses to gate the pipeline
 4. Load `accessibility` if testing frontend components
 
 ## Output Fields
@@ -59,7 +59,7 @@ Ensures implemented code is robust, performant, secure, and defect-free before p
 
 ### Security Test Coverage Gate Output (NEW)
 
-After generating security regression tests for detected patterns (from Â§B.3 of `security-scan`), produce this coverage report in your structured output:
+After generating security regression tests for detected patterns (from §B.3 of `security-scan`), produce this coverage report in your structured output:
 
 ```yaml
 securityTestCoverage:
@@ -76,7 +76,7 @@ securityTestCoverage:
 
 #### Procedure
 
-1. **Detect patterns**: Scan all modified/created files for the 13 security patterns from Â§B.2 of `security-scan`
+1. **Detect patterns**: Scan all modified/created files for the 13 security patterns from §B.2 of `security-scan`
 2. **Generate tests**: For each detected pattern, use the test mapping from Section 3 to create a regression test
 3. **Report patternsDetected**: Count of unique security patterns found across all changed files
 4. **Report testsGenerated**: Count of actual test files/assertions created

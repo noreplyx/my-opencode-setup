@@ -1,4 +1,4 @@
----
+--
 name: qa-workflow
 description: |
   UNIFIED QA SKILL (consolidated from qa-workflow + quality-assurance)
@@ -14,10 +14,7 @@ description: |
 
 This is the single source of truth for all QA agent workflows. It consolidates content from two prior skills (`qa-workflow` and `quality-assurance`) into one unified document.
 
-> **Legacy skills remain in place for backward compatibility:**
-> - `quality-assurance/SKILL.md` — Part B (Methodology) originated here
-> - `qa-workflow/SKILL.md` (old) — Part A (Workflow) originated here
-> - Reference files remain at `quality-assurance/references/` for detailed guidance
+> **Legacy skills have been removed.** All content is now consolidated here. Reference files are at qa-workflow/references/ for detailed guidance.
 
 ---
 
@@ -56,7 +53,7 @@ This ensures:
 - Rollback is possible if QA finds irreparable issues
 - The git log shows a clear pipeline timeline (`git log --grep="pipeline-checkpoint"`)
 
-If the commit fails (nothing to stage), log and proceed — no checkpoint needed.
+If the commit fails (nothing to stage), log and proceed â€” no checkpoint needed.
 
 ### Step 0: Load Shared Workflow
 
@@ -107,8 +104,8 @@ Determine the necessary testing types and define test cases. Use this priority t
 
 | Priority | Test Type | When to Apply |
 |----------|-----------|---------------|
-| P0 | Smoke test | Always — must pass before any other testing |
-| P1 | Functional tests | Always — verify feature correctness |
+| P0 | Smoke test | Always â€” must pass before any other testing |
+| P1 | Functional tests | Always â€” verify feature correctness |
 | P1 | Security regression | Changes touching auth, input, data access |
 | P2 | Integration tests | Cross-module changes |
 | P2 | Edge case tests | Public API changes, new functions |
@@ -122,7 +119,7 @@ Determine the necessary testing types and define test cases. Use this priority t
 | **Smoke Test** | Quick "does it start?" verification. Fast (<10s), reliable, zero flakiness. | App boots, health endpoint returns 200, CLI --help exits 0 |
 | **Functional Test** | Verify feature correctness against specifications. | CRUD operations, form validation, API response codes |
 | **Integration Test** | Verify cross-module interactions. | API + database, service + external API, component + store |
-| **Security Regression** | Verify no new vulnerabilities introduced. | SQLi, XSS, auth bypass, IDOR, SSRF — see Step 8 |
+| **Security Regression** | Verify no new vulnerabilities introduced. | SQLi, XSS, auth bypass, IDOR, SSRF â€” see Step 8 |
 | **Edge Case Test** | Boundary values, null/empty inputs, type mismatches. | See Part B Phase 2.5 |
 | **Performance Test** | Response time, throughput, resource usage. | p95 < 500ms, bundle size budgets |
 | **Accessibility Test** | WCAG compliance for UI. | Keyboard nav, color contrast, screen reader, axe-core |
@@ -157,7 +154,7 @@ Inspect the code for obvious quality issues, security flaws, and adherence to th
 
 ### Step 5: Smoke Test
 
-Run a quick "does the app start?" smoke test. The build gate and security scan have already passed — this confirms the app is runnable.
+Run a quick "does the app start?" smoke test. The build gate and security scan have already passed â€” this confirms the app is runnable.
 
 **The smoke test should be simple, fast (under 10 seconds), and give high confidence the code is runnable.**
 
@@ -181,7 +178,7 @@ Before running any test suite:
    ```
    Before running tests, check if `.opencode/test-manifest.yaml` exists.
    If it does, read it to understand what the Browser Tester is testing.
-   Use it to coordinate parallel test execution — avoid duplicating test coverage.
+   Use it to coordinate parallel test execution â€” avoid duplicating test coverage.
    ```
 3. **QA + Browser Tester hand-off protocol** (P3 coordination):
    ```
@@ -191,7 +188,7 @@ Before running any test suite:
    Read `.opencode/test-results/browser-<pipelineId>.json` for Browser Tester results
    to avoid duplicating browser-level tests.
    ```
-4. **Test discovery fallback chain**: Run `npm test` → if no test framework found, try `npx jest` → `npx vitest run` → `npx mocha` → `npx ava` → `npx tap`. First command that succeeds wins.
+4. **Test discovery fallback chain**: Run `npm test` â†’ if no test framework found, try `npx jest` â†’ `npx vitest run` â†’ `npx mocha` â†’ `npx ava` â†’ `npx tap`. First command that succeeds wins.
 5. Run the detected test command. Collect full output.
 
 ### Step 7: Coverage Analysis
@@ -219,19 +216,19 @@ After coverage analysis, automatically generate security regression tests for th
 
 | If file contains... | Generate security test... |
 |---------------------|--------------------------|
-| Database queries (`db.query`, `db.execute`, `.find(`, `.raw(`) | SQL/NoSQL injection test — try injection payloads on all endpoints that use this file |
-| Route handlers (`@Post`, `app.post`, `router.post`, `@Get`, `app.get`) | Auth bypass test — try accessing protected routes without a token |
-| File I/O (`readFileSync`, `writeFileSync`, `createReadStream`) | Path traversal test — try path traversal payloads in file-related parameters |
-| User input processing (`req.body`, `req.query`, `req.params`) | XSS test — try XSS payloads on text input fields |
-| `res.redirect` or `response.redirect` | Open redirect test — try external URL redirects |
-| JWT or auth logic | Token tampering test — try modified JWTs |
-| ID-based resource access (`/api/:id`, `/api/users/:userId`) | IDOR test — try accessing another user's resource |
-| File upload handling | Upload validation test — try uploading malicious file types |
-| Rate limiting (or missing rate limiting) | Rate limit test — verify 429 after N rapid requests |
-| `fetch()` or `http.request()` to external URLs | **SSRF test** — try internal hostnames (127.0.0.1, 169.254.169.254, metadata endpoints) and verify they are blocked |
-| Object merge/spread (`Object.assign`, `{...obj}`, `_.merge`, `_.extend`) | **Prototype pollution test** — try `__proto__`, `constructor.prototype` payloads and verify object integrity |
-| MongoDB query operators (`$where`, `$gt`, `$ne`, `$regex` in query objects) | **NoSQL injection test** — try `$gt: ""`, `$ne: null`, `$where: "1"` payloads on MongoDB-backed endpoints |
-| Unsanitized user input in `eval()`, `setTimeout()`, `setInterval()` string args | **Code injection test** — try payloads that execute arbitrary code |
+| Database queries (`db.query`, `db.execute`, `.find(`, `.raw(`) | SQL/NoSQL injection test â€” try injection payloads on all endpoints that use this file |
+| Route handlers (`@Post`, `app.post`, `router.post`, `@Get`, `app.get`) | Auth bypass test â€” try accessing protected routes without a token |
+| File I/O (`readFileSync`, `writeFileSync`, `createReadStream`) | Path traversal test â€” try path traversal payloads in file-related parameters |
+| User input processing (`req.body`, `req.query`, `req.params`) | XSS test â€” try XSS payloads on text input fields |
+| `res.redirect` or `response.redirect` | Open redirect test â€” try external URL redirects |
+| JWT or auth logic | Token tampering test â€” try modified JWTs |
+| ID-based resource access (`/api/:id`, `/api/users/:userId`) | IDOR test â€” try accessing another user's resource |
+| File upload handling | Upload validation test â€” try uploading malicious file types |
+| Rate limiting (or missing rate limiting) | Rate limit test â€” verify 429 after N rapid requests |
+| `fetch()` or `http.request()` to external URLs | **SSRF test** â€” try internal hostnames (127.0.0.1, 169.254.169.254, metadata endpoints) and verify they are blocked |
+| Object merge/spread (`Object.assign`, `{...obj}`, `_.merge`, `_.extend`) | **Prototype pollution test** â€” try `__proto__`, `constructor.prototype` payloads and verify object integrity |
+| MongoDB query operators (`$where`, `$gt`, `$ne`, `$regex` in query objects) | **NoSQL injection test** â€” try `$gt: ""`, `$ne: null`, `$where: "1"` payloads on MongoDB-backed endpoints |
+| Unsanitized user input in `eval()`, `setTimeout()`, `setInterval()` string args | **Code injection test** â€” try payloads that execute arbitrary code |
 
 **Test file naming convention:**
 - `tests/security/<feature>-sqli.test.ts`
@@ -299,7 +296,7 @@ Follow the structure defined in `shared-agent-workflow` skill.
 | `securityTestCoverage.patternsDetected` | Number of security patterns found in modified code |
 | `securityTestCoverage.testsGenerated` | Number of security tests actually created |
 | `securityTestCoverage.coverage` | Coverage percentage (testsGenerated / patternsDetected * 100) |
-| `securityTestCoverage.gatePassed` | Whether coverage meets the ≥ 80% threshold |
+| `securityTestCoverage.gatePassed` | Whether coverage meets the â‰¥ 80% threshold |
 | `securityTestCoverage.missingTests` | List of untested patterns with documented skip reasons |
 
 ### Sources Block (C1 Compliance)
@@ -358,11 +355,11 @@ evidence:
 ## Write Access Rules
 
 You have write access **ONLY for the following purposes**:
-1. **Creating test files** — Write new test files under `tests/`
-2. **Fixing test bugs** — Edit existing test files when you discover incorrect assertions or missing test cases
-3. **Adding test fixtures** — Create test data files under `tests/fixtures/`
-4. **Updating test config** — Modify `vitest.config.ts`, `jest.config.ts`, or equivalent
-5. **Writing test results** — Write to `.opencode/test-results/` for QA + Browser Tester hand-off
+1. **Creating test files** â€” Write new test files under `tests/`
+2. **Fixing test bugs** â€” Edit existing test files when you discover incorrect assertions or missing test cases
+3. **Adding test fixtures** â€” Create test data files under `tests/fixtures/`
+4. **Updating test config** â€” Modify `vitest.config.ts`, `jest.config.ts`, or equivalent
+5. **Writing test results** â€” Write to `.opencode/test-results/` for QA + Browser Tester hand-off
 
 ## NEVER write to:
 - Production code files (`src/`, `lib/`, `dist/`)
@@ -376,8 +373,8 @@ You have write access **ONLY for the following purposes**:
 ### Inputs Needed
 - Implementation files produced by Implementor
 - Test configuration and existing test suite
-- `.opencode/test-manifest.yaml` (optional — for parallel test coordination with Browser Tester)
-- `.opencode/test-results/browser-<pipelineId>.json` (optional — Browser Tester results for hand-off)
+- `.opencode/test-manifest.yaml` (optional â€” for parallel test coordination with Browser Tester)
+- `.opencode/test-results/browser-<pipelineId>.json` (optional â€” Browser Tester results for hand-off)
 
 ### Outputs Produced
 - Structured output (status, resultSummary, decisions, warnings, changedFiles, artifacts, sources)
@@ -389,7 +386,7 @@ You have write access **ONLY for the following purposes**:
 
 ### Independence Declaration
 - **Dependent on**: Implementor (must have code to test), Security Scan (must have passed)
-- **Can parallelize with**: Browser Tester (UI testing runs in parallel with QA logic testing) — coordinate via `.opencode/test-manifest.yaml` and `.opencode/test-results/`
+- **Can parallelize with**: Browser Tester (UI testing runs in parallel with QA logic testing) â€” coordinate via `.opencode/test-manifest.yaml` and `.opencode/test-results/`
 - **Circuit breaker aware**: Smoke test failures increment `circuitBreaker.counters.smokeTest`
 
 ---
@@ -502,7 +499,7 @@ After all tests pass, perform a cross-module impact analysis to identify modules
 3. **Trace impacted modules**: From each importing module, recursively trace imports to find the full dependency graph
 4. **Find their test files**: For each impacted module, locate corresponding test files (`*.test.ts`, `*.spec.ts`, `__tests__/`)
 5. **Run the impacted tests** to verify no regressions
-6. **For each importing module**, flag: "This change may affect [module X] — review recommended"
+6. **For each importing module**, flag: "This change may affect [module X] â€” review recommended"
 7. **Classify risk level**:
    - **High**: Direct import of exported types/classes used in critical paths
    - **Medium**: Indirect import or import of utility functions
@@ -533,7 +530,7 @@ When the project has no existing test framework or coverage is below threshold, 
 Generate unit tests for the following code.
 - Use the [Jest/Vitest] framework
 - Cover: happy path, error path, edge cases (null, empty, boundary values)
-- Do NOT mock dependencies — prefer integration-style tests
+- Do NOT mock dependencies â€” prefer integration-style tests
 - Include type annotations
 
 [PASTE CODE HERE]
@@ -637,7 +634,7 @@ retrospective:
     - "Edge case generation found 3 null-input bugs before merge"
     - "Security regression tests for SQL injection prevented a PR from shipping with vulnerable queries"
   whatWentWrong:
-    - "Test framework auto-detection failed for monorepo — required manual override"
+    - "Test framework auto-detection failed for monorepo â€” required manual override"
     - "Coverage report missing for 2 files due to c8 config issue"
   improvements:
     - "Add explicit test framework config to monorepo packages"
@@ -654,7 +651,7 @@ retrospective:
 - Use unique identifiers (UUIDs, timestamps) for test data to prevent collisions
 
 ### Isolation
-- Tests must not depend on each other — each test is a standalone assertion
+- Tests must not depend on each other â€” each test is a standalone assertion
 - Use per-test fixtures/teardown rather than shared state
 - Database tests should use transactions that roll back, or dedicated test databases
 - Mock external services at the I/O boundary (HTTP, filesystem, message queues)
@@ -662,7 +659,7 @@ retrospective:
 ### Deterministic
 - Remove non-determinism: no random values without seeding, no timing-dependent assertions
 - Use fixed seeds for random generators: `Math.random = () => 0.5` or `faker.seed(123)`
-- Await all async operations — no fire-and-forget promises
+- Await all async operations â€” no fire-and-forget promises
 - Set explicit timeouts for async operations rather than relying on defaults
 - Mock `Date.now()` and `setTimeout()` when testing time-sensitive logic
 
@@ -675,44 +672,44 @@ retrospective:
 | QA Agent / Scenario | Load This Skill | Also Load | Purpose |
 |---------------------|-----------------|-----------|---------|
 | **Full QA workflow** | `qa-workflow` (this file) | `shared-agent-workflow` | Complete testing pipeline |
-| **Edge case testing only** | `qa-workflow` (this file) | — | Part B Phase 2.5 methodology |
+| **Edge case testing only** | `qa-workflow` (this file) | â€” | Part B Phase 2.5 methodology |
 | **Non-functional testing** | `qa-workflow` (this file) | `accessibility` (if UI) | Part B Phase 3.5 |
-| **Security regression** | `qa-workflow` (this file) | — | Part A Step 8 security test generation |
-| **Regression impact analysis** | `qa-workflow` (this file) | — | Part B Phase 5.5 |
+| **Security regression** | `qa-workflow` (this file) | â€” | Part A Step 8 security test generation |
+| **Regression impact analysis** | `qa-workflow` (this file) | â€” | Part B Phase 5.5 |
 | **Browser/UI testing** | `qa-workflow` (this file) | `accessibility`, `playwright-cli` | Browser Tester coordination |
 
 ## Reference File Map
 
-Detailed guidance is available in the original reference files (at `quality-assurance/references/`):
+Detailed guidance is available in the original reference files (at `qa-workflow/references/`):
 
 | Reference File | Content | When to Load |
 |----------------|---------|-------------|
-| `quality-assurance/references/testing-strategies.md` | Test pyramid, functional/integration/performance/security testing, smoke test guidelines | Designing test cases, choosing test types |
-| `quality-assurance/references/qa-workflow.md` | Full QA workflow phases, test documentation, acceptance criteria | Following the end-to-end QA process |
-| `quality-assurance/references/ci-testing.md` | CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting | Setting up CI/CD quality gates, reporting bugs |
+| `qa-workflow/references/testing-strategies.md` | Test pyramid, functional/integration/performance/security testing, smoke test guidelines | Designing test cases, choosing test types |
+| `qa-workflow/references/qa-workflow.md` | Full QA workflow phases, test documentation, acceptance criteria | Following the end-to-end QA process |
+| `qa-workflow/references/ci-testing.md` | CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting | Setting up CI/CD quality gates, reporting bugs |
 
 ---
 
 ## Hard Rules
 
-- ❌ NEVER skip smoke tests before full test suite execution
-- ❌ NEVER leave flaky tests in the critical CI path — quarantine them
-- ❌ NEVER deploy with known S1 (critical) bugs open
-- ❌ NEVER report a claim without a `sources` block (method + command + excerpt)
-- ❌ NEVER report a bug without reproducible evidence (command + output + reproduction steps)
-- ❌ NEVER report a test as passed without showing the command and output excerpt
-- ❌ NEVER modify production code, agent configs, skill files, plan manifests, or project config files
-- ✅ ALWAYS document acceptance criteria as Given/When/Then
-- ✅ ALWAYS include boundary value analysis for numeric/date inputs
-- ✅ ALWAYS run security scans for changes touching auth, input handling, or data access
-- ✅ ALWAYS run `validate-output-contract.ts --stdin` before testing (Step 0b)
-- ✅ ALWAYS create a pre-flight checkpoint commit before any QA operations (Step -1)
-- ✅ ALWAYS check `.opencode/test-manifest.yaml` for parallel test coordination (Step 6)
-- ✅ ALWAYS share results via `.opencode/test-results/` when running in parallel with Browser Tester (Step 6)
-- ✅ ALWAYS include the exact command used to reproduce each bug
-- ✅ ALWAYS include the exact output/error for failed tests
-- ✅ ALWAYS include line numbers for bugs that reference specific code locations
-- ✅ ALWAYS include reproduction steps in the bug description
+- âŒ NEVER skip smoke tests before full test suite execution
+- âŒ NEVER leave flaky tests in the critical CI path â€” quarantine them
+- âŒ NEVER deploy with known S1 (critical) bugs open
+- âŒ NEVER report a claim without a `sources` block (method + command + excerpt)
+- âŒ NEVER report a bug without reproducible evidence (command + output + reproduction steps)
+- âŒ NEVER report a test as passed without showing the command and output excerpt
+- âŒ NEVER modify production code, agent configs, skill files, plan manifests, or project config files
+- âœ… ALWAYS document acceptance criteria as Given/When/Then
+- âœ… ALWAYS include boundary value analysis for numeric/date inputs
+- âœ… ALWAYS run security scans for changes touching auth, input handling, or data access
+- âœ… ALWAYS run `validate-output-contract.ts --stdin` before testing (Step 0b)
+- âœ… ALWAYS create a pre-flight checkpoint commit before any QA operations (Step -1)
+- âœ… ALWAYS check `.opencode/test-manifest.yaml` for parallel test coordination (Step 6)
+- âœ… ALWAYS share results via `.opencode/test-results/` when running in parallel with Browser Tester (Step 6)
+- âœ… ALWAYS include the exact command used to reproduce each bug
+- âœ… ALWAYS include the exact output/error for failed tests
+- âœ… ALWAYS include line numbers for bugs that reference specific code locations
+- âœ… ALWAYS include reproduction steps in the bug description
 
 ---
 
@@ -724,7 +721,7 @@ This skill includes an executable script that performs automated QA readiness ch
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `check-qa.ts` | Analyzes project for test coverage, test config, linter setup, CI pipeline, TS strict mode | `ts-node <skills-dir>/scripts/quality-assurance/check-qa.ts --dir=<project-dir> [--ci]` |
+| `check-qa.ts` | Analyzes project for test coverage, test config, linter setup, CI pipeline, TS strict mode | `ts-node <skills-dir>/scripts/qa-workflow/check-qa.ts --dir=<project-dir> [--ci]` |
 
 ### What It Checks
 
@@ -740,12 +737,12 @@ This skill includes an executable script that performs automated QA readiness ch
 Use the `--ci` flag to make the script exit with code 1 on failure, suitable for CI pipeline gating:
 
 ```bash
-ts-node skills/scripts/quality-assurance/check-qa.ts --dir=./ --ci
+ts-node skills/scripts/qa-workflow/check-qa.ts --dir=./ --ci
 ```
 
 ---
 
-> **For detailed guidance**, load the appropriate reference file from `quality-assurance/references/`:
-> - `testing-strategies.md` — Test pyramid, functional/integration/performance/security testing, smoke tests
-> - `qa-workflow.md` — Full QA workflow phases, test documentation, acceptance criteria
-> - `ci-testing.md` — CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting
+> **For detailed guidance**, load the appropriate reference file from `qa-workflow/references/`:
+> - `testing-strategies.md` â€” Test pyramid, functional/integration/performance/security testing, smoke tests
+> - `qa-workflow.md` â€” Full QA workflow phases, test documentation, acceptance criteria
+> - `ci-testing.md` â€” CI/CD quality gates, regression testing, flaky tests, accessibility, bug reporting
