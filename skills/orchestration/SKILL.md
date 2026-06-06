@@ -1,4 +1,4 @@
---
+﻿--
 name: orchestration
 description: Use this skill to orchestrate multiple agents to resolve complex problems and achieve overarching goals. This skill now uses modular reference docs for deep protocol details - load the skill for the nav hub, then load individual reference docs as needed.
 ---
@@ -31,6 +31,7 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **Pipeline Selection Classifier** | `pipeline-selector.ts` | Auto-classifies task type -> pipeline type |
 | **Smart Circuit Breaker** | Enhanced `circuit-breaker` in references | Failure signature tracking, pattern detection, contextual thresholds |
 | **Hand-off Completeness Check** | `check-handoff.ts` | Validates mandatory hand-off fields before dispatch |
+| **Evidence Gate** | `evidence-quality-gate.ts` | Real-time evidence quality validation after every agent hand-off |
 | **Evidence Contract** | Evidence arrays in every agent output | Anchored, verifiable evidence for every claim |
 | **Decision Provenance** | `evidence` field in every `decisions` entry | Source citations for every architectural decision |
 | **Dynamic Context Injection** | Per-agent context filtering | 30-50% token savings per hand-off |
@@ -87,6 +88,7 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 | Debug Agent | Setup -> Debug Agent |
 | Fixer Diagnostics | Setup -> Fixer Automated Diagnostics Protocol |
 | Shared Agent Workflow | Setup -> shared-agent-workflow skill |
+| Evidence Gate | Setup -> Evidence Gate (pipeline-gates.md) |
 | PlanDescriber Quality Feedback | Setup -> plan-quality-score.ts |
 
 ## Tooling
@@ -114,6 +116,7 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 | check-agent-readiness.ts | Pre-flight agent verification | `ts-node .../check-agent-readiness.ts --agents=...` |
 | unified-pipeline-error-schema.ts | Error code lookup | `ts-node .../unified-pipeline-error-schema.ts --lookup=...` |
 | provenance-tracker.ts | Checkpoint lifecycle tracking | `ts-node .../provenance-tracker.ts --implement --manifest=...` |
+| evidence-quality-gate.ts | Validate evidence quality and verifiability after every agent hand-off | `ts-node .../evidence-quality-gate.ts --context=agent-context.md` |
 | check-handoff.ts | Hand-off completeness validation | `ts-node .../check-handoff.ts --agent=<name> --context="..."` |
 
 ## Reference Files
@@ -138,3 +141,5 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 
 Scripts referenced in this skill use workspace-root-relative paths: `skills/scripts/orchestration/<script>.ts`
 Reference files are relative to this skill's directory: `skills/orchestration/references/<file>.md`
+
+

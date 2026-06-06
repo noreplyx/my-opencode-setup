@@ -265,6 +265,64 @@ ts-node skills/scripts/orchestration/pipeline-gitleaks.ts --workspace="${PWD}" [
 
 ---
 
+
+## Evidence Gate
+
+### Who Runs It
+
+The Orchestrator runs this gate AFTER every agent hand-off and BEFORE dispatching the next agent. It validates that every substantive claim made by the agent is backed by verifiable evidence.
+
+### What It Checks
+
+| Check | Description | Weight |
+|-------|-------------|--------|
+| **Required fields** | Every evidence entry must have `claim`, `source`, and `method` | Blocking |
+| **File existence** | The `source` file path must exist on disk | Blocking |
+| **Content hash** | If `contentHash` is provided, it must match the current file's SHA-256 | Blocking |
+| **Command re-execution** | If `command` is provided, re-run it and verify output matches the claim | Scoring |
+| **Excerpt verification** | If `excerpt` is provided, verify it exists in the source file | Scoring |
+| **Path traversal** | Evidence source paths must not escape the workspace root | Blocking |
+
+### Enforcement Command
+
+```bash
+ts-node skills/scripts/orchestration/evidence-quality-gate.ts --context=agent-context.md
+```
+
+### Scoring
+
+| Score | Verdict | Action |
+|-------|---------|--------|
+| >= 80% and zero failures | [x] PASS | Proceed — evidence quality is acceptable |
+| >= 80% with unverifiable entries | [!] WARN | Proceed with warning — some evidence needs manual review |
+| < 80% | [ ] FAIL | Block pipeline — agent must re-submit output with better evidence |
+| Any critical failure (file_not_found, hash_mismatch, path_traversal) | [ ] FAIL | Block pipeline — evidence is invalid |
+
+### Failure Action
+
+If the Evidence Gate fails:
+1. The Orchestrator rejects the agent's output and does NOT update `agent-context.md`
+2. The Orchestrator sends the validation errors back to the agent with clear instructions
+3. The agent gets **one retry** to fix the evidence quality
+4. If the agent fails twice, the Orchestrator escalates to the user
+
+### When to Skip
+
+- Exploratory, documentation, and architecture pipelines (no code to verify)
+- When the agent produced no substantive claims (e.g., trivial config changes)
+- When `agent-context.md` does not exist (first agent in pipeline)
+
+### Integration with Existing Tools
+
+The Evidence Gate complements:
+- **`validate-output-contract.ts`** — validates output format (field presence/types)
+- **`check-evidence-regression.ts`** — scans historical evidence for staleness
+- **`check-handoff.ts`** — validates hand-off completeness before dispatch
+
+The Evidence Gate is the **real-time quality check** that runs during the pipeline, while `check-evidence-regression.ts` is the **historical audit** that runs after the pipeline.
+
+---
+
 ## Acceptance Gate
 
 ### Protocol
@@ -299,3 +357,4 @@ Acceptance criteria carry **double weight** in the Verifier's compliance score.
 ```
 Build Gate â†’ Lint Gate â†’ Code Quality Gate â†’ Test Gate â†’ Security Scan â†’ QA (smoke + security regression) â†’ Security Test Coverage Gate â†’ Acceptance Gate â†’ Verifier
 ```
+

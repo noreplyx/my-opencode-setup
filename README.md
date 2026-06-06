@@ -1,4 +1,4 @@
-# OpenCode AI Agent System
+﻿# OpenCode AI Agent System
 
 This directory contains the configuration for the OpenCode AI agent system.
 
@@ -33,7 +33,7 @@ Each agent file is a markdown document with YAML frontmatter (delimited by `---`
 The standard orchestration workflow follows this sequence:
 
 ```
-Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor (checkpoint-driven: contract validation -> implement per-checkpoint -> self-verify -> adherence gate) -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Test Gate -> Security Scan (semgrep SAST + gitleaks + trivy + npm audit + osv-scanner + anti-patterns) -> QA (smoke test + coverage) -> Acceptance Gate -> Verifier (fast-pass if adherence >= 90%) -> Documentor -> Orchestrator (report)
+Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Evidence Gate -> Implementor (checkpoint-driven: contract validation -> implement per-checkpoint -> self-verify -> adherence gate) -> Evidence Gate -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Test Gate -> Security Scan (semgrep SAST + gitleaks + trivy + npm audit + osv-scanner + anti-patterns) -> QA (smoke test + coverage) -> Acceptance Gate -> Evidence Gate -> Verifier (fast-pass if adherence >= 90%) -> Evidence Gate -> Documentor -> Evidence Gate -> Orchestrator (report)
                                                                                          ->                                              ->
                                                                                      Fixer (feedback loop)                       Debug (after 3 Fixers)
 ```
@@ -51,6 +51,7 @@ Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor (checkpoint-
 | **Acceptance Gate** | Orchestrator | Acceptance criteria checkpoints from plan manifest | Cycle to Fixer |
 | **Security Test Coverage** | QA + Verifier | >=80% security test coverage | <50% -> QA loop; 50-79% -> warn |
 | **Evidence Gate** | Orchestrator | Evidence quality scoring, content hashes, cross-agent verification | Block pipeline |
+| **Evidence Gate** | Orchestrator | Evidence quality and verifiability after every agent hand-off | Score < 80% or critical failures -> agent retry; 2 failures -> escalate to user |
 | **Plan Verify** | Verifier | Code matches plan-manifest.json checkpoints (score >=80%) | Score < 80% -> cycle to Fixer; 3 attempts -> PlanDescriber |
 | **Test Gate** | Implementor | Runs project test suite (`npm test`, `vitest run`, etc.) and reports pass/fail | Tests fail -> cycle to Fixer |
 
@@ -64,20 +65,20 @@ The **Fixer** agent is called when QA discovers bugs or Verifier finds deviation
 
 ### Pipeline Type Quick Selection
 
-| Task Type | Pipeline | PlanDescriber | Security Scan | Verifier | Can Skip |
+| Task Type | Pipeline | PlanDescriber | Security Scan | Verifier | Evidence Gate | Can Skip |
 |-----------|----------|:---:|:---:|:---:|----------|
-| **New feature** | full | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | (none) |
-| **Simple/familiar** | quick | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder |
-| **Bug fix (known root cause)** | fixer-only | ✅ plan exists | ✅ MANDATORY | ✅ MANDATORY | Finder, PlanDescriber |
-| **Trivial config change** | trivial | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder, Build, Lint, Test, QA |
-| **Test-driven feature** | tdd | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder |
-| **Large feature (split)** | parallel | ✅ MANDATORY | ✅ MANDATORY | ✅ MANDATORY | Finder (optional) |
-| **UI/website testing** | browser-test | ❌ no code | ❌ no code | ❌ no code | All |
-| **Exploratory/research** | exploratory | ❌ no code | ❌ no code | ❌ no code | All except Finder |
-| **Documentation update** | documentation | ❌ no code | ❌ no code | ❌ no code | All except Documentor |
-| **Architecture design** | architecture | ❌ no code | ❌ no code | ❌ no code | All except Architect |
+| **New feature** | full | âœ… MANDATORY | âœ… MANDATORY | âœ… MANDATORY | (none) |
+| **Simple/familiar** | quick | âœ… MANDATORY | âœ… MANDATORY | âœ… MANDATORY | Finder |
+| **Bug fix (known root cause)** | fixer-only | âœ… plan exists | âœ… MANDATORY | âœ… MANDATORY | Finder, PlanDescriber |
+| **Trivial config change** | trivial | âœ… MANDATORY | âœ… MANDATORY | âœ… MANDATORY | Finder, Build, Lint, Test, QA |
+| **Test-driven feature** | tdd | âœ… MANDATORY | âœ… MANDATORY | âœ… MANDATORY | Finder |
+| **Large feature (split)** | parallel | âœ… MANDATORY | âœ… MANDATORY | âœ… MANDATORY | Finder (optional) |
+| **UI/website testing** | browser-test | âŒ no code | âŒ no code | âŒ no code | All |
+| **Exploratory/research** | exploratory | âŒ no code | âŒ no code | âŒ no code | All except Finder |
+| **Documentation update** | documentation | âŒ no code | âŒ no code | âŒ no code | All except Documentor |
+| **Architecture design** | architecture | âŒ no code | âŒ no code | âŒ no code | All except Architect |
 
-> **Hard rule**: PlanDescriber, Security Scan Gate, and Verifier Gate are **mandatory** for ANY pipeline that creates or modifies code. The Orchestrator MUST NOT skip them. Pipelines that produce zero code changes (exploratory, documentation, architecture, browser-test) are exempt.
+> **Hard rule**: PlanDescriber, Security Scan Gate, Verifier Gate, and Evidence Gate are **mandatory** for ANY pipeline that creates or modifies code. The Orchestrator MUST NOT skip them. Pipelines that produce zero code changes (exploratory, documentation, architecture, browser-test) are exempt.
 
 ### Pre-Flight Check
 
@@ -310,5 +311,9 @@ npx ts-node skills/scripts/orchestration/skill-drift-detector.ts --check
 npx ts-node skills/scripts/orchestration/check-plan-contract.ts --manifest=plan-manifests/<feature>/v1-manifest.json --mode=pre-implement
 npx ts-node skills/scripts/orchestration/check-plan-adherence.ts --manifest=plan-manifests/<feature>/v1-manifest.json --dir=./
 npx ts-node skills/scripts/orchestration/plan-diff-report.ts --manifest=plan-manifests/<feature>/v1-manifest.json
+
+# Evidence Gate
+npx ts-node skills/scripts/orchestration/evidence-quality-gate.ts --context=agent-context.md
 ```
+
 
