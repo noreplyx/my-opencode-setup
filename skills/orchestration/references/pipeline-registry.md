@@ -4,20 +4,22 @@ This document is the canonical index of all pipeline types, their agent sequence
 
 ## Mandatory Gates Policy
 
-The following three gates are **MANDATORY for every pipeline that creates or modifies code**:
+The following four gates are **MANDATORY for every pipeline that creates or modifies code**:
 
 | Gate | Why Mandatory | Exception |
 |------|---------------|-----------|
 | **PlanDescriber** | Every code change must follow a structured plan manifest with verifiable checkpoints | Fixer-only (plan already exists), exploratory, documentation, architecture pipelines |
 | **Security Scan Gate** | Every code change must be scanned for vulnerabilities, secrets, and anti-patterns | Exploratory, documentation, architecture pipelines (no functional code) |
+| **Security Test Coverage Gate** | Every security-relevant pattern detected by the scan must have a corresponding test | Exploratory, documentation, architecture pipelines (no functional code) |
 | **Verifier Gate** | Every implementation must be verified against its plan manifest for compliance | Exploratory, documentation, architecture pipelines (no code to verify) |
 
 **Enforcement rules:**
 1. Orchestrator MUST NOT skip PlanDescriber if the task involves creating or modifying code
 2. Orchestrator MUST NOT skip the Security Scan gate after any code change
-3. Orchestrator MUST NOT skip the Verifier gate after any implementation step
-4. If a pipeline type historically skipped these gates (fixer-only, trivial), the Orchestrator adds them back
-5. These gates apply to both primary and parallel pipeline branches
+3. Orchestrator MUST NOT skip the Security Test Coverage gate after QA runs
+4. Orchestrator MUST NOT skip the Verifier gate after any implementation step
+5. If a pipeline type historically skipped these gates (fixer-only, trivial), the Orchestrator adds them back
+6. These gates apply to both primary and parallel pipeline branches
 
 ## Pipeline Types
 
@@ -38,19 +40,19 @@ The following three gates are **MANDATORY for every pipeline that creates or mod
 ### Full Pipeline
 
 ```
-Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Security Self-Review Gate -> Test Gate -> Security Scan -> QA (smoke test + coverage) -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator (report)
+Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Implementor -> Integrator (Phase 1: verify -> Phase 2: wire) -> Build Gate -> Lint Gate -> Security Self-Review Gate -> Test Gate -> Security Scan -> QA (smoke test + coverage) -> Security Test Coverage Gate -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator (report)
 ```
 
 ### Quick Pipeline
 
 ```
-PlanDescriber -> Implementor -> Security Scan -> QA -> Verifier -> Documentor -> Orchestrator
+PlanDescriber -> Implementor -> Security Scan -> QA -> Security Test Coverage Gate -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator
 ```
 
 ### Fixer-Only Pipeline (SECURITY-HARDENED)
 
 ```
-Fixer -> Security Scan -> QA -> Verifier -> Documentor -> Orchestrator
+Fixer -> Security Scan -> QA -> Security Test Coverage Gate -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator
 ```
 
 > **Security note**: PlanDescriber is skipped because the plan manifest already exists from the original pipeline. Security Scan and Verifier are MANDATORY — every bug fix must be scanned for vulnerabilities and verified against the plan.
@@ -66,7 +68,7 @@ PlanDescriber -> Implementor -> Security Scan -> Verifier -> Orchestrator
 ### TDD Pipeline
 
 ```
-PlanDescriber -> QA (write tests first) -> Implementor -> Build -> Lint -> Test Gate -> Security Scan -> Verifier -> Documentor -> Orchestrator
+PlanDescriber -> QA (write tests first) -> Implementor -> Build -> Lint -> Test Gate -> Security Scan -> QA (functional tests) -> Security Test Coverage Gate -> Acceptance Gate -> Verifier -> Documentor -> Orchestrator
 ```
 
 ### Parallel Pipeline
@@ -75,7 +77,7 @@ PlanDescriber -> QA (write tests first) -> Implementor -> Build -> Lint -> Test 
 Pipeline A: PlanDescriber(frontend) -> Implementor(frontend) -> Build(frontend) -> Security Scan(frontend) -> Verifier(frontend)
 Pipeline B: PlanDescriber(backend) -> Implementor(backend) -> Build(backend) -> Security Scan(backend) -> Verifier(backend)
                      |                        |
-                  --- MERGE --- Integration QA -> Full Verifier -> Documentor -> Orchestrator
+                   --- MERGE --- Integration QA -> Security Test Coverage Gate -> Acceptance Gate -> Full Verifier -> Documentor -> Orchestrator
 ```
 
 ### Architecture Pipeline
@@ -112,6 +114,7 @@ Documentor -> Orchestrator
 | **Security Scan** | `pipeline-gitleaks.ts` | Gitleaks scanning, vulnerability scanning |
 | **QA** | (none) | Smoke test, coverage analysis, bug discovery |
 | **Acceptance Gate** | (none) | Acceptance criteria checkpoints from plan manifest |
+| **Security Test Coverage Gate** | (none) | Verify security tests cover patterns detected by security scan |
 | **Verifier** | `plan-quality-score.ts` | Record plan quality score for PlanDescriber feedback |
 | **Documentor** | (none) | Documentation generation |
 | **Teardown** | `pipeline-teardown.ts`, `pipeline-checkpoint.ts` | Archive logs, create git checkpoint |
@@ -136,6 +139,7 @@ Documentor -> Orchestrator
 | Lint | 3 attempts | Implementor |
 | Test | 3 attempts | Fixer |
 | Security Scan | 3 attempts | User |
+| Security Test Coverage | 3 attempts | QA |
 | Smoke Test | 3 attempts | Fixer |
 | Verifier | 3 attempts | PlanDescriber |
 | Total Pipeline | 5 retries | User |
