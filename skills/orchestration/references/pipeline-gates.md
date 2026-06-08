@@ -11,7 +11,7 @@ The Implementor MUST run the build command after writing code.
 | `import-error` | **Integrator** | Fix import paths |
 | `type-error` | **Fixer** | Fix type signatures |
 | `syntax-error` | **Implementor** | Fix syntax |
-| `config-error` | **Orchestrator** | Fix tsconfig/ESLint config |
+| `config-error` | **Fixer** | Fix tsconfig/ESLint config |
 | `dependency-error` | **user** | Fix package.json |
 | `lint-error` | **Implementor** | Fix code style |
 | `test-failure` | **Fixer** | Fix test assertions |
@@ -330,13 +330,14 @@ The Evidence Gate is the **real-time quality check** that runs during the pipeli
 1. **Check manifest** for `acceptanceCriteria` checkpoints
 2. **If none exist**: Skip gate with note "No acceptance criteria in manifest"
 3. **If acceptance criteria exist**:
-   - Start the application (`npm run start` or equivalent)
-   - Wait for health check to pass (max 30 seconds)
+   - The Orchestrator delegates Acceptance Gate execution to the **QA** agent
+   - QA starts the application (`npm run start` or equivalent)
+   - QA waits for health check to pass (max 30 seconds)
    - For each `acceptanceCriteria` checkpoint:
-     - Execute the `testCommand`
-     - Capture exit code + stdout/stderr
-     - Record: Pass / Fail / Skipped
-   - Stop the application
+     - QA executes the `testCommand`
+     - QA captures exit code + stdout/stderr
+     - QA records: Pass / Fail / Skipped
+   - QA stops the application
 
 ### Passing / Blocking
 

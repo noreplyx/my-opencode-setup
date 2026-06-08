@@ -46,9 +46,9 @@ Finder -> Orchestrator (brainstorm) -> PlanDescriber -> Evidence Gate -> Impleme
 | **Plan Contract** | Implementor | Pre-implementation contract rules from plan manifest | Fix plan or implementation |
 | **Build Gate** | Implementor | Code compiles without errors | Fix and rebuild before proceeding |
 | **Lint Gate** | Implementor | Code passes linter/style checks (eslint, prettier, tsc --noEmit) | Fix lint errors before proceeding |
-| **Security Scan** | Orchestrator | Semgrep SAST + Gitleaks secrets + Trivy vuln/misconfig + npm audit + OSV-Scanner + anti-patterns | Report to user; may fix, except, or block |
+| **Security Scan** | Delegated to security subagent | Semgrep SAST + Gitleaks secrets + Trivy vuln/misconfig + npm audit + OSV-Scanner + anti-patterns | Report to user; may fix, except, or block |
 | **Smoke Test** | QA | App boots/starts without crashing | Critical bug -> cycle to Fixer |
-| **Acceptance Gate** | Orchestrator | Acceptance criteria checkpoints from plan manifest | Cycle to Fixer |
+| **Acceptance Gate** | QA | Acceptance criteria checkpoints from plan manifest | Cycle to Fixer |
 | **Security Test Coverage** | QA + Verifier | >=80% security test coverage | <50% -> QA loop; 50-79% -> warn |
 | **Evidence Gate** | Orchestrator | Evidence quality scoring, content hashes, cross-agent verification | Block pipeline |
 | **Evidence Gate** | Orchestrator | Evidence quality and verifiability after every agent hand-off | Score < 80% or critical failures -> agent retry; 2 failures -> escalate to user |
