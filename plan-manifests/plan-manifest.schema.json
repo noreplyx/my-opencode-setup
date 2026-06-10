@@ -47,6 +47,126 @@
       "type": "string",
       "enum": ["low", "medium", "high"]
     },
+    "securityConsiderations": {
+      "description": "Security pre-screening results injected before planning. Auto-populated by security-prescreen.ts. Contains risk classification, required scans, and security-specific checkpoints.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["riskLevel", "authRequired", "inputValidationRequired", "requiredScans"],
+      "properties": {
+        "riskLevel": {
+          "description": "Risk classification determined by security pre-screening. Maps from standard/sensitive/infrastructure to plan manifest's riskLevel.",
+          "type": "string",
+          "enum": ["standard", "sensitive", "infrastructure"]
+        },
+        "authRequired": {
+          "description": "Whether the feature requires authentication/authorization.",
+          "type": "boolean"
+        },
+        "inputValidationRequired": {
+          "description": "Whether input validation is required (true for any user-facing feature).",
+          "type": "boolean"
+        },
+        "piiHandlingRequired": {
+          "description": "Whether the feature handles personally identifiable information.",
+          "type": "boolean"
+        },
+        "encryptionRequired": {
+          "description": "Whether encryption is required for data at rest or in transit.",
+          "type": "boolean"
+        },
+        "auditLoggingRequired": {
+          "description": "Whether audit logging of operations is required.",
+          "type": "boolean"
+        },
+        "rateLimitingRequired": {
+          "description": "Whether rate limiting is required (e.g., for API endpoints).",
+          "type": "boolean"
+        },
+        "summary": {
+          "description": "Human-readable summary of security considerations for the feature.",
+          "type": "string",
+          "minLength": 1
+        },
+        "requiredScans": {
+          "description": "List of security scans that MUST run for this feature.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["npm audit", "semgrep-sast", "secrets", "dependency-scan", "dast", "container-scan"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "securityCheckpoints": {
+          "description": "Security-specific checkpoints that supplement the standard checkpoints array.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "description", "target", "verify"],
+            "properties": {
+              "id": {
+                "description": "Unique identifier following the pattern CP-SEC-NNN.",
+                "type": "string",
+                "pattern": "^CP-SEC-\\d{3}$"
+              },
+              "description": {
+                "description": "Human-readable description of what to verify.",
+                "type": "string",
+                "minLength": 1
+              },
+              "target": {
+                "description": "Relative file path to the file being verified.",
+                "type": "string",
+                "minLength": 1
+              },
+              "verify": {
+                "description": "Verification specification (same structure as standard checkpoint verify).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind"],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["exportExists", "classExists", "functionExists", "methodExists", "handlesError", "validatesInput", "logsAtLevel", "hasMiddleware"]
+                  },
+                  "exportName": { "type": "string", "minLength": 1 },
+                  "className": { "type": "string", "minLength": 1 },
+                  "functionName": { "type": "string", "minLength": 1 },
+                  "methodName": { "type": "string", "minLength": 1 },
+                  "details": { "type": "string", "minLength": 1 },
+                  "level": { "type": "string", "enum": ["info", "warn", "error", "debug"] },
+                  "middlewareName": { "type": "string", "minLength": 1 },
+                  "routePath": { "type": "string", "minLength": 1 },
+                  "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] }
+                }
+              }
+            }
+          },
+          "uniqueItems": true
+        },
+        "circuitBreakerThreshold": {
+          "description": "Security-specific circuit breaker thresholds for this feature.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supplyChainThreshold", "securityScanRetries"],
+          "properties": {
+            "supplyChainThreshold": {
+              "description": "Maximum high/critical dependency vulnerabilities allowed.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "securityScanRetries": {
+              "description": "Maximum retries for security scan failures.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        }
+      }
+    },
     "changes": {
       "description": "List of changes from the previous manifest version. Used for manifest diffing across versions. Omit or set to empty array for the first manifest version.",
       "type": "array",

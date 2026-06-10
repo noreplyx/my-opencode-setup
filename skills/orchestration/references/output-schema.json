@@ -556,7 +556,7 @@
 
       "type": "object",
 
-      "description": "Agent-specific output, keyed by agent name. Recognized agent keys include: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator.",
+      "description": "Agent-specific output, keyed by agent name. Recognized agent keys include: finder, implementor, fixer, plandescriber, verifier, qa, browser-tester, documentor, integrator, acceptance-gate, merge-coordinator, security-prescreen.",
 
       "minProperties": 1,
 
@@ -945,6 +945,212 @@
             },
 
             "required": ["appStarted", "totalCheckpoints", "passed", "failed", "skipped", "details"]
+
+          },
+
+          "securityConsiderations": {
+
+            "type": "object",
+
+            "description": "Security pre-screening results from security-prescreen.ts. Populated by PlanDescriber in the plan manifest. Contains risk classification, required scans, boolean flags, security checkpoints, and circuit breaker thresholds. See plan-manifest.schema.json for the full schema.",
+
+            "properties": {
+
+              "riskLevel": {
+
+                "type": "string",
+
+                "enum": ["standard", "sensitive", "infrastructure"],
+
+                "description": "Risk classification determined by security pre-screening"
+
+              },
+
+              "authRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether the feature requires authentication/authorization"
+
+              },
+
+              "inputValidationRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether input validation is required"
+
+              },
+
+              "piiHandlingRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether the feature handles personally identifiable information"
+
+              },
+
+              "encryptionRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether encryption is required"
+
+              },
+
+              "auditLoggingRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether audit logging is required"
+
+              },
+
+              "rateLimitingRequired": {
+
+                "type": "boolean",
+
+                "description": "Whether rate limiting is required"
+
+              },
+
+              "summary": {
+
+                "type": "string",
+
+                "description": "Human-readable summary of security considerations"
+
+              },
+
+              "requiredScans": {
+
+                "type": "array",
+
+                "items": {
+
+                  "type": "string",
+
+                  "enum": ["npm audit", "semgrep-sast", "secrets", "dependency-scan", "dast", "container-scan"]
+
+                },
+
+                "description": "Security scans that MUST run for this feature"
+
+              },
+
+              "securityCheckpoints": {
+
+                "type": "array",
+
+                "items": {
+
+                  "type": "object",
+
+                  "required": ["id", "description", "target", "verify"],
+
+                  "properties": {
+
+                    "id": {
+
+                      "type": "string",
+
+                      "pattern": "^CP-SEC-\\d{3}$"
+
+                    },
+
+                    "description": {
+
+                      "type": "string",
+
+                      "minLength": 1
+
+                    },
+
+                    "target": {
+
+                      "type": "string",
+
+                      "minLength": 1
+
+                    },
+
+                    "verify": {
+
+                      "type": "object",
+
+                      "required": ["kind"],
+
+                      "properties": {
+
+                        "kind": {
+
+                          "type": "string",
+
+                          "enum": ["exportExists", "classExists", "functionExists", "methodExists", "handlesError", "validatesInput", "logsAtLevel", "hasMiddleware"]
+
+                        },
+
+                        "exportName": { "type": "string" },
+
+                        "className": { "type": "string" },
+
+                        "functionName": { "type": "string" },
+
+                        "methodName": { "type": "string" },
+
+                        "details": { "type": "string" },
+
+                        "level": { "type": "string", "enum": ["info", "warn", "error", "debug"] },
+
+                        "middlewareName": { "type": "string" }
+
+                      }
+
+                    }
+
+                  }
+
+                },
+
+                "description": "Security-specific checkpoints that supplement the standard checkpoints array"
+
+              },
+
+              "circuitBreakerThreshold": {
+
+                "type": "object",
+
+                "required": ["supplyChainThreshold", "securityScanRetries"],
+
+                "properties": {
+
+                  "supplyChainThreshold": {
+
+                    "type": "integer",
+
+                    "minimum": 1,
+
+                    "maximum": 5
+
+                  },
+
+                  "securityScanRetries": {
+
+                    "type": "integer",
+
+                    "minimum": 1,
+
+                    "maximum": 5
+
+                  }
+
+                },
+
+                "description": "Security-specific circuit breaker thresholds"
+
+              }
+
+            }
 
           },
 

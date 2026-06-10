@@ -112,7 +112,7 @@ After build + lint pass, the Orchestrator delegates the Security Scan to an appr
 | SAST analysis | semgrep (auto-loaded `semgrep-scan` skill) | Auto |
 | Vulnerability + IaC misconfig | trivy (auto-loaded `trivy-scan` skill) | Auto |
 | Code quality | pmd (auto-loaded `pmd-scan` skill) | Auto |
-| Post-deployment DAST | OWASP ZAP (`owasp-zap-scan` â€” optional) | Optional |
+| Post-deployment DAST | OWASP ZAP (`owasp-zap-scan`) | Auto (web projects: full, parallel, tdd, refactor); Skipped (non-web) |
 
 ### Severity Mapping
 
@@ -162,6 +162,58 @@ If any agent modifies `package.json`, `package-lock.json`, `yarn.lock`, or `pnpm
 1. The dependency scan MUST be re-run after the modification
 2. This applies to the Fixer agent â€” if Fixer installs/updates a package, the security scan must run again
 3. The Orchestrator checks `changedFiles` from Fixer/Implementor â€” if any dependency file is in the list, the security scan gate is re-triggered before proceeding to QA
+
+---
+
+## ZAP DAST Auto-Load Protocol
+
+### Who Runs It
+
+The Security Scan subagent auto-loads the `owasp-zap-scan` skill during the Security Scan gate. The ZAP scan runs in parallel with SAST (semgrep) and secrets (gitleaks) scans.
+
+### When It Runs
+
+| Pipeline Type | ZAP DAST Behavior |
+|--------------|-------------------|
+| full | Auto-load and run |
+| parallel | Auto-load and run |
+| tdd | Auto-load and run |
+| refactor | Auto-load and run |
+| quick | Skip (non-blocking) — report "ZAP skipped for quick pipeline" |
+| fixer-only | Skip (non-blocking) |
+| research | Skip |
+| documentation | Skip |
+| micro-pipeline | Skip |
+
+### What It Checks
+
+| Check | Description |
+|-------|-------------|
+| XSS | Cross-site scripting vulnerabilities |
+| SQL Injection | SQL injection in form fields/URLs |
+| CSRF | Cross-site request forgery tokens |
+| Authentication | Weak or missing auth controls |
+| Authorization | Insecure direct object references |
+| Session Management | Cookie flags, session fixation |
+| Information Disclosure | Stack traces, directory listing |
+
+### Severity Mapping
+
+| Severity | Pipeline Action |
+|----------|-----------------|
+| High / Critical | WARN (non-blocking) — report findings, do NOT block pipeline |
+| Medium | WARN — report findings |
+| Low | INFO |
+
+### Why Non-Blocking
+
+ZAP DAST is a dynamic scan that requires a running application and may produce false positives depending on the test environment. Findings are informational and included in the combined Security Scan report, but they do NOT block the pipeline. The Orchestrator reviews ZAP findings manually.
+
+### Prerequisites
+
+- The `owasp-zap-scan` skill must be whitelisted in the Orchestrator's tool permissions (already done in agents/orchestrator.md)
+- ZAP requires the application to be running (port 8080 or user-specified)
+- If ZAP is unavailable (e.g., podman not installed, no running app), the scan is skipped with a warning
 
 ---
 
@@ -356,6 +408,90 @@ Acceptance criteria carry **double weight** in the Verifier's compliance score.
 ## Integration Pipeline Flow
 
 ```
-Build Gate â†’ Lint Gate â†’ Code Quality Gate â†’ Test Gate â†’ Security Scan â†’ QA (smoke + security regression) â†’ Security Test Coverage Gate â†’ Acceptance Gate â†’ Verifier
+Implementor → Security Self-Review Gate → Build Gate → Lint Gate → Code Quality Gate → Test Gate → Security Scan (incl. ZAP DAST for web apps) → QA (smoke + security regression) → Security Test Coverage Gate → Acceptance Gate → Verifier
 ```
+
+---
+
+## Delegation Gate Protocol
+
+### Who Runs It
+
+The Orchestrator runs this gate AFTER every agent hand-off and BEFORE dispatching the next agent. It validates that the Orchestrator delegated all substantive work (research, planning, implementation, verification) to subagents rather than doing it directly.
+
+### What It Checks
+
+| Check | Description | Blocking? |
+|-------|-------------|-----------|
+| Agent History Review | Every pipeline step should be a subagent, not the orchestrator | Yes |
+| Changed Files Check | Orchestrator must not have changed files directly | Yes |
+| Implementation Language | Orchestrator output must not say "I created/wrote/implemented/fixed" | Yes |
+| Read-Only Verification | Orchestrator should only use read/glob/grep for verification | Warning |
+| Hand-off Evidence | Orchestrator must produce evidence of verification for each hand-off | Warning |
+| Subagent Coverage | Pipeline must have at least one subagent step beyond orchestrator | Warning |
+
+### Enforcement Command
+
+```bash
+ts-node skills/scripts/orchestration/delegation-gate.ts --context=agent-context.md
+```
+
+In strict mode (higher scrutiny):
+```bash
+ts-node skills/scripts/orchestration/delegation-gate.ts --context=agent-context.md --strict
+```
+
+### Failure Action
+
+| Result | Action |
+|--------|--------|
+| Pass | Proceed to next pipeline step |
+| Fail | Block pipeline — Orchestrator must re-delegate the work to proper subagents |
+| Warning | Proceed with warning — note the risk for manual review |
+
+### When to Skip
+
+- Single-agent pipelines (research only, documentation only)
+- When agent-context.md does not exist
+
+---
+
+## Security Pre-Screening Protocol
+
+### Who Runs It
+
+The Orchestrator runs this gate BEFORE dispatching PlanDescriber. It classifies the feature's risk level and produces `securityConsiderations` that get injected into the plan manifest.
+
+### Detection Modes
+
+| Mode | Flag | Input | Use Case |
+|------|------|-------|----------|
+| Description Analysis | `--feature` + `--description` | Feature name + text description | Before planning, when feature scope is known |
+| Source Detection | `--detect-from-source=<dir>` | Source code directory | When existing code is being modified |
+
+### Risk Classification
+
+| Risk Level | Plan Manifest Risk | When | Circuit Breaker Thresholds |
+|-----------|-------------------|------|---------------------------|
+| standard | low | Basic CRUD, static content, no user data | supplyChain: 3, securityRetries: 1 |
+| sensitive | medium | User profiles, auth, PII, sessions | supplyChain: 2, securityRetries: 2 |
+| infrastructure | high | Payments, admin, secrets, config | supplyChain: 1, securityRetries: 3 |
+
+### Auto-Generated Security Checkpoints
+
+For `sensitive` and `infrastructure` features, the pre-screening generates security checkpoints (CP-SEC-001, CP-SEC-002, etc.) that the Verifier must check in addition to the functional checkpoints from PlanDescriber.
+
+### Enforcement Command
+
+```bash
+ts-node skills/scripts/orchestration/security-prescreen.ts --feature=<name> --description="Feature description..."
+```
+
+Output is JSON — the Orchestrator injects the `securityConsiderations` block into the PlanDescriber's instructions for inclusion in the plan manifest.
+
+### When to Skip
+
+- Documentation-only pipelines
+- Research pipelines with no code changes
+- Fixer-only pipelines (the plan already exists with security considerations)
 

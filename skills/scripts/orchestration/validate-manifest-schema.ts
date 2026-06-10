@@ -31,6 +31,7 @@ interface ValidationOutput {
   warnings: string[];
   checkpointsValidated: number;
   contractRulesValidated: number;
+  securityConsiderationsValidated: number;
 }
 
 interface CLIOptions {
@@ -83,8 +84,13 @@ const VALID_VERIFY_METHODS = ['grep', 'read', 'reason'] as const;
 
 const VALID_LOG_LEVELS = ['info', 'warn', 'error', 'debug'] as const;
 
+const VALID_SECURITY_SCAN_TYPES = ['npm audit', 'semgrep-sast', 'secrets', 'dependency-scan', 'dast', 'container-scan'] as const;
+
+const VALID_SEC_RISK_LEVELS = ['standard', 'sensitive', 'infrastructure'] as const;
+
 const CP_ID_REGEX = /^CP-\d{3}$/;
 const CR_ID_REGEX = /^CR-\d{3}$/;
+const SEC_CP_ID_REGEX = /^CP-SEC-\d{3}$/;
 
 // ── CLI Argument Parsing ───────────────────────────────────────────
 
@@ -498,6 +504,182 @@ function validateChange(
   }
 }
 
+// ── Security Considerations Validation ──────────────────────────────
+
+export function validateSecurityConsiderations(
+  manifest: Record<string, unknown>,
+  errors: string[],
+  warnings: string[],
+): number {
+  const sc = manifest.securityConsiderations;
+
+  // Optional — skip if absent
+  if (sc === undefined || sc === null) {
+    return 0;
+  }
+
+  if (typeof sc !== 'object' || Array.isArray(sc)) {
+    addError(errors, '"securityConsiderations" must be an object');
+    return 0;
+  }
+
+  const sec = sc as Record<string, unknown>;
+  const prefix = 'securityConsiderations';
+
+  // 1. Validate required fields: riskLevel, authRequired, inputValidationRequired, requiredScans
+  const requiredFields = ['riskLevel', 'authRequired', 'inputValidationRequired', 'requiredScans'];
+  for (const field of requiredFields) {
+    if (sec[field] === undefined || sec[field] === null) {
+      addError(errors, `${prefix}: missing required field "${field}"`);
+    }
+  }
+
+  // 2. Validate riskLevel — must be one of standard/sensitive/infrastructure
+  if (sec.riskLevel !== undefined && sec.riskLevel !== null) {
+    if (!isValidEnum(sec.riskLevel, VALID_SEC_RISK_LEVELS)) {
+      addError(errors, `${prefix}.riskLevel: must be one of ${VALID_SEC_RISK_LEVELS.join(', ')}, got "${String(sec.riskLevel)}"`);
+    }
+  }
+
+  // 3. Validate boolean fields (when present)
+  const booleanFields = ['authRequired', 'inputValidationRequired', 'piiHandlingRequired', 'encryptionRequired', 'auditLoggingRequired', 'rateLimitingRequired'];
+  for (const field of booleanFields) {
+    if (sec[field] !== undefined && sec[field] !== null) {
+      if (typeof sec[field] !== 'boolean') {
+        addError(errors, `${prefix}.${field}: must be a boolean, got ${typeof sec[field]}`);
+      }
+    }
+  }
+
+  // 4. Validate summary — non-empty string when present
+  if (sec.summary !== undefined && sec.summary !== null) {
+    if (!isNonEmptyString(sec.summary)) {
+      addError(errors, `${prefix}.summary: must be a non-empty string`);
+    }
+  }
+
+  // 5. Validate requiredScans — array of strings from allowed enum
+  if (sec.requiredScans !== undefined && sec.requiredScans !== null) {
+    if (!Array.isArray(sec.requiredScans)) {
+      addError(errors, `${prefix}.requiredScans: must be an array`);
+    } else {
+      if (sec.requiredScans.length === 0) {
+        addWarning(warnings, `${prefix}.requiredScans: should contain at least one scan type`);
+      }
+      for (let i = 0; i < sec.requiredScans.length; i++) {
+        const scan = sec.requiredScans[i];
+        if (!isValidEnum(scan, VALID_SECURITY_SCAN_TYPES)) {
+          addError(errors, `${prefix}.requiredScans[${i}]: must be one of ${VALID_SECURITY_SCAN_TYPES.join(', ')}, got "${String(scan)}"`);
+        }
+      }
+    }
+  }
+
+  // 6. Validate securityCheckpoints if present
+  if (sec.securityCheckpoints !== undefined && sec.securityCheckpoints !== null) {
+    if (!Array.isArray(sec.securityCheckpoints)) {
+      addError(errors, `${prefix}.securityCheckpoints: must be an array`);
+    } else {
+      for (let i = 0; i < sec.securityCheckpoints.length; i++) {
+        const cp = sec.securityCheckpoints[i];
+        if (typeof cp !== 'object' || cp === null || Array.isArray(cp)) {
+          addError(errors, `${prefix}.securityCheckpoints[${i}]: must be an object`);
+          continue;
+        }
+        const scp = cp as Record<string, unknown>;
+        const cpPrefix = `${prefix}.securityCheckpoints[${i}]`;
+
+        // Required fields: id, description, target, verify
+        const cpRequired = ['id', 'description', 'target', 'verify'];
+        for (const f of cpRequired) {
+          if (scp[f] === undefined || scp[f] === null) {
+            addError(errors, `${cpPrefix}: missing required field "${f}"`);
+          }
+        }
+
+        // id must match ^CP-SEC-\d{3}$
+        if (scp.id !== undefined && scp.id !== null) {
+          if (!isString(scp.id) || !SEC_CP_ID_REGEX.test(scp.id)) {
+            addError(errors, `${cpPrefix}: "id" must match pattern ^CP-SEC-\\d{3}$, got "${String(scp.id)}"`);
+          }
+        }
+
+        // description must be non-empty string
+        if (scp.description !== undefined && scp.description !== null) {
+          if (!isNonEmptyString(scp.description)) {
+            addError(errors, `${cpPrefix}: "description" must be a non-empty string`);
+          }
+        }
+
+        // target must be non-empty string
+        if (scp.target !== undefined && scp.target !== null) {
+          if (!isNonEmptyString(scp.target)) {
+            addError(errors, `${cpPrefix}: "target" must be a non-empty string`);
+          }
+        }
+
+        // validate verify object
+        if (scp.verify !== undefined && scp.verify !== null) {
+          if (typeof scp.verify !== 'object' || Array.isArray(scp.verify)) {
+            addError(errors, `${cpPrefix}.verify: must be an object`);
+          } else {
+            const verify = scp.verify as Record<string, unknown>;
+            if (verify.kind === undefined || verify.kind === null) {
+              addError(errors, `${cpPrefix}.verify: missing required field "kind"`);
+            } else {
+              const VALID_SEC_VERIFY_KINDS = [
+                'exportExists', 'classExists', 'functionExists', 'methodExists',
+                'handlesError', 'validatesInput', 'logsAtLevel', 'hasMiddleware',
+              ] as const;
+              if (!isValidEnum(verify.kind, VALID_SEC_VERIFY_KINDS)) {
+                addError(errors, `${cpPrefix}.verify: "kind" must be one of ${VALID_SEC_VERIFY_KINDS.join(', ')}, got "${String(verify.kind)}"`);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 7. Validate circuitBreakerThreshold if present
+  if (sec.circuitBreakerThreshold !== undefined && sec.circuitBreakerThreshold !== null) {
+    if (typeof sec.circuitBreakerThreshold !== 'object' || Array.isArray(sec.circuitBreakerThreshold)) {
+      addError(errors, `${prefix}.circuitBreakerThreshold: must be an object`);
+    } else {
+      const cbt = sec.circuitBreakerThreshold as Record<string, unknown>;
+      const cbtPrefix = `${prefix}.circuitBreakerThreshold`;
+
+      // Required fields: supplyChainThreshold, securityScanRetries
+      const cbtRequired = ['supplyChainThreshold', 'securityScanRetries'];
+      for (const f of cbtRequired) {
+        if (cbt[f] === undefined || cbt[f] === null) {
+          addError(errors, `${cbtPrefix}: missing required field "${f}"`);
+        }
+      }
+
+      // supplyChainThreshold must be integer 1-5
+      if (cbt.supplyChainThreshold !== undefined && cbt.supplyChainThreshold !== null) {
+        if (!isInteger(cbt.supplyChainThreshold)) {
+          addError(errors, `${cbtPrefix}.supplyChainThreshold: must be an integer, got ${typeof cbt.supplyChainThreshold}`);
+        } else if (cbt.supplyChainThreshold < 1 || cbt.supplyChainThreshold > 5) {
+          addError(errors, `${cbtPrefix}.supplyChainThreshold: must be between 1 and 5, got ${cbt.supplyChainThreshold}`);
+        }
+      }
+
+      // securityScanRetries must be integer 1-5
+      if (cbt.securityScanRetries !== undefined && cbt.securityScanRetries !== null) {
+        if (!isInteger(cbt.securityScanRetries)) {
+          addError(errors, `${cbtPrefix}.securityScanRetries: must be an integer, got ${typeof cbt.securityScanRetries}`);
+        } else if (cbt.securityScanRetries < 1 || cbt.securityScanRetries > 5) {
+          addError(errors, `${cbtPrefix}.securityScanRetries: must be between 1 and 5, got ${cbt.securityScanRetries}`);
+        }
+      }
+    }
+  }
+
+  return 1;
+}
+
 // ── Main Validation ────────────────────────────────────────────────
 
 function validateManifest(
@@ -505,7 +687,7 @@ function validateManifest(
   manifestPath: string,
   errors: string[],
   warnings: string[],
-): { checkpointsValidated: number; contractRulesValidated: number } {
+): { checkpointsValidated: number; contractRulesValidated: number; securityConsiderationsValidated: number } {
   // 1. Top-level field validation
   validateTopLevel(manifest, errors, warnings);
 
@@ -560,7 +742,10 @@ function validateManifest(
     }
   }
 
-  return { checkpointsValidated, contractRulesValidated };
+  // 5. Security considerations validation
+  const securityConsiderationsValidated = validateSecurityConsiderations(manifest, errors, warnings);
+
+  return { checkpointsValidated, contractRulesValidated, securityConsiderationsValidated };
 }
 
 // ── CLI Entry Point ────────────────────────────────────────────────
@@ -590,6 +775,7 @@ function main(): void {
       warnings: [],
       checkpointsValidated: 0,
       contractRulesValidated: 0,
+      securityConsiderationsValidated: 0,
     };
     console.log(JSON.stringify(output, null, 2));
     process.exit(2);
@@ -604,6 +790,7 @@ function main(): void {
       warnings: [],
       checkpointsValidated: 0,
       contractRulesValidated: 0,
+      securityConsiderationsValidated: 0,
     };
     console.log(JSON.stringify(output, null, 2));
     process.exit(2);
@@ -623,6 +810,7 @@ function main(): void {
       warnings: [],
       checkpointsValidated: 0,
       contractRulesValidated: 0,
+      securityConsiderationsValidated: 0,
     };
     console.log(JSON.stringify(output, null, 2));
     process.exit(2);
@@ -641,6 +829,7 @@ function main(): void {
       warnings: [],
       checkpointsValidated: 0,
       contractRulesValidated: 0,
+      securityConsiderationsValidated: 0,
     };
     console.log(JSON.stringify(output, null, 2));
     process.exit(2);
@@ -650,7 +839,7 @@ function main(): void {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  const { checkpointsValidated, contractRulesValidated } = validateManifest(
+  const { checkpointsValidated, contractRulesValidated, securityConsiderationsValidated } = validateManifest(
     manifest,
     options.manifest,
     errors,
@@ -664,6 +853,7 @@ function main(): void {
     warnings,
     checkpointsValidated,
     contractRulesValidated,
+    securityConsiderationsValidated,
   };
 
   console.log(JSON.stringify(output, null, 2));
