@@ -31,7 +31,6 @@ permission:
     "pmd-scan": "allow"
     "security-scan": "allow"
     "shared-agent-workflow": "allow"
-reasoningEffort: "none"
 textVerbosity: "low"
 agentVersion: "2.2.0"
 lastModified: "2026-06-05"

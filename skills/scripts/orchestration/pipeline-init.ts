@@ -82,6 +82,18 @@ function execSafe(command: string, timeout = 30000): { stdout: string; stderr: s
   }
 }
 
+/**
+ * Sanitize a shell argument to prevent injection attacks.
+ * Wraps in single quotes and escapes any single quotes within.
+ * Returns 'true' as a safe fallback for empty/null/undefined args.
+ */
+function sanitizeShellArg(arg: string): string {
+  if (!arg || typeof arg !== 'string') return "'true'";
+  // Escape single quotes by ending the quote, adding escaped quote, restarting
+  const escaped = arg.replace(/'/g, "'\\''");
+  return `'${escaped}'`;
+}
+
 function parseArgs(): PipelineArgs {
   const args = process.argv.slice(2);
 
@@ -150,9 +162,86 @@ function runPreFlight(): PreFlightReport {
   const msgResult = execSafe('git log -1 --format=%s');
   const lastCommitMessage = msgResult.stdout || 'unknown';
 
+  // ---------------------------------------------------------------------------
+  // Build system auto-detection
+  // ---------------------------------------------------------------------------
+
+  function detectBuildCommand(): string {
+    const envCmd = process.env.BUILD_COMMAND;
+    if (envCmd) return envCmd;
+
+    // Check for config files in order of preference
+    const configChecks: [string, string][] = [
+      ['package.json', 'npm run build'],  // Default npm script
+      ['tsconfig.json', 'tsc --noEmit'],   // Standalone TypeScript
+      ['vite.config.ts', 'npx vite build'],
+      ['vite.config.js', 'npx vite build'],
+      ['next.config.js', 'next build'],
+      ['next.config.ts', 'next build'],
+      ['webpack.config.js', 'npx webpack --mode production'],
+      ['webpack.config.ts', 'npx webpack --mode production'],
+      ['nuxt.config.ts', 'npx nuxt build'],
+      ['nuxt.config.js', 'npx nuxt build'],
+      ['angular.json', 'ng build'],
+      ['svelte.config.js', 'npx vite build'],
+      ['rollup.config.js', 'npx rollup -c'],
+      ['rollup.config.mjs', 'npx rollup -c'],
+      ['esbuild.config.js', 'node esbuild.config.js'],
+      ['Makefile', 'make build'],
+      ['Cargo.toml', 'cargo build'],
+      ['go.mod', 'go build ./...'],
+      ['composer.json', 'composer install'],
+      ['pyproject.toml', 'pip install -e .'],
+      ['requirements.txt', 'pip install -r requirements.txt'],
+    ];
+
+    // First check: look for the most specific config files
+    for (const [configFile, command] of configChecks) {
+      if (fs.existsSync(path.resolve(configFile))) {
+        // Special handling for package.json - check for build script
+        if (configFile === 'package.json') {
+          try {
+            const pkg = JSON.parse(fs.readFileSync(path.resolve('package.json'), 'utf-8'));
+            if (pkg.scripts?.build) {
+              return 'npm run build';
+            }
+            // Check for other common scripts
+            if (pkg.scripts?.['compile']) return 'npm run compile';
+            if (pkg.scripts?.['tsc']) return 'npm run tsc';
+            if (pkg.scripts?.['typecheck']) return 'npm run typecheck';
+            // Fallback to tsc --noEmit if typescript is a dependency
+            if (pkg.devDependencies?.typescript || pkg.dependencies?.typescript) {
+              return 'npx tsc --noEmit';
+            }
+          } catch {
+            // If package.json is unparseable, fall through
+          }
+        }
+        return command;
+      }
+    }
+
+    // No config files found - check for common language indicators
+    const dirFiles = fs.readdirSync(process.cwd());
+    const hasTsFiles = dirFiles.some(f => f.endsWith('.ts') || f.endsWith('.tsx'));
+    const hasJsFiles = dirFiles.some(f => f.endsWith('.js') || f.endsWith('.jsx') || f.endsWith('.mjs'));
+    const hasPyFiles = dirFiles.some(f => f.endsWith('.py'));
+    const hasGoFiles = dirFiles.some(f => f.endsWith('.go'));
+    const hasRsFiles = dirFiles.some(f => f.endsWith('.rs'));
+
+    if (hasTsFiles) return 'npx tsc --noEmit';
+    if (hasGoFiles) return 'go build ./...';
+    if (hasRsFiles) return 'cargo build';
+    if (hasPyFiles) return 'python -m compileall .';
+    if (hasJsFiles) return 'node --check index.js || true'; // basic JS syntax check
+
+    // Ultimate fallback
+    return 'echo "No build system detected"';
+  }
+
   // Check if project compiles
-  // Build command is configurable via BUILD_COMMAND env var
-  const buildCmd = process.env.BUILD_COMMAND || 'npm run build'; // Configurable via env var, defaults to npm
+  // Build command is configurable via BUILD_COMMAND env var, or auto-detected
+  const buildCmd = detectBuildCommand();
   const buildResult = execSafe(buildCmd + ' 2>/dev/null || true', 15000);
   const projectCompiles = buildResult.exitCode === 0;
   const buildOutput = buildResult.stderr || buildResult.stdout || '(no build output captured)';
@@ -357,10 +446,49 @@ function printSummary(
 }
 
 // ---------------------------------------------------------------------------
+// Usage / Help
+// ---------------------------------------------------------------------------
+
+function printUsage(): void {
+  console.log(`
+Usage:
+  ${process.argv[0]} pipeline-init.ts --feature=<name> --pipeline-type=<type> \\
+      [--pipeline-complexity=simple|moderate|complex] [--confidence=<0-100>] \\
+      [--skip-readiness] [--force-clean]
+
+Create agent-context.md with initial pipeline configuration, run pre-flight checks,
+and set up pipeline infrastructure.
+
+Options:
+  --feature=<name>             Feature name (required)
+  --pipeline-type=<type>       Pipeline type: full, quick, fixer-only, parallel-feature,
+                               tdd, security-fix, ui-bug, documentation, micro-pipeline,
+                               refactor, research (required)
+  --pipeline-complexity=<lvl>  Complexity: simple, moderate, complex (default: moderate)
+  --confidence=<0-100>         Pipeline confidence score (default: 80)
+  --skip-readiness             Skip agent readiness check
+  --force-clean                Auto-archive stale agent-context.md
+
+Exit codes:
+  0   Success
+  1   Error
+  2   Stale pipeline detected
+  3   Agent readiness check failed
+`.trim());
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 function main(): void {
+  const rawArgs = process.argv.slice(2);
+
+  if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+    printUsage();
+    process.exit(0);
+  }
+
   const args = parseArgs();
 
   // 1. Run pre-flight checks
@@ -400,7 +528,7 @@ function main(): void {
   // 1b. Agent readiness check â€” verify required agents have correct permissions
   if (args.pipelineType !== 'documentation' && !args.skipReadiness) {
     const readinessResult = execSafe(
-      `${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType} 2>&1`,
+      `${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${sanitizeShellArg(args.pipelineType)} 2>&1`,
       15000,
     );
     
@@ -412,7 +540,7 @@ function main(): void {
       console.log('');
       console.log('Some agents required for this pipeline are not properly configured.');
       console.log('Run the check manually for details:');
-      console.log(`  ${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${args.pipelineType}`);
+      console.log(`  ${getScriptRunner()} skills/scripts/orchestration/check-agent-readiness.ts --pipeline-type=${sanitizeShellArg(args.pipelineType)}`);
       console.log('');
       console.log('To fix: Ensure all required agent config files exist with correct permissions.');
       process.exit(3);
@@ -437,7 +565,7 @@ function main(): void {
   const tsNodeBin = getScriptRunner();
   const auditLogScript = path.resolve(__dirname, 'audit-log.ts');
   const auditLogResult = execSafe(
-    `"${tsNodeBin}" "${auditLogScript}" init --pipeline-id="${pipelineId}" --feature="${args.feature}"`,
+    `"${tsNodeBin}" "${auditLogScript}" init --pipeline-id=${sanitizeShellArg(pipelineId)} --feature=${sanitizeShellArg(args.feature)}`,
     15000,
   );
   if (auditLogResult.exitCode !== 0) {

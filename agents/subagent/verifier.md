@@ -2,7 +2,6 @@
 description: Verifies that implemented code aligns with the structured Plan Manifest produced by PlanDescriber. Performs structural, behavioral, acceptance criteria, and Pass 6 Quality Drift Detection (independently catches poor-quality code even at 100% plan compliance).
 mode: subagent
 temperature: 0.1
-reasoningEffort: 0.1
 textVerbosity: "medium"
 tools:
   write: false

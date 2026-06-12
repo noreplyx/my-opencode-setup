@@ -467,6 +467,36 @@ function printSummary(ctx: AgentContextData | null, args: CliArgs): void {
 // ---------------------------------------------------------------------------
 
 function main(): void {
+  const rawArgs = process.argv.slice(2);
+
+  if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+    console.log(`
+Usage:
+  ${process.argv[0]} pipeline-teardown.ts --feature=<name> --pipeline-type=<type> --result=pass|fail|partial
+      [--duration-minutes=<N>] [--files-changed=<file1,file2,...>]
+      [--failed-gates=<gate1,gate2,...>] [--circuit-breaker-events=<json>]
+      [--keep-context]
+
+Teardown and finalize a pipeline run: archive agent-context.md, write timeline
+logs, and clean up context file.
+
+Options:
+  --feature=<name>               Feature name (required)
+  --pipeline-type=<type>         Pipeline type (required)
+  --result=<pass|fail|partial>   Pipeline result (required)
+  --duration-minutes=<N>         Total pipeline duration in minutes
+  --files-changed=<files>        Comma-separated list of changed files
+  --failed-gates=<gates>         Comma-separated list of gates that failed
+  --circuit-breaker-events=<json> Circuit breaker events as JSON array
+  --keep-context                 Preserve agent-context.md instead of deleting
+
+Exit codes:
+  0   Teardown complete
+  1   Error
+`.trim());
+    process.exit(0);
+  }
+
   const args = parseArgs();
   const rootDir = getRootDir();
   const contextPath = getAgentContextPath(rootDir);

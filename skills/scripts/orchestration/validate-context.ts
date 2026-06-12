@@ -361,6 +361,24 @@ function validateContext(obj: Record<string, unknown>): ValidationResult {
 
 function main(): void {
   const args = process.argv.slice(2);
+
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Usage:
+  ${process.argv[0]} validate-context.ts [--context=<path>]
+
+Validate agent-context.md conforms to the AgentContext schema.
+
+Options:
+  --context=<path>    Path to agent-context.md (default: agent-context.md)
+
+Exit codes:
+  0   Valid
+  1   Invalid
+`.trim());
+    process.exit(0);
+  }
+
   const contextPath = args.find(a => a.startsWith('--context='))?.split('=')[1] || 'agent-context.md';
 
   if (!fs.existsSync(contextPath)) {

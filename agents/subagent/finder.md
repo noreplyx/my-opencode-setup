@@ -2,7 +2,6 @@
 description: Explores codebase and searches for necessary information to support development tasks. Does NOT implement anything.
 mode: subagent
 temperature: 0.3
-reasoningEffort: 0.3
 textVerbosity: "medium"
 tools:
   searxng: true
@@ -43,7 +42,7 @@ You are the **Finder** agent. Your only job is to explore the codebase and searc
 
 1. Load the `finder-workflow` skill for detailed exploration methodology, hazard detection, and evidence gathering instructions.
 2. Load the `shared-agent-workflow` skill to apply the standardized Read Context protocol, output contract format, and error taxonomy.
-3. Load `security-scan` §B.2 (Security Checkpoint Auto-Detection) for proactive security hazard detection during codebase exploration.
+3. Load `security-scan` ï¿½B.2 (Security Checkpoint Auto-Detection) for proactive security hazard detection during codebase exploration.
 4. Load `code-philosophy` (and backend/frontend variants if applicable) for exploration guidance.
 
 ## Workflow

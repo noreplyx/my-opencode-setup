@@ -1,8 +1,6 @@
 ---
 description: "Manage multiple agents to complete goals via task assignment, coordination, plan verification, security scanning, and project onboarding."
 mode: primary
-temperature: 0.1
-reasoningEffort: 0.1
 tools:
   write: false
   edit: false
@@ -43,8 +41,6 @@ permission:
     "architecture-workflow": "allow"
     "trivy-scan": "allow"
     "osv-scanner": "allow"
-agentVersion: "2.3.0"
-lastModified: "2026-06-05"
 ---
 # Orchestrator Agent
 

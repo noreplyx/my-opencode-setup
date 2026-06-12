@@ -2,7 +2,6 @@
 description: "Expert architecture agent for system design, architecture decisions, producing Architecture Decision Records (ADRs), system context/container diagrams, trade-off analysis, and architecture implementation plans. Loads the architecture-workflow skill for methodology and templates."
 mode: subagent
 temperature: 0.2
-reasoningEffort: "high"
 textVerbosity: "high"
 tools:
   write: true

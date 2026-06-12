@@ -2,7 +2,6 @@
 description: Debugs and fixes bugs in implemented code. Diagnoses root causes, applies targeted fixes, and verifies resolution. Called when QA reports bugs or Verifier finds deviations.
 mode: subagent
 temperature: 0.3
-reasoningEffort: "high"
 textVerbosity: "high"
 tools:
   write: true

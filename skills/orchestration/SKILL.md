@@ -48,6 +48,90 @@ description: Use this skill to orchestrate multiple agents to resolve complex pr
 | **V2 Extended Output Schemas** | Fixer Root Cause, QA Security Coverage, Verifier Drift Detection | Standardized new fields |
 | **Pipeline Log Archiving** | `pipeline-teardown.ts` | Full log archival + agent-context.md cleanup |
 
+---
+
+## Standard Workflow Pipeline
+
+The full standard pipeline orchestrates the following agents and quality gates in sequence:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                       STANDARD WORKFLOW PIPELINE                     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                PLANNING & EXPLORATION PHASE                   │    │
+│  │                                                              │    │
+│  │  Finder ──► Orchestrator (brainstorm) ──► PlanDescriber       │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│       │                                                              │
+│       ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                  IMPLEMENTATION PHASE                         │    │
+│  │                                                              │    │
+│  │  Implementor                                                  │    │
+│  │       │                                                      │    │
+│  │       ▼                                                      │    │
+│  │  Integrator (Phase 1: Verify Cross-References)               │    │
+│  │       │                                                      │    │
+│  │       ▼                                                      │    │
+│  │  Integrator (Phase 2: Wire - barrel files, DI, routes)       │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│       │                                                              │
+│       ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                  QUALITY GATE SEQUENCE                        │    │
+│  │                                                              │    │
+│  │  1. Build Gate                                                │    │
+│  │       ▼                                                      │    │
+│  │  2. Lint Gate                                                 │    │
+│  │       ▼                                                      │    │
+│  │  3. Security Self-Review Gate   (17-item checklist)           │    │
+│  │       ▼                                                      │    │
+│  │  4. Code Quality Gate           (PMD static analysis + CPD)   │    │
+│  │       ▼                                                      │    │
+│  │  5. Test Gate                   (automated regression detect) │    │
+│  │       ▼                                                      │    │
+│  │  6. Security Scan Gate          (SAST, secrets, deps, vulns)  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│       │                                                              │
+│       ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │               QA & VERIFICATION PHASE                         │    │
+│  │                                                              │    │
+│  │  QA (Smoke Test + Security Regression)                       │    │
+│  │       │                                                      │    │
+│  │       ▼                                                      │    │
+│  │  Security Test Coverage Gate                                 │    │
+│  │       │                                                      │    │
+│  │       ▼                                                      │    │
+│  │  Acceptance Gate                                             │    │
+│  │       │                                                      │    │
+│  │       ▼                                                      │    │
+│  │  Verifier (plan compliance + drift detection)                │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│       │                                                              │
+│       ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                   FINALIZATION PHASE                          │    │
+│  │                                                              │    │
+│  │  Documentor ──► Orchestrator (report + teardown)             │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Gate Descriptions
+
+| Gate | What It Does | Who Runs It | Failure Action |
+|------|-------------|-------------|----------------|
+| **Build Gate** | `npm run build` / `npx tsc --noEmit` | Implementor | Fix build errors, retry |
+| **Lint Gate** | `eslint`, `prettier --check`, etc. | Implementor | Fix lint errors, retry |
+| **Security Self-Review Gate** | Validates 17-item security + quality checklist | Implementor | Pipeline blocked until all items pass |
+| **Code Quality Gate** | PMD static analysis + copy-paste detection | Implementor / Subagent | Violations fail the gate |
+| **Test Gate** | `npm test` / `jest` / `vitest run` | Subagent | Cycle to Fixer |
+| **Security Scan Gate** | SAST (semgrep), secrets (gitleaks), vulns (trivy, npm audit) | Security Subagent | Severity-based pass/fail |
+
 ## Protocol Reference
 
 All orchestration protocols are defined in `agents/orchestrator.md`:
@@ -118,6 +202,20 @@ All orchestration protocols are defined in `agents/orchestrator.md`:
 | provenance-tracker.ts | Checkpoint lifecycle tracking | `ts-node .../provenance-tracker.ts --implement --manifest=...` |
 | evidence-quality-gate.ts | Validate evidence quality and verifiability after every agent hand-off | `ts-node .../evidence-quality-gate.ts --context=agent-context.md` |
 | check-handoff.ts | Hand-off completeness validation | `ts-node .../check-handoff.ts --agent=<name> --context="..."` |
+| auto-rollback.ts | Automatic rollback on pipeline failure | `ts-node .../auto-rollback.ts --pipeline-id=<id> --manifest=...` |
+| check-evidence-regression.ts | Scan historical evidence for staleness | `ts-node .../check-evidence-regression.ts --manifest=...` |
+| circuit-breaker.ts | Circuit breaker state management | `ts-node .../circuit-breaker.ts --status --pipeline-id=<id>` |
+| cost-tracker.ts | Track pipeline execution costs | `ts-node .../cost-tracker.ts --pipeline-id=<id>` |
+| delegation-gate.ts | Validate orchestrator delegated all work | `ts-node .../delegation-gate.ts --context=agent-context.md` |
+| dependency-check.ts | Check dependency graph for conflicts | `ts-node .../dependency-check.ts --manifest=...` |
+| monitor-pipeline.ts | Real-time pipeline monitoring | `ts-node .../monitor-pipeline.ts --pipeline-id=<id>` |
+| pipeline-selector.ts | Auto-classify task type into pipeline | `ts-node .../pipeline-selector.ts --description="..."` |
+| pipeline-visualizer.ts | Generate pipeline visualization | `ts-node .../pipeline-visualizer.ts --pipeline-id=<id>` |
+| plan-quality-score.ts | Verifier-PlanDescriber feedback score | `ts-node .../plan-quality-score.ts --record --pipeline-id=<id> --compliance-score=<score>` |
+| security-prescreen.ts | Pre-plan security risk classification | `ts-node .../security-prescreen.ts --feature=<name> --description="..."` |
+| skill-drift-detector.ts | Detect skill definition drift | `ts-node .../skill-drift-detector.ts --skill=<name>` |
+| test-pipeline.ts | Integration test for pipeline | `ts-node .../test-pipeline.ts --pipeline-type=<type>` |
+| validate-transition.ts | Validate pipeline step transitions | `ts-node .../validate-transition.ts --from=<step> --to=<step> --type=<pipeline>` |
 
 ## Reference Files
 

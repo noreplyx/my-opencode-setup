@@ -715,6 +715,36 @@ function verifyManifest(manifest: PlanManifest, report: ParallelismReport): Veri
 // =========================================================================
 
 function main(): void {
+  const rawArgs = process.argv.slice(2);
+
+  if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+    console.log(`
+Usage:
+  ${process.argv[0]} parallel-dispatch.ts --manifest=<path> --pipeline-id=<id> [--dry-run] [--agent=<type>]
+  ${process.argv[0]} parallel-dispatch.ts --manifest=<path> --plan
+  ${process.argv[0]} parallel-dispatch.ts --manifest=<path> --verify
+  ${process.argv[0]} parallel-dispatch.ts --report=<path> --pipeline-id=<id>
+
+Analyze a plan manifest for parallelization opportunities and produce dispatch
+manifests in .opencode/dispatch/<pipelineId>/.
+
+Options:
+  --manifest=<path>       Path to plan manifest JSON (required for dispatch/plan/verify)
+  --report=<path>         Path to pre-computed parallelism report JSON
+  --pipeline-id=<id>      Pipeline ID (required for dispatch mode)
+  --agent=<type>          Agent type for dispatch (default: implementor)
+  --dry-run               Preview dispatch manifests without writing files
+  --plan                  Print parallelization plan and exit
+  --verify                Verify dispatch consistency against manifest
+
+Exit codes:
+  0   Success / Plan displayed / Verify passed
+  1   Input error (missing args, parse failure)
+  2   Inconsistency found (verify mode)
+`.trim());
+    process.exit(0);
+  }
+
   const args = parseArgs();
   const manifestPath = args.manifest;
 

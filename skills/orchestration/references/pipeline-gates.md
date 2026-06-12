@@ -76,6 +76,20 @@ If the security self-review gate fails:
 - Documentation-only and exploratory pipelines skip this gate
 - Fixer pipelines skip this gate (Fixer has its own security self-review)
 
+### Relationship to Security Pre-Screening
+
+The pipeline contains two distinct security gates at different stages:
+
+| Gate | Script | When | Who Runs | Purpose |
+|------|--------|------|----------|---------|
+| **Security Pre-Screening** | `security-prescreen.ts` | BEFORE PlanDescriber | Orchestrator | Classify risk level, inject security checkpoints into plan manifest |
+| **Security Self-Review Gate** | `security-self-review-gate.ts` | AFTER Implementation (before Build Gate) | Implementor / Orchestrator | Validate 17-item quality self-review completed |
+
+**Security Pre-Screening** is proactive — it designs security into the plan before any code is written.
+**Security Self-Review Gate** is reactive — it catches security gaps in the implementation before the build runs.
+
+Both gates must pass for Sensitive and Infrastructure features.
+
 ---
 
 ## Code Quality Gate
@@ -494,4 +508,8 @@ Output is JSON — the Orchestrator injects the `securityConsiderations` block i
 - Documentation-only pipelines
 - Research pipelines with no code changes
 - Fixer-only pipelines (the plan already exists with security considerations)
+
+### Relationship to Security Self-Review Gate
+
+See the Security Self-Review Gate section above for the post-implementation security gate. The Security Pre-Screening (this section) runs BEFORE planning, while the Security Self-Review Gate runs AFTER implementation.
 

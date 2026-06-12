@@ -1142,6 +1142,29 @@ function validatePipeline(filePath: string): ValidationResult[] {
 function main(): void {
   const args = process.argv.slice(2);
 
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Usage:
+  ${process.argv[0]} validate-output-contract.ts --file=<path> [--agent=<name>]
+  ${process.argv[0]} validate-output-contract.ts --agent=<name>          (pipe YAML via stdin)
+  ${process.argv[0]} validate-output-contract.ts --pipeline              (validates agent-context.md)
+
+Validate subagent output against the structured output contract schema.
+
+Options:
+  --file=<path>       Path to a YAML file with agent output to validate
+  --agent=<name>      Agent name (finder, implementor, fixer, plandescriber, verifier, qa, browser-tester)
+  --pipeline          Validate all agent outputs in agent-context.md
+  --version           Print version and exit
+
+Exit codes:
+  0   Valid
+  1   Validation failed
+  2   File not found / parse error
+`.trim());
+    process.exit(0);
+  }
+
   if (args.includes('--version')) {
     console.log('validate-output-contract.ts v2.0');
     console.log('Output Contract Validator for OpenCode orchestration system');

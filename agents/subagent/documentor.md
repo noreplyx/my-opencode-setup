@@ -2,7 +2,6 @@
 description: Creates and maintains project documentation including README updates, API docs, inline code comments, and technical documentation. Runs a two-phase workflow: first analysis of git diff + AST for change detection, then documentation generation inline with code changes.
 mode: subagent
 temperature: 0.2
-reasoningEffort: 0.2
 textVerbosity: "medium"
 tools:
   write: true
