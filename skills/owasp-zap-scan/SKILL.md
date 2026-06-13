@@ -151,7 +151,7 @@ zap-api-scan -t https://example.com/openapi.json -f openapi -r api-report.html
 
 Add to `~/.zshrc` or `~/.bashrc` for persistence:
 ```bash
-source /home/oat/.config/opencode/skills/owasp-zap-scan/scripts/zap-wrapper.sh
+source ./skills/owasp-zap-scan/scripts/zap-wrapper.sh
 ```
 
 ## Scan Workflow

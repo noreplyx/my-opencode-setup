@@ -15,7 +15,7 @@
 #   OSV_SCANNER_WORKDIR=/path/to/project osv-scanner-docker scan source -r /src
 #
 # Add to ~/.zshrc or ~/.bashrc for persistence:
-#   source /home/oat/.config/opencode/skills/osv-scanner/scripts/osv-scanner-wrapper.sh
+#   source ./skills/osv-scanner/scripts/osv-scanner-wrapper.sh
 
 osv-scanner-docker() {
     local workdir="${OSV_SCANNER_WORKDIR:-${PWD}}"

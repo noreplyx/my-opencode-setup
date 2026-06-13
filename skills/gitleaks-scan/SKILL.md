@@ -55,7 +55,7 @@ gitleaks-docker git --report-format=json --report-path=-
 
 Add to `~/.zshrc` or `~/.bashrc` for persistence:
 ```bash
-source /home/oat/.config/opencode/skills/gitleaks-scan/scripts/gitleaks-wrapper.sh
+source ./skills/gitleaks-scan/scripts/gitleaks-wrapper.sh
 ```
 
 ## Container Image Reference

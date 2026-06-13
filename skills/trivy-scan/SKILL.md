@@ -132,7 +132,7 @@ podman run --rm -v "${PWD}:/src:Z" docker.io/aquasec/trivy:latest \
 Source the included wrapper script to avoid repeating the podman incantation:
 
 ```bash
-source skills/trivy-scan/scripts/trivy-wrapper.sh
+source ./skills/trivy-scan/scripts/trivy-wrapper.sh
 # Now use like native trivy:
 trivy-docker fs .
 trivy-docker image nginx:latest
@@ -141,7 +141,7 @@ trivy-docker fs --severity CRITICAL --exit-code 1 .
 
 Add to `~/.zshrc` or `~/.bashrc` for persistence:
 ```bash
-source /home/oat/.config/opencode/skills/trivy-scan/scripts/trivy-wrapper.sh
+source skills/trivy-scan/scripts/trivy-wrapper.sh
 ```
 
 ## Scan Workflow

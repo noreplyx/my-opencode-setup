@@ -55,7 +55,7 @@ podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
 Source the included wrapper to avoid repeating the Podman incantation:
 
 ```bash
-source skills/osv-scanner/scripts/osv-scanner-wrapper.sh
+source ./skills/osv-scanner/scripts/osv-scanner-wrapper.sh
 # Now use like native osv-scanner (for source scanning):
 osv-scanner-docker scan source -r .
 osv-scanner-docker --format json -L ./package-lock.json
@@ -65,7 +65,7 @@ osv-scanner-docker --licenses="MIT,Apache-2.0" .
 
 Add to `~/.zshrc` or `~/.bashrc` for persistence:
 ```bash
-source /home/oat/.config/opencode/skills/osv-scanner/scripts/osv-scanner-wrapper.sh
+source skills/osv-scanner/scripts/osv-scanner-wrapper.sh
 ```
 
 ### Set Custom Working Directory
