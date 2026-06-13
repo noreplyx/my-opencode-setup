@@ -4,10 +4,10 @@ mode: primary
 tools:
   write: false
   edit: false
-  bash: true
-  read: true
-  glob: true
-  grep: true
+  bash: false
+  read: false
+  glob: false
+  grep: false
   skill: true
   lsp: false
   task: true
