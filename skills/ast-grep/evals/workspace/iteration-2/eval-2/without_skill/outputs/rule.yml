@@ -1,9 +1,0 @@
-id: rxjs-subscribe-calls
-language: TypeScript
-message: Method uses .subscribe() (RxJS Observable pattern)
-severity: info
-rule:
-  pattern: $X.subscribe($$$)
-  inside:
-    kind: method_definition
-    stopBy: end

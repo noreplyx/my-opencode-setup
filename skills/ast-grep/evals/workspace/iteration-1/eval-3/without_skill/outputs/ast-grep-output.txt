@@ -1,3 +1,0 @@
-$ /home/oat/.bun/bin/ast-grep run -p 'console.error($$$ARGS)' -r 'this.logger.error($$$ARGS)' -l ts --update-all /home/oat/.config/opencode/skills/ast-grep/evals/files/search-sample.ts
-
-Applied 1 changes

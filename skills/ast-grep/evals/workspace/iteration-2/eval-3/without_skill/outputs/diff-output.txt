@@ -1,8 +1,0 @@
---- search-sample.ts (original)
-+++ search-sample.ts (transformed)
-@@ -31,7 +31,7 @@
-       error: (err) => {
--        console.error('Failed to load users:', err);
-+        this.logger.error('Failed to load users:', err);
-         this.loading = false;
-       },

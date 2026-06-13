@@ -1,9 +1,0 @@
-﻿{
-  "expectations": [
-    {"text": "Uses --json flag for JSON output", "passed": true, "evidence": "Command: ast-grep -p 'import { $$$ } from \"$PATH\"' -l ts --json"},
-    {"text": "Uses meta-variables in the pattern (e.g., $MODULE or $PATH)", "passed": true, "evidence": "Uses $$$ (multi) for import specifiers and $PATH (single) for module path"},
-    {"text": "The pattern correctly matches imports from the specified paths", "passed": true, "evidence": "Pattern matches any import { ... } from \"...\" syntax; would filter with jq or inline rule for specific paths"},
-    {"text": "Output is valid JSON", "passed": true, "evidence": "Output is valid JSON: [] (empty array -- file has @angular/* imports, not ../../*)"}
-  ],
-  "summary": {"passed": 4, "failed": 0, "total": 4, "pass_rate": 1.0}
-}

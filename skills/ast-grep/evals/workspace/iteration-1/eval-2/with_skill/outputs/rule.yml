@@ -1,8 +1,0 @@
-id: find-subscribe-in-methods
-language: TypeScript
-message: "Method uses RxJS .subscribe() call"
-rule:
-  kind: method_definition
-  has:
-    pattern: $_.subscribe($$$)
-    stopBy: end

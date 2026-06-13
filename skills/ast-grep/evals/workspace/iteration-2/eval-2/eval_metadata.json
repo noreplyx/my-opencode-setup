@@ -1,6 +1,0 @@
-{
-  "eval_id": 2,
-  "eval_name": "create-rule-subscribe",
-  "prompt": "Create an ast-grep YAML rule to find all methods in the file evals/files/search-sample.ts that use .subscribe() calls (RxJS pattern). Write the rule, save it to a file, and run it with ast-grep scan. Show the output.",
-  "assertions": []
-}

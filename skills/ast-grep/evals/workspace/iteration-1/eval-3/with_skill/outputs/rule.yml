@@ -1,7 +1,0 @@
-id: console-error-to-logger
-language: TypeScript
-severity: error
-message: Replace console.error with this.logger.error
-rule:
-  pattern: console.error($$$ARGS)
-fix: this.logger.error($$$ARGS)

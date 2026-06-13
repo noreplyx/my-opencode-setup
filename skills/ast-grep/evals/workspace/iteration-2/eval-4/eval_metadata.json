@@ -1,6 +1,0 @@
-{
-  "eval_id": 4,
-  "eval_name": "find-arrow-implicit-return",
-  "prompt": "Create an ast-grep rule that finds all arrow functions (=>) assigned to a const/let variable that have only a single expression in the body (implicit return). Use this on a TypeScript project. Save the rule and run it.",
-  "assertions": []
-}
