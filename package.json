@@ -1,7 +1,6 @@
 {
-  "type": "module",
   "dependencies": {
-    "@opencode-ai/plugin": "1.15.7",
+    "@opencode-ai/plugin": "1.17.7",
     "agent-skills-eval": "^0.1.1",
     "dotenv": "^17.4.2",
     "prompts": "^2.4.2",
@@ -11,6 +10,8 @@
     "@playwright/cli": "latest",
     "@types/node": "^25.9.0",
     "@types/prompts": "^2.4.9",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "typescript": "^6.0.3"
   },
   "name": "opencode",

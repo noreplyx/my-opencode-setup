@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "schema/plan-protocol-schema.json",
+  "title": "Plan Protocol Schema",
+  "description": "Schema for structured plan descriptions with checkpoints, acceptance criteria, and security concerns.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "plan": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short, descriptive title of the plan"
+        },
+        "description": {
+          "type": "string",
+          "description": "One-sentence summary of what the plan achieves"
+        },
+        "overview": {
+          "type": "string",
+          "description": "Detailed overview of the plan context, goals, and constraints"
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version of the plan (e.g., '1.0.0')"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when the plan was created"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when the plan was last modified"
+        },
+        "checkpoints": {
+          "type": "array",
+          "description": "Ordered list of implementation checkpoints",
+          "items": {
+            "$ref": "#/definitions/checkpoint"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["title", "description", "overview", "checkpoints"]
+    }
+  },
+  "required": ["plan"],
+  "definitions": {
+    "checkpoint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the checkpoint (e.g., 'CP-01', 'CP-02')",
+          "pattern": "^CP-\\d+$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Short name for the checkpoint"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of what this checkpoint entails"
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "IDs of checkpoints that must be completed before this one",
+          "items": {
+            "type": "string",
+            "pattern": "^CP-\\d+$"
+          },
+          "uniqueItems": true
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "description": "Verifiable conditions that must be met for this checkpoint to be considered complete",
+          "items": {
+            "$ref": "#/definitions/acceptance_criterion"
+          },
+          "minItems": 1
+        },
+        "security_concerns": {
+          "type": "array",
+          "description": "Security concerns specific to this checkpoint as a whole",
+          "items": {
+            "$ref": "#/definitions/security_concern"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "description": "Reasons this checkpoint is blocked from proceeding",
+          "items": {
+            "$ref": "#/definitions/blocker"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "dependencies", "acceptance_criteria"]
+    },
+    "acceptance_criterion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the criterion (e.g., 'AC-01-01')",
+          "pattern": "^AC-\\d+-\\d+$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Verifiable condition that must be satisfied"
+        },
+        "verification_method": {
+          "type": "string",
+          "description": "How to verify this criterion is met (e.g., test command, manual inspection, code review)"
+        },
+        "security_concerns": {
+          "type": "array",
+          "description": "Security concerns specific to this acceptance criterion",
+          "items": {
+            "$ref": "#/definitions/security_concern"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of this acceptance criterion",
+          "enum": ["pending", "passed", "failed", "blocked"],
+          "default": "pending"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "description", "verification_method"]
+    },
+    "security_concern": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the concern (e.g., 'SC-01')",
+          "pattern": "^SC-\\d+(-\\d+)?$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the security risk or concern"
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity level of the concern",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "mitigation": {
+          "type": "string",
+          "description": "Recommended action to address or reduce the risk"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["id", "description", "severity", "mitigation"]
+    },
+    "blocker": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Description of why this checkpoint is blocked"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when the blocker was added"
+        },
+        "resolved": {
+          "type": "boolean",
+          "description": "Whether this blocker has been resolved",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": ["reason"]
+    }
+  }
+}
+
+
