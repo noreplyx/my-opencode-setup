@@ -205,6 +205,22 @@ switch (command) {
     }
     const [cp] = plan.checkpoints.splice(currentIdx, 1);
     plan.checkpoints.splice(newIndex, 0, cp);
+    const orderIndex = new Map(plan.checkpoints.map((c, i) => [c.id, i]));
+    const violations: string[] = [];
+    for (const c of plan.checkpoints) {
+      for (const dep of c.dependencies) {
+        const depIdx = orderIndex.get(dep);
+        const cpIdx = orderIndex.get(c.id);
+        if (depIdx !== undefined && cpIdx !== undefined && depIdx >= cpIdx) {
+          violations.push(`  ${c.id} depends on ${dep}, but ${c.id} is at index ${cpIdx} and ${dep} is at index ${depIdx}`);
+        }
+      }
+    }
+    if (violations.length > 0) {
+      console.error("Error: reorder would break dependency ordering (dependencies must appear before their dependents):");
+      for (const v of violations) console.error(v);
+      process.exit(1);
+    }
     save();
     break;
   }
