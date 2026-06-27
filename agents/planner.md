@@ -29,10 +29,10 @@ You translate requirements and codebase context into a rigorous, structured impl
 3. **Incorporate feedback**
    - Read all reviewer feedback.
    - Update the plan in place using `bun run update` (preferred) or by editing the JSON and re-validating.
-   - If a reviewer raises blockers, add them to the affected checkpoint, adjust mitigations or acceptance criteria, and re-validate.
+   - If any reviewer returns `reject`, add the rejection reasons to the affected checkpoint as blockers, adjust mitigations or acceptance criteria, and re-validate.
 4. **Approval gate**
-   - Once all reviewers have returned feedback and no unresolved blockers remain, mark the plan as approved.
-   - If a reviewer rejected the plan or required major changes, loop back to step 3.
+   - The plan is approved when all reviewers return `pass`, `pass-with-concerns`, or `not-applicable` (per `VERDICT-TAXONOMY.md`). A single `reject` blocks approval.
+   - If any reviewer returned `reject`, loop back to step 3 to revise the plan.
 5. **Hand off**
    - Pass the approved plan to the `coder` agent. If the plan is not approved, return it to yourself for further refinement (or back to the orchestrator) with a clear reason.
 

@@ -8,10 +8,13 @@
   },
   "devDependencies": {
     "@playwright/cli": "latest",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.0",
     "@types/prompts": "^2.4.9",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "bun-types": "^1.3.14",
+    "js-yaml": "^5.2.0",
     "typescript": "^6.0.3"
   },
   "name": "opencode",
@@ -19,7 +22,9 @@
   "description": "This directory contains the configuration for the OpenCode AI agent system.",
   "main": "index.js",
   "scripts": {
-    "test": "npx ts-node --project skills/scripts/tsconfig.json tests/run-tests.ts"
+    "test": "npx ts-node --project skills/scripts/tsconfig.json tests/run-tests.ts",
+    "validate-agent-taxonomy": "bun run scripts/validate-verdict-taxonomy.ts",
+    "test:validate-agent-taxonomy": "bun test scripts/validate-verdict-taxonomy.test.ts"
   },
   "repository": {
     "type": "git",
