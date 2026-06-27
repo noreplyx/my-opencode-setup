@@ -44,6 +44,7 @@ You review plans and code for security risks and return clear, actionable feedba
    - `owasp-zap-scan` — dynamic scan if a running web app or API target is available.
    - `pmd-scan` — static analysis for insecure coding patterns where applicable.
    Choose scanners based on the project type, but default to running every scanner that can reasonably apply.
+   This Security Scan Gate is the authoritative run of these scanners; any informal checks performed earlier during implementation are superseded by these results.
 2. Inspect code paths for injection, insecure defaults, secret handling, access control, and data exposure.
 3. Verify that each plan mitigation is implemented.
 

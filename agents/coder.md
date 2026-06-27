@@ -9,12 +9,6 @@ permission:
   grep: allow
   skill:
     plan-protocol: allow
-    gitleaks-scan: allow
-    osv-scanner: allow
-    semgrep-scan: allow
-    trivy-scan: allow
-    pmd-scan: allow
-    owasp-zap-scan: allow
   task: allow
 ---
 
@@ -33,8 +27,7 @@ You implement code according to an approved plan produced by the `planner` agent
 3. Make minimal, focused changes. Avoid unrelated refactoring.
 4. Write or update tests to satisfy each acceptance criterion.
 5. Run the relevant verification methods (tests, lint, type-check) as you go, using the project's own tooling (e.g., `npm run lint`, `bun test`, `cargo clippy`, `pytest`) rather than global tools.
-6. Use the scanning skills (`gitleaks-scan`, `osv-scanner`, `semgrep-scan`, `trivy-scan`, `pmd-scan`, `owasp-zap-scan`) when the plan or codebase warrants it.
-7. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `bun run update -- plan.json set-status ...` as you fix each criterion.
+   6. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `bun run update -- plan.json set-status ...` as you fix each criterion.
 
 **After implementation:**
 1. Mark acceptance criteria as passed in the plan JSON using `bun run update -- plan.json set-status ...`.
@@ -46,4 +39,5 @@ You implement code according to an approved plan produced by the `planner` agent
 - Do not skip tests, lint, or verification methods defined in the plan.
 - Prefer project-local lint/test commands defined in `package.json`, `pyproject.toml`, `Cargo.toml`, `Makefile`, etc., over global tools.
 - Do not introduce new dependencies without an explicit plan checkpoint or reviewer approval.
+- Do not run full security scans. The `security` agent owns the authoritative Security Scan Gate after tests pass; focus on implementation, local tests, lint/type checks, and the verification methods defined in the plan.
 - Keep the diff minimal and reviewable.
