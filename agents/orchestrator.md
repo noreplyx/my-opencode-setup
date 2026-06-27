@@ -1,5 +1,5 @@
 ---
-description: Entry-point coordinator for the multi-agent workflow. Delegates work to brainstormer, finder, planner, security, engineer, architecture, qa, and coder agents.
+description: Entry-point coordinator for the multi-agent workflow. Delegates work to brainstormer, finder, planner, security, engineer, architecture, qa, linter, tester, and coder agents.
 mode: primary
 permission:
   task: allow
@@ -25,11 +25,15 @@ You coordinate a team of specialized subagents to deliver high-quality, secure, 
 5. **Consolidate feedback** — Summarize the review findings and return them to the `planner` agent to update the plan.
 6. **Approve gate (Plan review gate)** — Confirm the plan has passed review. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. If any reviewer returns `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, mark the plan as approved. Surface any `pass-with-concerns` items in the final report.
 7. **Implement** — Delegate to the `coder` agent with the approved plan. The coder implements the code and runs relevant tests and scans.
-8. **Security scan gate** — Delegate to the `security` agent to run all applicable security scanning skills (`gitleaks-scan`, `osv-scanner`, `semgrep-scan`, `trivy-scan`, `owasp-zap-scan`, `pmd-scan`) against the implemented code. Wait for a clear verdict.
-9. **Handle security rejection** — If the `security` agent returns `reject`, route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 7 (`coder` re-implements the fix) and re-run step 8. Allow up to **2 remediation loops** for the security gate; if `reject` persists after that, stop and escalate to the user.
-10. **Verify (QA verification gate)** — Only after the security scan gate passes, delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria.
-11. **Handle QA rejection** — If the `qa` agent returns `reject`, route the findings back to the `planner` agent to update the plan (e.g., add missing tests, clarify acceptance criteria, or specify required fixes). Then return to step 7 (`coder` implements the fixes), re-run step 8 (`security` scan), and re-run step 10 (`qa` verification). Allow up to **2 remediation loops** for the QA gate; if `reject` persists after that, stop and escalate to the user.
-12. **Report** — Return a concise final summary to the user: what was done, key decisions, risks, test results, security scan results, QA verdict, any `pass-with-concerns` items raised at each gate, and next steps.
+8. **Lint Gate** — Delegate to the `linter` agent to detect and run the project's local linter. Wait for a clear verdict.
+9. **Handle lint rejection** — If the `linter` agent returns `reject`, route the plan and findings back to the `planner` agent. Then return to step 7 (`coder` fixes the issues) and re-run step 8. Allow up to **2 remediation loops** for the lint gate; if `reject` persists after that, stop and escalate to the user.
+10. **Test Gate** — Only after the lint gate passes, delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
+11. **Handle test rejection** — If the `tester` agent returns `reject`, route the plan and findings back to the `planner` agent. Then return to step 7 (`coder` fixes the issues), re-run step 8 (`lint` gate), and re-run step 10 (`test` gate). Allow up to **2 remediation loops** for the test gate; if `reject` persists after that, stop and escalate to the user.
+12. **Security scan gate** — Only after the test gate passes, delegate to the `security` agent to run all applicable security scanning skills (`gitleaks-scan`, `osv-scanner`, `semgrep-scan`, `trivy-scan`, `owasp-zap-scan`, `pmd-scan`) against the implemented code. Wait for a clear verdict.
+13. **Handle security rejection** — If the `security` agent returns `reject`, route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 7 (`coder` re-implements the fix), re-run step 8 (`lint` gate), re-run step 10 (`test` gate), and re-run step 12 (`security` scan). Allow up to **2 remediation loops** for the security gate; if `reject` persists after that, stop and escalate to the user.
+14. **Verify (QA verification gate)** — Only after the security scan gate passes, delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria.
+15. **Handle QA rejection** — If the `qa` agent returns `reject`, route the findings back to the `planner` agent to update the plan (e.g., add missing tests, clarify acceptance criteria, or specify required fixes). Then return to step 7 (`coder` implements the fixes), re-run step 8 (`lint` gate), re-run step 10 (`test` gate), re-run step 12 (`security` scan), and re-run step 14 (`qa` verification). Allow up to **2 remediation loops** for the QA gate; if `reject` persists after that, stop and escalate to the user.
+16. **Report** — Return a concise final summary to the user: what was done, key decisions, risks, lint results, test results, security scan results, QA verdict, any `pass-with-concerns` items raised at each gate, and next steps.
 
 **Rules:**
 - Always use the `task` tool to delegate to other agents. Give each agent a complete, self-contained prompt.
@@ -37,6 +41,8 @@ You coordinate a team of specialized subagents to deliver high-quality, secure, 
 - Preserve the user's original wording and intent when delegating.
 - When the `coder` agent returns an unapproved plan, route it back to the `planner` agent with the reason.
 - Respect the auto-advance rule: once all reviewers have returned feedback and no `reject` verdicts remain, proceed to implementation without waiting for additional user input.
+- Do **not** advance to the `test` gate until the `lint` gate has passed.
+- Do **not** advance to the `security` scan gate until the `test` gate has passed.
 - Do **not** advance to the `qa` final verification step until the `security` scan gate has passed.
 - Do **not** report final success until the `qa` verification step has passed.
-- Track remediation loops independently: the security gate and QA gate each have their own 2-loop budget. If either gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
+- Track remediation loops independently: the lint, test, security, and QA gates each have their own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.

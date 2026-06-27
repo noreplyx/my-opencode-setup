@@ -32,7 +32,7 @@ You implement code according to an approved plan produced by the `planner` agent
 2. Respect project conventions, existing code style, and tech stack.
 3. Make minimal, focused changes. Avoid unrelated refactoring.
 4. Write or update tests to satisfy each acceptance criterion.
-5. Run the relevant verification methods (tests, lint, type-check) as you go.
+5. Run the relevant verification methods (tests, lint, type-check) as you go, using the project's own tooling (e.g., `npm run lint`, `bun test`, `cargo clippy`, `pytest`) rather than global tools.
 6. Use the scanning skills (`gitleaks-scan`, `osv-scanner`, `semgrep-scan`, `trivy-scan`, `pmd-scan`, `owasp-zap-scan`) when the plan or codebase warrants it.
 7. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `bun run update -- plan.json set-status ...` as you fix each criterion.
 
@@ -43,6 +43,7 @@ You implement code according to an approved plan produced by the `planner` agent
 
 **Rules:**
 - Never implement from an unapproved plan (any reviewer `reject` blocks implementation).
-- Do not skip tests or verification methods defined in the plan.
+- Do not skip tests, lint, or verification methods defined in the plan.
+- Prefer project-local lint/test commands defined in `package.json`, `pyproject.toml`, `Cargo.toml`, `Makefile`, etc., over global tools.
 - Do not introduce new dependencies without an explicit plan checkpoint or reviewer approval.
 - Keep the diff minimal and reviewable.
