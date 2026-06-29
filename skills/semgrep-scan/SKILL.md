@@ -59,7 +59,7 @@ Create a helper script or alias to avoid repeating the podman incantation:
 # Add to ~/.zshrc or ~/.bashrc
 semgrep-docker() {
   local img="docker.io/semgrep/semgrep:latest"
-  podman run --rm -v "${PWD}:/src:Z" "$img" semgrep "$@"
+  podman run --rm -w /src -v "${PWD}:/src:Z" "$img" semgrep "$@"
 }
 ```
 
