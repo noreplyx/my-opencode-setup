@@ -15,8 +15,8 @@ PMD supports **17+ languages**: Java, Apex, JavaScript, TypeScript, JSP, Kotlin,
 
 | Operation | Command |
 |-----------|---------|
-| **Quick Java scan** | `podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest check -d /src -R rulesets/java/quickstart.xml` |
-| **Shell wrapper** (recommended) | Add the `pmd-docker` alias below and run `pmd-docker check -d /src -R rulesets/java/quickstart.xml` |
+| **Quick Java scan** | `podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest check -d /src -R category/java/quickstart.xml` |
+| **Shell wrapper** (recommended) | Add the `pmd-docker` alias below and run `pmd-docker check -d /src -R category/java/quickstart.xml` |
 | **First-time setup** | `podman pull docker.io/pmdcode/pmd:latest` |
 | **Check version** | `podman run --rm docker.io/pmdcode/pmd:latest --version` |
 | **Run CPD** | `podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest cpd --minimum-tokens 100 --language java --dir /src` |
@@ -45,16 +45,16 @@ podman run --rm docker.io/pmdcode/pmd:latest --version
 
 # Quick Java scan with quickstart rules
 podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
-  check -d /src -R rulesets/java/quickstart.xml
+  check -d /src -R category/java/quickstart.xml
 
 # Scan with XML output report
 podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
-  check -d /src/src/main/java -R rulesets/java/quickstart.xml \
+  check -d /src/src/main/java -R category/java/quickstart.xml \
   -r /src/target/pmd-report.xml -f xml
 
 # Scan with HTML report
 podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
-  check -d /src -R rulesets/java/quickstart.xml \
+  check -d /src -R category/java/quickstart.xml \
   -r /src/target/pmd-report.html -f html
 ```
 
@@ -74,7 +74,7 @@ Then use it like native PMD:
 
 ```bash
 # PMD check
-pmd-docker check -d /src -R rulesets/java/quickstart.xml
+pmd-docker check -d /src -R category/java/quickstart.xml
 
 # With custom ruleset file in the project
 pmd-docker check -d /src -R /src/config/my-ruleset.xml
@@ -83,7 +83,7 @@ pmd-docker check -d /src -R /src/config/my-ruleset.xml
 pmd-docker cpd --minimum-tokens 100 --language java --dir /src
 
 # Write report to file
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.json -f json
+pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.json -f json
 ```
 
 ## Container Image Reference
@@ -92,15 +92,16 @@ pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.json
 - **Mount point**: Your code directory must be mounted at `/src` inside the container
 - **Working directory**: The container uses `/` by default; mount at `/src` and use `/src/...` paths
 - **Output files**: Write to `/src/<filename>` to persist results to the host
+- **Platform note**: Examples use `:Z` (SELinux label) for Linux compatibility. On **Windows**, omit `:Z` from mount flags (e.g., `-v "${PWD}:/src"`). On **macOS** and non-SELinux Linux, `:Z` is silently ignored.
 - **Custom rules/jars**: Mount custom rule JARs at `/custom-pmd-libs`:
   ```bash
   podman run --rm -v "${PWD}:/src:Z" -v "/path/to/custom-rules:/custom-pmd-libs:Z" \
-    docker.io/pmdcode/pmd:latest check -d /src -R rulesets/java/quickstart.xml
+    docker.io/pmdcode/pmd:latest check -d /src -R category/java/quickstart.xml
   ```
 - **Cache for incremental analysis**: Speeds up subsequent scans
   ```bash
   podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
-    check -d /src -R rulesets/java/quickstart.xml --cache /src/.pmd-cache
+    check -d /src -R category/java/quickstart.xml --cache /src/.pmd-cache/
   ```
 
 ## PMD CLI Reference
@@ -113,11 +114,10 @@ PMD's CLI command is `check`. Below is a quick-reference table for the most usef
 | `-R <rulesets>` | **Required.** Path to ruleset XML file. Can repeat or comma-separate multiple | -- |
 | `-f <format>` | Report format (text, xml, html, csv, json, sarif) | text |
 | `-r <file>` | Write report to file instead of stdout | -- |
-| `--cache <file>` | Cache path for incremental analysis (speeds up repeat scans) | -- |
+| `--cache <dir>` | Cache directory for incremental analysis (speeds up repeat scans) | -- |
 | `--use-version <lang-version>` | Set language version (e.g., `java-21`, `java-17`, `java-11`, `java-8`) | latest |
 | `--force-language <lang>` | Force language for all files (e.g., `xml` for non-standard XML files) | -- |
-| `--minimum-priority <n>` | Minimum rule priority (1=highest, 5=lowest). Lower priority violations suppressed | -- |
-| `--aux-classpath <cp>` | Java classpath for type resolution (colon-separated paths or file: URL) | -- |
+| `--classpath <cp>` | Java classpath for type resolution (colon-separated paths or file: URL) | -- |
 | `--no-fail-on-violation` | Exit with 0 even if violations found | fail (exit 4) |
 | `--no-fail-on-error` | Exit with 0 even if recoverable errors occur | fail (exit 5) |
 | `-v` / `--verbose` | Verbose/debug log output | -- |
@@ -135,47 +135,47 @@ PMD's CLI command is `check`. Below is a quick-reference table for the most usef
 
 ## Choosing Rulesets
 
-PMD bundles rulesets for each language under `rulesets/<language>/`. All paths are relative to PMD's classpath -- they work out of the box inside the container.
+PMD bundles rulesets for each language under `category/<language>/`. All paths are relative to PMD's classpath -- they work out of the box inside the container.
 
 ### Java Rulesets
 
 | Ruleset | Focus |
 |---------|-------|
-| `rulesets/java/quickstart.xml` | All Java rules (best practices, code style, design, documentation, error prone, multithreading, performance, security) -- **start here** |
-| `rulesets/java/bestpractices.xml` | Best practices (e.g., avoid using hard-coded literals, use try-with-resources) |
-| `rulesets/java/codestyle.xml` | Code style (e.g., naming conventions, unnecessary imports, modifier order) |
-| `rulesets/java/design.xml` | Design (e.g., excessive method length, too many fields, tight coupling) |
-| `rulesets/java/errorprone.xml` | Error-prone (e.g., empty catch blocks, unused variables, close resource) |
-| `rulesets/java/multithreading.xml` | Multithreading (e.g., avoid synchronized, use notify correctly) |
-| `rulesets/java/performance.xml` | Performance (e.g., inefficient string operations, avoid array copies) |
-| `rulesets/java/security.xml` | Security (e.g., code vulnerable to injection, insecure cryptography) |
+| `category/java/quickstart.xml` | All Java rules (best practices, code style, design, documentation, error prone, multithreading, performance, security) -- **start here** |
+| `category/java/bestpractices.xml` | Best practices (e.g., avoid using hard-coded literals, use try-with-resources) |
+| `category/java/codestyle.xml` | Code style (e.g., naming conventions, unnecessary imports, modifier order) |
+| `category/java/design.xml` | Design (e.g., excessive method length, too many fields, tight coupling) |
+| `category/java/errorprone.xml` | Error-prone (e.g., empty catch blocks, unused variables, close resource) |
+| `category/java/multithreading.xml` | Multithreading (e.g., avoid synchronized, use notify correctly) |
+| `category/java/performance.xml` | Performance (e.g., inefficient string operations, avoid array copies) |
+| `category/java/security.xml` | Security (e.g., code vulnerable to injection, insecure cryptography) |
 
 ### Other Language Rulesets
 
 | Language | Built-in Ruleset Path |
 |----------|----------------------|
-| **Apex (Salesforce)** | `rulesets/apex/quickstart.xml` |
-| **JavaScript** | `rulesets/ecmascript/quickstart.xml` |
-| **Kotlin** | `rulesets/kotlin/quickstart.xml` |
-| **Swift** | `rulesets/swift/quickstart.xml` |
-| **PLSQL** | `rulesets/plsql/quickstart.xml` |
-| **JSP** | `rulesets/jsp/quickstart.xml` |
-| **HTML** | `rulesets/html/quickstart.xml` |
-| **XML** | `rulesets/xml/quickstart.xml` |
-| **Maven POM** | `rulesets/pom/quickstart.xml` |
-| **Velocity** | `rulesets/velocity/quickstart.xml` |
-| **Visualforce** | `rulesets/visualforce/quickstart.xml` |
-| **Modelica** | `rulesets/modelica/quickstart.xml` |
-| **Scala** | `rulesets/scala/quickstart.xml` |
+| **Apex (Salesforce)** | `category/apex/quickstart.xml` |
+| **JavaScript** | `category/ecmascript/quickstart.xml` |
+| **Kotlin** | `category/kotlin/quickstart.xml` |
+| **Swift** | `category/swift/quickstart.xml` |
+| **PLSQL** | `category/plsql/quickstart.xml` |
+| **JSP** | `category/jsp/quickstart.xml` |
+| **HTML** | `category/html/quickstart.xml` |
+| **XML** | `category/xml/quickstart.xml` |
+| **Maven POM** | `category/pom/quickstart.xml` |
+| **Velocity** | `category/velocity/quickstart.xml` |
+| **Visualforce** | `category/visualforce/quickstart.xml` |
+| **Modelica** | `category/modelica/quickstart.xml` |
+| **Scala** | `category/scala/quickstart.xml` |
 
 ### Using Multiple Rulesets
 
 ```bash
 # Comma-separated
-pmd-docker check -d /src -R rulesets/java/quickstart.xml,rulesets/java/codestyle.xml
+pmd-docker check -d /src -R category/java/quickstart.xml,category/java/codestyle.xml
 
 # Repeat the -R flag
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -R rulesets/java/security.xml
+pmd-docker check -d /src -R category/java/quickstart.xml -R category/java/security.xml
 ```
 
 ### Using a Custom Ruleset File
@@ -188,8 +188,7 @@ pmd-docker check -d /src -R /src/pmd-ruleset.xml
 
 Example custom ruleset file (`pmd-ruleset.xml`) -- **PMD 7.x compatible**:
 
-> **[!]? PMD 6.x vs 7.x Ruleset Paths:** PMD 7.x changed rule paths from `rulesets/java/errorprone.xml` to `category/java/errorprone.xml`.
-> If you see errors like `No such ruleset`, update your paths to use `category/<language>/<category>.xml` format.
+> **PMD 7.x Ruleset Paths:** This container runs PMD 7.x which uses `category/<language>/<category>.xml` paths.
 > Use `category/java/bestpractices.xml`, `category/java/codestyle.xml`, `category/java/design.xml`, `category/java/documentation.xml`,
 > `category/java/errorprone.xml`, `category/java/multithreading.xml`, `category/java/performance.xml`, `category/java/security.xml`.
 
@@ -243,10 +242,10 @@ Example custom ruleset file (`pmd-ruleset.xml`) -- **PMD 7.x compatible**:
 
 ```bash
 # Generate all report types
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.xml -f xml
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.html -f html
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.json -f json
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -r /src/pmd-report.sarif -f sarif
+pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.xml -f xml
+pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.html -f html
+pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.json -f json
+pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.sarif -f sarif
 ```
 
 ## Language Version Selection
@@ -255,16 +254,16 @@ Use `--use-version <lang-version>` to target a specific language version. This a
 
 ```bash
 # Java 21
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --use-version java-21
+pmd-docker check -d /src -R category/java/quickstart.xml --use-version java-21
 
 # Java 17
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --use-version java-17
+pmd-docker check -d /src -R category/java/quickstart.xml --use-version java-17
 
 # Java 11
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --use-version java-11
+pmd-docker check -d /src -R category/java/quickstart.xml --use-version java-11
 
 # Java 8
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --use-version java-8
+pmd-docker check -d /src -R category/java/quickstart.xml --use-version java-8
 ```
 
 ## CPD: Copy/Paste Detector
@@ -319,7 +318,7 @@ Java, JSP, C/C++, C#, CSS, Dart, Fortran, Go, Gherkin, HTML, JavaScript (ecmascr
 ### 1. Scan Java Project Before Code Review
 
 ```bash
-pmd-docker check -d /src -R rulesets/java/quickstart.xml \
+pmd-docker check -d /src -R category/java/quickstart.xml \
   -f html -r /src/target/pmd-report.html \
   --use-version java-21
 ```
@@ -328,46 +327,39 @@ pmd-docker check -d /src -R rulesets/java/quickstart.xml \
 
 ```bash
 pmd-docker check -d /src \
-  -R rulesets/java/quickstart.xml \
-  -R rulesets/ecmascript/quickstart.xml \
+  -R category/java/quickstart.xml \
+  -R category/ecmascript/quickstart.xml \
   -f text
 ```
 
 ### 3. Focus on Security-Only Rules
 
 ```bash
-pmd-docker check -d /src -R rulesets/java/security.xml -f text
+pmd-docker check -d /src -R category/java/security.xml -f text
 ```
 
 ### 4. Use as a Quality Gate (CI Pipeline)
 
-```bash
+```powershell
 # Fails with exit code 4 if violations found (default behavior)
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -f xml -r /src/pmd-report.xml
+pmd-docker check -d /src -R category/java/quickstart.xml -f xml -r /src/pmd-report.xml
 
 # Check exit code in script
-if [ $? -eq 4 ]; then
-  echo "[X] PMD violations found -- quality gate failed"
+if ($LASTEXITCODE -eq 4) {
+  Write-Host "[X] PMD violations found -- quality gate failed"
   exit 1
-fi
+}
 ```
 
 ### 5. Incremental Analysis (Faster Repeat Scans)
 
 ```bash
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --cache /src/.pmd-cache
+pmd-docker check -d /src -R category/java/quickstart.xml --cache /src/.pmd-cache/
 # Second run is much faster -- only re-analyzes changed files
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --cache /src/.pmd-cache
+pmd-docker check -d /src -R category/java/quickstart.xml --cache /src/.pmd-cache/
 ```
 
-### 6. Run with Priority Filter (Only High-Priority Violations)
+### 6. Benchmark Mode
 
-```bash
-# Only show priority 1 and 2 (high severity) violations
-pmd-docker check -d /src -R rulesets/java/quickstart.xml --minimum-priority 2
-```
-
-### 7. Benchmark Mode
-
-```bash
-pmd-docker check -d /src -R rulesets/java/quickstart.xml -b 2>/tmp/pmd-benchmark.txt
+```powershell
+pmd-docker check -d /src -R category/java/quickstart.xml -b 2> $env:TEMP\pmd-benchmark.txt
