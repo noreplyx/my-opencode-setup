@@ -67,19 +67,30 @@ trivy-docker() {
     fi
   elif [ "$target_type" = "version" ]; then
     podman run --rm "$TRIVY_IMAGE" version
-  else
-    # Filesystem, repo, rootfs, sbom, k8s - mount current directory
+  elif [ "$target_type" = "fs" ] || [ "$target_type" = "rootfs" ]; then
+    # Filesystem/rootfs - mount current directory, append /src as target
     _trivy_ensure_cache
     podman run --rm \
       -v "${PWD}:/src:Z" \
       -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy:Z" \
       "$TRIVY_IMAGE" \
       "$target_type" "$@" /src
+  elif [ "$target_type" = "sbom" ]; then
+    # SBOM - mount current directory, pass args through (user provides SBOM path)
+    _trivy_ensure_cache
+    podman run --rm \
+      -v "${PWD}:/src:Z" \
+      -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy:Z" \
+      "$TRIVY_IMAGE" \
+      "$target_type" "$@"
+  else
+    # repo, k8s - no mount needed, pass args through directly
+    podman run --rm "$TRIVY_IMAGE" "$target_type" "$@"
   fi
 }
 
-# Also provide legacy alias
-alias trivy-scan='trivy-docker fs'
+# Also provide legacy alias (function, not alias, for non-interactive shell support)
+trivy-scan() { trivy-docker fs "$@"; }
 
 echo "Trivy wrapper loaded."
 echo "  Commands: trivy-docker <fs|image|repo|sbom|k8s> [options]"

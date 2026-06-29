@@ -284,7 +284,7 @@ trivy-docker fs --scanners misconfig --misconfig-scanners terraform /src
 trivy-docker fs --scanners misconfig --misconfig-scanners all /src
 
 # Include cloudformation, arm, helm in scan
-trivy-docker fs --scanners misconfig --misconfig-scanners all --cf-scan /src
+trivy-docker fs --scanners misconfig --misconfig-scanners all /src
 ```
 
 ### Step 7: SBOM (Software Bill of Materials)
@@ -333,7 +333,7 @@ trivy-docker fs --severity CRITICAL,HIGH,MEDIUM,LOW --exit-code 0 /src
 trivy-docker fs --severity CRITICAL,HIGH --exit-code 1 --ignore-unfixed /src
 
 # Scan only new changes since last scan (Trivy's built-in diff cache, not git diff)
-trivy-docker fs --severity CRITICAL,HIGH --exit-code 1 --diff /src
+trivy-docker fs --severity CRITICAL,HIGH --exit-code 1 /src
 ```
 
 ### Step 10: Custom Configurations
@@ -374,7 +374,7 @@ trivy-docker fs --file-patterns "pom.xml" /src
 trivy-docker fs --verbose /src
 
 # Show only remediated/fixed version info
-trivy-docker fs --show-suppressed /src
+trivy-docker fs --show-ignored /src
 ```
 
 ## Parsing and Reporting Results
