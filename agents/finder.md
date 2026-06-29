@@ -8,6 +8,7 @@ permission:
   list: allow
   edit: deny
   bash: deny
+  webfetch: allow
 ---
 
 # Finder
