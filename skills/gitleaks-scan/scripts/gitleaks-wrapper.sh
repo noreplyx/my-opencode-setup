@@ -41,7 +41,8 @@ gitleaks-docker() {
   local path_commands="git|dir|file|directory"
 
   # Check if the last arg is a path (not starting with - and not a subcommand)
-  local last_arg="${@: -1}"
+  local last_arg
+  last_arg="${@: -1}"
   local has_path_arg=false
   case "$last_arg" in
     -*|git|dir|file|directory|detect|protect|stdin|version|completion|help)
@@ -53,10 +54,17 @@ gitleaks-docker() {
   esac
 
   # If the command uses paths but no path was given, default to /src
+  # Skip if --source= is already provided (explicit source path)
   case "$first_arg" in
-    git|dir|file|directory|detect|protect)
+    git|dir|file|directory)
       if ! $has_path_arg; then
-        set -- "$@" "/src"
+        local has_source=false
+        for arg in "$@"; do
+          case "$arg" in --source=*) has_source=true ;; esac
+        done
+        if ! $has_source; then
+          set -- "$@" "/src"
+        fi
       fi
       ;;
   esac
