@@ -69,8 +69,11 @@ function validateGraph(errors: ValidationError[], plan: Plan): void {
     for (const dep of deps) {
       if (!cpIds.has(dep)) {
         addError(errors, `plan.checkpoints`, `checkpoint "${cp.id}" depends on "${dep}" which does not exist`);
-      } else if ((orderIndex.get(dep) ?? i) >= i) {
-        addError(errors, `plan.checkpoints`, `checkpoint "${cp.id}" (index ${i}) depends on "${dep}" (index ${orderIndex.get(dep)}) which appears later in the checkpoints array (dependency ordering violation)`);
+      } else {
+        const depIdx = orderIndex.get(dep) ?? i;
+        if (depIdx >= i) {
+          addError(errors, `plan.checkpoints`, `checkpoint "${cp.id}" (index ${i}) depends on "${dep}" (index ${depIdx}) which appears later in the checkpoints array (dependency ordering violation)`);
+        }
       }
     }
     graph.set(cp.id, new Set(deps));
