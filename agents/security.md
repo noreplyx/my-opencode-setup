@@ -2,11 +2,13 @@
 description: Reviews implementation plans and implemented code from a security perspective using the plan-protocol skill and available security scanners.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
   list: allow
   skill:
+    "*": deny
     plan-protocol: allow
     ast-grep: allow
     gitleaks-scan: allow

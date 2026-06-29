@@ -2,12 +2,15 @@
 description: Runs the project's local linter and returns a gate verdict based on the results.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
   list: allow
   bash: allow
   edit: deny
+  skill:
+   "*": deny
 ---
 
 # Linter Gate

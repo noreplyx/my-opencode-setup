@@ -2,10 +2,13 @@
 description: Entry-point coordinator for the multi-agent workflow. Delegates work to brainstormer, finder, planner, security, engineer, architecture, qa, linter, tester, and coder agents.
 mode: primary
 permission:
+  "*": deny
   task: allow
   edit: deny
   bash: allow
   question: allow
+  skill:
+    "*": deny
 ---
 
 # Orchestrator

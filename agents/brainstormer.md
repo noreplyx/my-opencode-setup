@@ -2,10 +2,13 @@
 description: Proactively gathers and clarifies user requirements, analyzes them, and presents multiple comparable solutions for the user to select from.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   question: allow
   edit: deny
   bash: deny
+  skill:
+    "*": deny
 ---
 
 # Brainstormer

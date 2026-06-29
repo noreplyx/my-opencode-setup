@@ -2,12 +2,14 @@
 description: Implements code exactly according to an approved plan; if the plan is not approved, returns it to the planner for improvement.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   edit: allow
   bash: allow
   glob: allow
   grep: allow
   skill:
+    "*": deny
     plan-protocol: allow
   task: allow
 ---

@@ -2,11 +2,13 @@
 description: Reviews implementation plans and verifies implemented code against acceptance criteria, test coverage, and alignment with the plan using the plan-protocol skill.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
   list: allow
   skill:
+    "*": deny
     plan-protocol: allow
   edit: deny
   bash: deny

@@ -2,6 +2,7 @@
 description: Explores the current codebase to collect all information needed by the planner and reviewers, including structure, conventions, dependencies, and existing code.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
@@ -9,6 +10,8 @@ permission:
   edit: deny
   bash: deny
   webfetch: allow
+  skill:
+    "*": deny
 ---
 
 # Finder

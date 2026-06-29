@@ -2,11 +2,13 @@
 description: Reviews implementation plans and implemented code for system architecture fit, trade-offs, ADRs, C4 diagrams, and alignment with long-term design goals.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
   list: allow
   skill:
+    "*": deny
     plan-protocol: allow
   edit: deny
   bash: deny

@@ -2,6 +2,7 @@
 description: Runs the project's local test runner, checks that tests pass, and verifies acceptance-criterion coverage.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
@@ -9,6 +10,7 @@ permission:
   bash: allow
   edit: deny
   skill:
+    "*": deny
     plan-protocol: allow
 ---
 

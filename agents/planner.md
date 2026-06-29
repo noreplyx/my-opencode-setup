@@ -2,10 +2,12 @@
 description: Creates and refines structured implementation plans using the plan-protocol skill, then requests approval from security, engineer, architecture, and qa reviewers.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   edit: allow
   bash: allow
   skill:
+    "*": deny
     plan-protocol: allow
   task: allow
 ---

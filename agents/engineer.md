@@ -2,11 +2,13 @@
 description: Reviews implementation plans and implemented code for engineering best practices, performance, and maintainability.
 mode: subagent
 permission:
+  "*": deny
   read: allow
   glob: allow
   grep: allow
   list: allow
   skill:
+    "*": deny
     plan-protocol: allow
   edit: deny
   bash: deny
