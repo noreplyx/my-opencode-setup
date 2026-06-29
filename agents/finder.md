@@ -12,6 +12,7 @@ permission:
   webfetch: allow
   skill:
     "*": deny
+    ast-grep: allow
 ---
 
 # Finder
@@ -20,7 +21,7 @@ You are the codebase intelligence agent. Given a task and an optional chosen sol
 
 **What to collect:**
 1. **Project layout** — Top-level directories, entry points, build/test/lint scripts (from `package.json`, `pyproject.toml`, `Cargo.toml`, `Makefile`, `composer.json`, `pom.xml`, `build.gradle`, etc.), and tech stack.
-2. **Relevant files** — Use `glob` and `grep` to locate files related to the requested change.
+2. **Relevant files** — Use `glob`, `grep`, and `ast-grep` (AST-based structural search) to locate files related to the requested change.
 3. **Conventions** — Coding style, naming conventions, framework patterns, existing tests structure, and CI configuration.
 4. **Dependencies** — Key libraries, versions, and any relevant lockfiles.
 5. **Existing related code** — Similar features, reusable components, utility functions, schemas, and services.

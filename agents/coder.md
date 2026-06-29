@@ -11,6 +11,7 @@ permission:
   skill:
     "*": deny
     plan-protocol: allow
+    ast-grep: allow
   task: allow
 ---
 
