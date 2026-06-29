@@ -41,7 +41,7 @@ This skill is designed to be **automatically loaded by the Orchestrator** during
 | **Pull command** | `podman pull ghcr.io/zaproxy/zaproxy:stable` |
 | **Mount point** | Reports/configs at `/zap/wrk/` inside container |
 | **Network** | Use `--network host` to scan localhost/127.0.0.1 targets |
-| **Packed scan scripts** | `zap-baseline.py`, `zap-full-scan.py`, `zap-api-scan.py` |
+| **Packaged scan scripts** | `zap-baseline.py`, `zap-full-scan.py`, `zap-api-scan.py` |
 | **Entrypoint** | `/bin/sh` (scripts must be passed as command) |
 | **Healthcheck** | Supported; set `ZAP_PORT` if using non-default port |
 
@@ -90,30 +90,30 @@ This skill is **designed for automatic pipeline integration** when web applicati
 A passive scan that runs the ZAP spider against a target URL (default: 1 minute), then waits for passive scanning to complete. **Does NOT perform any actual attacks**. Ideal for CI/CD and production environments.
 
 **Characteristics:**
-- [x] Passive only -- no attack payloads sent
-- [T] Runs in a few minutes
-- [x] CI/CD safe (can run against production)
-- [S] Detects: missing security headers, cookie flags, info disclosure, etc.
+- ✅ Passive only -- no attack payloads sent
+- ⏱️ Runs in a few minutes
+- ✅ CI/CD safe (can run against production)
+- 🛡️ Detects: missing security headers, cookie flags, info disclosure, etc.
 
 ### 2. Full Scan (`zap-full-scan.py`)
 
 An active scan that runs the ZAP spider + optional AJAX spider, then performs a **full active scan** with attack payloads. **Potentially destructive**.
 
 **Characteristics:**
-- [!] Sends attack payloads (SQLi, XSS, command injection, etc.)
-- [T] Can run for hours (no time limit by default)
-- [X] CI/CD NOT safe for production
-- [S] Detects: OWASP Top 10, injection flaws, XSS, CSRF, etc.
+- ⚠️ Sends attack payloads (SQLi, XSS, command injection, etc.)
+- ⏱️ Can run for hours (no time limit by default)
+- ❌ CI/CD NOT safe for production
+- 🛡️ Detects: OWASP Top 10, injection flaws, XSS, CSRF, etc.
 
 ### 3. API Scan (`zap-api-scan.py`)
 
 Tuned for scanning APIs defined by OpenAPI, SOAP, or GraphQL. Imports the API definition and runs an Active Scan against discovered endpoints.
 
 **Characteristics:**
-- [x] No spidering needed -- endpoints defined by API spec
-- [!] Active scan tuned for APIs (skips web-specific checks like XSS)
-- [i] Supports OpenAPI (JSON/YAML), SOAP (WSDL), GraphQL (schema)
-- [S] Detects: API-specific vulnerabilities, server error codes, content type issues
+- ✅ No spidering needed -- endpoints defined by API spec
+- ⚠️ Active scan tuned for APIs (skips web-specific checks like XSS)
+- ℹ️ Supports OpenAPI (JSON/YAML), SOAP (WSDL), GraphQL (schema)
+- 🛡️ Detects: API-specific vulnerabilities, server error codes, content type issues
 
 ## Quick Start
 
@@ -318,10 +318,10 @@ All three scan scripts use the same exit code convention:
 
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | Success (no FAILs, or all WARN) | [x] PASS |
-| 1 | At least 1 FAIL (from config) | [X] FAIL -- block pipeline |
-| 2 | At least 1 WARN, no FAILs | [!] WARN -- proceed with findings |
-| 3 | Tool error / other failure | [X] FAIL -- investigate |
+| 0 | Success (no FAILs, or all WARN) | ✅ PASS |
+| 1 | At least 1 FAIL (from config) | ❌ FAIL -- block pipeline |
+| 2 | At least 1 WARN, no FAILs | ⚠️ WARN -- proceed with findings |
+| 3 | Tool error / other failure | ❌ FAIL -- investigate |
 
 **Important**: By default, all alerts are reported as WARNings. To make specific alerts fail the pipeline, use `-c config_file` and set rules to FAIL.
 
@@ -424,10 +424,10 @@ podman run --rm --network host -v "${WORKSPACE_ROOT}:/zap/wrk/:Z" \
 
 | Exit Code | Meaning | Pipeline Action |
 |-----------|---------|-----------------|
-| 0 | Success | [x] PASS -- proceed |
-| 1 | At least 1 FAIL | [X] FAIL -- block pipeline |
-| 2 | At least 1 WARN | [!] WARN -- proceed with findings |
-| 3 | Tool error | [X] FAIL -- investigate |
+| 0 | Success | ✅ PASS -- proceed |
+| 1 | At least 1 FAIL | ❌ FAIL -- block pipeline |
+| 2 | At least 1 WARN | ⚠️ WARN -- proceed with findings |
+| 3 | Tool error | ❌ FAIL -- investigate |
 
 ### Hard Rules for OWASP ZAP
 
