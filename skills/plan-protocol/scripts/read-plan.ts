@@ -12,7 +12,9 @@ export function renderCheckpoint(cp: Checkpoint, noEmoji = false): string {
   const acCount = cp.acceptance_criteria.length;
   const scCount = (cp.security_concerns || []).length + cp.acceptance_criteria.reduce((sum, ac) => sum + (ac.security_concerns || []).length, 0);
   const passedACs = cp.acceptance_criteria.filter(ac => ac.status === "passed").length;
-  const statusTag = passedACs === acCount ? icon("✅", "[done]", noEmoji) : icon("⬜", "[pending]", noEmoji);
+  const failedACs = cp.acceptance_criteria.filter(ac => ac.status === "failed").length;
+  const blockedACs = cp.acceptance_criteria.filter(ac => ac.status === "blocked").length;
+  const statusTag = passedACs === acCount ? icon("✅", "[done]", noEmoji) : failedACs > 0 ? icon("❌", "[fail]", noEmoji) : blockedACs > 0 ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[pending]", noEmoji);
   lines.push(`### [${cp.id}] ${cp.title} ${statusTag} (${passedACs}/${acCount} ACs, ${scCount} SCs)`);
   lines.push("");
   lines.push(`**Description:** ${cp.description}`);

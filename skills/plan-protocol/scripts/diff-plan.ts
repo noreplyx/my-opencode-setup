@@ -82,6 +82,10 @@ export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
     const depsChanged = JSON.stringify(cpA.dependencies) !== JSON.stringify(cpB.dependencies);
     if (depsChanged) changes.push(`  - dependencies: [${cpA.dependencies.join(", ")}] → [${cpB.dependencies.join(", ")}]`);
 
+    const blockersA = JSON.stringify((cpA.blockers || []).map(b => b.reason));
+    const blockersB = JSON.stringify((cpB.blockers || []).map(b => b.reason));
+    if (blockersA !== blockersB) changes.push(`  - blockers changed`);
+
     const scMapA = new Map((cpA.security_concerns || []).map(s => [s.id, s]));
     const scMapB = new Map((cpB.security_concerns || []).map(s => [s.id, s]));
     const allScIds = new Set([...scMapA.keys(), ...scMapB.keys()]);

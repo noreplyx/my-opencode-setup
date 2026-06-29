@@ -109,15 +109,15 @@ switch (command) {
   case "add-cp": {
     const title = commandArgs[0];
     if (!title) { console.error("Error: add-cp requires a title"); process.exit(1); }
-    const description = commandArgs[1] || `Implement and verify "${title}"`;
+    const knownCpFlags = new Set(["--ac", "--after"]);
+    const nonFlagArgs = commandArgs.slice(1).filter(a => !knownCpFlags.has(a));
+    const description = nonFlagArgs[0] || `Implement and verify "${title}"`;
     const afterIdx = commandArgs.indexOf("--after");
     const acFlags: { desc: string; verify: string }[] = [];
-    const acIdxs: number[] = [];
     for (let i = 0; i < commandArgs.length; i++) {
       if (commandArgs[i] === "--ac" && i + 1 < commandArgs.length) {
         const parts = commandArgs[i + 1].split("::");
         acFlags.push({ desc: parts[0], verify: parts[1] || `Run tests for ${title.toLowerCase().replace(/\s+/g, "-")}; assert expected behavior` });
-        acIdxs.push(i, i + 1);
       }
     }
     let insertIndex = plan.checkpoints.length;

@@ -69,6 +69,8 @@ function validateGraph(errors: ValidationError[], plan: Plan): void {
     for (const dep of deps) {
       if (!cpIds.has(dep)) {
         addError(errors, `plan.checkpoints`, `checkpoint "${cp.id}" depends on "${dep}" which does not exist`);
+      } else if (dep === cp.id) {
+        addError(errors, `plan.checkpoints`, `checkpoint "${cp.id}" depends on itself (self-dependency)`);
       } else {
         const depIdx = orderIndex.get(dep) ?? i;
         if (depIdx >= i) {
