@@ -15,11 +15,11 @@ PMD supports **17+ languages**: Java, Apex, JavaScript, TypeScript, JSP, Kotlin,
 
 | Operation | Command |
 |-----------|---------|
-| **Quick Java scan** | `podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest check -d /src -R category/java/quickstart.xml` |
-| **Shell wrapper** (recommended) | Add the `pmd-docker` alias below and run `pmd-docker check -d /src -R category/java/quickstart.xml` |
+| **Quick Java scan** | `podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest check -d /src -R category/java/quickstart.xml` |
+| **Shell wrapper** (recommended) | Add the `pmd-docker` function below and run `pmd-docker check -d /src -R category/java/quickstart.xml` |
 | **First-time setup** | `podman pull docker.io/pmdcode/pmd:latest` |
 | **Check version** | `podman run --rm docker.io/pmdcode/pmd:latest --version` |
-| **Run CPD** | `podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest cpd --minimum-tokens 100 --language java --dir /src` |
+| **Run CPD** | `podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest cpd --minimum-tokens 100 --language java --dir /src` |
 
 ## Why Container-Based?
 
@@ -28,6 +28,19 @@ PMD supports **17+ languages**: Java, Apex, JavaScript, TypeScript, JSP, Kotlin,
 - [x] **Bundled** -- includes all PMD rulesets for all languages
 - [x] **Reproducible** -- same PMD version across all environments
 - [x] **Auto-updates** -- pull the latest image to get new PMD versions & rules
+
+## Cross-Platform Compatibility
+
+This skill works on **Linux**, **macOS** (via Podman Machine), and **Windows** (via Git Bash, WSL2, or MSYS2). Key platform notes:
+
+| Concern | Linux | macOS | Windows |
+|---------|-------|-------|---------|
+| **Shell** | bash/zsh | bash/zsh | Git Bash, WSL2, or MSYS2 (not cmd.exe/PowerShell) |
+| **Podman** | Native | Podman Machine | WSL2 or Podman Machine |
+| **Volume mount** | `-v "$(pwd):/src:Z"` | `-v "$(pwd):/src"` (omit `:Z`) | `-v "$(pwd):/src"` (omit `:Z`) |
+| **`$(pwd)`** | Works in all POSIX shells | Works in all POSIX shells | Works in Git Bash, WSL2, MSYS2 |
+
+> **Tip**: Set `SELINUX_OPT=""` on macOS/Windows to omit the `:Z` flag. The wrapper script handles this automatically.
 
 ## Quick Start
 
@@ -44,19 +57,21 @@ Then run a scan:
 podman run --rm docker.io/pmdcode/pmd:latest --version
 
 # Quick Java scan with quickstart rules
-podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
+podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest \
   check -d /src -R category/java/quickstart.xml
 
 # Scan with XML output report
-podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
+podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest \
   check -d /src/src/main/java -R category/java/quickstart.xml \
   -r /src/target/pmd-report.xml -f xml
 
 # Scan with HTML report
-podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
+podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest \
   check -d /src -R category/java/quickstart.xml \
   -r /src/target/pmd-report.html -f html
 ```
+
+> **Platform note**: On Linux, add `:Z` after mount paths for SELinux (e.g., `-v "$(pwd):/src:Z"`). On macOS and Windows, omit `:Z`.
 
 ### Shell Wrapper (Recommended)
 
@@ -66,7 +81,9 @@ Create a helper function to avoid repeating the podman incantation:
 # Add to ~/.zshrc or ~/.bashrc
 pmd-docker() {
   local img="docker.io/pmdcode/pmd:latest"
-  podman run --rm -v "${PWD}:/src:Z" "$img" "$@"
+  local selinux="${SELINUX_OPT:-:Z}"
+  [ "$(uname -s)" != "Linux" ] && selinux=""
+  podman run --rm -v "$(pwd):/src${selinux}" "$img" "$@"
 }
 ```
 
@@ -92,15 +109,15 @@ pmd-docker check -d /src -R category/java/quickstart.xml -r /src/pmd-report.json
 - **Mount point**: Your code directory must be mounted at `/src` inside the container
 - **Working directory**: The container uses `/` by default; mount at `/src` and use `/src/...` paths
 - **Output files**: Write to `/src/<filename>` to persist results to the host
-- **Platform note**: Examples use `:Z` (SELinux label) for Linux compatibility. On **Windows**, omit `:Z` from mount flags (e.g., `-v "${PWD}:/src"`). On **macOS** and non-SELinux Linux, `:Z` is silently ignored.
+- **Platform note**: Examples use `:Z` (SELinux label) for Linux compatibility. On **Windows** and **macOS**, omit `:Z` from mount flags (e.g., `-v "$(pwd):/src"`). On **Linux**, `:Z` is needed for SELinux. Set `SELINUX_OPT=""` to disable.
 - **Custom rules/jars**: Mount custom rule JARs at `/custom-pmd-libs`:
   ```bash
-  podman run --rm -v "${PWD}:/src:Z" -v "/path/to/custom-rules:/custom-pmd-libs:Z" \
+  podman run --rm -v "$(pwd):/src" -v "/path/to/custom-rules:/custom-pmd-libs" \
     docker.io/pmdcode/pmd:latest check -d /src -R category/java/quickstart.xml
   ```
 - **Cache for incremental analysis**: Speeds up subsequent scans
   ```bash
-  podman run --rm -v "${PWD}:/src:Z" docker.io/pmdcode/pmd:latest \
+  podman run --rm -v "$(pwd):/src" docker.io/pmdcode/pmd:latest \
     check -d /src -R category/java/quickstart.xml --cache /src/.pmd-cache/
   ```
 

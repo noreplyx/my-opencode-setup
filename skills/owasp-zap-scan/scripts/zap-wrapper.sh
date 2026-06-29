@@ -5,6 +5,21 @@
 #   zap-baseline -t https://example.com -r report.html
 #   zap-full-scan -t https://staging.example.com -r full-report.html
 #   zap-api-scan -t /zap/wrk/openapi.json -f openapi -r api-report.html
+#
+# Cross-platform: works on Linux, macOS (via Podman Machine), and Windows (via Git Bash/WSL2).
+
+# --- Platform detection ---
+case "$(uname -s)" in
+  Linux*)  _OS="linux" ;;
+  Darwin*) _OS="macos" ;;
+  CYGWIN*|MINGW*|MSYS*) _OS="windows" ;;
+  *)       _OS="linux" ;;
+esac
+
+# SELinux label: only on Linux, configurable via env var (set SELINUX_OPT="" to disable)
+SELINUX_OPT="${SELINUX_OPT:-:Z}"
+[ "$_OS" != "linux" ] && SELINUX_OPT=""
+# --- End platform detection ---
 
 ZAP_IMAGE="${ZAP_IMAGE:-ghcr.io/zaproxy/zaproxy:stable}"
 
@@ -24,7 +39,7 @@ _zap_run() {
 
   podman run --rm \
     --network host \
-    -v "${PWD}:/zap/wrk/:Z" \
+    -v "$(pwd):/zap/wrk${SELINUX_OPT}" \
     "$ZAP_IMAGE" \
     "$script" "$@"
 }

@@ -11,6 +11,21 @@
 #
 # Add to ~/.zshrc or ~/.bashrc:
 #   source /path/to/gitleaks-wrapper.sh
+#
+# Cross-platform: works on Linux, macOS (via Podman Machine), and Windows (via Git Bash/WSL2).
+
+# --- Platform detection ---
+case "$(uname -s)" in
+  Linux*)  _OS="linux" ;;
+  Darwin*) _OS="macos" ;;
+  CYGWIN*|MINGW*|MSYS*) _OS="windows" ;;
+  *)       _OS="linux" ;;
+esac
+
+# SELinux label: only on Linux, configurable via env var (set SELINUX_OPT="" to disable)
+SELINUX_OPT="${SELINUX_OPT:-:Z}"
+[ "$_OS" != "linux" ] && SELINUX_OPT=""
+# --- End platform detection ---
 
 GITLEAKS_IMG="${GITLEAKS_IMAGE:-docker.io/zricethezav/gitleaks:latest}"
 
@@ -47,7 +62,7 @@ gitleaks-docker() {
   esac
 
   podman run --rm \
-    -v "${PWD}:/src:Z" \
+    -v "$(pwd):/src${SELINUX_OPT}" \
     "$GITLEAKS_IMG" \
     "$@"
 }

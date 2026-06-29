@@ -3,6 +3,26 @@
 # Source this file in your shell to use trivy-docker as a native trivy replacement:
 #   source /path/to/trivy-wrapper.sh
 #   trivy-docker fs --severity CRITICAL --exit-code 1 .
+#
+# Cross-platform: works on Linux, macOS (via Podman Machine), and Windows (via Git Bash/WSL2).
+# On Windows, use Git Bash or WSL2 — not cmd.exe or PowerShell directly.
+
+# --- Platform detection ---
+case "$(uname -s)" in
+  Linux*)  _OS="linux" ;;
+  Darwin*) _OS="macos" ;;
+  CYGWIN*|MINGW*|MSYS*) _OS="windows" ;;
+  *)       _OS="linux" ;;
+esac
+
+# SELinux label: only on Linux, configurable via env var (set SELINUX_OPT="" to disable)
+SELINUX_OPT="${SELINUX_OPT:-:Z}"
+[ "$_OS" != "linux" ] && SELINUX_OPT=""
+
+# Podman socket path: configurable via env var
+PODMAN_SOCK="${PODMAN_SOCK:-/run/user/$(id -u)/podman/podman.sock}"
+
+# --- End platform detection ---
 
 TRIVY_IMAGE="${TRIVY_IMAGE:-docker.io/aquasec/trivy:latest}"
 TRIVY_CACHE_VOLUME="${TRIVY_CACHE_VOLUME:-trivy-cache}"
@@ -53,12 +73,11 @@ trivy-docker() {
   # Special handling for 'image' subcommand - needs Podman socket
   if [ "$target_type" = "image" ]; then
     # For local images, mount the Podman socket
-    local podman_sock="/run/user/$(id -u)/podman/podman.sock"
-    if [ -S "$podman_sock" ]; then
+    if [ -S "$PODMAN_SOCK" ]; then
       _trivy_ensure_cache
       podman run --rm \
-        -v "$podman_sock:/var/run/docker.sock:Z" \
-        -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy:Z" \
+        -v "$PODMAN_SOCK:/var/run/docker.sock${SELINUX_OPT}" \
+        -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy${SELINUX_OPT}" \
         "$TRIVY_IMAGE" \
         image "$@"
     else
@@ -71,16 +90,16 @@ trivy-docker() {
     # Filesystem/rootfs - mount current directory, append /src as target
     _trivy_ensure_cache
     podman run --rm \
-      -v "${PWD}:/src:Z" \
-      -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy:Z" \
+      -v "$(pwd):/src${SELINUX_OPT}" \
+      -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy${SELINUX_OPT}" \
       "$TRIVY_IMAGE" \
       "$target_type" "$@" /src
   elif [ "$target_type" = "sbom" ]; then
     # SBOM - mount current directory, pass args through (user provides SBOM path)
     _trivy_ensure_cache
     podman run --rm \
-      -v "${PWD}:/src:Z" \
-      -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy:Z" \
+      -v "$(pwd):/src${SELINUX_OPT}" \
+      -v "$TRIVY_CACHE_VOLUME:/root/.cache/trivy${SELINUX_OPT}" \
       "$TRIVY_IMAGE" \
       "$target_type" "$@"
   else

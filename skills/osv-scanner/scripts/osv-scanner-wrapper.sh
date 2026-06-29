@@ -16,9 +16,24 @@
 #
 # Add to ~/.zshrc or ~/.bashrc for persistence:
 #   source ./skills/osv-scanner/scripts/osv-scanner-wrapper.sh
+#
+# Cross-platform: works on Linux, macOS (via Podman Machine), and Windows (via Git Bash/WSL2).
+
+# --- Platform detection ---
+case "$(uname -s)" in
+  Linux*)  _OS="linux" ;;
+  Darwin*) _OS="macos" ;;
+  CYGWIN*|MINGW*|MSYS*) _OS="windows" ;;
+  *)       _OS="linux" ;;
+esac
+
+# SELinux label: only on Linux, configurable via env var (set SELINUX_OPT="" to disable)
+SELINUX_OPT="${SELINUX_OPT:-:Z}"
+[ "$_OS" != "linux" ] && SELINUX_OPT=""
+# --- End platform detection ---
 
 osv-scanner-docker() {
-    local workdir="${OSV_SCANNER_WORKDIR:-${PWD}}"
+    local workdir="${OSV_SCANNER_WORKDIR:-$(pwd)}"
     local image="ghcr.io/google/osv-scanner:latest"
 
     # Ensure the image is pulled
@@ -31,10 +46,10 @@ osv-scanner-docker() {
     fi
 
     podman run --rm \
-        -v "${workdir}:/src:Z" \
+        -v "${workdir}:/src${SELINUX_OPT}" \
         "${image}" \
         "$@"
 }
 
-# Also provide a shorthand alias
-alias osv-docker=osv-scanner-docker
+# Also provide a shorthand (function, not alias, for non-interactive shell support)
+osv-docker() { osv-scanner-docker "$@"; }

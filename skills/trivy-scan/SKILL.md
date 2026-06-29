@@ -20,13 +20,27 @@ This skill is **automatically loaded by the Orchestrator** during every pipeline
 - [x] **Official image** -- 1B+ pulls, actively maintained by Aqua Security
 - [x] **Podman-native** -- works with Podman socket for local container image scanning
 
+## Cross-Platform Compatibility
+
+This skill works on **Linux**, **macOS** (via Podman Machine), and **Windows** (via Git Bash, WSL2, or MSYS2). Key platform notes:
+
+| Concern | Linux | macOS | Windows |
+|---------|-------|-------|---------|
+| **Shell** | bash/zsh | bash/zsh | Git Bash, WSL2, or MSYS2 (not cmd.exe/PowerShell) |
+| **Podman** | Native | Podman Machine | WSL2 or Podman Machine |
+| **Volume mount** | `-v "$(pwd):/src:Z"` | `-v "$(pwd):/src"` (omit `:Z`) | `-v "$(pwd):/src"` (omit `:Z`) |
+| **Socket path** | `/run/user/$(id -u)/podman/podman.sock` | `~/.local/share/containers/podman/machine/podman.sock` | Varies by WSL2 distro |
+| **`$(pwd)`** | Works in all POSIX shells | Works in all POSIX shells | Works in Git Bash, WSL2, MSYS2 |
+
+> **Tip**: Set `SELINUX_OPT=""` on macOS/Windows to omit the `:Z` flag. Set `PODMAN_SOCK` to your platform's socket path. The wrapper scripts (`trivy-wrapper.sh`) handle this automatically.
+
 ## Quick Reference
 
 | Operation | Command |
 |-----------|---------|
-| **Scan filesystem (project dir)** | `TRIVY_IMG="docker.io/aquasec/trivy:latest"; podman run --rm -v "${PWD}:/src:Z" "$TRIVY_IMG" fs /src` |
-| **Scan container image** | `podman run --rm -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z docker.io/aquasec/trivy:latest image <image-name>` |
-| **Scan with critical/high only** | `podman run --rm -v "${PWD}:/src:Z" docker.io/aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 1 /src` |
+| **Scan filesystem (project dir)** | `TRIVY_IMG="docker.io/aquasec/trivy:latest"; podman run --rm -v "$(pwd):/src" "$TRIVY_IMG" fs /src` |
+| **Scan container image** | `podman run --rm -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock docker.io/aquasec/trivy:latest image <image-name>` |
+| **Scan with critical/high only** | `podman run --rm -v "$(pwd):/src" docker.io/aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 1 /src` |
 | **Shell wrapper** | Source `scripts/trivy-wrapper.sh` then run `trivy-docker fs .` |
 | **First-time setup** | `podman pull docker.io/aquasec/trivy:latest` |
 
@@ -52,9 +66,11 @@ The Trivy vulnerability database is downloaded on first run (~40MB). To avoid re
 podman volume create trivy-cache
 
 # Use it in all subsequent scans
-podman run --rm -v "${PWD}:/src:Z" -v trivy-cache:/root/.cache/trivy:Z \
+podman run --rm -v "$(pwd):/src" -v trivy-cache:/root/.cache/trivy \
   docker.io/aquasec/trivy:latest fs /src
 ```
+
+> **Platform note**: On Linux, add `:Z` after mount paths for SELinux: `-v "$(pwd):/src:Z" -v trivy-cache:/root/.cache/trivy:Z`. On macOS and Windows, omit `:Z`.
 
 ## When to Use This Skill
 
@@ -114,18 +130,20 @@ Combine multiple scanners: `--scanners vuln,misconfig,secret`
 podman pull docker.io/aquasec/trivy:latest
 
 # Scan a local project for vulnerabilities + misconfigurations
-podman run --rm -v "${PWD}:/src:Z" docker.io/aquasec/trivy:latest \
+podman run --rm -v "$(pwd):/src" docker.io/aquasec/trivy:latest \
   fs --scanners vuln,misconfig /src
 
 # Scan a container image (using Podman socket)
 podman run --rm \
-  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z \
+  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock \
   docker.io/aquasec/trivy:latest image nginx:latest
 
 # Scan with severity filter and non-zero exit code (CI mode)
-podman run --rm -v "${PWD}:/src:Z" docker.io/aquasec/trivy:latest \
+podman run --rm -v "$(pwd):/src" docker.io/aquasec/trivy:latest \
   fs --severity CRITICAL,HIGH --exit-code 1 /src
 ```
+
+> **Platform note**: On Linux, add `:Z` after mount paths for SELinux (e.g., `-v "$(pwd):/src:Z"`). On macOS and Windows, omit `:Z`. The wrapper script (`trivy-wrapper.sh`) handles this automatically.
 
 ### Shell Wrapper (Recommended)
 
@@ -243,29 +261,31 @@ Trivy can scan local container images by talking to the Podman socket:
 ```bash
 # 1. Scan a locally built/pulled image
 podman run --rm \
-  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z \
+  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock \
   docker.io/aquasec/trivy:latest image nginx:latest
 
 # 2. Scan with severity filter
 podman run --rm \
-  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z \
+  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock \
   docker.io/aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 1 my-app:latest
 
 # 3. Scan by image ID
 podman run --rm \
-  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock:Z \
+  -v /run/user/$(id -u)/podman/podman.sock:/var/run/docker.sock \
   docker.io/aquasec/trivy:latest image sha256:abc123...
 
 # 4. Scan remote registry image (no socket needed for public registries)
 podman run --rm docker.io/aquasec/trivy:latest image docker.io/library/alpine:latest
 ```
 
-**Rootless Podman socket path**: `/run/user/$(id -u)/podman/podman.sock`
+**Rootless Podman socket path**: `/run/user/$(id -u)/podman/podman.sock` (Linux). On **macOS** (Podman Machine), the socket is typically at `~/.local/share/containers/podman/machine/podman.sock`. On **Windows** (WSL2), it varies by distro.
 
 If the socket path differs, find it with:
 ```bash
 podman info | grep -A2 podman.sock
 ```
+
+> **Tip**: Set the `PODMAN_SOCK` environment variable to override the socket path. The wrapper script (`trivy-wrapper.sh`) respects this.
 
 ### Step 6: IaC Misconfiguration Scanning
 
@@ -309,7 +329,7 @@ trivy-docker image --format cyclonedx --output /src/image-sbom.cdx.json alpine:l
 
 ```bash
 # Download/update vulnerability database (without scanning)
-podman run --rm -v trivy-cache:/root/.cache/trivy:Z docker.io/aquasec/trivy:latest image --download-db-only alpine:latest
+podman run --rm -v trivy-cache:/root/.cache/trivy docker.io/aquasec/trivy:latest image --download-db-only alpine:latest
 
 # Clear cache
 podman volume rm trivy-cache
@@ -427,7 +447,7 @@ This skill is **automatically loaded** by the Orchestrator during every pipeline
 podman image exists docker.io/aquasec/trivy:latest || podman pull docker.io/aquasec/trivy:latest
 
 # 2. Run filesystem vulnerability + misconfig scan
-podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
+podman run --rm -v "${WORKSPACE_ROOT:-$(pwd)}:/src" docker.io/aquasec/trivy:latest \
   fs --scanners vuln,misconfig --severity CRITICAL,HIGH --exit-code 1 /src
 ```
 
@@ -449,7 +469,7 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/aquasec/trivy:latest \
 - [x] NEVER modify project files during scanning
 - [x] NEVER skip the Trivy scan -- it is mandatory
 - [x] Use a persistent cache volume for the vulnerability database to speed up scans
-- [x] For container image scanning, use Podman socket: `/run/user/$(id -u)/podman/podman.sock`
+- [x] For container image scanning, use Podman socket: `/run/user/$(id -u)/podman/podman.sock` (Linux). On macOS/Windows, set `PODMAN_SOCK` to the correct path.
 
 ## Examples
 

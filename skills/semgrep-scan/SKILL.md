@@ -15,7 +15,7 @@ This skill is **automatically loaded by the Orchestrator** during every pipeline
 
 | Operation | Command |
 |-----------|---------|
-| **Quick security scan** | `SEMGREP_IMG="docker.io/semgrep/semgrep:latest"; podman run --rm -v "${PWD}:/src:Z" "$SEMGREP_IMG" semgrep scan --config p/security-audit --error .` |
+| **Quick security scan** | `SEMGREP_IMG="docker.io/semgrep/semgrep:latest"; podman run --rm -v "$(pwd):/src" "$SEMGREP_IMG" semgrep scan --config p/security-audit --error .` |
 | **Shell wrapper** (simplifies usage) | Add the alias/script below and run `semgrep-docker --config p/security-audit --error .` |
 | **First-time setup** | `podman pull docker.io/semgrep/semgrep:latest` |
 
@@ -26,6 +26,19 @@ This skill is **automatically loaded by the Orchestrator** during every pipeline
 - [x] **Bundled tools** -- includes jq, bash, curl, python3, git (v1.162.0+)
 - [x] **Reproducible** -- same semgrep version across all environments
 - [x] **Auto-updates** -- pull the latest image to get new rules & semgrep versions
+
+## Cross-Platform Compatibility
+
+This skill works on **Linux**, **macOS** (via Podman Machine), and **Windows** (via Git Bash, WSL2, or MSYS2). Key platform notes:
+
+| Concern | Linux | macOS | Windows |
+|---------|-------|-------|---------|
+| **Shell** | bash/zsh | bash/zsh | Git Bash, WSL2, or MSYS2 (not cmd.exe/PowerShell) |
+| **Podman** | Native | Podman Machine | WSL2 or Podman Machine |
+| **Volume mount** | `-v "$(pwd):/src:Z"` | `-v "$(pwd):/src"` (omit `:Z`) | `-v "$(pwd):/src"` (omit `:Z`) |
+| **`$(pwd)`** | Works in all POSIX shells | Works in all POSIX shells | Works in Git Bash, WSL2, MSYS2 |
+
+> **Tip**: Set `SELINUX_OPT=""` on macOS/Windows to omit the `:Z` flag. The wrapper script handles this automatically.
 
 ## Quick Start
 
@@ -39,17 +52,19 @@ Then run scans via the container:
 
 ```bash
 # Auto-detect and scan everything
-podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config auto .
 
 # Scan with security-focused rules, strict mode
-podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config p/owasp-top-ten --error .
 
 # Scan specific paths with custom rules
-podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config /src/path/to/my-rules.yaml --error /src/src/
 ```
+
+> **Platform note**: On Linux, add `:Z` after mount paths for SELinux (e.g., `-v "$(pwd):/src:Z"`). On macOS and Windows, omit `:Z`. The wrapper script handles this automatically.
 
 ### Shell Wrapper (Recommended)
 
@@ -59,7 +74,9 @@ Create a helper script or alias to avoid repeating the podman incantation:
 # Add to ~/.zshrc or ~/.bashrc
 semgrep-docker() {
   local img="docker.io/semgrep/semgrep:latest"
-  podman run --rm -w /src -v "${PWD}:/src:Z" "$img" semgrep "$@"
+  local selinux="${SELINUX_OPT:-:Z}"
+  [ "$(uname -s)" != "Linux" ] && selinux=""
+  podman run --rm -w /src -v "$(pwd):/src${selinux}" "$img" semgrep "$@"
 }
 ```
 
@@ -191,11 +208,11 @@ Use `--baseline-commit` to scan only changes since a specific commit. This is us
 
 ```bash
 # Scan only changes since main branch diverged
-podman run --rm -w /src -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -w /src -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config p/security-audit --baseline-commit origin/main --error .
 
 # Scan only changes in the current PR
-podman run --rm -w /src -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -w /src -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config p/default --baseline-commit HEAD~1 --error .
 ```
 
@@ -280,11 +297,11 @@ For JSON output, use `jq` to filter and summarize. Since jq is included in the c
 
 ```bash
 # Count findings by severity (pipe through the container's jq)
-podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   sh -c 'semgrep scan --config p/security-audit --json . | jq ".results | group_by(.extra.severity) | map({severity: .[0].extra.severity, count: length})"'
 
 # Extract high-severity findings only
-podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   sh -c 'semgrep scan --config p/security-audit --json . | jq ".results | map(select(.extra.severity == \"ERROR\")) | .[] | {file: .path, line: .start.line, rule: .check_id, message: .extra.message}"'
 ```
 
@@ -319,7 +336,7 @@ Validate new rules **before** running scans with them -- this catches syntax err
 
 ## Common Scan Recipes
 
-All recipes assume you've set up the `semgrep-docker` shell wrapper. Without it, prepend `podman run --rm -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest` to each command.
+All recipes assume you've set up the `semgrep-docker` shell wrapper. Without it, prepend `podman run --rm -v "$(pwd):/src" docker.io/semgrep/semgrep:latest` to each command.
 
 ### Recipe 1: Quick Security Scan (default)
 ```bash
@@ -333,7 +350,7 @@ semgrep-docker scan --config p/default --error .
 
 ### Recipe 3: Incremental PR Scan
 ```bash
-podman run --rm -w /src -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -w /src -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config p/security-audit --baseline-commit origin/main --error .
 ```
 
@@ -354,7 +371,7 @@ semgrep-docker scan --config p/security-audit --sarif --output /src/results.sari
 
 ### Recipe 6: JSON with Baseline for CI
 ```bash
-podman run --rm -w /src -v "${PWD}:/src:Z" docker.io/semgrep/semgrep:latest \
+podman run --rm -w /src -v "$(pwd):/src" docker.io/semgrep/semgrep:latest \
   semgrep scan --config p/security-audit --baseline-commit origin/main \
     --json --output /src/results.json --error .
 ```
@@ -400,7 +417,7 @@ Build Gate -> Lint Gate -> Code Quality Gate -> SECURITY SCAN -> QA
 2. The Orchestrator sets up the shell wrapper or runs the full podman command with the project root mounted at `/src`
 3. The Orchestrator runs the security-audit scan:
    ```bash
-   podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" docker.io/semgrep/semgrep:latest \
+   podman run --rm -v "${WORKSPACE_ROOT:-$(pwd)}:/src" docker.io/semgrep/semgrep:latest \
      semgrep scan --config p/security-audit --error .
    ```
 4. The Orchestrator parses the semgrep output and includes findings in the combined Security Scan report
@@ -430,7 +447,7 @@ If the image cannot be pulled (no network), the Orchestrator should report a war
 
 When automatically triggered during a pipeline, the semgrep scan uses these defaults:
 - **Image**: `docker.io/semgrep/semgrep:latest`
-- **Volume mount**: `$WORKSPACE_ROOT:/src:Z` (with SELinux label)
+- **Volume mount**: `$WORKSPACE_ROOT:/src` (add `:Z` on Linux for SELinux)
 - **Config**: `p/security-audit` (security-focused)
 - **Mode**: `--error` (strict -- fail on any finding)
 - **Target**: `.` (inside container at `/src`)
@@ -439,7 +456,7 @@ When automatically triggered during a pipeline, the semgrep scan uses these defa
 ## Hard Rules
 
 - [x] Always use `--error` for CI/strict mode -- fails the pipeline on findings
-- [x] Always mount the project root with `-v "${PWD}:/src:Z"` -- the `:Z` flag handles SELinux labeling
+- [x] Always mount the project root with `-v "$(pwd):/src"` (add `:Z` on Linux for SELinux)
 - [x] Always use `--rm` to clean up the container after execution
 - [x] The Orchestrator loads this skill automatically during every pipeline -- no user prompt required
 - [x] Read-only operation -- the container is ephemeral (`--rm`), no persistent changes
