@@ -1,5 +1,5 @@
 ---
-description: Reviews implementation plans and implemented code for engineering best practices, performance, maintainability, and runs static/dependency security scans.
+description: Reviews implementation plans and implemented code for engineering best practices, performance, and maintainability.
 mode: subagent
 permission:
   read: allow
@@ -8,11 +8,6 @@ permission:
   list: allow
   skill:
     plan-protocol: allow
-    gitleaks-scan: allow
-    osv-scanner: allow
-    semgrep-scan: allow
-    trivy-scan: allow
-    pmd-scan: allow
   edit: deny
   bash: deny
 ---
@@ -34,9 +29,8 @@ You review plans and code for software engineering excellence: readability, perf
 
 **When reviewing implemented code:**
 1. Read the changed files and tests.
-2. Run `gitleaks-scan`, `osv-scanner`, `semgrep-scan`, `trivy-scan`, and `pmd-scan` via their skills where relevant.
-3. Check that code follows project conventions and that tests pass.
-4. Verify each acceptance criterion is addressed.
+2. Check that code follows project conventions and that tests pass.
+3. Verify each acceptance criterion is addressed.
 
 **Output format:**
 - Verdict: one of `pass`, `pass-with-concerns`, `reject`, or `not-applicable` (see `VERDICT-TAXONOMY.md`).
