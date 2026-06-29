@@ -46,6 +46,8 @@ rule:
 fix: for (const $ITEM of $ARR) { $$$ }
 ```
 
+**Caveat**: This works best when the callback body is a single block statement. If the body uses `$ITEM` in ways that differ from `for...of` semantics (e.g., `$ITEM` is reassigned), the transform may produce incorrect results. Review each match.
+
 ### 4. Find optional chaining candidates
 
 ```yaml

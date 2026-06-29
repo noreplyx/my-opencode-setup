@@ -48,6 +48,9 @@ ast-grep (`sg`) is a structural code search, lint, and rewrite tool based on Abs
 | Search hidden files / .git | `ast-grep -p '$PATTERN' --no-ignore hidden` |
 | Suppress color (CI/scripting) | `ast-grep -p '$PATTERN' --no-color` |
 | Strictness control | `ast-grep -p '$PATTERN' --strictness smart` |
+| Sort results by file/line | `ast-grep -p '$PATTERN' --sort` |
+| Deduplicate identical matches | `ast-grep -p '$PATTERN' --unique` |
+| Limit number of matches | `ast-grep -p '$PATTERN' --max-match-count 10` |
 
 ---
 
@@ -481,11 +484,11 @@ oImplicitReturns, strictNullChecks
 | Task | Command |
 |------|---------|
 | Find all function calls matching a pattern | sg -p 'console.log()' -l ts |
-| Find all arrow functions | sg -p 'ARG => ' -l ts |
+| Find all arrow functions | sg -p '($ARG) => ...' -l ts |
 | Find imports from a specific module | sg -p 'import { $$$ } from "lodash"' -l ts |
 | Refactor: rename function across all files | sg -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U |
-| Find empty catch blocks | sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: {}}}" |
-| Find classes with specific decorators | sg -p '@Injectable() class  { $ }' -l ts |
+| Find empty catch blocks | sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}" |
+| Find classes with specific decorators | sg -p '@Injectable() class { $$$ }' -l ts |
 
 ### Loading the Skill
 
