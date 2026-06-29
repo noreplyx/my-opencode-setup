@@ -157,7 +157,7 @@ osv-scanner-docker --offline-vulnerabilities --download-offline-databases /src
 
 ### Scan Offline Only (No Network)
 ```bash
-osv-scanner-docker --offline /src
+osv-scanner-docker --offline-vulnerabilities /src
 ```
 
 ### Scan with Persistent Offline DB Cache
@@ -166,7 +166,7 @@ podman run --rm \
   -v "${PWD}:/src:Z" \
   -v "${HOME}/.cache/osv-scanner:/root/.cache/osv-scanner:Z" \
   ghcr.io/google/osv-scanner:latest \
-  --offline /src
+  --offline-vulnerabilities /src
 ```
 
 ---
@@ -220,14 +220,14 @@ source scripts/osv-scanner-wrapper.sh
 osv-scanner-docker scan source -r .
 
 # JSON report
-osv-scanner-docker --format json -L ./package-lock.json > report.json
+osv-scanner-docker --format json -L /src/package-lock.json > report.json
 # Container scan -- use raw podman run (see "Container Image Scanning" section)
 podman save --format=docker-archive node:20 -o /tmp/node20.tar && \
 podman run --rm -v /tmp:/tmp:Z -v "${PWD}:/src:Z" \
   ghcr.io/google/osv-scanner:latest scan image --archive /tmp/node20.tar
 
 # License check
-osv-scanner-docker --licenses="MIT,Apache-2.0" .
+osv-scanner-docker --licenses="MIT,Apache-2.0" /src
 
 # Scan with custom workdir
 OSV_SCANNER_WORKDIR=/home/user/project osv-scanner-docker scan source -r /src

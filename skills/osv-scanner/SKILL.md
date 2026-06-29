@@ -25,7 +25,7 @@ OSV-Scanner connects your project's list of dependencies to the [OSV.dev](https:
 |-----------|---------|
 | **Quick source scan** | `osv-scanner-docker scan source -r .` |
 | **Quick container scan** | See "Container Image Scanning" section below for two methods (archive or socket) |
-| **JSON output** | `osv-scanner-docker --format json -L ./package-lock.json` |
+| **JSON output** | `osv-scanner-docker --format json -L /src/package-lock.json` |
 | **Shell wrapper** | Source `scripts/osv-scanner-wrapper.sh` then run `osv-scanner-docker ...` |
 | **First-time setup** | `podman pull ghcr.io/google/osv-scanner:latest` |
 | **Check version** | `osv-scanner-docker --version` |
@@ -58,8 +58,8 @@ Source the included wrapper to avoid repeating the Podman incantation:
 source ./skills/osv-scanner/scripts/osv-scanner-wrapper.sh
 # Now use like native osv-scanner (for source scanning):
 osv-scanner-docker scan source -r .
-osv-scanner-docker --format json -L ./package-lock.json
-osv-scanner-docker --licenses="MIT,Apache-2.0" .
+osv-scanner-docker --format json -L /src/package-lock.json
+osv-scanner-docker --licenses="MIT,Apache-2.0" /src
 # For container image scanning, see "Container Image Scanning" section below
 ```
 
@@ -111,8 +111,8 @@ Triggers **automatically** during every pipeline Security Scan gate as the depen
 | Target | Command | Use Case |
 |--------|---------|----------|
 | **Source directory** | `osv-scanner-docker scan source -r .` | Auto-detect all lockfiles |
-| **Specific lockfile** | `osv-scanner-docker scan source -L ./package-lock.json` | Single lockfile scan |
-| **Multiple lockfiles** | `osv-scanner-docker scan source -L ./Cargo.lock -L ./go.mod` | Multi-ecosystem projects |
+| **Specific lockfile** | `osv-scanner-docker scan source -L /src/package-lock.json` | Single lockfile scan |
+| **Multiple lockfiles** | `osv-scanner-docker scan source -L /src/Cargo.lock -L /src/go.mod` | Multi-ecosystem projects |
 | **Container image** | (requires raw `podman run` -- see below) | Container vulnerability scan |
 | **Exported image** | (requires raw `podman run` -- see below) | Pre-exported image archive |
 | **Git repo** | (auto-detected when scanning source) | C/C++ submodules + vendored code |
@@ -206,7 +206,7 @@ Useful for air-gapped environments or CI without network access:
 osv-scanner-docker --offline-vulnerabilities --download-offline-databases /src
 
 # Step 2: Scan offline (no network required)
-osv-scanner-docker --offline /src
+osv-scanner-docker --offline-vulnerabilities /src
 
 # Or scan vulnerabilities offline but allow network for other features
 osv-scanner-docker --offline-vulnerabilities /src
@@ -218,7 +218,7 @@ The databases are cached at the standard OS cache directory inside the container
 podman run --rm \
   -v "${PWD}:/src:Z" \
   -v "${HOME}/.cache/osv-scanner:/root/.cache/osv-scanner:Z" \
-  ghcr.io/google/osv-scanner:latest --offline /src
+  ghcr.io/google/osv-scanner:latest --offline-vulnerabilities /src
 ```
 
 #### Guided Remediation (Experimental)
@@ -350,7 +350,7 @@ osv-scanner-docker scan source -r --verbosity info /src
 osv-scanner-docker scan source -r --verbosity error /src
 
 # Custom port for HTML server
-osv-scanner-docker scan source -r --serve --port 9000 /src
+osv-scanner-docker scan source -r --serve /src
 ```
 
 ## Reporting Findings
@@ -462,7 +462,7 @@ podman run --rm -v "${WORKSPACE_ROOT}:/src:Z" \
 | Method | Requires | Pros | Cons |
 |--------|----------|------|------|
 | **Direct** (`scan image <name>:<tag>`) | Docker socket mounted | Simple one-liner | Needs socket access |
-| **Archive** (`scan image --archive ./img.tar`) | Pre-exported `.tar` | No socket needed, fully isolated | Extra export step |
+| **Archive** (`scan image --archive /src/img.tar`) | Pre-exported `.tar` | No socket needed, fully isolated | Extra export step |
 
 The archive method is **recommended for pipeline usage** since it doesn't require the Docker socket:
 

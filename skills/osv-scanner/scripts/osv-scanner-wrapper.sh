@@ -5,9 +5,9 @@
 #   source skills/osv-scanner/scripts/osv-scanner-wrapper.sh
 #
 # Then use it just like native osv-scanner (for source/lockfile scanning):
-#   osv-scanner-docker scan source -r .
-#   osv-scanner-docker --format json -L ./package-lock.json
-#   osv-scanner-docker --licenses="MIT,Apache-2.0" .
+#   osv-scanner-docker scan source -r /src
+#   osv-scanner-docker --format json -L /src/package-lock.json
+#   osv-scanner-docker --licenses="MIT,Apache-2.0" /src
 #
 # For container image scanning, use raw podman run commands (see SKILL.md).
 #
@@ -47,6 +47,7 @@ osv-scanner-docker() {
 
     podman run --rm \
         -v "${workdir}:/src${SELINUX_OPT}" \
+        --workdir /src \
         "${image}" \
         "$@"
 }
