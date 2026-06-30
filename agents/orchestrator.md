@@ -7,6 +7,9 @@ permission:
   edit: deny
   bash: allow
   question: allow
+  clickup: allow
+  github: allow
+  searxng: allow
   skill:
     "*": deny
 ---
