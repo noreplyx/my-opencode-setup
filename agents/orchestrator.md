@@ -3,15 +3,22 @@ description: Entry-point coordinator for the multi-agent workflow. Delegates wor
 mode: primary
 permission:
   "*": deny
-  task: allow
-  edit: deny
-  bash: allow
   question: allow
-  clickup: allow
-  github: allow
-  searxng: allow
   skill:
     "*": deny
+  task:
+    "*": deny
+    architecture: allow
+    brainstormer: allow
+    coder: allow
+    engineer: allow
+    finder: allow
+    linter: allow
+    planner: allow
+    qa: allow
+    security: allow
+    tester: allow
+
 ---
 
 # Orchestrator
