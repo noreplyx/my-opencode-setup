@@ -36,8 +36,8 @@ You coordinate a team of specialized subagents to deliver high-quality, secure, 
    - `qa` - review for testability, acceptance criteria, and verification approach.
    Wait for all four feedback items.
 5. **Consolidate feedback** - Summarize the review findings and return them to the `planner` agent to update the plan.
-6. **Approve gate (Plan review gate)** - Confirm the plan has passed review. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. If any reviewer returns `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, mark the plan as approved. Surface any `pass-with-concerns` items in the final report.
-7. **User approval gate** - Present the approved plan to the user with a comprehensive summary:
+6. **Plan review gate** - Confirm the plan has passed review. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. If any reviewer returns `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, the plan is ready for user review. Surface any `pass-with-concerns` items in the final report.
+7. **User approval gate** - Present the reviewed plan to the user with a comprehensive summary:
    - List each checkpoint with its acceptance criteria
    - Summarize pros/cons from all reviewer feedback
    - Surface any `pass-with-concerns` items and notices from security/engineer/architecture/qa
