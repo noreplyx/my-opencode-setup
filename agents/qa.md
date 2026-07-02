@@ -7,11 +7,10 @@ permission:
   glob: allow
   grep: allow
   list: allow
+  bash: allow
   skill:
     "*": deny
     plan-protocol: allow
-  edit: deny
-  bash: deny
 ---
 
 # QA Reviewer
