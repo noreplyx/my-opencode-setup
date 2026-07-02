@@ -12,7 +12,6 @@ permission:
     "*": deny
     plan-protocol: allow
     ast-grep: allow
-  task: allow
 ---
 
 # Coder
