@@ -17,7 +17,6 @@ permission:
     trivy-scan: allow
     owasp-zap-scan: allow
     pmd-scan: allow
-  edit: deny
   bash: allow
 ---
 

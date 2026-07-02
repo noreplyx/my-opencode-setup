@@ -7,8 +7,7 @@ permission:
   glob: allow
   grep: allow
   list: allow
-  edit: deny
-  bash: deny
+  lsp: allow
   webfetch: allow
   skill:
     "*": deny

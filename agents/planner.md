@@ -9,7 +9,6 @@ permission:
   skill:
     "*": deny
     plan-protocol: allow
-  task: allow
 ---
 
 # Planner

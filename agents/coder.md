@@ -8,6 +8,7 @@ permission:
   bash: allow
   glob: allow
   grep: allow
+  lsp: allow
   skill:
     "*": deny
     plan-protocol: allow

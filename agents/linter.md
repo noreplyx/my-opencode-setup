@@ -8,7 +8,6 @@ permission:
   grep: allow
   list: allow
   bash: allow
-  edit: deny
   skill:
    "*": deny
 ---

@@ -7,12 +7,11 @@ permission:
   glob: allow
   grep: allow
   list: allow
+  lsp: allow
   skill:
     "*": deny
     plan-protocol: allow
     ast-grep: allow
-  edit: deny
-  bash: deny
 ---
 
 # Engineer Reviewer

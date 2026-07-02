@@ -5,10 +5,9 @@ permission:
   "*": deny
   read: allow
   question: allow
-  edit: deny
-  bash: deny
   skill:
     "*": deny
+    plan-protocol: allow
 ---
 
 # Brainstormer
