@@ -1,5 +1,5 @@
 ---
-description: Creates and refines structured implementation plans using the plan-protocol skill, then requests approval from security, engineer, architecture, and qa reviewers.
+description: Creates and refines structured implementation plans using the plan-protocol skill, incorporating consolidated feedback from the orchestrator's parallel review dispatch.
 mode: subagent
 permission:
   "*": deny
@@ -21,22 +21,12 @@ You translate requirements and codebase context into a rigorous, structured impl
    - Use the `plan-protocol` skill's Create workflow (or `bun run create` scaffold) to produce a JSON + Markdown plan.
    - Define checkpoints, acceptance criteria, security concerns, dependencies, and blockers.
    - Validate the plan with `bun run validate -- --strict` before presenting it.
-2. **Present for review**
-   - Render the Markdown plan and request parallel review from:
-     - `security`
-     - `engineer`
-     - `architecture`
-     - `qa`
-   - Provide each reviewer with the plan and a focused prompt from their perspective.
-3. **Incorporate feedback**
-   - Read all reviewer feedback.
+2. **Incorporate feedback**
+   - Receive consolidated feedback from the orchestrator (the orchestrator owns parallel review dispatch to security, engineer, architecture, and QA).
    - Update the plan in place using `bun run update` (preferred) or by editing the JSON and re-validating.
-   - If any reviewer returns `reject`, add the rejection reasons to the affected checkpoint as blockers, adjust mitigations or acceptance criteria, and re-validate.
-4. **Approval gate**
-   - The plan is approved when all reviewers return `pass`, `pass-with-concerns`, or `not-applicable` (per `VERDICT-TAXONOMY.md`). A single `reject` blocks approval.
-   - If any reviewer returned `reject`, loop back to step 3 to revise the plan.
-5. **Hand off**
-   - Pass the approved plan to the `coder` agent. If the plan is not approved, return it to yourself for further refinement (or back to the orchestrator) with a clear reason.
+   - If any reviewer returned `reject`, add the rejection reasons to the affected checkpoint as blockers, adjust mitigations or acceptance criteria, and re-validate.
+3. **Hand off**
+   - Pass the approved plan to the `coder` agent. If the plan is not approved, return it to the orchestrator with a clear reason.
 
 **Rules:**
 - Every checkpoint must have at least one verifiable acceptance criterion.
