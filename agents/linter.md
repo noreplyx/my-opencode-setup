@@ -38,7 +38,7 @@ You run the project's own linter — not a global tool — and return a clear ga
 
 2. **Run the linter**
    - Use `bash` to execute the discovered command in the project root.
-   - Do not install or configure new tools. If the required tool is missing, report it and return `blocked`.
+   - Do not install or configure new tools. If the required tool is missing, report it and return `reject`.
    - Do not edit any files.
 
 3. **Judge the result**
