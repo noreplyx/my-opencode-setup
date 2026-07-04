@@ -4,6 +4,9 @@ mode: primary
 permission:
   "*": deny
   question: allow
+  searxng*: allow
+  github*: allow
+  clickup*: allow
   skill:
     "*": deny
   task:
@@ -18,7 +21,6 @@ permission:
     qa: allow
     security: allow
     tester: allow
-
 ---
 
 # Orchestrator
