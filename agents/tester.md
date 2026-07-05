@@ -11,6 +11,7 @@ permission:
   skill:
     "*": deny
     plan-protocol: allow
+    playwright-cli: allow
 ---
 
 # Tester Gate
