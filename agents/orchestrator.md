@@ -7,6 +7,7 @@ permission:
   searxng*: allow
   github*: allow
   clickup*: allow
+  database: allow
   skill:
     "*": deny
   task:

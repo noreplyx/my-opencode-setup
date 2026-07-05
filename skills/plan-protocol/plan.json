@@ -1,0 +1,330 @@
+{
+  "plan": {
+    "title": "Database Tool Remediation Plan",
+    "description": "Fix critical security vulnerabilities and improve engineering quality in the custom database tool (tools/database.ts)",
+    "overview": "Remediate SQL injection (CRITICAL), authorization bypass (HIGH), credential exposure (HIGH), error leakage (MEDIUM), and code quality issues identified by Security, Engineering, Architecture, and QA reviews. The plan prioritizes security fixes first (CP-01 through CP-03), then engineering improvements (CP-04), then architecture/QA improvements (CP-05, CP-06). CP-02 and CP-03 can be worked in parallel after CP-01. CP-05 and CP-06 can be worked in parallel after CP-04.",
+    "version": "1.0.0",
+    "created_at": "2026-07-05T15:40:00.000Z",
+    "updated_at": "2026-07-05T15:40:00.000Z",
+    "checkpoints": [
+      {
+        "id": "CP-01",
+        "title": "Parameterized Query Execution (SQL Injection Fix)",
+        "description": "Replace all raw string interpolation in SQL queries with parameterized/prepared statements across all three executors (executePostgres, executeMySQL, executeMSSQL). PostgreSQL already uses $1-style parameters for schema queries but the main query path uses client.query({text: query}) which still accepts raw strings — ensure all user-supplied values use parameterized APIs. MySQL uses connection.execute(query) which is parameterized-capable but currently passes raw strings. MSSQL uses pool.request().query() with string interpolation for schema queries and raw strings for the main query path. Convert all to use parameterized queries with positional or named parameters.",
+        "dependencies": [],
+        "acceptance_criteria": [
+          {
+            "id": "AC-01-01",
+            "description": "PostgreSQL executePostgres passes user query via parameterized client.query({text, values}) with no string concatenation of user input",
+            "verification_method": "Code review: inspect executePostgres function; assert no template literals or string concatenation in query text. Run test with query containing single quotes and semicolons; verify no injection occurs.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-01-01",
+                "description": "PostgreSQL driver pg.Client.query accepts both parameterized and raw text — must ensure values array is always provided for user-supplied queries",
+                "severity": "critical",
+                "mitigation": "Use client.query({text: query, values: []}) signature exclusively; add a lint rule or wrapper function that enforces parameterized usage"
+              }
+            ]
+          },
+          {
+            "id": "AC-01-02",
+            "description": "MySQL executeMySQL passes user query via parameterized connection.execute(sql, params) with positional parameters, not string interpolation",
+            "verification_method": "Code review: inspect executeMySQL function; assert connection.execute receives params array. Run test with query containing single quotes; verify no injection.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-01-02",
+                "description": "MySQL schema path uses DESCRIBE with backtick escaping — replace with parameterized prepared statement or INFORMATION_SCHEMA query",
+                "severity": "high",
+                "mitigation": "Replace DESCRIBE with SELECT FROM INFORMATION_SCHEMA.COLUMNS using parameterized WHERE table_name = ?"
+              }
+            ]
+          },
+          {
+            "id": "AC-01-03",
+            "description": "MSSQL executeMSSQL passes user query via pool.request().input(name, type, value).query() with named parameters, not string interpolation",
+            "verification_method": "Code review: inspect executeMSSQL function; assert pool.request().input() is used for all user-supplied values. Run test with query containing single quotes; verify no injection.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-01-03",
+                "description": "MSSQL schema path uses string interpolation with .replace(/'/g, \"''\") which is insufficient — replace with parameterized query",
+                "severity": "high",
+                "mitigation": "Replace string interpolation in schema query with pool.request().input('tableName', mssql.NVarChar, query).query('SELECT ... WHERE TABLE_NAME = @tableName')"
+              }
+            ]
+          },
+          {
+            "id": "AC-01-04",
+            "description": "All three executors reject multi-statement queries that attempt to execute DDL/DML after a SELECT",
+            "verification_method": "Run integration test with query 'SELECT 1; DROP TABLE users' against each driver; verify only the SELECT executes or the entire query is rejected.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-01-04",
+                "description": "Some drivers may execute multi-statement queries by default (e.g., mssql allows multiple statements in one .query() call)",
+                "severity": "critical",
+                "mitigation": "Enable statement-level restrictions per driver: for mssql, use multiple: false or parse and reject multi-statement input; for mysql2, ensure multipleStatements: false in connection config"
+              }
+            ]
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-01",
+            "description": "SQL injection is the most critical vulnerability — all three executors pass raw user SQL to the driver without parameterization",
+            "severity": "critical",
+            "mitigation": "Replace all raw string interpolation with driver-native parameterized query APIs (pg: $1, mysql2: ?, mssql: @param). Add automated test suite that attempts SQL injection payloads and verifies they are neutralized."
+          }
+        ]
+      },
+      {
+        "id": "CP-02",
+        "title": "Authorization & Write-Operation Prevention",
+        "description": "Replace the current startsWith('SELECT') / startsWith('WITH') check with a robust query-type detection mechanism that prevents any write operations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, EXEC, CALL, etc.). The current check is trivially bypassable via multi-statement injection, WITH + write, SELECT INTO OUTFILE, and other techniques. Implement a SQL parser or tokenizer that extracts the first statement type, or use a blocklist/allowlist approach at the driver level.",
+        "dependencies": ["CP-01"],
+        "acceptance_criteria": [
+          {
+            "id": "AC-02-01",
+            "description": "Query-type detection uses a SQL tokenizer or parser (not string prefix matching) to identify the first statement type",
+            "verification_method": "Code review: inspect the detection logic; assert it handles leading whitespace, comments, CTEs, and subqueries. Test with '/* comment */ SELECT 1', 'WITH cte AS (...) SELECT 1', and 'SELECT 1' — all must be allowed.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-02-02",
+            "description": "All write statement types (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, EXEC, CALL, REPLACE, LOAD, SELECT INTO OUTFILE/DUMPFILE) are rejected with a clear error message",
+            "verification_method": "Run test matrix: for each write keyword, send query starting with that keyword; assert rejection. Test edge cases like 'DELETE FROM users WHERE 1=1' and 'SELECT * FROM users INTO OUTFILE /tmp/hack'.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-02-01",
+                "description": "SELECT INTO OUTFILE is a SELECT statement that writes to the filesystem — must be detected and rejected",
+                "severity": "high",
+                "mitigation": "Add specific detection for SELECT ... INTO OUTFILE/DUMPFILE pattern in the tokenizer"
+              }
+            ]
+          },
+          {
+            "id": "AC-02-03",
+            "description": "WITH (CTE) queries that contain write operations in any CTE body are rejected, not just the final statement",
+            "verification_method": "Test with 'WITH cte AS (DELETE FROM users RETURNING *) SELECT * FROM cte' — must be rejected. Test with 'WITH cte AS (SELECT 1) SELECT * FROM cte' — must be allowed.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-02-02",
+                "description": "WITH clause can contain write CTEs (PostgreSQL: DELETE/UPDATE/INSERT in CTE) — the current prefix check misses this entirely",
+                "severity": "critical",
+                "mitigation": "Parse all CTE bodies for write operations, not just the final SELECT"
+              }
+            ]
+          },
+          {
+            "id": "AC-02-04",
+            "description": "Multi-statement queries are rejected at the application level before reaching the driver",
+            "verification_method": "Test with 'SELECT 1; DELETE FROM users' and 'SELECT 1\\nDROP TABLE users' — both must be rejected with a clear error about multi-statement queries.",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-02",
+            "description": "Authorization bypass allows arbitrary write operations to the database, including data destruction and exfiltration",
+            "severity": "critical",
+            "mitigation": "Implement robust query-type detection using a proper SQL tokenizer. Add comprehensive test suite covering all bypass techniques."
+          }
+        ]
+      },
+      {
+        "id": "CP-03",
+        "title": "Credential & Error Leakage Remediation",
+        "description": "Fix credential exposure in metadata output (SQL Server connection strings returned in extractDatabaseName), sanitize database error messages to prevent leaking connection strings or sensitive info, and add connection string validation before use. The extractDatabaseName function currently truncates MSSQL connection strings at 60 chars, which can expose passwords. Error messages from the database driver may contain the full connection string or other sensitive data.",
+        "dependencies": ["CP-01"],
+        "acceptance_criteria": [
+          {
+            "id": "AC-03-01",
+            "description": "extractDatabaseName for SQL Server parses the connection string to extract only server host and database name, never returning raw connection string fragments",
+            "verification_method": "Code review: inspect extractDatabaseName for MSSQL path. Test with connection string containing 'Password=secret123;' — assert output does not contain 'secret123' or any password-like substring.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-03-01",
+                "description": "SQL Server connection strings contain passwords in plaintext — truncation at 60 chars may still expose the password",
+                "severity": "high",
+                "mitigation": "Parse the connection string with a proper parser (e.g., split on semicolons, extract Server= and Database= values only) or use mssql config object parsing"
+              }
+            ]
+          },
+          {
+            "id": "AC-03-02",
+            "description": "Database error messages are sanitized to remove connection strings, passwords, and file paths before being returned to the user",
+            "verification_method": "Code review: inspect the catch block in the execute function. Test by triggering a connection error with a deliberately invalid connection string; assert the error message does not contain the password portion.",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-03-02",
+                "description": "Database driver error messages may include the full connection string, query text, or stack traces with sensitive info",
+                "severity": "medium",
+                "mitigation": "Wrap driver calls in try-catch and return a generic error message. Use a regex or parser to strip sensitive patterns from error messages before returning."
+              }
+            ]
+          },
+          {
+            "id": "AC-03-03",
+            "description": "Connection string is validated for basic format correctness before being passed to the driver (e.g., correct protocol prefix, non-empty host/user)",
+            "verification_method": "Code review: inspect validation logic. Test with empty string, missing protocol, and malformed connection strings — assert clear error messages before any driver call.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-03-04",
+            "description": "Credentials are never logged, stored in conversation history metadata, or exposed in tool output beyond the sanitized database identifier",
+            "verification_method": "Code review: inspect all return paths and metadata construction. Assert the metadata.database field only contains sanitized host:port/dbname, never raw connection strings.",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-03",
+            "description": "Credential exposure in metadata and error messages can leak database passwords to users and conversation history",
+            "severity": "high",
+            "mitigation": "Sanitize all output paths: parse connection strings to extract only safe identifiers, wrap driver errors with generic messages, validate before use."
+          }
+        ]
+      },
+      {
+        "id": "CP-04",
+        "title": "Driver Abstraction & Type Safety",
+        "description": "Refactor the three near-identical executor functions (~80 lines each) into a single driver abstraction with a common interface. Define proper TypeScript types for driver instances, query results, and connection configs. Eliminate pervasive `any` types. Create a DriverAdapter interface with methods: connect(), query(text, params), schema(tableName?), disconnect(). Implement concrete adapters for PostgreSQL, MySQL, and MSSQL. This reduces code duplication and makes the codebase maintainable.",
+        "dependencies": ["CP-01", "CP-02", "CP-03"],
+        "acceptance_criteria": [
+          {
+            "id": "AC-04-01",
+            "description": "A DriverAdapter interface is defined with typed methods for connect, query, schema, and disconnect — no `any` types in the interface",
+            "verification_method": "Code review: inspect the interface definition. Run TypeScript compiler with --noImplicitAny; assert zero type errors.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-04-02",
+            "description": "Three concrete adapter classes (PostgresAdapter, MySQLAdapter, MSSQLAdapter) implement the DriverAdapter interface with proper types for driver-specific APIs",
+            "verification_method": "Code review: inspect each adapter. Assert each implements all interface methods. Assert driver-specific types (pg.Client, mysql2.Connection, mssql.ConnectionPool) are properly typed, not `any`.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-04-03",
+            "description": "The main execute function uses the adapter pattern to dispatch to the correct driver, eliminating the if/else chain and duplicated code",
+            "verification_method": "Code review: inspect the refactored execute function. Assert there is a single query execution path, not three separate functions. Count lines of duplicated logic — must be reduced by at least 60%.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-04-04",
+            "description": "All existing functionality (query, schema listing, table description) is preserved after refactoring",
+            "verification_method": "Run the full test suite (from CP-06) against the refactored code; assert all tests pass with identical output format.",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-04",
+            "description": "Refactoring may introduce regressions if the adapter abstraction doesn't correctly handle driver-specific behaviors (e.g., mssql parameter syntax vs mysql2)",
+            "severity": "medium",
+            "mitigation": "Write integration tests for each adapter before refactoring, then run the same tests after. Use the adapter pattern to encapsulate driver-specific quirks."
+          }
+        ]
+      },
+      {
+        "id": "CP-05",
+        "title": "Connection/Query Timeouts & SQL-Level LIMIT",
+        "description": "Add configurable timeouts for database connections and query execution to prevent the tool from hanging indefinitely. Push the row LIMIT into the SQL query itself (using LIMIT/OFFSET/TOP syntax per dialect) instead of client-side Array.slice() after fetching all rows. This prevents excessive data transfer and improves performance.",
+        "dependencies": ["CP-04"],
+        "acceptance_criteria": [
+          {
+            "id": "AC-05-01",
+            "description": "Connection timeout is set (e.g., 10 seconds) for all three drivers — connection attempt fails fast if database is unreachable",
+            "verification_method": "Code review: inspect adapter connect() methods for timeout configuration. Test with unreachable host; assert failure within 15 seconds (not hanging indefinitely).",
+            "status": "pending"
+          },
+          {
+            "id": "AC-05-02",
+            "description": "Query execution timeout is set (e.g., 30 seconds) for all three drivers — long-running queries are aborted",
+            "verification_method": "Code review: inspect adapter query() methods for statement_timeout or equivalent. Test with deliberately slow query (pg_sleep(60)); assert timeout before 35 seconds.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-05-03",
+            "description": "LIMIT is pushed into the SQL query for all three drivers (PostgreSQL: LIMIT, MySQL: LIMIT, MSSQL: SELECT TOP or OFFSET FETCH) instead of client-side slicing",
+            "verification_method": "Code review: inspect query construction — assert LIMIT/TOP clause is appended to user query. Test by querying a table with 1000+ rows and limit=5; assert only 5 rows are transferred (verify via driver logs or network monitoring).",
+            "status": "pending",
+            "security_concerns": [
+              {
+                "id": "SC-05-01",
+                "description": "Appending LIMIT to user queries may break queries that already have a LIMIT clause, or queries with ORDER BY ... FOR UPDATE, etc.",
+                "severity": "medium",
+                "mitigation": "Use a wrapper query (SELECT * FROM (user_query) AS _sub LIMIT N) or parse the query to detect existing LIMIT. For MSSQL, use OFFSET FETCH or wrap in subquery with SELECT TOP."
+              }
+            ]
+          },
+          {
+            "id": "AC-05-04",
+            "description": "The max limit of 1000 rows is enforced at the SQL level, not just client-side",
+            "verification_method": "Code review: assert the LIMIT value passed to SQL is Math.min(requestedLimit, 1000). Test with limit=5000; assert only 1000 rows returned.",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-05",
+            "description": "Without timeouts, a malicious or accidental query can hang the tool indefinitely, causing resource exhaustion",
+            "severity": "high",
+            "mitigation": "Set connection and statement timeouts at the driver level. For pg: statement_timeout in connection config. For mysql2: timeout and maxExecutionTime. For mssql: requestTimeout in connection config."
+          }
+        ]
+      },
+      {
+        "id": "CP-06",
+        "title": "Dependency Registration, Testability & Output Consistency",
+        "description": "Add missing npm dependencies (pg, mysql2, mssql) to package.json. Export pure functions and the DriverAdapter interface for testability. Add a test suite with unit tests for query-type detection, sanitization, and formatting functions. Fix MySQL schema output format inconsistency (bullet list vs markdown table). Ensure all functions are mockable/testable without a real database connection.",
+        "dependencies": ["CP-04"],
+        "acceptance_criteria": [
+          {
+            "id": "AC-06-01",
+            "description": "pg, mysql2, and mssql are listed as dependencies in package.json with compatible version ranges",
+            "verification_method": "Inspect package.json; assert all three packages are present in dependencies (not devDependencies). Run 'bun install' and verify no resolution errors.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-06-02",
+            "description": "Pure functions (formatResults, extractDatabaseName, query-type detection) are exported and unit-testable without database connections",
+            "verification_method": "Code review: inspect exports. Write unit tests for formatResults with known inputs; assert correct markdown output. Write unit tests for query-type detection with various SQL inputs; assert correct allow/reject decisions.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-06-03",
+            "description": "MySQL schema output uses the same markdown table format as PostgreSQL and MSSQL (not bullet list)",
+            "verification_method": "Code review: inspect MySQL schema path. Run schema action against a MySQL database; assert output is a markdown table with header row, separator, and data rows (not a bullet list).",
+            "status": "pending"
+          },
+          {
+            "id": "AC-06-04",
+            "description": "A test suite exists with at least 10 test cases covering: query-type detection (5+ cases), formatResults (2+ cases), extractDatabaseName (2+ cases), and error sanitization (1+ case)",
+            "verification_method": "Run 'bun test' or equivalent; assert all tests pass. Inspect test file; assert minimum 10 test cases covering the specified areas.",
+            "status": "pending"
+          },
+          {
+            "id": "AC-06-05",
+            "description": "The DriverAdapter interface and adapters are exported to allow mock injection in tests",
+            "verification_method": "Code review: inspect exports. Assert that a test file can import DriverAdapter and create a mock adapter without importing any database driver.",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-06",
+            "description": "Missing dependencies cause runtime import failures that may expose stack traces or be exploited by dependency confusion attacks",
+            "severity": "medium",
+            "mitigation": "Pin dependency versions to specific ranges. Use bun.lock or package-lock.json for reproducible installs. Add integration test that verifies all three drivers can be imported."
+          }
+        ]
+      }
+    ]
+  }
+}
