@@ -8,6 +8,7 @@ permission:
   grep: allow
   list: allow
   lsp: allow
+  sql-reader: allow
   webfetch: allow
   skill:
     "*": deny
