@@ -9,6 +9,7 @@ permission:
   list: allow
   lsp: allow
   sql-reader: allow
+  redis: allow
   webfetch: allow
   skill:
     "*": deny
