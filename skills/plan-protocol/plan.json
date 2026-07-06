@@ -1,327 +1,563 @@
 {
   "plan": {
-    "title": "Database Tool Remediation Plan",
-    "description": "Fix critical security vulnerabilities and improve engineering quality in the custom database tool (tools/database.ts)",
-    "overview": "Remediate SQL injection (CRITICAL), authorization bypass (HIGH), credential exposure (HIGH), error leakage (MEDIUM), and code quality issues identified by Security, Engineering, Architecture, and QA reviews. The plan prioritizes security fixes first (CP-01 through CP-03), then engineering improvements (CP-04), then architecture/QA improvements (CP-05, CP-06). CP-02 and CP-03 can be worked in parallel after CP-01. CP-05 and CP-06 can be worked in parallel after CP-04.",
-    "version": "1.0.0",
-    "created_at": "2026-07-05T15:40:00.000Z",
-    "updated_at": "2026-07-05T15:40:00.000Z",
+    "title": "Improve Redis Tool: Tests-First, Then Iterate (v2 — Review Feedback Applied)",
+    "description": "Add comprehensive test coverage and fix 8 identified issues in tools/redis.ts using a tests-first approach",
+    "overview": "This plan implements Option 4 (Tests-First, Then Iterate) for improving tools/redis.ts. Phase 1 creates test infrastructure and writes tests for all exported pure functions and the RedisDriver class. A prerequisite step installs ioredis as a devDependency for TypeScript types. Phase 2 fixes 7 issues incrementally (TDD style: test first, then fix). Phase 3 verifies all tests pass and TypeScript compiles cleanly. The plan uses bun test (built-in, no deps needed) and creates tools/redis.test.ts from scratch. Each fix in Phase 2 has its own test case written first before the implementation change. Integration tests with a real Redis server are out of scope but noted as future work.",
+    "version": "2.0.16",
+    "created_at": "2026-07-06T04:47:17.875Z",
+    "updated_at": "2026-07-06T04:58:26.485Z",
     "checkpoints": [
       {
         "id": "CP-01",
-        "title": "Parameterized Query Execution (SQL Injection Fix)",
-        "description": "Replace all raw string interpolation in SQL queries with parameterized/prepared statements across all three executors (executePostgres, executeMySQL, executeMSSQL). PostgreSQL already uses $1-style parameters for schema queries but the main query path uses client.query({text: query}) which still accepts raw strings — ensure all user-supplied values use parameterized APIs. MySQL uses connection.execute(query) which is parameterized-capable but currently passes raw strings. MSSQL uses pool.request().query() with string interpolation for schema queries and raw strings for the main query path. Convert all to use parameterized queries with positional or named parameters.",
+        "title": "Create Test Infrastructure and Write Tests for Pure Functions",
+        "description": "Create tools/redis.test.ts with bun test. Write tests for all 7 exported pure functions: extractRedisIdentifier, sanitizeConnectionString, parseConnectionString, formatValue, formatKeyValueTable, formatList, formatResult. Add a 'test:redis' script to package.json (do NOT overwrite the existing 'test' script). Include edge cases: NaN, Infinity, Symbol in formatValue; pipe characters in keys for formatKeyValueTable; IPv6 addresses in parseConnectionString.",
         "dependencies": [],
         "acceptance_criteria": [
           {
             "id": "AC-01-01",
-            "description": "PostgreSQL executePostgres passes user query via parameterized client.query({text, values}) with no string concatenation of user input",
-            "verification_method": "Code review: inspect executePostgres function; assert no template literals or string concatenation in query text. Run test with query containing single quotes and semicolons; verify no injection occurs.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-01-01",
-                "description": "PostgreSQL driver pg.Client.query accepts both parameterized and raw text — must ensure values array is always provided for user-supplied queries",
-                "severity": "critical",
-                "mitigation": "Use client.query({text: query, values: []}) signature exclusively; add a lint rule or wrapper function that enforces parameterized usage"
-              }
-            ]
+            "description": "tools/redis.test.ts exists and contains test blocks for all 7 exported pure functions",
+            "verification_method": "Run: ls tools/redis.test.ts; grep for 'describe' or 'test' for each of the 7 functions",
+            "status": "pending"
           },
           {
             "id": "AC-01-02",
-            "description": "MySQL executeMySQL passes user query via parameterized connection.execute(sql, params) with positional parameters, not string interpolation",
-            "verification_method": "Code review: inspect executeMySQL function; assert connection.execute receives params array. Run test with query containing single quotes; verify no injection.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-01-02",
-                "description": "MySQL schema path uses DESCRIBE with backtick escaping — replace with parameterized prepared statement or INFORMATION_SCHEMA query",
-                "severity": "high",
-                "mitigation": "Replace DESCRIBE with SELECT FROM INFORMATION_SCHEMA.COLUMNS using parameterized WHERE table_name = ?"
-              }
-            ]
+            "description": "extractRedisIdentifier tests: valid URL returns hostname:port/db, invalid URL returns raw string, URL with no port defaults to 6379, URL with no db defaults to 0",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'extractRedisIdentifier'; assert all 4 scenarios pass",
+            "status": "pending"
           },
           {
             "id": "AC-01-03",
-            "description": "MSSQL executeMSSQL passes user query via pool.request().input(name, type, value).query() with named parameters, not string interpolation",
-            "verification_method": "Code review: inspect executeMSSQL function; assert pool.request().input() is used for all user-supplied values. Run test with query containing single quotes; verify no injection.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-01-03",
-                "description": "MSSQL schema path uses string interpolation with .replace(/'/g, \"''\") which is insufficient — replace with parameterized query",
-                "severity": "high",
-                "mitigation": "Replace string interpolation in schema query with pool.request().input('tableName', mssql.NVarChar, query).query('SELECT ... WHERE TABLE_NAME = @tableName')"
-              }
-            ]
+            "description": "sanitizeConnectionString tests: URL with password redacts it to ****, non-URL string with password-like pattern is masked, URL without password is unchanged, rediss:// scheme is also handled",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'sanitizeConnectionString'; assert all 4 scenarios pass including rediss://",
+            "status": "pending"
           },
           {
             "id": "AC-01-04",
-            "description": "All three executors reject multi-statement queries that attempt to execute DDL/DML after a SELECT",
-            "verification_method": "Run integration test with query 'SELECT 1; DROP TABLE users' against each driver; verify only the SELECT executes or the entire query is rejected.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-01-04",
-                "description": "Some drivers may execute multi-statement queries by default (e.g., mssql allows multiple statements in one .query() call)",
-                "severity": "critical",
-                "mitigation": "Enable statement-level restrictions per driver: for mssql, use multiple: false or parse and reject multi-statement input; for mysql2, ensure multipleStatements: false in connection config"
-              }
-            ]
+            "description": "parseConnectionString tests: full URL returns correct host/port/password/db, minimal URL returns defaults (localhost/6379/undefined/0), URL with db path parses db number correctly, IPv6 address in URL is parsed correctly",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'parseConnectionString'; assert all 4 scenarios pass including IPv6 like redis://[::1]:6379/0",
+            "status": "pending"
+          },
+          {
+            "id": "AC-01-05",
+            "description": "formatValue tests: null/undefined returns NULL, Buffer returns utf-8 string, object returns JSON stringified, string returns itself, number returns stringified number, NaN returns 'NaN', Infinity returns 'Infinity', Symbol returns its string representation",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'formatValue'; assert all 8 scenarios pass",
+            "status": "pending"
+          },
+          {
+            "id": "AC-01-06",
+            "description": "formatKeyValueTable tests: empty array returns _(empty)_, single entry produces valid markdown table with header/separator/row, multiple entries produce correct table, long values are truncated at 200 chars, pipe characters in keys/values are escaped with backslash",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'formatKeyValueTable'; assert all 5 scenarios pass including pipe chars in keys like 'key|name'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-01-07",
+            "description": "formatList tests: empty array returns _(empty)_, single item returns numbered list, multiple items return correctly numbered list",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'formatList'; assert all 3 scenarios pass",
+            "status": "pending"
+          },
+          {
+            "id": "AC-01-08",
+            "description": "formatResult tests: returns markdown bold label followed by formatted value",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'formatResult'; assert output matches **label:** value pattern",
+            "status": "pending"
+          },
+          {
+            "id": "AC-01-09",
+            "description": "package.json has a new 'test:redis' script that runs 'bun test tools/redis.test.ts'; the existing 'test' script is NOT modified",
+            "verification_method": "Inspect package.json scripts; assert 'test:redis' exists with 'bun test tools/redis.test.ts' and 'test' still contains 'npx ts-node'",
+            "status": "pending"
           }
         ],
         "security_concerns": [
           {
             "id": "SC-01",
-            "description": "SQL injection is the most critical vulnerability — all three executors pass raw user SQL to the driver without parameterization",
-            "severity": "critical",
-            "mitigation": "Replace all raw string interpolation with driver-native parameterized query APIs (pg: $1, mysql2: ?, mssql: @param). Add automated test suite that attempts SQL injection payloads and verifies they are neutralized."
+            "description": "Tests for sanitizeConnectionString may inadvertently log real-looking passwords if test data resembles production secrets",
+            "severity": "low",
+            "mitigation": "Use clearly fake test credentials (e.g., 'redis://user:test123@host:6379') that are obviously not real"
           }
         ]
       },
       {
         "id": "CP-02",
-        "title": "Authorization & Write-Operation Prevention",
-        "description": "Replace the current startsWith('SELECT') / startsWith('WITH') check with a robust query-type detection mechanism that prevents any write operations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, EXEC, CALL, etc.). The current check is trivially bypassable via multi-statement injection, WITH + write, SELECT INTO OUTFILE, and other techniques. Implement a SQL parser or tokenizer that extracts the first statement type, or use a blocklist/allowlist approach at the driver level.",
-        "dependencies": ["CP-01"],
+        "title": "Install ioredis as DevDependency for TypeScript Types",
+        "description": "ioredis is dynamically imported at runtime but is NOT in package.json. TypeScript cannot resolve import('ioredis') types without it. Install ioredis as a devDependency so that CP-09 (replace any types) can use proper ioredis type definitions. This is a prerequisite for all TypeScript type improvements.",
+        "dependencies": [],
         "acceptance_criteria": [
           {
             "id": "AC-02-01",
-            "description": "Query-type detection uses a SQL tokenizer or parser (not string prefix matching) to identify the first statement type",
-            "verification_method": "Code review: inspect the detection logic; assert it handles leading whitespace, comments, CTEs, and subqueries. Test with '/* comment */ SELECT 1', 'WITH cte AS (...) SELECT 1', and 'SELECT 1' — all must be allowed.",
-            "status": "pending"
+            "description": "ioredis is listed in devDependencies in package.json",
+            "verification_method": "Inspect package.json devDependencies; assert 'ioredis' is present",
+            "status": "passed"
           },
           {
             "id": "AC-02-02",
-            "description": "All write statement types (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, EXEC, CALL, REPLACE, LOAD, SELECT INTO OUTFILE/DUMPFILE) are rejected with a clear error message",
-            "verification_method": "Run test matrix: for each write keyword, send query starting with that keyword; assert rejection. Test edge cases like 'DELETE FROM users WHERE 1=1' and 'SELECT * FROM users INTO OUTFILE /tmp/hack'.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-02-01",
-                "description": "SELECT INTO OUTFILE is a SELECT statement that writes to the filesystem — must be detected and rejected",
-                "severity": "high",
-                "mitigation": "Add specific detection for SELECT ... INTO OUTFILE/DUMPFILE pattern in the tokenizer"
-              }
-            ]
-          },
-          {
-            "id": "AC-02-03",
-            "description": "WITH (CTE) queries that contain write operations in any CTE body are rejected, not just the final statement",
-            "verification_method": "Test with 'WITH cte AS (DELETE FROM users RETURNING *) SELECT * FROM cte' — must be rejected. Test with 'WITH cte AS (SELECT 1) SELECT * FROM cte' — must be allowed.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-02-02",
-                "description": "WITH clause can contain write CTEs (PostgreSQL: DELETE/UPDATE/INSERT in CTE) — the current prefix check misses this entirely",
-                "severity": "critical",
-                "mitigation": "Parse all CTE bodies for write operations, not just the final SELECT"
-              }
-            ]
-          },
-          {
-            "id": "AC-02-04",
-            "description": "Multi-statement queries are rejected at the application level before reaching the driver",
-            "verification_method": "Test with 'SELECT 1; DELETE FROM users' and 'SELECT 1\\nDROP TABLE users' — both must be rejected with a clear error about multi-statement queries.",
-            "status": "pending"
+            "description": "TypeScript can resolve import('ioredis') without errors",
+            "verification_method": "Run: npx tsc --noEmit --strict --moduleResolution node --module esnext -e 'const x: typeof import(\"ioredis\") = null;' 2>&1; assert exit code 0",
+            "status": "passed"
           }
         ],
         "security_concerns": [
           {
             "id": "SC-02",
-            "description": "Authorization bypass allows arbitrary write operations to the database, including data destruction and exfiltration",
-            "severity": "critical",
-            "mitigation": "Implement robust query-type detection using a proper SQL tokenizer. Add comprehensive test suite covering all bypass techniques."
+            "description": "Adding ioredis as a dependency introduces a new supply chain attack surface",
+            "severity": "medium",
+            "mitigation": "Pin the ioredis version to a known-good release; run 'bun add -d ioredis@5.4.1' or latest stable; review the package for suspicious postinstall scripts"
           }
         ]
       },
       {
         "id": "CP-03",
-        "title": "Credential & Error Leakage Remediation",
-        "description": "Fix credential exposure in metadata output (SQL Server connection strings returned in extractDatabaseName), sanitize database error messages to prevent leaking connection strings or sensitive info, and add connection string validation before use. The extractDatabaseName function currently truncates MSSQL connection strings at 60 chars, which can expose passwords. Error messages from the database driver may contain the full connection string or other sensitive data.",
-        "dependencies": ["CP-01"],
+        "title": "Write Tests for RedisDriver Class with Mocked ioredis Client",
+        "description": "Write comprehensive tests for the RedisDriver class using Bun.mock.module('ioredis', ...) to mock the ioredis module. Test connect(), execute() for all action types, close(), error handling paths (ECONNREFUSED, ETIMEOUT, NOAUTH, WRONGTYPE, unknown action, ioredis-not-installed), and retry logic. Note: AC-03-05 (keys warning test) will be modified in CP-04 when the KEYS '' bug is fixed.",
+        "dependencies": [
+          "CP-01",
+          "CP-02"
+        ],
         "acceptance_criteria": [
           {
             "id": "AC-03-01",
-            "description": "extractDatabaseName for SQL Server parses the connection string to extract only server host and database name, never returning raw connection string fragments",
-            "verification_method": "Code review: inspect extractDatabaseName for MSSQL path. Test with connection string containing 'Password=secret123;' — assert output does not contain 'secret123' or any password-like substring.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-03-01",
-                "description": "SQL Server connection strings contain passwords in plaintext — truncation at 60 chars may still expose the password",
-                "severity": "high",
-                "mitigation": "Parse the connection string with a proper parser (e.g., split on semicolons, extract Server= and Database= values only) or use mssql config object parsing"
-              }
-            ]
+            "description": "Mocking strategy uses Bun.mock.module('ioredis', ...) to provide a fake ioredis default export with all needed methods (connect, get, set, keys, mset, quit, etc.)",
+            "verification_method": "Inspect tools/redis.test.ts; assert Bun.mock.module('ioredis', ...) is used for mocking",
+            "status": "passed"
           },
           {
             "id": "AC-03-02",
-            "description": "Database error messages are sanitized to remove connection strings, passwords, and file paths before being returned to the user",
-            "verification_method": "Code review: inspect the catch block in the execute function. Test by triggering a connection error with a deliberately invalid connection string; assert the error message does not contain the password portion.",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-03-02",
-                "description": "Database driver error messages may include the full connection string, query text, or stack traces with sensitive info",
-                "severity": "medium",
-                "mitigation": "Wrap driver calls in try-catch and return a generic error message. Use a regex or parser to strip sensitive patterns from error messages before returning."
-              }
-            ]
+            "description": "RedisDriver.connect() with valid connection string creates client and calls connect() on it",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver connect'; assert client.connect was called",
+            "status": "passed"
           },
           {
             "id": "AC-03-03",
-            "description": "Connection string is validated for basic format correctness before being passed to the driver (e.g., correct protocol prefix, non-empty host/user)",
-            "verification_method": "Code review: inspect validation logic. Test with empty string, missing protocol, and malformed connection strings — assert clear error messages before any driver call.",
-            "status": "pending"
+            "description": "RedisDriver.connect() when ioredis is not available throws error mentioning 'bun add ioredis'",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver connect.*not installed'; assert error message contains 'bun add ioredis'",
+            "status": "passed"
           },
           {
             "id": "AC-03-04",
-            "description": "Credentials are never logged, stored in conversation history metadata, or exposed in tool output beyond the sanitized database identifier",
-            "verification_method": "Code review: inspect all return paths and metadata construction. Assert the metadata.database field only contains sanitized host:port/dbname, never raw connection strings.",
-            "status": "pending"
+            "description": "RedisDriver.execute('get', { key }) returns formatted result with value from mocked client.get()",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute get'; assert output contains '**Value:**'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-05",
+            "description": "RedisDriver.execute('keys', { pattern }) with pattern='*' triggers console.warn about blocking (will be refined in CP-04)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute keys.*warning'; assert console.warn was called",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-06",
+            "description": "RedisDriver.execute('mset', { keyValues }) calls client.mset() with flattened key-value pairs",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute mset'; assert client.mset was called with correct args",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-07",
+            "description": "RedisDriver.execute() with unknown action throws error listing supported actions",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute unknown'; assert error message contains 'Unknown action'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-08",
+            "description": "RedisDriver.execute() handles ECONNREFUSED error and throws user-friendly message mentioning 'Connection refused'",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute.*ECONNREFUSED'; assert error mentions 'Connection refused'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-09",
+            "description": "RedisDriver.execute() handles ETIMEOUT error and throws user-friendly message mentioning 'timed out'",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute.*ETIMEOUT'; assert error mentions 'timed out' or 'timeout'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-10",
+            "description": "RedisDriver.execute() handles NOAUTH error and throws user-friendly message mentioning 'Authentication failed'",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute.*NOAUTH'; assert error mentions 'Authentication failed'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-11",
+            "description": "RedisDriver.execute() handles WRONGTYPE error and throws user-friendly message mentioning 'wrong kind of value'",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute.*WRONGTYPE'; assert error mentions 'wrong kind'",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-12",
+            "description": "RedisDriver.close() calls client.quit() and sets client to null",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver close'; assert client.quit was called and client is null",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-13",
+            "description": "RedisDriver.execute() returns RedisResult with correct output, metadata (action, key, connection, duration)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute.*metadata'; assert result.metadata has action, key, connection, duration fields",
+            "status": "passed"
+          },
+          {
+            "id": "AC-03-14",
+            "description": "Retry strategy test: client is created with retryStrategy that returns increasing delays and stops after 3 attempts",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver retry strategy'; assert retryStrategy(1) returns 200, retryStrategy(4) returns null",
+            "status": "passed"
           }
         ],
         "security_concerns": [
           {
             "id": "SC-03",
-            "description": "Credential exposure in metadata and error messages can leak database passwords to users and conversation history",
-            "severity": "high",
-            "mitigation": "Sanitize all output paths: parse connection strings to extract only safe identifiers, wrap driver errors with generic messages, validate before use."
+            "description": "Mocked tests may not catch real ioredis API mismatches if the mock doesn't match actual ioredis behavior",
+            "severity": "medium",
+            "mitigation": "Use type assertions that match ioredis method signatures; document that integration tests with real Redis are needed for full coverage"
           }
         ]
       },
       {
         "id": "CP-04",
-        "title": "Driver Abstraction & Type Safety",
-        "description": "Refactor the three near-identical executor functions (~80 lines each) into a single driver abstraction with a common interface. Define proper TypeScript types for driver instances, query results, and connection configs. Eliminate pervasive `any` types. Create a DriverAdapter interface with methods: connect(), query(text, params), schema(tableName?), disconnect(). Implement concrete adapters for PostgreSQL, MySQL, and MSSQL. This reduces code duplication and makes the codebase maintainable.",
-        "dependencies": ["CP-01", "CP-02", "CP-03"],
+        "title": "Fix KEYS '' Warning (Issue #7) — Only Warn for '*', Not ''",
+        "description": "The current code at line 196 warns for both pattern === '*' and pattern === ''. An empty pattern '' is not the same as '*' — it matches only keys with empty string names. Fix the condition to only warn for '*'. Write the test case first (TDD). Also update the test written in CP-03 AC-03-05 to reflect the corrected behavior.",
+        "dependencies": [
+          "CP-03"
+        ],
         "acceptance_criteria": [
           {
             "id": "AC-04-01",
-            "description": "A DriverAdapter interface is defined with typed methods for connect, query, schema, and disconnect — no `any` types in the interface",
-            "verification_method": "Code review: inspect the interface definition. Run TypeScript compiler with --noImplicitAny; assert zero type errors.",
+            "description": "Test case written first: execute('keys', { pattern: '' }) does NOT trigger console.warn",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'keys empty pattern no warning'; assert console.warn was NOT called",
             "status": "pending"
           },
           {
             "id": "AC-04-02",
-            "description": "Three concrete adapter classes (PostgresAdapter, MySQLAdapter, MSSQLAdapter) implement the DriverAdapter interface with proper types for driver-specific APIs",
-            "verification_method": "Code review: inspect each adapter. Assert each implements all interface methods. Assert driver-specific types (pg.Client, mysql2.Connection, mssql.ConnectionPool) are properly typed, not `any`.",
+            "description": "Test case written first: execute('keys', { pattern: '*' }) still triggers console.warn",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'keys star pattern warns'; assert console.warn was called",
             "status": "pending"
           },
           {
             "id": "AC-04-03",
-            "description": "The main execute function uses the adapter pattern to dispatch to the correct driver, eliminating the if/else chain and duplicated code",
-            "verification_method": "Code review: inspect the refactored execute function. Assert there is a single query execution path, not three separate functions. Count lines of duplicated logic — must be reduced by at least 60%.",
+            "description": "Source code fix: line 196 condition changed from (pattern === '*' || pattern === '') to (pattern === '*')",
+            "verification_method": "Inspect tools/redis.ts line 196; assert condition is pattern === '*' only",
             "status": "pending"
           },
           {
             "id": "AC-04-04",
-            "description": "All existing functionality (query, schema listing, table description) is preserved after refactoring",
-            "verification_method": "Run the full test suite (from CP-06) against the refactored code; assert all tests pass with identical output format.",
+            "description": "CP-03 AC-03-05 test is updated to match the new behavior (empty pattern no longer warns)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'RedisDriver execute keys'; assert all keys-related tests pass",
             "status": "pending"
-          }
-        ],
-        "security_concerns": [
-          {
-            "id": "SC-04",
-            "description": "Refactoring may introduce regressions if the adapter abstraction doesn't correctly handle driver-specific behaviors (e.g., mssql parameter syntax vs mysql2)",
-            "severity": "medium",
-            "mitigation": "Write integration tests for each adapter before refactoring, then run the same tests after. Use the adapter pattern to encapsulate driver-specific quirks."
           }
         ]
       },
       {
         "id": "CP-05",
-        "title": "Connection/Query Timeouts & SQL-Level LIMIT",
-        "description": "Add configurable timeouts for database connections and query execution to prevent the tool from hanging indefinitely. Push the row LIMIT into the SQL query itself (using LIMIT/OFFSET/TOP syntax per dialect) instead of client-side Array.slice() after fetching all rows. This prevents excessive data transfer and improves performance.",
-        "dependencies": ["CP-04"],
+        "title": "Fix startTime || Date.now() Dead Code (Issue #6)",
+        "description": "At line 865, the error handler uses `startTime || Date.now()` for duration calculation. But `startTime` is always defined (set at line 833) and is a number, so the fallback is dead code. Remove the fallback to just use `startTime`. Write the test case first.",
+        "dependencies": [
+          "CP-03"
+        ],
         "acceptance_criteria": [
           {
             "id": "AC-05-01",
-            "description": "Connection timeout is set (e.g., 10 seconds) for all three drivers — connection attempt fails fast if database is unreachable",
-            "verification_method": "Code review: inspect adapter connect() methods for timeout configuration. Test with unreachable host; assert failure within 15 seconds (not hanging indefinitely).",
+            "description": "Test case written first: error path in tool.execute() returns duration that is a positive number, not NaN or 0, and is calculated from startTime",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'error duration uses startTime'; assert duration is a positive number and not NaN",
             "status": "pending"
           },
           {
             "id": "AC-05-02",
-            "description": "Query execution timeout is set (e.g., 30 seconds) for all three drivers — long-running queries are aborted",
-            "verification_method": "Code review: inspect adapter query() methods for statement_timeout or equivalent. Test with deliberately slow query (pg_sleep(60)); assert timeout before 35 seconds.",
+            "description": "Source code fix: line 865 changed from `Date.now() - (startTime || Date.now())` to `Date.now() - startTime`",
+            "verification_method": "Inspect tools/redis.ts line 865; assert expression is 'Date.now() - startTime'",
             "status": "pending"
-          },
-          {
-            "id": "AC-05-03",
-            "description": "LIMIT is pushed into the SQL query for all three drivers (PostgreSQL: LIMIT, MySQL: LIMIT, MSSQL: SELECT TOP or OFFSET FETCH) instead of client-side slicing",
-            "verification_method": "Code review: inspect query construction — assert LIMIT/TOP clause is appended to user query. Test by querying a table with 1000+ rows and limit=5; assert only 5 rows are transferred (verify via driver logs or network monitoring).",
-            "status": "pending",
-            "security_concerns": [
-              {
-                "id": "SC-05-01",
-                "description": "Appending LIMIT to user queries may break queries that already have a LIMIT clause, or queries with ORDER BY ... FOR UPDATE, etc.",
-                "severity": "medium",
-                "mitigation": "Use a wrapper query (SELECT * FROM (user_query) AS _sub LIMIT N) or parse the query to detect existing LIMIT. For MSSQL, use OFFSET FETCH or wrap in subquery with SELECT TOP."
-              }
-            ]
-          },
-          {
-            "id": "AC-05-04",
-            "description": "The max limit of 1000 rows is enforced at the SQL level, not just client-side",
-            "verification_method": "Code review: assert the LIMIT value passed to SQL is Math.min(requestedLimit, 1000). Test with limit=5000; assert only 1000 rows returned.",
-            "status": "pending"
-          }
-        ],
-        "security_concerns": [
-          {
-            "id": "SC-05",
-            "description": "Without timeouts, a malicious or accidental query can hang the tool indefinitely, causing resource exhaustion",
-            "severity": "high",
-            "mitigation": "Set connection and statement timeouts at the driver level. For pg: statement_timeout in connection config. For mysql2: timeout and maxExecutionTime. For mssql: requestTimeout in connection config."
           }
         ]
       },
       {
         "id": "CP-06",
-        "title": "Dependency Registration, Testability & Output Consistency",
-        "description": "Add missing npm dependencies (pg, mysql2, mssql) to package.json. Export pure functions and the DriverAdapter interface for testability. Add a test suite with unit tests for query-type detection, sanitization, and formatting functions. Fix MySQL schema output format inconsistency (bullet list vs markdown table). Ensure all functions are mockable/testable without a real database connection.",
-        "dependencies": ["CP-04"],
+        "title": "Gate TLS Warning to Fire Once Per Session (Issue #4)",
+        "description": "The TLS warning at lines 826-831 (in the tool's execute function, not RedisDriver) fires on every non-TLS connection. This is noisy for repeated calls. Gate it with a module-level boolean flag so it only fires once per session. To avoid test isolation issues, expose a resetTlsWarningFlag() function that tests can call in beforeEach. Write the test case first.",
+        "dependencies": [
+          "CP-03"
+        ],
         "acceptance_criteria": [
           {
             "id": "AC-06-01",
-            "description": "pg, mysql2, and mssql are listed as dependencies in package.json with compatible version ranges",
-            "verification_method": "Inspect package.json; assert all three packages are present in dependencies (not devDependencies). Run 'bun install' and verify no resolution errors.",
+            "description": "Test case written first: first non-TLS connection triggers console.warn for TLS warning (test lives in the tool.execute test section)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'TLS warning first call'; assert console.warn was called",
             "status": "pending"
           },
           {
             "id": "AC-06-02",
-            "description": "Pure functions (formatResults, extractDatabaseName, query-type detection) are exported and unit-testable without database connections",
-            "verification_method": "Code review: inspect exports. Write unit tests for formatResults with known inputs; assert correct markdown output. Write unit tests for query-type detection with various SQL inputs; assert correct allow/reject decisions.",
+            "description": "Test case written first: second non-TLS connection does NOT trigger console.warn for TLS warning (test lives in the tool.execute test section)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'TLS warning second call'; assert console.warn was called only once total",
             "status": "pending"
           },
           {
             "id": "AC-06-03",
-            "description": "MySQL schema output uses the same markdown table format as PostgreSQL and MSSQL (not bullet list)",
-            "verification_method": "Code review: inspect MySQL schema path. Run schema action against a MySQL database; assert output is a markdown table with header row, separator, and data rows (not a bullet list).",
+            "description": "Source code fix: add module-level let tlsWarningShown = false; gate the console.warn behind it; set to true after first fire; expose resetTlsWarningFlag() for test isolation",
+            "verification_method": "Inspect tools/redis.ts; assert tlsWarningShown flag exists, gates the warning, and resetTlsWarningFlag() is exported",
             "status": "pending"
           },
           {
             "id": "AC-06-04",
-            "description": "A test suite exists with at least 10 test cases covering: query-type detection (5+ cases), formatResults (2+ cases), extractDatabaseName (2+ cases), and error sanitization (1+ case)",
-            "verification_method": "Run 'bun test' or equivalent; assert all tests pass. Inspect test file; assert minimum 10 test cases covering the specified areas.",
+            "description": "Test isolation: beforeEach calls resetTlsWarningFlag() so tests don't interfere with each other",
+            "verification_method": "Inspect tools/redis.test.ts; assert beforeEach or equivalent calls resetTlsWarningFlag()",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "CP-07",
+        "title": "Add Input Validation for Key, Pattern, and All User-Controlled Parameters (Issue #8, Expanded)",
+        "description": "Add input validation in RedisDriver.execute() for all user-controlled parameters: key, newKey, pattern, field, member, element. Validate: reject null bytes, enforce max length (1024 chars for pattern, 512 chars for keys/fields/members/elements). Add size limits for bulk read operations: cap lrange at 1000 items, limit mget to 100 keys, limit keys to 10000 results. Write the test case first.",
+        "dependencies": [
+          "CP-03"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-07-01",
+            "description": "Test case written first: execute('keys', { pattern: 'a'.repeat(1025) }) throws error about pattern too long (validation in RedisDriver.execute() keys case)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'keys pattern too long'; assert error mentions 'pattern' and '1024'",
             "status": "pending"
           },
           {
-            "id": "AC-06-05",
-            "description": "The DriverAdapter interface and adapters are exported to allow mock injection in tests",
-            "verification_method": "Code review: inspect exports. Assert that a test file can import DriverAdapter and create a mock adapter without importing any database driver.",
+            "id": "AC-07-02",
+            "description": "Test case written first: execute('scan', { pattern: 'a\\0b' }) throws error about null byte in pattern",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'scan pattern null byte'; assert error mentions 'null byte' or 'invalid'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-03",
+            "description": "Test case written first: execute('keys', { pattern: 'valid:*' }) succeeds without validation error",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'keys valid pattern'; assert no validation error thrown",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-04",
+            "description": "Test case written first: execute('get', { key: 'key\\0name' }) throws error about null byte in key",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'key null byte'; assert error mentions 'null byte' or 'invalid'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-05",
+            "description": "Test case written first: execute('rename', { key: 'valid', newKey: 'x'.repeat(513) }) throws error about newKey too long",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'newKey too long'; assert error mentions 'newKey' and '512'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-06",
+            "description": "Test case written first: execute('hget', { key: 'k', field: 'field\\0name' }) throws error about null byte in field",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'field null byte'; assert error mentions 'null byte'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-07",
+            "description": "Test case written first: execute('sismember', { key: 'k', member: 'mem\\0ber' }) throws error about null byte in member",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'member null byte'; assert error mentions 'null byte'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-08",
+            "description": "Test case written first: execute('lrem', { key: 'k', count: 1, element: 'el\\0' }) throws error about null byte in element",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'element null byte'; assert error mentions 'null byte'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-09",
+            "description": "Test case written first: execute('lrange', { key: 'k', start: 0, stop: 2000 }) caps stop to 999 (max 1000 items)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'lrange cap'; assert client.lrange was called with stop <= 999",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-10",
+            "description": "Test case written first: execute('mget', { keys: Array(101).fill('k') }) throws error about too many keys (max 100)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'mget too many keys'; assert error mentions '100' or 'too many'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-11",
+            "description": "Test case written first: execute('keys', { pattern: '*' }) with mocked client returning 10001 keys caps output at 10000",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'keys result cap'; assert output mentions '10000' or truncation",
+            "status": "pending"
+          },
+          {
+            "id": "AC-07-12",
+            "description": "Source code fix: add input validation helper or inline checks in RedisDriver.execute() for all affected parameters before calling client",
+            "verification_method": "Inspect tools/redis.ts; assert validation exists for key, newKey, pattern, field, member, element in the relevant switch cases",
             "status": "pending"
           }
         ],
         "security_concerns": [
           {
-            "id": "SC-06",
-            "description": "Missing dependencies cause runtime import failures that may expose stack traces or be exploited by dependency confusion attacks",
+            "id": "SC-07",
+            "description": "Unvalidated inputs could be used for Redis command injection or denial-of-service via extremely long patterns/keys",
+            "severity": "high",
+            "mitigation": "Reject null bytes in all string parameters; enforce max lengths (1024 for pattern, 512 for keys/fields/members/elements); cap bulk operation sizes"
+          },
+          {
+            "id": "SC-07-01",
+            "description": "Bulk read operations (lrange, mget, keys) without size limits could cause OOM or excessive network transfer",
             "severity": "medium",
-            "mitigation": "Pin dependency versions to specific ranges. Use bun.lock or package-lock.json for reproducible installs. Add integration test that verifies all three drivers can be imported."
+            "mitigation": "Cap lrange to 1000 items, mget to 100 keys, keys to 10000 results; document limits in error messages"
+          }
+        ]
+      },
+      {
+        "id": "CP-08",
+        "title": "Fix mset Type Coercion (Issue #3) — Preserve Type Info and Serialize Objects",
+        "description": "At line 424, mset converts all values to String(v), losing type information (numbers, booleans, null). Fix to pass values as-is to ioredis, which handles type serialization correctly. For non-primitive values (objects, arrays), serialize via JSON.stringify before passing. Write the test case first.",
+        "dependencies": [
+          "CP-03"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-08-01",
+            "description": "Test case written first: execute('mset', { keyValues: { a: 42, b: true, c: null } }) passes raw values to client.mset()",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'mset preserves types'; assert client.mset was called with 42, true, null (not '42', 'true', 'null')",
+            "status": "pending"
+          },
+          {
+            "id": "AC-08-02",
+            "description": "Test case written first: execute('mset', { keyValues: { a: 'hello' } }) still works with string values",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'mset string values'; assert client.mset was called with 'hello'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-08-03",
+            "description": "Test case written first: execute('mset', { keyValues: { a: { nested: true }, b: [1,2,3] } }) serializes objects/arrays via JSON.stringify before passing",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'mset object serialization'; assert client.mset was called with JSON stringified values for objects and arrays",
+            "status": "pending"
+          },
+          {
+            "id": "AC-08-04",
+            "description": "Source code fix: line 424 changed from kvPairs.push(k, String(v)) to kvPairs.push(k, typeof v === 'object' ? JSON.stringify(v) : v)",
+            "verification_method": "Inspect tools/redis.ts line 424; assert String(v) is replaced with proper type-aware serialization",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": "CP-09",
+        "title": "Replace any Types with Proper ioredis Types (Issue #2) — Distinct Types for Module vs Client",
+        "description": "Replace `any` types throughout tools/redis.ts with proper ioredis types. Key changes: redisModule (line 7) should be typed as typeof import('ioredis') | null; RedisDriver.redis (module type) and RedisDriver.client (instance type) need DISTINCT types; error catch (line 623) should use unknown. Write type-level tests first.",
+        "dependencies": [
+          "CP-02",
+          "CP-03"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-09-01",
+            "description": "Test case written first: TypeScript compilation passes with no 'any' type errors in tools/redis.ts",
+            "verification_method": "Run: bun run tsc --noEmit --strict tools/redis.ts 2>&1; assert exit code 0",
+            "status": "pending"
+          },
+          {
+            "id": "AC-09-02",
+            "description": "redisModule variable typed as typeof import('ioredis') | null instead of any",
+            "verification_method": "Inspect tools/redis.ts line 7; assert type is not 'any'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-09-03",
+            "description": "RedisDriver.redis (module reference) typed as typeof import('ioredis') | null; RedisDriver.client (instance) typed as import('ioredis').Redis | null — distinct types",
+            "verification_method": "Inspect tools/redis.ts lines 122-123; assert redis and client have different types (module vs instance)",
+            "status": "pending"
+          },
+          {
+            "id": "AC-09-04",
+            "description": "catch (error: any) on line 623 changed to catch (error: unknown) with proper type narrowing",
+            "verification_method": "Inspect tools/redis.ts line 623; assert type is 'unknown' not 'any'",
+            "status": "pending"
+          },
+          {
+            "id": "AC-09-05",
+            "description": "All function signatures using 'any' in formatValue, formatList, formatKeyValueTable, formatResult use proper types (unknown or generic)",
+            "verification_method": "Run: grep -n 'any' tools/redis.ts; assert no remaining 'any' types (or only unavoidable ones with justification)",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-09",
+            "description": "Improper ioredis type usage could mask API incompatibilities if the type definitions don't match the actual runtime behavior",
+            "severity": "low",
+            "mitigation": "Use the ioredis types from the installed package (ioredis ships its own types); verify with runtime tests"
+          }
+        ]
+      },
+      {
+        "id": "CP-10",
+        "title": "Refactor Error Handler to Use sanitizeConnectionString (Issue #5, Option A)",
+        "description": "sanitizeConnectionString is exported but never called in the execution path. The error handler at lines 851-857 does its own inline redaction which only handles redis:// scheme, not rediss://. Refactor the error handler to use sanitizeConnectionString, which handles both schemes via URL parsing. Remove the inline regex. Write the test case first.",
+        "dependencies": [
+          "CP-03"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-10-01",
+            "description": "Test case written first: error handler output uses sanitizeConnectionString to redact credentials in error messages",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'error handler uses sanitizeConnectionString'; assert sanitizeConnectionString is called during error handling",
+            "status": "pending"
+          },
+          {
+            "id": "AC-10-02",
+            "description": "Test case written first: error with rediss:// connection string redacts password correctly (not just redis://)",
+            "verification_method": "Run: bun test tools/redis.test.ts -t 'error handler rediss scheme'; assert rediss://user:pass@host is redacted to rediss://user:****@host",
+            "status": "pending"
+          },
+          {
+            "id": "AC-10-03",
+            "description": "Source code fix: error handler calls sanitizeConnectionString(connStr) instead of inline regex; inline regex at lines 855-857 is removed",
+            "verification_method": "Inspect tools/redis.ts lines 851-857; assert sanitizeConnectionString is called and inline regex is removed",
+            "status": "pending"
+          },
+          {
+            "id": "AC-10-04",
+            "description": "All existing tests still pass after the change",
+            "verification_method": "Run: bun test tools/redis.test.ts; assert all tests pass",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-10",
+            "description": "Error messages may leak Redis credentials if sanitization is incomplete or inconsistent",
+            "severity": "high",
+            "mitigation": "Use sanitizeConnectionString which handles both redis:// and rediss:// schemes via URL parsing; verify with test cases for both schemes"
+          }
+        ]
+      },
+      {
+        "id": "CP-11",
+        "title": "Final Verification: All Tests Pass and TypeScript Compiles Cleanly",
+        "description": "Run the full test suite and TypeScript compiler to confirm all changes are correct and no regressions were introduced. This is the final gate before handoff. Integration tests with a real Redis server are out of scope and should be documented as future work.",
+        "dependencies": [
+          "CP-04",
+          "CP-05",
+          "CP-06",
+          "CP-07",
+          "CP-08",
+          "CP-09",
+          "CP-10"
+        ],
+        "acceptance_criteria": [
+          {
+            "id": "AC-11-01",
+            "description": "All tests in tools/redis.test.ts pass (bun test exit code 0)",
+            "verification_method": "Run: bun test tools/redis.test.ts; assert exit code 0 and all tests pass",
+            "status": "pending"
+          },
+          {
+            "id": "AC-11-02",
+            "description": "TypeScript compilation succeeds with no errors (tsc --noEmit exit code 0)",
+            "verification_method": "Run: npx tsc --noEmit --project tsconfig.json 2>&1; assert exit code 0",
+            "status": "pending"
+          },
+          {
+            "id": "AC-11-03",
+            "description": "Test output contains no unexpected console.warn or console.log calls beyond the test framework's own output (expected warnings from intentional tests are acceptable)",
+            "verification_method": "Run: bun test tools/redis.test.ts 2>&1; grep for 'console.warn' and 'console.log' in test output; assert only expected warnings (from tests that intentionally trigger warnings) are present",
+            "status": "pending"
+          }
+        ],
+        "security_concerns": [
+          {
+            "id": "SC-11",
+            "description": "Integration tests with a real Redis server are not covered by this plan; unit tests with mocks may miss real-world edge cases",
+            "severity": "medium",
+            "mitigation": "Document the need for integration tests as future work; consider creating ADR-001 for test strategy"
           }
         ]
       }
