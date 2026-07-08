@@ -8,7 +8,6 @@ permission:
   grep: allow
   list: allow
   lsp: allow
-  webfetch: allow
   skill:
     "*": deny
     ast-grep: allow
