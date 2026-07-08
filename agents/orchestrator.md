@@ -4,6 +4,7 @@ mode: primary
 permission:
   "*": deny
   question: allow
+  webfetch: allow
   searxng*: allow
   github*: allow
   clickup*: allow
