@@ -8,12 +8,13 @@ permission:
   grep: allow
   list: allow
   lsp: allow
-  sql-reader: allow
-  redis: allow
   webfetch: allow
   skill:
     "*": deny
     ast-grep: allow
+  bash:
+    "*": deny
+    ast-grep *: allow
 ---
 
 # Finder

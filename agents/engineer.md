@@ -12,6 +12,8 @@ permission:
     "*": deny
     plan-protocol: allow
     ast-grep: allow
+  bash:
+    ast-grep *: allow
 ---
 
 # Engineer Reviewer

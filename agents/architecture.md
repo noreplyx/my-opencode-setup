@@ -10,8 +10,6 @@ permission:
   skill:
     "*": deny
     plan-protocol: allow
-  edit: deny
-  bash: deny
 ---
 
 # Architecture Reviewer
