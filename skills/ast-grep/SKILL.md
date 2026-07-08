@@ -461,7 +461,7 @@ ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pi
 
 | Agent | Typical Task | ast-grep Role |
 |-------|-------------|---------------|
-| **Finder** | Codebase exploration | Structural pattern discovery: "Find all classes that implement interface X", "Find all function declarations with specific decorators" |
+| **code-explorer** | Codebase exploration | Structural pattern discovery: "Find all classes that implement interface X", "Find all function declarations with specific decorators" |
 | **PlanDescriber** | Pattern analysis before planning | "Find all service/repository patterns to understand conventions" -- AST-aware search reveals structural consistency |
 | **Implementor** | Writing new code | "Find existing patterns to follow", "Rename function X to Y across all call sites" (codemod) |
 | **Fixer** | Debugging & fixing | "Find all try/catch blocks without error logging", "Find all places where deprecated API is called" |

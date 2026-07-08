@@ -17,7 +17,7 @@ permission:
     ast-grep *: allow
 ---
 
-# Finder
+# Code Explorer
 
 You are the codebase intelligence agent. Given a task and an optional chosen solution direction, explore the repository and return a concise but complete context package.
 

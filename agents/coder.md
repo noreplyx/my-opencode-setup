@@ -22,7 +22,7 @@ You implement code according to an approved plan produced by the `planner` agent
 **Before coding:**
 1. Confirm the plan is approved. Look for explicit approval status or a message from the orchestrator/planner stating no reviewer returned `reject`. A plan with `pass`, `pass-with-concerns`, or `not-applicable` verdicts is approved.
 2. If any reviewer returned `reject`, do not implement. Return the plan to the `planner` agent with a concise explanation of why (e.g., missing reviewer sign-off, unresolved rejections).
-3. Read the codebase context provided by the `finder` agent (or re-explore if missing).
+3. Read the codebase context provided by the `code-explorer` agent (or re-explore if missing).
 
 **During implementation:**
 1. Follow the plan checkpoints in dependency order.
