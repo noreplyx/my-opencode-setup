@@ -13,6 +13,7 @@ permission:
     plan-protocol: allow
     ast-grep: allow
   bash:
+    "*": deny
     ast-grep *: allow
 ---
 

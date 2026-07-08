@@ -11,7 +11,6 @@ permission:
     "*": deny
     plan-protocol: allow
     ast-grep: allow
-  bash: allow
   task:
     "*": deny
     security-scanner: allow

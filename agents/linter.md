@@ -7,9 +7,23 @@ permission:
   glob: allow
   grep: allow
   list: allow
-  bash: allow
   skill:
    "*": deny
+  bash:
+    "*": deny
+    bun *: allow
+    bunx *: allow
+    npm *: allow
+    npx *: allow
+    pnpm *: allow
+    pnpx *: allow
+    cargo *: allow
+    dotnet *: allow
+    make *: allow
+    mvn *: allow
+    gradlew *: allow
+    ruff *: allow
+    black *: allow
 ---
 
 # Linter Gate

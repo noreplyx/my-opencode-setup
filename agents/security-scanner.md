@@ -5,7 +5,9 @@ permission:
   "*": deny
   read: allow
   glob: allow
-  bash: allow
+  bash:
+    "*": deny
+    podman *: allow
   skill:
     "*": deny
     gitleaks-scan: allow

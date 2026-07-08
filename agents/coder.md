@@ -13,8 +13,6 @@ permission:
     "*": deny
     plan-protocol: allow
     ast-grep: allow
-  base:
-    ast-grep *: allow
 ---
 
 # Coder
