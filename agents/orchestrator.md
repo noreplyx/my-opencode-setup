@@ -8,6 +8,8 @@ permission:
   searxng*: allow
   github*: allow
   clickup*: allow
+  sql-reader: allow
+  redis: allow
   skill:
     "*": deny
   task:
