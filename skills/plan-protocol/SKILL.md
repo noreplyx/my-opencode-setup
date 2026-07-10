@@ -38,16 +38,16 @@ This skill supports seven operations:
 
 | Capability | Description | Command |
 |---|---|---|
-| **Create** | Produce a plan JSON + Markdown from user intent | Follow the Create workflow below, or scaffold with `bun run create -- "Title" "Description" "Overview" plan.json [N]` where N is checkpoint count (default 3). Supports `--ac` for custom acceptance criteria. Run from skill directory. |
-| **Read / Render** | Parse an existing plan JSON and display as full Markdown | `bun run read -- plan.json` (run from skill directory) |
-| **Verify** | Validate a plan JSON for schema conformance, dependency integrity, ID uniqueness, and semantic quality | `bun run validate -- plan.json` or `bun run validate -- --strict plan.json` (run from skill directory) |
-| **Understand** | Analyze a plan for execution order, critical path, parallel groups, security context, and progress | `bun run read -- --understand plan.json` (run from skill directory) |
-| **Understand (JSON)** | Same analysis as structured JSON for programmatic consumption | `bun run read -- --json plan.json` (run from skill directory) |
-| **Update** | Modify a plan in-place (add/remove/reorder checkpoints, set AC status, manage blockers). Supports `--dry-run` to preview changes. | `bun run update -- plan.json <command> [args]` (run from skill directory) |
-| **Update (strict)** | Same as Update but with strict semantic validation | `bun run update -- --strict plan.json <command> [args]` (run from skill directory) |
-| **Diff** | Compare two plan versions for changes | `bun run diff -- plan-a.json plan-b.json` (run from skill directory) |
-| **Schema** | Display the full schema reference with field descriptions, relationships, constraints, and allowed values | `bun run read -- --schema` (run from skill directory) |
-| **Help** | Show usage info for any script | `bun run <cmd> -- --help` |
+| **Create** | Produce a plan JSON + Markdown from user intent | Follow the Create workflow below, or scaffold with `scripts/create-plan.ts -- "Title" "Description" "Overview" plan.json [N]` where N is checkpoint count (default 3). Supports `--ac` for custom acceptance criteria. Run from skill directory. |
+| **Read / Render** | Parse an existing plan JSON and display as full Markdown | `scripts/read-plan.ts -- plan.json` (run from skill directory) |
+| **Verify** | Validate a plan JSON for schema conformance, dependency integrity, ID uniqueness, and semantic quality | `scripts/validate-plan.ts -- plan.json` or `scripts/validate-plan.ts -- --strict plan.json` (run from skill directory) |
+| **Understand** | Analyze a plan for execution order, critical path, parallel groups, security context, and progress | `scripts/read-plan.ts -- --understand plan.json` (run from skill directory) |
+| **Understand (JSON)** | Same analysis as structured JSON for programmatic consumption | `scripts/read-plan.ts -- --json plan.json` (run from skill directory) |
+| **Update** | Modify a plan in-place (add/remove/reorder checkpoints, set AC status, manage blockers). Supports `--dry-run` to preview changes. | `scripts/update-plan.ts -- plan.json <command> [args]` (run from skill directory) |
+| **Update (strict)** | Same as Update but with strict semantic validation | `scripts/update-plan.ts -- --strict plan.json <command> [args]` (run from skill directory) |
+| **Diff** | Compare two plan versions for changes | `scripts/diff-plan.ts -- plan-a.json plan-b.json` (run from skill directory) |
+| **Schema** | Display the full schema reference with field descriptions, relationships, constraints, and allowed values | `scripts/read-plan.ts -- --schema` (run from skill directory) |
+| **Help** | Show usage info for any script | `scripts/<script>.ts -- --help` |
 
 ## Output Format
 
@@ -137,9 +137,9 @@ Break the plan into sequential checkpoints. Each checkpoint must be:
   - Size for ~1 focused work session, not multi-week phases
   - If a checkpoint has >5 acceptance criteria, consider splitting it
 
-**Parallel checkpoints:** When scaffolding with `bun run create`, prefix a checkpoint description with `~` to make it independent (no dependency on the prior checkpoint). Example:
+**Parallel checkpoints:** When scaffolding with `scripts/create-plan.ts`, prefix a checkpoint description with `~` to make it independent (no dependency on the prior checkpoint). Example:
 ```
-bun run create -- "My API" "Build an API" "Full plan" plan.json "Setup" "~Auth" "Core"
+scripts/create-plan.ts -- "My API" "Build an API" "Full plan" plan.json "Setup" "~Auth" "Core"
 ```
 This creates CP-01 (Setup) with no deps, CP-02 (Auth) with no deps (parallel to CP-01), and CP-03 (Core) depending on CP-02.
 
@@ -202,28 +202,28 @@ If the user chooses "Modify", update the affected checkpoints/ACs/SCs and re-con
 1. **Write the JSON output** — produce the full JSON object conforming to `~/.config/opencode/skills/plan-protocol/references/plan-protocol-schema.json`
     - To quickly scaffold a skeleton plan, run:
       ```
-       bun run create -- "Plan Title" "Description" "Overview" plan.json 5
+       scripts/create-plan.ts -- "Plan Title" "Description" "Overview" plan.json 5
       ```
-       (Run from the skill directory, or use `bun --cwd <skill-dir> run create -- ...`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/create-plan.ts -- ...`)
        The last argument is the number of checkpoints (default 3).
        Then edit the generated `plan.json` with your checkpoints, acceptance criteria, and security concerns.
        **Note:** The scaffolded output uses generic descriptions. You MUST edit each checkpoint's title, description, ACs, and SCs with concrete content before presenting the plan. The scaffold passes `--strict` validation but is not production-ready.
     - To scaffold with custom acceptance criteria for the last checkpoint, use `--ac`:
       ```
-      bun run create -- "Login Feature" "Add user login" "JWT-based login" plan.json "Login Endpoint" --ac "Returns JWT on valid credentials::curl POST /login; assert 200 with token" --ac "Rejects invalid password::curl POST /login with wrong password; assert 401"
+      scripts/create-plan.ts -- "Login Feature" "Add user login" "JWT-based login" plan.json "Login Endpoint" --ac "Returns JWT on valid credentials::curl POST /login; assert 200 with token" --ac "Rejects invalid password::curl POST /login with wrong password; assert 401"
       ```
       The `--ac` flag is repeatable. Each value uses format `"description::verification_method"` or just `"description"` (uses default verification method). Custom ACs are applied to the last checkpoint only.
     2. **Validate the JSON** — run a programmatic validation check against the schema before proceeding (strict mode is enabled by default):
        ```
-       bun run validate -- --strict plan.json
+       scripts/validate-plan.ts -- --strict plan.json
        ```
-      (Run from the skill directory, or use `bun --cwd <skill-dir> run validate -- plan.json`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/validate-plan.ts -- plan.json`)
    3. **Fix if invalid** — if validation fails, correct the JSON and re-validate until it passes
    4. **Derive the Markdown** — generate the Markdown summary from the validated JSON by running:
      ```
-     bun run read -- plan.json > plan.md
+     scripts/read-plan.ts -- plan.json > plan.md
      ```
-     (Run from the skill directory, or use `bun --cwd <skill-dir> run read -- plan.json > plan.md`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/read-plan.ts -- plan.json > plan.md`)
 
 ---
 
@@ -234,12 +234,12 @@ To render an existing plan JSON as human-readable Markdown:
 1. Ensure the plan JSON file exists and is valid
 2. Run:
    ```
-   bun run read -- plan.json
+   scripts/read-plan.ts -- plan.json
    ```
-   (Run from the skill directory, or use `bun --cwd <skill-dir> run read -- plan.json`)
+   (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/read-plan.ts -- plan.json`)
 3. The script outputs the full Markdown checklist to stdout. Redirect to a file if needed:
    ```
-   bun run read -- plan.json > plan.md
+   scripts/read-plan.ts -- plan.json > plan.md
    ```
 
 The `read-plan.ts` script automatically validates the plan before rendering. Use `--force` to render even if validation fails (useful for debugging malformed plans).
@@ -249,8 +249,8 @@ The `read-plan.ts` script automatically validates the plan before rendering. Use
 For environments that don't support emoji rendering (e.g., plain text terminals, CI logs), use `--no-emoji`:
 
 ```
-bun run read -- --no-emoji plan.json
-bun run read -- --summary --no-emoji plan.json
+scripts/read-plan.ts -- --no-emoji plan.json
+scripts/read-plan.ts -- --summary --no-emoji plan.json
 ```
 
 ### Force Mode
@@ -258,7 +258,7 @@ bun run read -- --summary --no-emoji plan.json
 To render a plan even if it fails validation (useful for debugging malformed plans):
 
 ```
-bun run read -- --force plan.json
+scripts/read-plan.ts -- --force plan.json
 ```
 
 This replaces emoji icons with text labels: `[done]`, `[pending]`, `[fail]`, `[BLOCKED]`.
@@ -268,8 +268,8 @@ This replaces emoji icons with text labels: `[done]`, `[pending]`, `[fail]`, `[B
 To get a concise analysis summary instead of the full Markdown render:
 
 ```
-bun run read -- --summary plan.json
-bun run read -- --analyze plan.json
+scripts/read-plan.ts -- --summary plan.json
+scripts/read-plan.ts -- --analyze plan.json
 ```
 
 Both flags are equivalent. This outputs the Plan Analysis format (execution order, critical path, parallel groups, severity summary, progress with real AC status, and blockers).
@@ -279,7 +279,7 @@ Both flags are equivalent. This outputs the Plan Analysis format (execution orde
 The `--understand` flag is a first-class capability that analyzes a plan's structure and execution context:
 
 ```
-bun run read -- --understand plan.json
+scripts/read-plan.ts -- --understand plan.json
 ```
 
 This produces the same analysis output as `--summary`/`--analyze` (execution order, critical path, parallel groups, security context, progress), but is semantically distinct — it represents the "Understand" workflow rather than just a summary. Use `--understand` when the user asks to "understand", "interpret", or "make sense of" a plan.
@@ -289,7 +289,7 @@ This produces the same analysis output as `--summary`/`--analyze` (execution ord
 To display the full plan protocol schema reference with field descriptions, relationships, constraints, and allowed values:
 
 ```
-bun run read -- --schema
+scripts/read-plan.ts -- --schema
 ```
 
 This outputs a comprehensive Markdown document covering:
@@ -307,7 +307,7 @@ This outputs a comprehensive Markdown document covering:
 To get the same analysis as structured JSON (for programmatic consumption by other tools or AI agents):
 
 ```
-bun run read -- --json plan.json
+scripts/read-plan.ts -- --json plan.json
 ```
 
 This outputs the `AnalysisResult` object as JSON with fields: `executionOrder`, `criticalPath`, `parallelGroups`, `severityCounts`, and `criticalHighSCs`.
@@ -320,9 +320,9 @@ To verify a plan JSON for correctness:
 
 1. Run the validator:
    ```
-   bun run validate -- plan.json
+   scripts/validate-plan.ts -- plan.json
    ```
-   (Run from the skill directory, or use `bun --cwd <skill-dir> run validate -- plan.json`)
+   (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/validate-plan.ts -- plan.json`)
 2. The validator checks:
    - **Schema conformance** — all required fields, types, patterns, and enum values (via `ajv` against the JSON Schema)
    - **Checkpoint ID uniqueness** — no duplicate CP IDs
@@ -338,7 +338,7 @@ To verify a plan JSON for correctness:
 For additional semantic quality checks, use `--strict`:
 
 ```
-bun run validate -- --strict plan.json
+scripts/validate-plan.ts -- --strict plan.json
 ```
 
 Strict mode adds:
@@ -374,15 +374,15 @@ Use this workflow to modify an existing plan in-place without recreating it from
 
 | Command | Description | Example |
 |---|---|---|
-| `add-cp <title> [description] [--after CP-ID]` | Add a new checkpoint after the given CP-ID (or at end if omitted). Dependencies default to the previous checkpoint. | `bun run update -- plan.json add-cp "Rate Limiting" "Add rate limiting middleware" --after CP-02` |
-| `remove-cp <CP-ID>` | Remove a checkpoint and all its ACs/SCs. Fails if other checkpoints depend on it. | `bun run update -- plan.json remove-cp CP-03` |
-| `reorder <CP-ID> <new-index>` | Move a checkpoint to a new position (0-based). | `bun run update -- plan.json reorder CP-03 1` |
-| `set-status <CP-ID> <AC-ID> <status>` | Set an AC status: `pending`, `passed`, `failed`, `blocked` | `bun run update -- plan.json set-status CP-01 AC-01-01 passed` |
-| `add-blocker <CP-ID> <reason>` | Add a blocker to a checkpoint. | `bun run update -- plan.json add-blocker CP-02 "Waiting for API key"` |
-| `remove-blocker <CP-ID> <index>` | Remove a blocker by index (0-based). | `bun run update -- plan.json remove-blocker CP-02 0` |
-| `set-title <new-title>` | Update the plan title. | `bun run update -- plan.json set-title "My Revised Plan"` |
-| `set-description <new-description>` | Update the plan description. | `bun run update -- plan.json set-description "Revised description"` |
-| `set-overview <new-overview>` | Update the plan overview. | `bun run update -- plan.json set-overview "Revised overview"` |
+| `add-cp <title> [description] [--after CP-ID]` | Add a new checkpoint after the given CP-ID (or at end if omitted). Dependencies default to the previous checkpoint. | `scripts/update-plan.ts -- plan.json add-cp "Rate Limiting" "Add rate limiting middleware" --after CP-02` |
+| `remove-cp <CP-ID>` | Remove a checkpoint and all its ACs/SCs. Fails if other checkpoints depend on it. | `scripts/update-plan.ts -- plan.json remove-cp CP-03` |
+| `reorder <CP-ID> <new-index>` | Move a checkpoint to a new position (0-based). | `scripts/update-plan.ts -- plan.json reorder CP-03 1` |
+| `set-status <CP-ID> <AC-ID> <status>` | Set an AC status: `pending`, `passed`, `failed`, `blocked` | `scripts/update-plan.ts -- plan.json set-status CP-01 AC-01-01 passed` |
+| `add-blocker <CP-ID> <reason>` | Add a blocker to a checkpoint. | `scripts/update-plan.ts -- plan.json add-blocker CP-02 "Waiting for API key"` |
+| `remove-blocker <CP-ID> <index>` | Remove a blocker by index (0-based). | `scripts/update-plan.ts -- plan.json remove-blocker CP-02 0` |
+| `set-title <new-title>` | Update the plan title. | `scripts/update-plan.ts -- plan.json set-title "My Revised Plan"` |
+| `set-description <new-description>` | Update the plan description. | `scripts/update-plan.ts -- plan.json set-description "Revised description"` |
+| `set-overview <new-overview>` | Update the plan overview. | `scripts/update-plan.ts -- plan.json set-overview "Revised overview"` |
 
 The update script automatically re-validates the plan after each modification and warns if validation fails.
 
@@ -391,14 +391,14 @@ The update script automatically re-validates the plan after each modification an
 To preview changes without writing to the file, use `--dry-run`:
 
 ```
-bun run update -- --dry-run plan.json add-cp "Rate Limiting"
-bun run update -- --dry-run plan.json set-status CP-01 AC-01-01 passed
+scripts/update-plan.ts -- --dry-run plan.json add-cp "Rate Limiting"
+scripts/update-plan.ts -- --dry-run plan.json set-status CP-01 AC-01-01 passed
 ```
 
 Dry-run mode shows the resulting JSON on stdout without modifying the file. Combine with `--strict` for full validation preview:
 
 ```
-bun run update -- --dry-run --strict plan.json add-cp "Rate Limiting"
+scripts/update-plan.ts -- --dry-run --strict plan.json add-cp "Rate Limiting"
 ```
 
 ### Strict Mode
@@ -406,10 +406,10 @@ bun run update -- --dry-run --strict plan.json add-cp "Rate Limiting"
 For additional semantic quality checks during updates, use `--strict`:
 
 ```
-bun run update -- --strict plan.json add-cp "Rate Limiting"
+scripts/update-plan.ts -- --strict plan.json add-cp "Rate Limiting"
 ```
 
-Strict mode adds the same checks as `bun run validate -- --strict`: subjective language detection, placeholder detection, and minimum length checks on verification methods and mitigations.
+Strict mode adds the same checks as `scripts/validate-plan.ts -- --strict`: subjective language detection, placeholder detection, and minimum length checks on verification methods and mitigations.
 
 ---
 
@@ -418,7 +418,7 @@ Strict mode adds the same checks as `bun run validate -- --strict`: subjective l
 Use this workflow to compare two plan versions and see what changed.
 
 ```
-bun run diff -- plan-v1.json plan-v2.json
+scripts/diff-plan.ts -- plan-v1.json plan-v2.json
 ```
 
 The diff output shows:
@@ -465,10 +465,10 @@ Collect all security concerns across the plan:
 Maintain a status map for execution tracking:
 
 1. Each AC starts as `pending`
-2. As work is done, mark ACs as `passed` or `failed` using `bun run update -- plan.json set-status <CP-ID> <AC-ID> <status>`
+2. As work is done, mark ACs as `passed` or `failed` using `scripts/update-plan.ts -- plan.json set-status <CP-ID> <AC-ID> <status>`
 3. A checkpoint is **complete** only when ALL its ACs are `passed`
 4. A checkpoint is **blocked** if it has blockers or any dependency checkpoint is not yet complete
-5. Report progress concisely using `bun run read -- --summary plan.json`
+5. Report progress concisely using `scripts/read-plan.ts -- --summary plan.json`
 
 ### Step 5: Security-Aware Execution
 
@@ -509,12 +509,12 @@ When the user asks to "understand", "analyze", or "interpret" a plan, produce th
 
 To generate this programmatically, use understand mode:
 ```
-bun run read -- --understand plan.json
+scripts/read-plan.ts -- --understand plan.json
 ```
 
 For structured JSON output (parsable by other tools or AI agents):
 ```
-bun run read -- --json plan.json
+scripts/read-plan.ts -- --json plan.json
 ```
 
 ### Hard Rules for Understand
@@ -544,15 +544,15 @@ bun run read -- --json plan.json
 - MUST NOT have duplicate acceptance criterion IDs across the entire plan
 - MUST NOT have duplicate security concern IDs across the entire plan
 - MUST NOT have dangling dependency references (every dependency must point to an existing checkpoint)
-- MUST use `bun run validate -- --strict` before presenting a plan to ensure semantic quality
-- MUST use `bun run update` to modify plans in-place rather than manual JSON editing
+- MUST use `scripts/validate-plan.ts -- --strict` before presenting a plan to ensure semantic quality
+- MUST use `scripts/update-plan.ts` to modify plans in-place rather than manual JSON editing
 
 ## Schema Reference
 
 The JSON schema is defined at `~/.config/opencode/skills/plan-protocol/references/plan-protocol-schema.json`. To display the full schema reference with field descriptions, relationships, constraints, and allowed values at any time, run:
 
 ```
-bun run read -- --schema
+scripts/read-plan.ts -- --schema
 ```
 
 ### Schema Overview

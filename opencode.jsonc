@@ -31,5 +31,40 @@
         "Authorization": "Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
+  },
+  "agent":{
+    "architecture":{
+      "model": "ollama-cloud/gemma4:31b"
+    },
+    "brainstormer":{
+      "model": "ollama-cloud/gemma4:31b"
+    },
+    "code-explorer":{
+      "model": "ollama-cloud/nemotron-3-nano:30b"
+    },
+    "coder":{
+      "model": "ollama-cloud/kimi-k2.7-code"
+    },
+    "engineer":{
+      "model": "ollama-cloud/gemma4:31b"
+    },
+    "linter":{
+      "model": "ollama-cloud/nemotron-3-nano:30b",
+    },
+    "planner":{
+      "model": "ollama-cloud/kimi-k2.7-code"
+    },
+    "qa":{
+      "model": "ollama-cloud/gemma4:31b"
+    },
+    "security-scanner":{
+      "model": "ollama-cloud/nemotron-3-nano:30b"
+    },
+    "security":{
+      "model": "ollama-cloud/gemma4:31b"
+    },
+    "tester":{
+      "model": "ollama-cloud/gemma4:31b"
+    }
   }
 }

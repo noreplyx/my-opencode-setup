@@ -418,14 +418,14 @@ function renderSchemaDocs(): string {
   lines.push("");
   lines.push("| Tool | Command | Purpose |");
   lines.push("|------|---------|---------|");
-  lines.push("| Create | `bun run create -- <title> <desc> <overview> <path> [N]` | Scaffold a plan skeleton |");
-  lines.push("| Render | `bun run read -- <plan.json>` | Display plan as Markdown |");
-  lines.push("| Validate | `bun run validate -- <plan.json>` | Check schema + integrity |");
-  lines.push("| Validate (strict) | `bun run validate -- --strict <plan.json>` | + semantic quality checks |");
-  lines.push("| Understand | `bun run read -- --understand <plan.json>` | Analyze execution order, critical path, security, progress |");
-  lines.push("| Update | `bun run update -- <plan.json> <cmd> [args]` | Modify plan in-place |");
-  lines.push("| Diff | `bun run diff -- <a.json> <b.json>` | Compare two plan versions |");
-  lines.push("| Schema | `bun run read -- --schema` | Display this schema reference |");
+  lines.push("| Create | `scripts/create-plan.ts -- <title> <desc> <overview> <path> [N]` | Scaffold a plan skeleton |");
+  lines.push("| Render | `scripts/read-plan.ts -- <plan.json>` | Display plan as Markdown |");
+  lines.push("| Validate | `scripts/validate-plan.ts -- <plan.json>` | Check schema + integrity |");
+  lines.push("| Validate (strict) | `scripts/validate-plan.ts -- --strict <plan.json>` | + semantic quality checks |");
+  lines.push("| Understand | `scripts/read-plan.ts -- --understand <plan.json>` | Analyze execution order, critical path, security, progress |");
+  lines.push("| Update | `scripts/update-plan.ts -- <plan.json> <cmd> [args]` | Modify plan in-place |");
+  lines.push("| Diff | `scripts/diff-plan.ts -- <a.json> <b.json>` | Compare two plan versions |");
+  lines.push("| Schema | `scripts/read-plan.ts -- --schema` | Display this schema reference |");
   lines.push("");
   return lines.join("\n");
 }
