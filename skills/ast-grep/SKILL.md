@@ -1,15 +1,15 @@
 ---
 name: ast-grep
 description: >-
-  Use this skill for ALL structural code search, linting, and rewriting tasks using ast-grep (sg).
+  Use this skill for structural code search and codemod/rewrite operations using ast-grep (sg).
   ast-grep is an AST-based tool (tree-sitter) that understands code structure -- searches are
   structure-aware, NOT text-based. This skill covers: ad-hoc pattern search (`ast-grep run`),
-  YAML rule creation (`ast-grep scan`), code rewriting with `fix` and `transform`, inline rules,
-  JSON output, test-driven rule development, project-level scanning, and stdin/pipe usage.
+  code rewriting with `--rewrite`/`fix`/`transform`, YAML rule creation (`ast-grep scan`),
+  inline rules, JSON output, stdin/pipe usage, and project-level scanning.
   
   CRITICAL: Use this skill WHENEVER the user asks to "find all X", "search for pattern",
-  "replace this code structure", "find functions that...", "refactor X to Y", "lint for...",
-  "create a rule", "write a codemod", or ANY codebase structural search/rewrite task -- even
+  "replace this code structure", "find functions that...", "refactor X to Y",
+  "write a codemod", or ANY codebase structural search/rewrite task -- even
   if the user doesn't mention ast-grep by name. Recognize these as ast-grep-worthy tasks.
   ast-grep is ESPECIALLY useful over plain grep when the pattern involves nested code structures,
   multi-line constructs, or semantic relationships between code elements (function calls with
@@ -22,35 +22,35 @@ description: >-
 
 # ast-grep Skill
 
-ast-grep (`sg`) is a structural code search, lint, and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
+ast-grep (`sg`) is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
-> **Installed version**: 0.42.3 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
+> **Installed version**: 0.44.1 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
 | Ad-hoc pattern search | `ast-grep -p '$PATTERN' -l <lang>` |
+| Context lines around match | `ast-grep -p '$PATTERN' -C 3` |
+| JSON output | `ast-grep -p '$PATTERN' --json` |
+| Search hidden files / .git | `ast-grep -p '$PATTERN' --no-ignore hidden` |
+| Sort results by file/line | `ast-grep -p '$PATTERN' --sort` |
+| Deduplicate identical matches | `ast-grep -p '$PATTERN' --unique` |
+| Limit number of matches | `ast-grep -p '$PATTERN' --max-match-count 10` |
 | Ad-hoc search + rewrite | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang>` |
-| Interactive rewrite (ask per match) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang> -i` |
 | Apply all rewrites (no prompt) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang> -U` |
+| Interactive rewrite (ask per match) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang> -i` |
 | Scan with YAML rule file | `ast-grep scan --rule rule.yml` |
 | Scan with inline rule | `ast-grep scan --inline-rules '...'` |
 | Filter results by rule ID | `ast-grep scan --filter 'no-console'` |
-| JSON output | `ast-grep -p '$PATTERN' --json` |
 | JSON output from stdin | `echo 'code' \| ast-grep --stdin --json -p '$PATTERN' -l <lang>` |
 | Debug query parsing | `ast-grep -p '$PATTERN' -l <lang> --debug-query` |
 | Test rules (snapshot-based) | `ast-grep test [-U \| -i]` |
 | Create rule scaffold | `ast-grep new rule <name>` |
 | Create project scaffold | `ast-grep new project <name>` |
-| Context lines around match | `ast-grep -p '$PATTERN' -C 3` |
 | Follow symlinks | `ast-grep -p '$PATTERN' --follow` |
-| Search hidden files / .git | `ast-grep -p '$PATTERN' --no-ignore hidden` |
 | Suppress color (CI/scripting) | `ast-grep -p '$PATTERN' --no-color` |
 | Strictness control | `ast-grep -p '$PATTERN' --strictness smart` |
-| Sort results by file/line | `ast-grep -p '$PATTERN' --sort` |
-| Deduplicate identical matches | `ast-grep -p '$PATTERN' --unique` |
-| Limit number of matches | `ast-grep -p '$PATTERN' --max-match-count 10` |
 
 ---
 
@@ -63,17 +63,6 @@ With `grep`, you match text patterns. With `ast-grep`, you write **code patterns
 - Comments, strings, and other non-code text are automatically ignored
 - Structure is preserved -- `foo()` does NOT match `foo(a, b)` because the AST is different
 - Rewrite preserves indentation levels
-
-### The Expanded Three-Question Framework
-
-Before writing any ast-grep command, step through this decision tree:
-
-1. **Do I need `pattern` or `kind`?**
-   - `pattern` -> when you care about the *content* of the code: `console.log($ARG)`
-   - `kind` -> when you care about the *type* of AST node: all `arrow_function` nodes
-   - Combine with `all: [{kind: ...}, {pattern: ...}]` to narrow a node type by content
-2. **What parts should be fixed and what parts should be variable?** (use `$META` for variable parts)
-3. **Do I need extra conditions?** (only inside classes, only with specific children, etc.)
 
 ---
 
@@ -140,117 +129,7 @@ ast-grep -p '$PATTERN' --json                # structured output for piping
 
 ---
 
-## Chapter 2: YAML Rules (`ast-grep scan` + `inline-rules`)
-
-### Rule Structure
-
-```yaml
-id: descriptive-rule-id           # Required
-language: TypeScript              # Required
-rule:                             # Required: matching logic
-  pattern: console.log($ARG)
-```
-
-### Rule Object Fields
-
-A rule matches if ALL fields match (implicit AND). See `references/rule-reference.md` for the complete reference.
-
-| Field | Type | Purpose | Example |
-|-------|------|---------|---------|
-| `pattern` | String/Object | AST pattern to match | `console.log($ARG)` |
-| `kind` | String | Tree-sitter node kind | `call_expression` |
-| `regex` | String | Rust regex matching node text | `^[a-z]+$` |
-| `nthChild` | Number/String/Object | Position among siblings (1-based) | `3`, `2n+1` |
-| `range` | Object | Line/column range | `{start: {line: 0}}` |
-| `all` | Array | Must match ALL sub-rules (explicit AND) | `[...]` |
-| `any` | Array | Must match ANY sub-rules | `[...]` |
-| `not` | Object | Must NOT match sub-rule | `{...}` |
-| `matches` | String | Match utility rule by id | `isRouteHandler` |
-| `inside` | Object | Must be inside matched node | `{kind: class_declaration}` |
-| `has` | Object | Must have descendant matched | `{pattern: await $_}` |
-| `precedes` / `follows` | Object | Position relative to sibling | `{kind: function_declaration}` |
-| `severity` | String | Report importance | `error`, `warning`, `info`, `hint` |
-| `message` | String | Human-readable violation | `"Replace X with Y"` |
-| `note` | String | Developer guidance | `"Use the logger module"` |
-
-**`kind` vs `pattern` cheat sheet:**
-- `kind` -> find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
-- `pattern` -> find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
-- Both -> `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
-
-Common kind names: `call_expression`, `function_declaration`, `method_definition`, `arrow_function`, `class_declaration`, `variable_declaration`, `identifier`, `import_statement`, `return_statement`, `binary_expression`. See `references/recipes.md` for per-language lists.
-
-### Complete Rule Examples
-
-**No await in Promise.all:**
-```yaml
-rule:
-  pattern: Promise.all($A)
-  has:
-    pattern: await $_
-    stopBy: end
-```
-
-**Functions without return type:**
-```yaml
-rule:
-  kind: function_declaration
-  has:
-    field: body
-    kind: statement_block
-  not:
-    has:
-      field: return_type
-```
-
-**Console calls with severity + fix:**
-```yaml
-id: no-console
-language: TypeScript
-severity: warning
-message: "Replace console.log with logger"
-rule:
-  any:
-    - pattern: console.log($$$)
-    - pattern: console.warn($$$)
-    - pattern: console.error($$$)
-fix: logger.log($$$)
-```
-
-**Class methods without `this`:**
-```yaml
-rule:
-  kind: method_definition
-  not:
-    has:
-      pattern: this.$_
-```
-
-### Utility Rules
-
-```yaml
-utils:
-  isRouteHandler:
-    any:
-      - pattern: app.get($$$)
-      - pattern: app.post($$$)
-rule:
-  matches: isRouteHandler
-```
-
-### Running Rules
-
-```bash
-ast-grep scan --rule rule.yml                 # single rule file
-ast-grep scan --inline-rules 'id:... rule:...' # inline (no file)
-ast-grep scan --rule rule1.yml --rule rule2.yml    # multiple files (repeat --rule)
-ast-grep scan --filter 'no-console'            # filter by rule ID
-ast-grep scan --interactive                    # interactive fix mode
-```
-
----
-
-## Chapter 3: Rewriting Code
+## Chapter 2: Rewriting Code
 
 ### Simple Rewrite: `--rewrite` Flag
 
@@ -306,6 +185,118 @@ constraints:
   OLD_FN:
     regex: ^debug    # only match functions starting with "debug"
     kind: identifier
+```
+
+---
+
+## Chapter 3: YAML Rules (`ast-grep scan` + `inline-rules`)
+
+### Rule Structure
+
+```yaml
+id: descriptive-rule-id           # Required
+language: TypeScript              # Required
+rule:                             # Required: matching logic
+  pattern: console.log($ARG)
+```
+
+### Rule Object Fields
+
+A rule matches if ALL fields match (implicit AND). See `references/rule-reference.md` for the complete reference.
+
+| Field | Type | Purpose | Example |
+|-------|------|---------|---------|
+| `pattern` | String/Object | AST pattern to match | `console.log($ARG)` |
+| `kind` | String | Tree-sitter node kind | `call_expression` |
+| `regex` | String | Rust regex matching node text | `^[a-z]+$` |
+| `nthChild` | Number/String/Object | Position among siblings (1-based) | `3`, `2n+1` |
+| `range` | Object | Line/column range | `{start: {line: 0}}` |
+| `all` | Array | Must match ALL sub-rules (explicit AND) | `[...]` |
+| `any` | Array | Must match ANY sub-rules | `[...]` |
+| `not` | Object | Must NOT match sub-rule | `{...}` |
+| `matches` | String | Match utility rule by id | `isRouteHandler` |
+| `inside` | Object | Must be inside matched node | `{kind: class_declaration}` |
+| `has` | Object | Must have descendant matched | `{pattern: await $_}` |
+| `precedes` / `follows` | Object | Position relative to sibling | `{kind: function_declaration}` |
+| `severity` | String | Report importance | `error`, `warning`, `info`, `hint` |
+| `message` | String | Human-readable violation | `"Replace X with Y"` |
+| `note` | String | Developer guidance | `"Use the logger module"` |
+
+**`kind` vs `pattern` cheat sheet:**
+- `kind` -> find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
+- `pattern` -> find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
+- Both -> `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
+
+Common kind names: `call_expression`, `function_declaration`, `method_definition`, `arrow_function`, `class_declaration`, `variable_declaration`, `identifier`, `import_statement`, `return_statement`, `binary_expression`. See `references/recipes.md` for per-language lists.
+
+### Complete Rule Examples
+
+**Find classes with a specific decorator:**
+```yaml
+rule:
+  pattern: '@Injectable() class $NAME { $$$BODY }'
+```
+
+**Find imports from a specific module:**
+```yaml
+rule:
+  pattern: import { $$$ } from "lodash"
+```
+
+**Find functions matching a signature pattern:**
+```yaml
+rule:
+  kind: function_declaration
+  has:
+    pattern: find$_
+  has:
+    field: return_type
+    pattern: Promise<$T>
+```
+
+**No await in Promise.all:**
+```yaml
+rule:
+  pattern: Promise.all($A)
+  has:
+    pattern: await $_
+    stopBy: end
+```
+
+**Console calls with severity + fix:**
+```yaml
+id: no-console
+language: TypeScript
+severity: warning
+message: "Replace console.log with logger"
+rule:
+  any:
+    - pattern: console.log($$$)
+    - pattern: console.warn($$$)
+    - pattern: console.error($$$)
+fix: logger.log($$$)
+```
+
+### Utility Rules
+
+```yaml
+utils:
+  isRouteHandler:
+    any:
+      - pattern: app.get($$$)
+      - pattern: app.post($$$)
+rule:
+  matches: isRouteHandler
+```
+
+### Running Rules
+
+```bash
+ast-grep scan --rule rule.yml                 # single rule file
+ast-grep scan --inline-rules 'id:... rule:...' # inline (no file)
+ast-grep scan --rule rule1.yml --rule rule2.yml    # multiple files (repeat --rule)
+ast-grep scan --filter 'no-console'            # filter by rule ID
+ast-grep scan --interactive                    # interactive fix mode
 ```
 
 ---
@@ -395,10 +386,10 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 | You need to... | Use this |
 |----------------|----------|
-| Simple text search (one keyword) | `grep`/`ripgrep` -- ast-grep is overkill |
 | Structural search (by syntax, not text) | `ast-grep run -p '...'` |
-| Complex search (multiple conditions, relational rules) | YAML rule -> `ast-grep scan --inline-rules` |
 | Code refactoring / codemod (transform code) | YAML `fix`/`transform` -> `ast-grep scan --rule rule.yml -U` |
+| Complex search (multiple conditions, relational rules) | YAML rule -> `ast-grep scan --inline-rules` |
+| Simple text search (one keyword) | `grep`/`ripgrep` -- ast-grep is overkill |
 | Persistent lint rule (run in CI) | Project setup -> `ast-grep new project`, add rules |
 | Piped/scripted usage (process stdin) | `ast-grep --stdin` or `--json` |
 | Rule development (discover kinds, test) | [Playground](https://ast-grep.github.io/playground.html) first, then `ast-grep test` |
@@ -455,7 +446,7 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 ## Agent Tool Protocol
 
 ### Purpose
-ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. The rules it enforces (no-console, missing return types, no-any-type, etc.) are already covered by ESLint, TypeScript strict mode, and the semgrep SAST scan. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform.
+ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform. Lint rules (no-console, missing return types, etc.) are already covered by ESLint, TypeScript strict mode, and semgrep SAST.
 
 ### When Subagents Should Use ast-grep
 
@@ -469,15 +460,10 @@ ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pi
 
 ### When NOT to Use ast-grep
 
-- **Simple keyword search** -> use grep/
-g (ast-grep is overkill for text matching)
-- **Already enforced by the Lint Gate** -> ESLint already catches 
-o-console, 
-o-explicit-any, explicit-function-return-type, 
-o-empty
+- **Simple keyword search** -> use grep/rg (ast-grep is overkill for text matching)
+- **Already enforced by the Lint Gate** -> ESLint already catches no-console, no-explicit-any, explicit-function-return-type, no-empty
 - **Already covered by semgrep SAST** -> semgrep already catches AST-level security patterns
-- **Already covered by TypeScript strict mode** -> strict, 
-oImplicitReturns, strictNullChecks
+- **Already covered by TypeScript strict mode** -> strict, noImplicitReturns, strictNullChecks
 
 ### Quick Commands for Subagents
 
@@ -490,22 +476,12 @@ oImplicitReturns, strictNullChecks
 | Find empty catch blocks | sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}" |
 | Find classes with specific decorators | sg -p '@Injectable() class { $$$ }' -l ts |
 
-### Loading the Skill
-
-Subagents load this skill explicitly when they need to perform structural code analysis:
-
-`
-skill("ast-grep")
-`
-
-The Orchestrator does NOT auto-load this skill during pipeline execution. It is triggered by subagent task requirements.
-
 ### Full Reference
 
 See the sections above for complete coverage of:
-- Pattern basics (st-grep run)
-- YAML rules (st-grep scan)
-- Rewriting code with ix and 	ransform
+- Pattern basics (ast-grep run)
+- Rewriting code with fix and transform
+- YAML rules (ast-grep scan)
 - JSON output and stdin piping
 - Debugging and project setup
 - All language-kind tables and recipe patterns
