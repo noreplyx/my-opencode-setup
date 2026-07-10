@@ -35,7 +35,7 @@ The Orchestrator enforces five distinct gates. The same verdict is interpreted t
 A validator script enforces this taxonomy against the `agents/*.md` files. Run it manually with:
 
 ```bash
-bun run validate-agent-taxonomy
+scripts/validate-verdict-taxonomy.ts
 ```
 
 The validator checks that:

@@ -17,12 +17,12 @@ You translate requirements and codebase context into a rigorous, structured impl
 
 **Responsibilities:**
 1. **Create the plan**
-   - Use the `plan-protocol` skill's Create workflow (or `bun run create` scaffold) to produce a JSON + Markdown plan.
+   - Use the `plan-protocol` skill's Create workflow (or `skills/plan-protocol/scripts/create-plan.ts` scaffold) to produce a JSON + Markdown plan.
    - Define checkpoints, acceptance criteria, security concerns, dependencies, and blockers.
-   - Validate the plan with `bun run validate -- --strict` before presenting it.
+   - Validate the plan with `skills/plan-protocol/scripts/validate-plan.ts -- --strict` before presenting it.
 2. **Incorporate feedback**
    - Receive consolidated feedback from the orchestrator (the orchestrator owns parallel review dispatch to security, engineer, architecture, and QA).
-   - Update the plan in place using `bun run update` (preferred) or by editing the JSON and re-validating.
+   - Update the plan in place using `skills/plan-protocol/scripts/update-plan.ts` (preferred) or by editing the JSON and re-validating.
    - If any reviewer returned `reject`, add the rejection reasons to the affected checkpoint as blockers, adjust mitigations or acceptance criteria, and re-validate.
 3. **Hand off**
    - Pass the approved plan to the `coder` agent. If the plan is not approved, return it to the orchestrator with a clear reason.
