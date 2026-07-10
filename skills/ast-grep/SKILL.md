@@ -1,22 +1,23 @@
 ---
 name: ast-grep
 description: >-
-  Use this skill for structural code search and codemod/rewrite operations using ast-grep.
-  ast-grep is an AST-based tool (tree-sitter) that understands code structure -- searches are
-  structure-aware, NOT text-based. This skill covers: ad-hoc pattern search (`ast-grep run`),
-  code rewriting with `--rewrite`/`fix`/`transform`, YAML rule creation (`ast-grep scan`),
-  inline rules, JSON output, stdin/pipe usage, and project-level scanning.
-  
+  AST-based (tree-sitter) structural code search, codemod/rewrite, and codebase
+  exploration across 20+ languages. Covers ad-hoc pattern search (`ast-grep run`),
+  rewriting with `--rewrite`/`fix`/`transform`, YAML rules (`ast-grep scan`),
+  inline rules, JSON output, stdin/pipe, and project-level scanning.
+
   CRITICAL: Use this skill WHENEVER the user asks to "find all X", "search for pattern",
   "replace this code structure", "find functions that...", "refactor X to Y",
-  "write a codemod", or ANY codebase structural search/rewrite task -- even
-  if the user doesn't mention ast-grep by name. Recognize these as ast-grep-worthy tasks.
-  ast-grep is ESPECIALLY useful over plain grep when the pattern involves nested code structures,
-  multi-line constructs, or semantic relationships between code elements (function calls with
-  specific argument patterns, classes with certain decorators, imports from specific modules).
-  Also triggers when the user says "find all imports from X", "change all X to Y", or
-  "find arrow functions that...". If the task involves any structural understanding of code
-  beyond simple keyword matching, load this skill.
+  "write a codemod", "understand this code", "show me the pattern for X", or ANY
+  codebase structural search/rewrite/exploration task -- even if the user doesn't
+  mention ast-grep by name. Recognize these as ast-grep-worthy tasks.
+  ast-grep is ESPECIALLY useful over plain grep when the pattern involves nested code
+  structures, multi-line constructs, or semantic relationships between code elements
+  (function calls with specific argument patterns, classes with certain decorators,
+  imports from specific modules). Also triggers when the user says "find all imports
+  from X", "change all X to Y", or "find arrow functions that...". If the task
+  involves any structural understanding of code beyond simple keyword matching,
+  load this skill.
 
 ---
 
