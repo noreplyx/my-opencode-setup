@@ -84,7 +84,7 @@ nthChild:
     kind: function_declaration
 ```
 
-Note: Only named nodes are counted, not unnamed nodes (punctuation like `,`, `;`, `(`, `)`).
+Note: Only named nodes are counted, not unnamed nodes (punctuation like `,`, `;`, `(`, `)`). For example, in `foo(a, b, c)`, the arguments `a`, `b`, `c` are at positions 1, 2, 3 -- the commas and parentheses are unnamed and skipped.
 
 ### `range`
 
@@ -112,7 +112,7 @@ This matches a node starting at position (0,0) and ending at (0,3), e.g., `foo` 
 severity: error      # error | warning | info | hint
 ```
 
-Used in scan mode to color-code and filter results. `error` findings typically exit non-zero, while `info`/`hint` are advisory.
+Used in scan mode to color-code and filter results. `error` findings are the most severe; whether they cause a non-zero exit depends on the runner/CI configuration.
 
 ## Composite Rules
 

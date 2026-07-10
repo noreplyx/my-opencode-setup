@@ -1,7 +1,7 @@
 ---
 name: ast-grep
 description: >-
-  Use this skill for structural code search and codemod/rewrite operations using ast-grep (sg).
+  Use this skill for structural code search and codemod/rewrite operations using ast-grep.
   ast-grep is an AST-based tool (tree-sitter) that understands code structure -- searches are
   structure-aware, NOT text-based. This skill covers: ad-hoc pattern search (`ast-grep run`),
   code rewriting with `--rewrite`/`fix`/`transform`, YAML rule creation (`ast-grep scan`),
@@ -22,7 +22,7 @@ description: >-
 
 # ast-grep Skill
 
-ast-grep (`sg`) is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
+ast-grep is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
 > **Installed version**: 0.44.1 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
 
@@ -37,7 +37,7 @@ ast-grep (`sg`) is a structural code search and rewrite tool based on Abstract S
 | Sort results by file/line | `ast-grep -p '$PATTERN' --sort` |
 | Deduplicate identical matches | `ast-grep -p '$PATTERN' --unique` |
 | Limit number of matches | `ast-grep -p '$PATTERN' --max-match-count 10` |
-| Ad-hoc search + rewrite | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang>` |
+| Ad-hoc search + rewrite (dry-run) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang>` |
 | Apply all rewrites (no prompt) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang> -U` |
 | Interactive rewrite (ask per match) | `ast-grep -p '$PATTERN' --rewrite '$NEW' -l <lang> -i` |
 | Scan with YAML rule file | `ast-grep scan --rule rule.yml` |
@@ -51,6 +51,7 @@ ast-grep (`sg`) is a structural code search and rewrite tool based on Abstract S
 | Follow symlinks | `ast-grep -p '$PATTERN' --follow` |
 | Suppress color (CI/scripting) | `ast-grep -p '$PATTERN' --no-color` |
 | Strictness control | `ast-grep -p '$PATTERN' --strictness smart` |
+| Scan JSON output | `ast-grep scan --rule rule.yml --json` |
 
 ---
 
@@ -99,7 +100,7 @@ rule:
 | `$$$NAME` | **Zero or more** AST nodes | `console.log($$$ARGS)` |
 | `$_` | Non-capturing single (faster) | `$_.log($_)` |
 
-**Key rule**: `$A` = one node, `$$$A` = 0+. So `console.log($ARG)` matches `log(x)` but NOT `log(x, y)` or `log()`; `console.log($$$)` matches all three.
+**Key rule**: `$A` = one node, `$$$A` = 0+. So `console.log($ARG)` matches `log(x)` but NOT `log(x, y)` or `log()`; `console.log($$$ARGS)` matches all three.
 
 **Same name = equality**: `$A == $A` matches `a == a` but NOT `a == b`.
 **Non-capturing `$_`**: faster -- no bookkeeping overhead.
@@ -115,6 +116,14 @@ See `references/pattern-syntax.md` for full reference.
 | `relaxed` | More permissive matching |
 | `cst` | Exact match including trivia |
 | `signature` | Match function/method signatures only |
+| `template` | Match text only, node kinds are ignored |
+
+### Performance Tips
+
+- **`kind` is faster than `pattern`**: matching by node type avoids parsing overhead. Use `kind: call_expression` instead of `pattern: $_.call()` when you don't need to match specific content.
+- **`$_` is faster than `$NAME`**: non-capturing meta-variables skip bookkeeping. Use `$_` when you don't need the captured value.
+- **`--max-match-count N`**: stop scanning after N matches to bound runtime.
+- **`-j N`**: control thread count (default: number of CPU cores).
 
 ### Useful Flags
 
@@ -122,7 +131,7 @@ See `references/pattern-syntax.md` for full reference.
 ast-grep -p '$PATTERN' -C 3                  # context lines
 ast-grep -p '$PATTERN' --no-ignore hidden    # search .git/hidden
 ast-grep -p '$PATTERN' -j 4                  # thread count
-ast-grep -p '$PATTERN' --globs '*.test.ts'   # file filter
+ast-grep -p '$PATTERN' --globs '*.test.ts'    # file filter
 ast-grep -p '$PATTERN' --no-color            # CI/scripting
 ast-grep -p '$PATTERN' --json                # structured output for piping
 ```
@@ -158,6 +167,8 @@ rule:
   pattern: foo($X)
 fix: bar($X)
 ```
+
+**Apply with**: `ast-grep scan --rule rule.yml -U` (without `-U`, it's a dry-run).
 
 ### Transformations (`transform`)
 
@@ -224,7 +235,7 @@ A rule matches if ALL fields match (implicit AND). See `references/rule-referenc
 
 **`kind` vs `pattern` cheat sheet:**
 - `kind` -> find node **types**: all `arrow_function`, all `class_declaration` (faster, catches edge cases)
-- `pattern` -> find specific **content**: `console.log($ARG)`, `import { $$$$$ } from "lodash"`
+- `pattern` -> find specific **content**: `console.log($ARG)`, `import { $$$ } from "lodash"`
 - Both -> `all: [{kind: call_expression}, {pattern: console.log($ARG)}]`
 
 Common kind names: `call_expression`, `function_declaration`, `method_definition`, `arrow_function`, `class_declaration`, `variable_declaration`, `identifier`, `import_statement`, `return_statement`, `binary_expression`. See `references/recipes.md` for per-language lists.
@@ -344,7 +355,7 @@ ast-grep test -i   # interactive review
 ### JSON Output
 
 ```bash
-ast-grep -p 'import { $$$$$ } from "$MODULE"' --json | jq '.[].metaVariables.single.MODULE.text'
+ast-grep -p 'import { $$$ } from "$MODULE"' --json | jq '.[].metaVariables.single.MODULE.text'
 echo 'code' | ast-grep --stdin --json -p 'console.log($$$)' -l ts | jq .
 ```
 
@@ -354,7 +365,7 @@ JSON from `ast-grep run --json` is a flat array with `text`, `range`, `file`, `r
 ### StdIn Mode
 
 ```bash
-echo "console.log('test')" | ast-grep --stdin -p 'console.log($ARG)' -l python
+echo "console.log('test')" | ast-grep --stdin -p 'console.log($ARG)' -l ts
 ```
 
 **StdIn caveats**: requires BOTH `--stdin` AND non-tty piped execution; `--lang` mandatory; `-i` (interactive) incompatible with stdin; `--json` works with stdin.
@@ -409,7 +420,7 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 - **Same-name capture = equality**: `$A == $A` matches `a == a`, not `a == b`
 
 ### Rules & Matching
-- **`pattern` ? `kind`**: `pattern` matches specific code; `kind` matches node types. Use `kind` for "find ALL arrow functions", `pattern` for "find arrow functions that call foo()". Combine with `all:`.
+- **`pattern` vs `kind`**: `pattern` matches specific code; `kind` matches node types. Use `kind` for "find ALL arrow functions", `pattern` for "find arrow functions that call foo()". Combine with `all:`.
 - **`kind` names are language-specific**: use the [playground](https://ast-grep.github.io/playground.html) to discover them
 - **`nthChild` is 1-based** (like CSS)
 - **Regex uses Rust syntax** -- no lookahead/lookbehind/backreferences
@@ -418,6 +429,7 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 - **`fix` is indentation-sensitive**: meta-variables preserve their original indentation
 - **`-U` applies rewrites**: without it, `ast-grep run --rewrite` is a dry-run
 - **`-i` confirms each replacement**: interactive mode
+- **Multi-rule ordering matters**: when chaining rules in one YAML file (separated by `---`), rules are applied in order. Each rule sees the output of the previous one. For example, rename the function definition first, then rename its call sites.
 
 ### Stdin & Piping
 - **`--stdin` requires BOTH flag AND non-tty execution**: can't type input interactively
@@ -429,8 +441,8 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 ### Output Control
 - **`--no-color`**: suppresses ANSI for CI/scripting
 - **`severity`**: `error` > `warning` > `info` > `hint` -- controls scan output visibility
-- **Scan JSON ? Run JSON**: `ast-grep scan --json` gives flat array with `ruleId` field; `ast-grep run --json` gives flat array without `ruleId`
-- **`--no-ignore hidden`**: search `.git` and hidden files
+- **Scan JSON vs Run JSON**: `ast-grep scan --json` gives flat array with `ruleId` field; `ast-grep run --json` gives flat array without `ruleId`
+- **`--no-ignore` requires a sub-option**: e.g., `--no-ignore hidden` (search dotfiles), `--no-ignore vcs` (ignore .gitignore). See `ast-grep run --help` for all values.
 
 ---
 
@@ -443,45 +455,18 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 ---
 
-## Agent Tool Protocol
+## Subagent Usage
 
-### Purpose
-ast-grep (sg) is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. Its real value is in **structural search, discovery, and codemod/rewrite operations** that text-based grep cannot perform. Lint rules (no-console, missing return types, etc.) are already covered by ESLint, TypeScript strict mode, and semgrep SAST.
+ast-grep is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. Use it for structural search, discovery, and codemod/rewrite operations that text-based grep cannot perform.
 
-### When Subagents Should Use ast-grep
+| Agent | Typical Task | ast-grep Command |
+|-------|-------------|------------------|
+| **code-explorer** | Find all classes implementing an interface | `sg -p 'class $NAME implements $IFACE { $$$ }' -l ts` |
+| **code-explorer** | Find all function declarations with a decorator | `sg -p '@$DECORATOR\ndef $NAME($$$):' -l py` |
+| **Implementor** | Rename a function across all call sites | `sg -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U` |
+| **Implementor** | Discover existing patterns before writing code | `sg -p 'repository.$METHOD($$$)' -l ts` |
+| **Fixer** | Find try/catch blocks without error logging | `sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}"` |
+| **Fixer** | Find deprecated API calls | `sg -p 'deprecatedApi($$$)' -l ts` |
+| **QA** | Find all test files using a specific pattern | `sg -p 'describe("$NAME", $$$)' --globs '*.test.ts'` |
 
-| Agent | Typical Task | ast-grep Role |
-|-------|-------------|---------------|
-| **code-explorer** | Codebase exploration | Structural pattern discovery: "Find all classes that implement interface X", "Find all function declarations with specific decorators" |
-| **PlanDescriber** | Pattern analysis before planning | "Find all service/repository patterns to understand conventions" -- AST-aware search reveals structural consistency |
-| **Implementor** | Writing new code | "Find existing patterns to follow", "Rename function X to Y across all call sites" (codemod) |
-| **Fixer** | Debugging & fixing | "Find all try/catch blocks without error logging", "Find all places where deprecated API is called" |
-| **QA** | Test verification | "Find all test files that use pattern P" |
-
-### When NOT to Use ast-grep
-
-- **Simple keyword search** -> use grep/rg (ast-grep is overkill for text matching)
-- **Already enforced by the Lint Gate** -> ESLint already catches no-console, no-explicit-any, explicit-function-return-type, no-empty
-- **Already covered by semgrep SAST** -> semgrep already catches AST-level security patterns
-- **Already covered by TypeScript strict mode** -> strict, noImplicitReturns, strictNullChecks
-
-### Quick Commands for Subagents
-
-| Task | Command |
-|------|---------|
-| Find all function calls matching a pattern | sg -p 'console.log()' -l ts |
-| Find all arrow functions | sg -p '($ARG) => ...' -l ts |
-| Find imports from a specific module | sg -p 'import { $$$ } from "lodash"' -l ts |
-| Refactor: rename function across all files | sg -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U |
-| Find empty catch blocks | sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}" |
-| Find classes with specific decorators | sg -p '@Injectable() class { $$$ }' -l ts |
-
-### Full Reference
-
-See the sections above for complete coverage of:
-- Pattern basics (ast-grep run)
-- Rewriting code with fix and transform
-- YAML rules (ast-grep scan)
-- JSON output and stdin piping
-- Debugging and project setup
-- All language-kind tables and recipe patterns
+**When NOT to use**: simple keyword search (use grep/rg), lint rules already enforced by ESLint, security patterns already covered by semgrep SAST, or TypeScript strict mode checks.

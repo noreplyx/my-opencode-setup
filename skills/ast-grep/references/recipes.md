@@ -46,7 +46,7 @@ rule:
 fix: for (const $ITEM of $ARR) { $$$ }
 ```
 
-**Caveat**: This works best when the callback body is a single block statement. If the body uses `$ITEM` in ways that differ from `for...of` semantics (e.g., `$ITEM` is reassigned), the transform may produce incorrect results. Review each match.
+**Caveat**: This works best when the callback body is a single block statement. If the body uses `$ITEM` in ways that differ from `for...of` semantics (e.g., `$ITEM` is reassigned), the transform may produce incorrect results. Also note that `this` binding differs: `forEach` callbacks have dynamic `this` (or explicit `thisArg`), while `for...of` uses the enclosing scope's `this`. Review each match.
 
 ### 4. Find optional chaining candidates
 
