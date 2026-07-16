@@ -23,6 +23,12 @@ description: >-
 
 # ast-grep Skill
 
+> [!IMPORTANT]
+> **AI AGENT CRITICAL GUIDELINE:**
+> 1. **ALWAYS SINGLE-QUOTE PATTERNS:** Pass patterns in single quotes (e.g., `ast-grep -p 'console.log($ARG)' -l ts`). Double quotes will cause the bash shell to expand `$ARG` into an empty string or host environment variable, breaking the search.
+> 2. **MATCHING MULTIPLE ARGUMENTS:** Use `$$$ARGS` instead of `$ARG` when matching zero-or-more entities. `console.log($ARG)` will NOT match `console.log(a, b)` or `console.log()`.
+> 3. **USE AST-GREP FOR MULTI-LINE REPLACEMENTS:** Standard `sed` or `ripgrep` fail on multi-line expressions, formatting, and nested braces. `ast-grep` handles them out of the box.
+
 ast-grep is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
 > **Installed version**: 0.44.1 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
