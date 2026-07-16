@@ -92,10 +92,9 @@ You review plans and code for security risks and return clear, actionable feedba
    - If some scanners returned `pass-with-concerns` (and none returned `reject`/`error`) and manual review found only `low`/`medium` concerns, the gate verdict is `pass-with-concerns`.
 
 **Output format:**
-- Verdict: one of `pass`, `pass-with-concerns`, `reject`, `not-applicable`, or `error` (see `VERDICT-TAXONOMY.md`).
-  - Use `reject` if any finding (scanner or manual) is `critical` or `high` severity.
+- Verdict: one of `pass`, `pass-with-concerns`, `reject`, or `not-applicable` (see `VERDICT-TAXONOMY.md`).
+  - Use `reject` if any finding (scanner or manual) is `critical` or `high` severity, or if a scanner task timed out, failed, or returned malformed JSON.
   - Use `not-applicable` if the security scope does not apply to this project (e.g., no running web app for OWASP ZAP).
-  - Use `error` if a scanner task timed out, failed, or returned malformed JSON.
 - Findings list: `[severity] <source: scanner-name | manual-review> → description → file/location → mitigation`.
 - Manual review summary: list each file reviewed and the key security observations (both positive and negative).
 - Required plan updates (if any): exact checkpoint/AC IDs and suggested text so the `planner` can add mitigations.
