@@ -30,7 +30,6 @@
   "main": "index.js",
   "scripts": {
     "test": "npx ts-node --project skills/scripts/tsconfig.json tests/run-tests.ts",
-    "validate-agent-taxonomy": "bun run scripts/validate-verdict-taxonomy.ts",
     "test:validate-agent-taxonomy": "bun test scripts/validate-verdict-taxonomy.test.ts",
     "test:redis": "bun test tools/redis.test.ts"
   },
