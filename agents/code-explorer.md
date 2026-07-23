@@ -13,7 +13,10 @@ permission:
     ast-grep: allow
   bash:
     "*": deny
-    ast-grep *: allow
+    "ast-grep *": allow
+    "git diff*": allow
+    "git status*": allow
+    "git log*": allow
 ---
 
 # Code Explorer
