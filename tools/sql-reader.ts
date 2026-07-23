@@ -11,6 +11,84 @@ import type { ConnectionPool } from "mssql"
 const driverModules: Record<string, any> = {}
 
 /**
+ * Connection pool entry for reusing database connections across tool calls.
+ */
+interface PooledDriver {
+  driver: DatabaseDriver
+  lastUsed: number
+  key: string
+}
+
+const connectionPools = new Map<string, PooledDriver>()
+let poolCleanupInterval: ReturnType<typeof setInterval> | null = null
+
+function schedulePoolCleanup() {
+  if (poolCleanupInterval) return
+  poolCleanupInterval = setInterval(() => {
+    const now = Date.now()
+    const idleTimeout = 5 * 60 * 1000 // 5 minutes
+    for (const [key, pooled] of connectionPools.entries()) {
+      if (now - pooled.lastUsed > idleTimeout) {
+        connectionPools.delete(key)
+        pooled.driver.close().catch((e) => console.warn("[database] Error closing idle connection:", e))
+      }
+    }
+    if (connectionPools.size === 0 && poolCleanupInterval) {
+      clearInterval(poolCleanupInterval)
+      poolCleanupInterval = null
+    }
+  }, 60 * 1000)
+  // Don't prevent process exit in Node/Bun environments
+  if (poolCleanupInterval && typeof poolCleanupInterval === "object" && "unref" in poolCleanupInterval) {
+    ;(poolCleanupInterval as any).unref()
+  }
+}
+
+/**
+ * Close all active pooled connections (useful for testing or teardown).
+ */
+async function closeAllPools(): Promise<void> {
+  if (poolCleanupInterval) {
+    clearInterval(poolCleanupInterval)
+    poolCleanupInterval = null
+  }
+  const closePromises: Promise<void>[] = []
+  for (const [key, pooled] of connectionPools.entries()) {
+    connectionPools.delete(key)
+    closePromises.push(pooled.driver.close().catch((e) => console.warn("[database] Error closing pooled connection:", e)))
+  }
+  await Promise.all(closePromises)
+}
+
+/**
+ * Resolves a connection string from connectionId via SQL_CONNECTIONS env var
+ * or falls back to direct connectionString parameter.
+ */
+function resolveConnectionString(connectionId?: string, connectionString?: string): string {
+  if (connectionId && connectionId.trim()) {
+    const envConnections = process.env.SQL_CONNECTIONS
+    if (!envConnections) {
+      throw new Error("SQL_CONNECTIONS environment variable is not defined.")
+    }
+    let parsed: Record<string, string>
+    try {
+      parsed = JSON.parse(envConnections)
+    } catch {
+      throw new Error("SQL_CONNECTIONS environment variable contains invalid JSON.")
+    }
+    const resolved = parsed[connectionId.trim()]
+    if (!resolved) {
+      throw new Error(`Connection ID '${connectionId}' not found in SQL_CONNECTIONS.`)
+    }
+    return resolved
+  }
+  if (connectionString && connectionString.trim()) {
+    return connectionString.trim()
+  }
+  throw new Error("Either connectionId or connectionString must be provided.")
+}
+
+/**
  * Extracts a human-readable database identifier from a connection string.
  */
 function extractDatabaseName(connStr: string, type: string): string {
@@ -28,8 +106,8 @@ function extractDatabaseName(connStr: string, type: string): string {
       return `${server}/${db}`
     }
     return "unknown"
-  } catch (error) {
-    console.warn("Failed to parse connection string:", error)
+  } catch {
+    console.warn("Failed to parse connection string for display name extraction")
     return "unknown"
   }
 }
@@ -135,7 +213,7 @@ function isReadOnlyQuery(sql: string): boolean {
   // Single-word write keywords (checked with \b word boundaries)
   const writeKeywords = [
     "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
-    "TRUNCATE", "EXEC", "EXECUTE", "MERGE", "REPLACE",
+    "TRUNCATE", "EXEC", "EXECUTE", "MERGE",
     "GRANT", "REVOKE", "RENAME", "SET", "INTO",
     "CALL", "COPY", "LOAD", "BULK",
   ]
@@ -190,26 +268,51 @@ function escapeMarkdownCell(value: string): string {
 }
 
 /**
- * Format rows as a markdown table.
+ * Format rows as a markdown table with column and size truncation.
  */
 function formatResults<T>(columns: string[], rows: T[]): string {
   if (rows.length === 0) return "_(0 rows returned)_"
 
-  const escapedColumns = columns.map(escapeMarkdownCell)
+  let displayedColumns = columns
+  let truncatedColsNote = ""
+  if (columns.length > 15) {
+    displayedColumns = columns.slice(0, 15)
+    truncatedColsNote = `\n\n_(Note: ${columns.length - 15} column(s) omitted from table output)_`
+  }
+
+  const escapedColumns = displayedColumns.map(escapeMarkdownCell)
   const header = `| ${escapedColumns.join(" | ")} |`
   const separator = `| ${escapedColumns.map(() => "---").join(" | ")} |`
-  const body = rows
-    .map((row) => {
-      const r = row as Record<string, unknown>
-      return `| ${columns.map((col) => {
-        const val = r[col]
-        if (val === null || val === undefined) return "NULL"
-        return escapeMarkdownCell(String(val))
-      }).join(" | ")} |`
-    })
-    .join("\n")
 
-  return `${header}\n${separator}\n${body}\n\n_${rows.length} row(s) returned_`
+  let body = ""
+  let displayedRowCount = 0
+  let isByteTruncated = false
+
+  for (const row of rows) {
+    const r = row as Record<string, unknown>
+    const line = `| ${displayedColumns.map((col) => {
+      const val = r[col]
+      if (val === null || val === undefined) return "NULL"
+      const valStr = String(val)
+      const truncated = valStr.length > 120 ? valStr.slice(0, 117) + "..." : valStr
+      return escapeMarkdownCell(truncated)
+    }).join(" | ")} |\n`
+
+    if (body.length + line.length > 50000) {
+      isByteTruncated = true
+      break
+    }
+    body += line
+    displayedRowCount++
+  }
+
+  const bodyTrimmed = body.trimEnd()
+  let summary = `_${rows.length} row(s) returned_`
+  if (isByteTruncated) {
+    summary = `_${displayedRowCount} of ${rows.length} row(s) displayed (output truncated at 50KB)_`
+  }
+
+  return `${header}\n${separator}\n${bodyTrimmed}\n\n${summary}${truncatedColsNote}`
 }
 
 /**
@@ -324,6 +427,8 @@ interface DatabaseDriver {
   connect(connectionString: string): Promise<void>
   /** Execute a SELECT/WITH query and return results */
   query(sql: string, limit: number, params?: unknown[]): Promise<QueryResult>
+  /** Explain a SELECT/WITH query execution plan */
+  explain(sql: string, analyze?: boolean): Promise<string>
   /** List all user tables in the database */
   listTables(): Promise<TableInfo[]>
   /** Describe columns of a specific table */
@@ -361,6 +466,8 @@ class PostgresDriver implements DatabaseDriver {
     }
     this.client = new pg.Client({ connectionString, connectionTimeoutMillis: 10000 })
     await this.client.connect()
+    // DB-level read-only enforcement & query timeout
+    await this.client.query("SET default_transaction_read_only = ON")
     await this.client.query("SET statement_timeout = '30000'")
   }
 
@@ -383,6 +490,12 @@ class PostgresDriver implements DatabaseDriver {
     return { columns, rows }
   }
 
+  async explain(sql: string, analyze = false): Promise<string> {
+    const verb = analyze ? "EXPLAIN (ANALYZE, FORMAT TEXT)" : "EXPLAIN (FORMAT TEXT)"
+    const result = await this.client!.query(`${verb} ${sql}`)
+    return result.rows.map((r: Record<string, unknown>) => Object.values(r)[0]).join("\n")
+  }
+
   async listTables(): Promise<TableInfo[]> {
     const result = await this.client!.query(
       `SELECT table_schema, table_name, table_type
@@ -398,9 +511,9 @@ class PostgresDriver implements DatabaseDriver {
   }
 
   async describeTable(tableName: string): Promise<ColumnInfo[]> {
-    // Support schema-qualified table names (e.g. "public.users")
+    // Support schema-qualified table names (e.g. "public.users"), default to "public"
     const dotIndex = tableName.indexOf(".")
-    let schema: string | null = null
+    let schema: string = "public"
     let table: string
     if (dotIndex >= 0) {
       schema = tableName.substring(0, dotIndex)
@@ -409,23 +522,12 @@ class PostgresDriver implements DatabaseDriver {
       table = tableName
     }
 
-    let queryText: string
-    let params: unknown[]
-    if (schema) {
-      queryText = `SELECT column_name, data_type, is_nullable, character_maximum_length,
-                          column_default, ordinal_position
-                   FROM information_schema.columns
-                   WHERE table_schema = $1 AND table_name = $2
-                   ORDER BY ordinal_position`
-      params = [schema, table]
-    } else {
-      queryText = `SELECT column_name, data_type, is_nullable, character_maximum_length,
-                          column_default, ordinal_position
-                   FROM information_schema.columns
-                   WHERE table_name = $1
-                   ORDER BY ordinal_position`
-      params = [table]
-    }
+    const queryText = `SELECT column_name, data_type, is_nullable, character_maximum_length,
+                        column_default, ordinal_position
+                 FROM information_schema.columns
+                 WHERE table_schema = $1 AND table_name = $2
+                 ORDER BY ordinal_position`
+    const params = [schema, table]
 
     const result = await this.client!.query(queryText, params)
     return result.rows.map((r: Record<string, unknown>) => ({
@@ -475,8 +577,19 @@ class MySQLDriver implements DatabaseDriver {
       uri: connectionString,
       connectTimeout: 10000,
     })
-    // CP-05: Set query timeout (30s) for MySQL 5.7+
-    await this.connection.execute("SET SESSION max_execution_time = 30000")
+    // DB-level read-only enforcement
+    await this.connection.execute("SET SESSION TRANSACTION READ ONLY").catch(() => {})
+
+    // CP-05: Set query timeout (30s) for MySQL 5.7+ / MariaDB
+    try {
+      await this.connection.execute("SET SESSION max_execution_time = 30000")
+    } catch {
+      try {
+        await this.connection.execute("SET SESSION max_statement_time = 30")
+      } catch {
+        console.warn("⚠️  Could not set query timeout — unsupported MySQL/MariaDB version")
+      }
+    }
   }
 
   async query(sql: string, limit: number, params?: unknown[]): Promise<QueryResult> {
@@ -487,6 +600,17 @@ class MySQLDriver implements DatabaseDriver {
     if (rowsArray.length === 0) return { columns: [], rows: [] }
     const columns = Object.keys(rowsArray[0])
     return { columns, rows: rowsArray }
+  }
+
+  async explain(sql: string, analyze = false): Promise<string> {
+    const verb = analyze ? "EXPLAIN ANALYZE" : "EXPLAIN"
+    const [rows] = await this.connection!.execute(`${verb} ${sql}`)
+    const rowsArray = rows as Record<string, unknown>[]
+    if (analyze || rowsArray.length === 0) {
+      return rowsArray.map((r) => Object.values(r)[0]).join("\n")
+    }
+    const cols = Object.keys(rowsArray[0])
+    return formatResults(cols, rowsArray)
   }
 
   async listTables(): Promise<TableInfo[]> {
@@ -604,11 +728,22 @@ class MSSQLDriver implements DatabaseDriver {
     return { columns, rows }
   }
 
+  async explain(sql: string): Promise<string> {
+    await this.pool!.request().query("SET SHOWPLAN_TEXT ON")
+    try {
+      const result = await this.pool!.request().query(sql)
+      const rows = result.recordset as Record<string, unknown>[]
+      return rows.map((r) => Object.values(r)[0]).join("\n")
+    } finally {
+      await this.pool!.request().query("SET SHOWPLAN_TEXT OFF").catch(() => {})
+    }
+  }
+
   async listTables(): Promise<TableInfo[]> {
     const result = await this.pool!.request().query(`
       SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE
       FROM INFORMATION_SCHEMA.TABLES
-      WHERE TABLE_TYPE = 'BASE TABLE'
+      WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
       ORDER BY TABLE_SCHEMA, TABLE_NAME
     `)
     return (result.recordset as Record<string, unknown>[]).map((r: Record<string, unknown>) => ({
@@ -619,9 +754,9 @@ class MSSQLDriver implements DatabaseDriver {
   }
 
   async describeTable(tableName: string): Promise<ColumnInfo[]> {
-    // Support schema-qualified table names (e.g. "dbo.users")
+    // Support schema-qualified table names (e.g. "dbo.users"), default to "dbo"
     const dotIndex = tableName.indexOf(".")
-    let schema: string | null = null
+    let schema: string = "dbo"
     let table: string
     if (dotIndex >= 0) {
       schema = tableName.substring(0, dotIndex)
@@ -630,38 +765,21 @@ class MSSQLDriver implements DatabaseDriver {
       table = tableName
     }
 
-    let queryText: string
-    if (schema) {
-      queryText = `
-        SELECT
-          c.COLUMN_NAME AS column_name,
-          c.DATA_TYPE AS data_type,
-          c.IS_NULLABLE AS is_nullable,
-          c.CHARACTER_MAXIMUM_LENGTH AS max_length,
-          c.COLUMN_DEFAULT AS [default]
-        FROM INFORMATION_SCHEMA.COLUMNS c
-        WHERE c.TABLE_SCHEMA = @schema AND c.TABLE_NAME = @tableName
-        ORDER BY c.ORDINAL_POSITION
-      `
-    } else {
-      queryText = `
-        SELECT
-          c.COLUMN_NAME AS column_name,
-          c.DATA_TYPE AS data_type,
-          c.IS_NULLABLE AS is_nullable,
-          c.CHARACTER_MAXIMUM_LENGTH AS max_length,
-          c.COLUMN_DEFAULT AS [default]
-        FROM INFORMATION_SCHEMA.COLUMNS c
-        WHERE c.TABLE_NAME = @tableName
-        ORDER BY c.ORDINAL_POSITION
-      `
-    }
+    const queryText = `
+      SELECT
+        c.COLUMN_NAME AS column_name,
+        c.DATA_TYPE AS data_type,
+        c.IS_NULLABLE AS is_nullable,
+        c.CHARACTER_MAXIMUM_LENGTH AS max_length,
+        c.COLUMN_DEFAULT AS [default]
+      FROM INFORMATION_SCHEMA.COLUMNS c
+      WHERE c.TABLE_SCHEMA = @schema AND c.TABLE_NAME = @tableName
+      ORDER BY c.ORDINAL_POSITION
+    `
 
     const request = this.pool!.request()
       .input("tableName", this.mssql!.NVarChar, table)
-    if (schema) {
-      request.input("schema", this.mssql!.NVarChar, schema)
-    }
+      .input("schema", this.mssql!.NVarChar, schema)
     const result = await request.query(queryText)
     return (result.recordset as Record<string, unknown>[]).map((r: Record<string, unknown>) => ({
       column_name: r.column_name as string,
@@ -683,7 +801,7 @@ class MSSQLDriver implements DatabaseDriver {
 // Driver dispatch
 // ---------------------------------------------------------------------------
 
-async function createDriver(type: string, connectionString: string): Promise<DatabaseDriver> {
+async function createDriver(type: string): Promise<DatabaseDriver> {
   switch (type) {
     case "postgres": return new PostgresDriver()
     case "mysql": return new MySQLDriver()
@@ -696,79 +814,105 @@ async function createDriver(type: string, connectionString: string): Promise<Dat
 // Tool definition
 // ---------------------------------------------------------------------------
 
+async function getOrCreateDriver(type: string, connectionString: string): Promise<DatabaseDriver> {
+  const poolKey = `${type}:${connectionString}`
+  const existing = connectionPools.get(poolKey)
+  if (existing) {
+    existing.lastUsed = Date.now()
+    return existing.driver
+  }
+
+  const driver = await createDriver(type)
+  await driver.connect(connectionString)
+  connectionPools.set(poolKey, { driver, lastUsed: Date.now(), key: poolKey })
+  schedulePoolCleanup()
+  return driver
+}
+
+// ---------------------------------------------------------------------------
+// Tool definition
+// ---------------------------------------------------------------------------
+
 export default tool({
-  description: `Query a database (PostgreSQL, MySQL, SQL Server) to retrieve data or schema information.
+  description: `Query a database (PostgreSQL, MySQL, SQL Server) to retrieve data, schema information, or query execution plans.
 
 Use action="query" with a SELECT statement to fetch data rows.
 Use action="schema" to explore database structure:
   - With a table name: describe columns, types, nullability, defaults
   - Without a table name: list all tables in the database
+Use action="explain" to inspect query execution plan (optional analyze=true for runtime stats).
 
-Results are returned as formatted markdown tables.`,
+Results are returned as formatted markdown tables or code blocks.`,
   args: {
     type: tool.schema.enum(["postgres", "mysql", "mssql"]).describe(
       "Database type: 'postgres' for PostgreSQL, 'mysql' for MySQL/MariaDB, 'mssql' for SQL Server",
     ),
-    action: tool.schema.enum(["query", "schema"]).describe(
+    action: tool.schema.enum(["query", "schema", "explain"]).describe(
       "'query' — run a SELECT SQL statement and return data rows. " +
-      "'schema' — explore database structure (list tables or describe a table's columns).",
+      "'schema' — explore database structure (list tables or describe a table's columns). " +
+      "'explain' — inspect query execution plan.",
     ),
-    connectionString: tool.schema.string().describe(
-      "Full connection string. Examples:\n" +
+    connectionId: tool.schema.string().optional().describe(
+      "Connection ID defined in SQL_CONNECTIONS env var (JSON map of connection ID to connection string). Preferred over raw connectionString for security.",
+    ),
+    connectionString: tool.schema.string().optional().describe(
+      "Full connection string. (Optional fallback if connectionId is not used). Examples:\n" +
       "- PostgreSQL: postgresql://user:password@host:5432/dbname\n" +
       "- MySQL: mysql://user:password@host:3306/dbname\n" +
       "- SQL Server: Server=host;Database=dbname;User Id=user;Password=password;TrustServerCertificate=true;",
     ),
-    query: tool.schema.string().describe(
-      "For action='query': a SELECT SQL statement (e.g. SELECT * FROM users WHERE id = 1).\n" +
+    query: tool.schema.string().optional().describe(
+      "For action='query' or 'explain': a SELECT SQL statement (e.g. SELECT * FROM users WHERE id = 1).\n" +
       "For action='schema': a table name to describe its columns (fallback if tableName is not provided), or leave empty to list all tables.",
     ),
     tableName: tool.schema.string().optional().describe(
       "For action='schema': the table name to describe its columns. Supports schema-qualified names (e.g. 'public.users'). " +
       "If not provided, falls back to the 'query' parameter for backward compatibility.",
     ),
+    analyze: tool.schema.boolean().optional().describe(
+      "For action='explain': if true, execute query to fetch actual runtime performance statistics (EXPLAIN ANALYZE). Default: false.",
+    ),
     limit: tool.schema.number().optional().describe(
       "Maximum number of rows to return (default: 100, max: 1000). Only applies to action='query'.",
     ),
   },
   async execute(args, context) {
-    const { type, action, connectionString, query, tableName, limit = 100 } = args
+    const { type, action, connectionId, connectionString, query, tableName, analyze = false, limit = 100 } = args
     const maxLimit = Math.min(limit, 1000)
     const limitCapped = limit > 1000
 
-    // Validate connection string is provided
-    if (!connectionString || !connectionString.trim()) {
-      return "A connection string is required."
+    let connStr: string
+    try {
+      connStr = resolveConnectionString(connectionId, connectionString)
+    } catch (err) {
+      return (err as Error).message
     }
 
     // Input size limits (CP-06)
-    if (connectionString.length > 10240) {
+    if (connStr.length > 10240) {
       return "Connection string exceeds maximum length of 10KB."
     }
     if (query && query.length > 102400) {
       return "Query exceeds maximum length of 100KB."
     }
 
-    // Validate: for "query" action, a query is required
-    if (action === "query" && (!query || !query.trim())) {
-      return "A SQL query is required when action is 'query'."
+    // Validate: for "query" or "explain" action, a query is required
+    if ((action === "query" || action === "explain") && (!query || !query.trim())) {
+      return `A SQL query is required when action is '${action}'.`
     }
 
     // Security: reject multi-statement queries
-    if (action === "query" && hasMultiStatement(query!)) {
+    if ((action === "query" || action === "explain") && hasMultiStatement(query!)) {
       return "Multi-statement queries are not allowed."
     }
 
     // Security: only allow read-only queries
-    if (action === "query" && !isReadOnlyQuery(query!)) {
+    if ((action === "query" || action === "explain") && !isReadOnlyQuery(query!)) {
       return "Only SELECT (read-only) queries are allowed. Write operations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, etc.) are not supported."
     }
 
-    let driver: DatabaseDriver | null = null
     try {
-      driver = await createDriver(type, connectionString)
-      await driver.connect(connectionString)
-
+      const driver = await getOrCreateDriver(type, connStr)
       let result: string
 
       if (action === "schema") {
@@ -797,6 +941,9 @@ Results are returned as formatted markdown tables.`,
             )
           }
         }
+      } else if (action === "explain") {
+        const planText = await driver.explain(query!, analyze)
+        result = `\`\`\`\n${planText}\n\`\`\``
       } else {
         // action === "query"
         const queryResult = await driver.query(query!, maxLimit, undefined)
@@ -808,11 +955,11 @@ Results are returned as formatted markdown tables.`,
       }
 
       // Append limit cap warning if the user requested more than 1000
-      if (limitCapped) {
+      if (limitCapped && action === "query") {
         result += "\n\nNote: limit capped to 1000."
       }
 
-      const dbId = extractDatabaseName(connectionString, type)
+      const dbId = extractDatabaseName(connStr, type)
 
       // Audit logging: log successful query execution
       console.debug(`[database] ${type}/${action} on ${dbId}: completed`)
@@ -834,19 +981,28 @@ Results are returned as formatted markdown tables.`,
         // MSSQL: redact the entire connection string (all key=value pairs) except the server name
         .replace(/(Server\s*=\s*[^;]+).*$/gmi, "$1;Password=<redacted>;")
         .replace(/password\s*[:=]\s*\S+/gi, "password=<redacted>")
-      const dbId = extractDatabaseName(connectionString, type)
+      const dbId = extractDatabaseName(connStr, type)
       // Audit logging: log query failure
       console.warn(`[database] ${type}/${action} on ${dbId}: error - ${sanitized}`)
       return `Database error [${dbId}]: ${sanitized}`
-    } finally {
-      if (driver) {
-        await driver.close().catch((e) => console.warn("Failed to close database connection:", e))
-      }
     }
   },
 })
 
 // CP-06: Export pure functions for testability
-export { extractDatabaseName, formatResults, isReadOnlyQuery, hasMultiStatement, escapeMarkdownCell, applyLimit, applyTop, stripCommentsAndStrings }
+export {
+  extractDatabaseName,
+  formatResults,
+  isReadOnlyQuery,
+  hasMultiStatement,
+  escapeMarkdownCell,
+  applyLimit,
+  applyTop,
+  stripCommentsAndStrings,
+  resolveConnectionString,
+  getOrCreateDriver,
+  closeAllPools,
+  connectionPools,
+}
 export type { DatabaseDriver }
 export { PostgresDriver, MySQLDriver, MSSQLDriver, createDriver }
