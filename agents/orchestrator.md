@@ -24,6 +24,7 @@ permission:
     planner: allow
     qa: allow
     security: allow
+    sub-coder: allow
     tester: allow
 ---
 

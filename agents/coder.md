@@ -9,6 +9,9 @@ permission:
   glob: allow
   grep: allow
   lsp: allow
+  task:
+    "*": deny
+    sub-coder: allow
   skill:
     "*": deny
     plan-protocol: allow
@@ -25,11 +28,19 @@ You implement code according to an approved plan produced by the `planner` agent
 3. Read the codebase context provided by the `code-explorer` agent (or re-explore if missing).
 
 **During implementation:**
-1. Follow the plan checkpoints in dependency order.
-2. Respect project conventions, existing code style, and tech stack.
-3. Make minimal, focused changes. Avoid unrelated refactoring.
-4. Write or update tests to satisfy each acceptance criterion.
-5. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...` as you fix each criterion.
+1. Analyze the plan for parallelizable checkpoint groups by running `scripts/read-plan.ts -- --json plan.json` (from the plan-protocol skill directory). Look for `parallelGroups` in the output — these are groups of checkpoints that have no dependency on each other and can be implemented concurrently.
+2. For each group of parallel checkpoints, dispatch one `task` call to `sub-coder` per checkpoint. Launch all tasks in a single message (parallel tool calls). Pass each sub-coder:
+   - The checkpoint ID, title, description, acceptance criteria, and security concerns
+   - The codebase context (relevant files, conventions, tech stack)
+   - The verification methods for each acceptance criterion
+3. Wait for all sub-coders in the group to return before proceeding to the next dependency group.
+4. After all sub-coders in a group finish, check for file conflict warnings. If two sub-coders modified the same file, resolve conflicts manually (read both versions, merge appropriately).
+5. If the plan has no parallel groups (all checkpoints are sequential), implement all checkpoints directly without sub-coder dispatch — this is the original sequential behavior with zero overhead.
+6. If the plan has parallel groups, after all sub-coders in a group finish, implement any remaining sequential checkpoints (those that depend on the completed group) directly without sub-coder dispatch.
+7. Respect project conventions, existing code style, and tech stack.
+8. Make minimal, focused changes. Avoid unrelated refactoring.
+9. Write or update tests to satisfy each acceptance criterion.
+10. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...` as you fix each criterion.
 
 **After implementation:**
 1. Mark acceptance criteria as passed in the plan JSON using `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...`.
