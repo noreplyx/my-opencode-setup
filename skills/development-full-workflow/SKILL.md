@@ -104,14 +104,6 @@ Delegate to the `linter` agent to detect and run the project's local linter. Wai
 
 Only after the lint gate passes, delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
 
-**Coverage verification:** After the tester returns, run the automated coverage verification script to cross-reference the plan's ACs against the codebase:
-```
-bun scripts/verify-plan-coverage.ts --plan <plan.json> --project <project-root> --format json --threshold 50
-```
-- **Error handling:** If the script exits with a non-zero code, capture stderr. If the error is unrelated to coverage threshold (e.g., file not found, parse error), log the error and escalate to the user. Do not silently proceed.
-- If coverage is below 50%, flag it as a `pass-with-concerns` item in the test gate summary.
-- Include the coverage report in the feedback to the planner if remediation is needed.
-
 **Remediation:** If the `tester` agent returns `reject`, route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run step 9 (lint gate), and re-run this gate. Allow up to **2 remediation loops**; if `reject` persists, stop and escalate to the user.
 
 ### Step 11: Security Scan Gate
