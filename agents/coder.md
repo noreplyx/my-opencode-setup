@@ -33,8 +33,7 @@ You implement code according to an approved plan produced by the `planner` agent
 
 **After implementation:**
 1. Mark acceptance criteria as passed in the plan JSON using `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...`.
-2. Summarize what was changed and any deviations from the plan with justification.
-3. Hand off to the `qa` agent for final verification if requested.
+2. Return to the orchestrator with a summary of what was changed and any deviations from the plan with justification. The orchestrator will route to the next gate.
 
 **Rules:**
 - Never implement from an unapproved plan (any reviewer `reject` blocks implementation).
