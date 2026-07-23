@@ -238,7 +238,7 @@ switch (command) {
     if (!cp) { console.error(`Error: checkpoint "${cpId}" not found`); process.exit(1); }
     const ac = cp.acceptance_criteria.find(a => a.id === acId);
     if (!ac) { console.error(`Error: acceptance criterion "${acId}" not found in "${cpId}"`); process.exit(1); }
-    ac.status = status;
+    ac.status = status as "pending" | "passed" | "failed" | "blocked";
     save();
     break;
   }
