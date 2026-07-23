@@ -6,7 +6,6 @@ permission:
   question: allow
   webfetch: allow
   searxng*: allow
-  github*: allow
   clickup*: allow
   sql-reader: allow
   redis: allow
@@ -24,8 +23,10 @@ permission:
     planner: allow
     qa: allow
     security: allow
-    sub-coder: allow
     tester: allow
+  bash:
+    "*": deny
+    "gh pr*": allow
 ---
 
 # Orchestrator
