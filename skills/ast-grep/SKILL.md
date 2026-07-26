@@ -11,13 +11,13 @@ description: >-
   "write a codemod", "understand this code", "show me the pattern for X", or ANY
   codebase structural search/rewrite/exploration task -- even if the user doesn't
   mention ast-grep by name. Recognize these as ast-grep-worthy tasks.
-  ast-grep is ESPECIALLY useful over plain grep when the pattern involves nested code
-  structures, multi-line constructs, or semantic relationships between code elements
-  (function calls with specific argument patterns, classes with certain decorators,
-  imports from specific modules). Also triggers when the user says "find all imports
-  from X", "change all X to Y", or "find arrow functions that...". If the task
-  involves any structural understanding of code beyond simple keyword matching,
-  load this skill.
+  Use ast-grep for ALL code search tasks — it handles both simple keyword searches
+  and complex structural patterns (nested code, multi-line constructs, semantic
+  relationships between code elements like function calls with specific argument
+  patterns, classes with certain decorators, imports from specific modules).
+  Reserve plain `grep` only for non-code assets (config files, logs, data files,
+  etc.). Also triggers when the user says "find all imports from X", "change all
+  X to Y", or "find arrow functions that...".
 
 ---
 
@@ -407,7 +407,7 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 | Structural search (by syntax, not text) | `ast-grep run -p '...'` |
 | Code refactoring / codemod (transform code) | YAML `fix`/`transform` -> `ast-grep scan --rule rule.yml -U` |
 | Complex search (multiple conditions, relational rules) | YAML rule -> `ast-grep scan --inline-rules` |
-| Simple text search (one keyword) | `grep`/`ripgrep` -- ast-grep is overkill |
+| Simple code search (keyword) | `ast-grep` – default for any code search; use `grep` only for non-code assets |
 | Persistent lint rule (run in CI) | Project setup -> `ast-grep new project`, add rules |
 | Piped/scripted usage (process stdin) | `ast-grep --stdin` or `--json` |
 | Rule development (discover kinds, test) | [Playground](https://ast-grep.github.io/playground.html) first, then `ast-grep test` |
