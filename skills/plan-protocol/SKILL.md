@@ -204,7 +204,7 @@ If the user chooses "Modify", update the affected checkpoints/ACs/SCs and re-con
       ```
        scripts/create-plan.ts -- "Plan Title" "Description" "Overview" plan.json 5
       ```
-       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/create-plan.ts -- ...`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/create-plan.ts -- ...`)
        The last argument is the number of checkpoints (default 3).
        Then edit the generated `plan.json` with your checkpoints, acceptance criteria, and security concerns.
        **Note:** The scaffolded output uses generic descriptions. You MUST edit each checkpoint's title, description, ACs, and SCs with concrete content before presenting the plan. The scaffold passes `--strict` validation but is not production-ready.
@@ -217,13 +217,13 @@ If the user chooses "Modify", update the affected checkpoints/ACs/SCs and re-con
        ```
        scripts/validate-plan.ts -- --strict plan.json
        ```
-       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/validate-plan.ts -- plan.json`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/validate-plan.ts -- plan.json`)
    3. **Fix if invalid** — if validation fails, correct the JSON and re-validate until it passes
    4. **Derive the Markdown** — generate the Markdown summary from the validated JSON by running:
      ```
      scripts/read-plan.ts -- plan.json > plan.md
      ```
-       (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/read-plan.ts -- plan.json > plan.md`)
+       (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/read-plan.ts -- plan.json > plan.md`)
 
 ---
 
@@ -236,7 +236,7 @@ To render an existing plan JSON as human-readable Markdown:
    ```
    scripts/read-plan.ts -- plan.json
    ```
-   (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/read-plan.ts -- plan.json`)
+   (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/read-plan.ts -- plan.json`)
 3. The script outputs the full Markdown checklist to stdout. Redirect to a file if needed:
    ```
    scripts/read-plan.ts -- plan.json > plan.md
@@ -322,7 +322,7 @@ To verify a plan JSON for correctness:
    ```
    scripts/validate-plan.ts -- plan.json
    ```
-   (Run from the skill directory, or use `bun --cwd <skill-dir> run scripts/validate-plan.ts -- plan.json`)
+   (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/validate-plan.ts -- plan.json`)
 2. The validator checks:
    - **Schema conformance** — all required fields, types, patterns, and enum values (via `ajv` against the JSON Schema)
    - **Checkpoint ID uniqueness** — no duplicate CP IDs
