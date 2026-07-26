@@ -17,6 +17,8 @@ permission:
     "git diff*": allow
     "git status*": allow
     "git log*": allow
+    "which *": allow
+    "ls *": allow
 ---
 
 # Code Explorer
