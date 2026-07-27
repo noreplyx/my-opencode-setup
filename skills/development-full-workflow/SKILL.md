@@ -10,7 +10,7 @@ description: >-
   13-step workflow, conflict resolution rules, remediation loops, gate
   sequencing, and verdict taxonomy usage. Use when the Orchestrator is running
   a full development pipeline that requires structured planning, multi-reviewer
-  gates, sequential quality gates (lint -> test -> security -> QA), and
+  gates, parallel quality gates (lint || test, then security || QA), and
   comprehensive reporting. Also use when the user asks for a "full workflow",
   "development pipeline", "multi-agent workflow", "orchestrated development",
   or "complete implementation process" with planning, review, implementation,
@@ -94,31 +94,39 @@ Do **not** proceed to implementation until the user selects "Approve".
 
 Delegate to the `coder` agent with the approved plan. The coder implements the code and runs relevant tests and scans. For plans with independent checkpoints, the coder may dispatch parallel sub-coder tasks to implement multiple checkpoints concurrently.
 
-### Step 9: Lint Gate
+### Step 9: Lint + Test Gates (Parallel Pair 1)
 
-Delegate to the `linter` agent to detect and run the project's local linter. Wait for a clear verdict.
+Launch **both** the `linter` and `tester` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — lint failures do not affect test results and vice versa.
 
-**Remediation:** If the `linter` agent returns `reject`, route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run this gate. Allow up to **2 remediation loops**; if `reject` persists, stop and escalate to the user.
+**Lint Gate** — Delegate to the `linter` agent to detect and run the project's local linter. Wait for a clear verdict.
 
-### Step 10: Test Gate
+**Test Gate** — Delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
 
-Only after the lint gate passes, delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
+Wait for both gates to return before proceeding.
 
-**Remediation:** If the `tester` agent returns `reject`, route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run step 9 (lint gate), and re-run this gate. Allow up to **2 remediation loops**; if `reject` persists, stop and escalate to the user.
+**Remediation (both gates):**
+- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **only the lint gate** (step 9a). The test gate result is preserved — do not re-run it.
+- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **both** the lint gate and test gate (step 9) — lint must re-run because code changed.
+- If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run both gates (step 9).
+- Allow up to **2 remediation loops per gate** (tracked independently). If either gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
-### Step 11: Security Scan Gate
+### Step 10: Security Scan + QA Verification Gates (Parallel Pair 2)
 
-Only after the test gate passes, delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
+Only after **both** the lint and test gates have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
 
-**Remediation:** If the `security` agent returns `reject`, route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 8 (coder re-implements the fix), re-run step 9 (lint gate), re-run step 10 (test gate), and re-run this gate. Allow up to **2 remediation loops**; if `reject` persists, stop and escalate to the user.
+**Security Scan Gate** — Delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
 
-### Step 12: Verify (QA Verification Gate)
+**QA Verification Gate** — Delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run the automated coverage verification script as part of its workflow.
 
-Only after the security scan gate passes, delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run the automated coverage verification script as part of its workflow.
+Wait for both gates to return before proceeding.
 
-**Remediation:** If the `qa` agent returns `reject`, route the findings back to the `planner` agent to update the plan. Then return to step 8 (coder implements the fixes), re-run step 9 (lint gate), re-run step 10 (test gate), re-run step 11 (security scan), and re-run this gate. Allow up to **2 remediation loops**; if `reject` persists, stop and escalate to the user.
+**Remediation (both gates):**
+- If **only the security gate** returns `reject`: route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 8 (coder re-implements the fix), re-run step 9 (lint + test gates), and re-run **only the security gate** (step 10a). The QA gate result is preserved — do not re-run it.
+- If **only the QA gate** returns `reject`: route the findings back to the `planner` agent to update the plan. Then return to step 8 (coder implements the fixes), re-run step 9 (lint + test gates), and re-run **only the QA gate** (step 10b). The security gate result is preserved — do not re-run it.
+- If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run step 9 (lint + test gates), and re-run both gates (step 10).
+- Allow up to **2 remediation loops per gate** (tracked independently). If either gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
-### Step 13: Report
+### Step 11: Report
 
 Return a concise final summary to the user: what was done, key decisions, risks, lint results, test results (including coverage percentage from the automated verification), security scan results, QA verdict, any `pass-with-concerns` items raised at each gate, any documented reviewer conflicts, and next steps.
 
@@ -129,11 +137,12 @@ Return a concise final summary to the user: what was done, key decisions, risks,
 - Preserve the user's original wording and intent when delegating.
 - When the `coder` agent returns an unapproved plan, route it back to the `planner` agent with the reason.
 - Always obtain explicit user approval (step 7) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate.
-- Do **not** advance to the `test` gate until the `lint` gate has passed.
-- Do **not** advance to the `security` scan gate until the `test` gate has passed.
-- Do **not** advance to the `qa` final verification step until the `security` scan gate has passed.
-- Do **not** report final success until the `qa` verification step has passed.
-- Track remediation loops independently: the lint, test, security, and QA gates each have their own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
+- Launch lint and test gates **concurrently** (parallel pair 1). Wait for both to finish before proceeding.
+- Launch security scan and QA verification gates **concurrently** (parallel pair 2). Wait for both to finish before proceeding.
+- Do **not** advance to parallel pair 2 (security + QA) until **both** gates in parallel pair 1 (lint + test) have passed.
+- Do **not** report final success until **both** gates in parallel pair 2 (security + QA) have passed.
+- Track remediation loops independently: each of the 4 gates (lint, test, security, QA) has its own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
+- When remediating a single gate failure, preserve the passing result of its parallel partner (do not re-run the passing gate) unless code changes were made that could affect it.
 
 ## References
 

@@ -28,19 +28,14 @@ You implement a single plan checkpoint dispatched by the `coder` agent. You are 
 5. If you detect a file conflict with another checkpoint (same file being modified), flag it in your output — do not overwrite.
 
 **After implementation:**
-1. Run pre-flight validation on the affected scope:
-   - Detect and run the project's local linter on changed files
-   - Detect and run typecheck on changed files
-   - Run tests for affected test files only (e.g., `jest --findRelatedTests <changed-files>`, `pytest <changed-test-files>`)
-2. Report back to the coder agent with:
+1. Report back to the coder agent with:
    - What files were changed and why
    - Each AC's status (passed/failed) with verification evidence
-   - Pre-flight results (lint/typecheck/test output excerpts)
    - Any file conflict warnings
    - Any deviations from the plan with justification
 
 **Rules:**
 - Do not modify files outside the checkpoint's scope.
 - Do not introduce new dependencies without explicit AC approval.
-- Do not run full security scans — the security agent owns that gate.
+- Do not run lint, typecheck, tests, or security scans — the orchestrator's gates own all validation.
 - If you cannot complete the checkpoint (blocker, missing dependency), report it clearly.
