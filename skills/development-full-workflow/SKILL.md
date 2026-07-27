@@ -113,7 +113,7 @@ Only after **all three** of the lint, typecheck, and test gates have passed (ste
 
 **Security Scan Gate** — Delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
 
-**QA Verification Gate** — Delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run the automated coverage verification script as part of its workflow.
+**QA Verification Gate** — Delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run `scripts/verify-plan-coverage.ts` as part of its workflow to produce an objective coverage baseline.
 
 Wait for both gates to return before proceeding.
 
