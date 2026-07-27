@@ -94,7 +94,7 @@ Do **not** proceed to implementation until the user selects "Approve".
 
 Delegate to the `coder` agent with the approved plan. The coder implements the code and runs relevant tests and scans. For plans with independent checkpoints, the coder may dispatch parallel sub-coder tasks to implement multiple checkpoints concurrently.
 
-### Step 9: Lint + TypeCheck + Test Gates (Parallel Pair 1)
+### Step 9: Lint/TypeCheck + Test Gates (Parallel Pair 1)
 
 Launch the `linter` agent (which returns both lint and typecheck verdicts) and the `tester` agent **concurrently** in a single message (parallel tool calls). These three gates are independent — failures in one do not affect the others.
 
