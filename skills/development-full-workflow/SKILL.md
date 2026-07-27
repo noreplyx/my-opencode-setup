@@ -90,7 +90,7 @@ Delegate to the `coder` agent with the approved plan. The coder implements the c
 
 ### Step 9: Lint/TypeCheck + Test Gates (Parallel Pair 1)
 
-Launch the `linter` agent (which returns both lint and typecheck verdicts) and the `tester` agent **concurrently** in a single message (parallel tool calls). These three gates are independent — failures in one do not affect the others.
+Launch the `linter` agent (which returns both lint and typecheck verdicts) and the `tester` agent **concurrently** in a single message (parallel tool calls). The linter agent covers two gates (lint + typecheck); the tester agent covers the test gate. These three gates are independent — failures in one do not affect the others.
 
 **Lint Gate** — Delegate to the `linter` agent to detect and run the project's local linter. Wait for a clear verdict.
 
@@ -109,7 +109,7 @@ Wait for all three gates to return before proceeding.
 
 ### Step 10: Security Scan + QA Verification Gates (Parallel Pair 2)
 
-Only after **all three** the lint, typecheck, and test gates have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
+Only after **all three** of the lint, typecheck, and test gates have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
 
 **Security Scan Gate** — Delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
 
