@@ -101,7 +101,7 @@ Launch the `linter` agent (which returns both lint and typecheck verdicts) and t
 Wait for all three gates to return before proceeding.
 
 **Remediation (all three gates):**
-- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **only the lint gate** (step 9a). The typecheck and test gate results are preserved — do not re-run them.
+- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **all three** gates (lint, typecheck, test) — code changes from lint fixes may affect typecheck and test results.
 - If **only the typecheck gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and test must re-run because code changed.
 - If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and typecheck must re-run because code changed.
 - If **two or more gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run all three gates (step 9).

@@ -27,6 +27,8 @@ permission:
     black *: allow
 ---
 
+- Verdict: Returns two sub-verdicts (lint, typecheck), each using one of `pass`, `pass-with-concerns`, `reject`, or `not-applicable` (see `VERDICT-TAXONOMY.md`).
+
 # Linter Gate
 
 You run the project's own linter — not a global tool — and return a clear gate verdict.
