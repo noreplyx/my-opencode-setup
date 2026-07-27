@@ -7,7 +7,7 @@ description: >-
   user approval gate, implement, lint gate, test gate, security scan gate, QA
   verification gate, and final report. This skill is automatically loaded by the
   Orchestrator agent at the start of every pipeline. It defines the exact
-  13-step workflow, conflict resolution rules, remediation loops, gate
+  11-step workflow, conflict resolution rules, remediation loops, gate
   sequencing, and verdict taxonomy usage. Use when the Orchestrator is running
   a full development pipeline that requires structured planning, multi-reviewer
   gates, parallel quality gates (lint || test, then security || QA), and
@@ -20,7 +20,7 @@ allowed-tools: Bash(*) task(*) question(*) webfetch(*) searxng(*) github(*) clic
 
 # Development Full Workflow
 
-This skill defines the complete 13-step development pipeline used by the Orchestrator agent. It coordinates a team of specialized subagents to deliver high-quality, secure, well-architected, and tested code.
+This skill defines the complete 11-step development pipeline used by the Orchestrator agent. It coordinates a team of specialized subagents to deliver high-quality, secure, well-architected, and tested code.
 
 ## Workflow (execute in order)
 
@@ -94,25 +94,28 @@ Do **not** proceed to implementation until the user selects "Approve".
 
 Delegate to the `coder` agent with the approved plan. The coder implements the code and runs relevant tests and scans. For plans with independent checkpoints, the coder may dispatch parallel sub-coder tasks to implement multiple checkpoints concurrently.
 
-### Step 9: Lint + Test Gates (Parallel Pair 1)
+### Step 9: Lint + TypeCheck + Test Gates (Parallel Pair 1)
 
-Launch **both** the `linter` and `tester` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — lint failures do not affect test results and vice versa.
+Launch the `linter` agent (which returns both lint and typecheck verdicts) and the `tester` agent **concurrently** in a single message (parallel tool calls). These three gates are independent — failures in one do not affect the others.
 
 **Lint Gate** — Delegate to the `linter` agent to detect and run the project's local linter. Wait for a clear verdict.
 
+**TypeCheck Gate** — Delegate to the `linter` agent with instructions to run the project's type checker (e.g., `tsc --noEmit`, `mypy`, `cargo check`, `gotype`, etc.) as a separate step after linting. The linter agent will detect the type checker from project manifests and run it. Wait for a clear verdict.
+
 **Test Gate** — Delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
 
-Wait for both gates to return before proceeding.
+Wait for all three gates to return before proceeding.
 
-**Remediation (both gates):**
-- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **only the lint gate** (step 9a). The test gate result is preserved — do not re-run it.
-- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **both** the lint gate and test gate (step 9) — lint must re-run because code changed.
-- If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run both gates (step 9).
-- Allow up to **2 remediation loops per gate** (tracked independently). If either gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
+**Remediation (all three gates):**
+- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **only the lint gate** (step 9a). The typecheck and test gate results are preserved — do not re-run them.
+- If **only the typecheck gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **only the typecheck gate** (step 9b). The lint and test gate results are preserved — do not re-run them.
+- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and typecheck must re-run because code changed.
+- If **two or more gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run all three gates (step 9).
+- Allow up to **2 remediation loops per gate** (tracked independently across lint, typecheck, and test). If any gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
 ### Step 10: Security Scan + QA Verification Gates (Parallel Pair 2)
 
-Only after **both** the lint and test gates have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
+Only after **all three** the lint, typecheck, and test gates have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
 
 **Security Scan Gate** — Delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
 
@@ -137,12 +140,12 @@ Return a concise final summary to the user: what was done, key decisions, risks,
 - Preserve the user's original wording and intent when delegating.
 - When the `coder` agent returns an unapproved plan, route it back to the `planner` agent with the reason.
 - Always obtain explicit user approval (step 7) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate.
-- Launch lint and test gates **concurrently** (parallel pair 1). Wait for both to finish before proceeding.
+- Launch lint, typecheck, and test gates **concurrently** (parallel pair 1). Wait for all three to finish before proceeding.
 - Launch security scan and QA verification gates **concurrently** (parallel pair 2). Wait for both to finish before proceeding.
-- Do **not** advance to parallel pair 2 (security + QA) until **both** gates in parallel pair 1 (lint + test) have passed.
+- Do **not** advance to parallel pair 2 (security + QA) until **all three** gates in parallel pair 1 (lint + typecheck + test) have passed.
 - Do **not** report final success until **both** gates in parallel pair 2 (security + QA) have passed.
-- Track remediation loops independently: each of the 4 gates (lint, test, security, QA) has its own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
-- When remediating a single gate failure, preserve the passing result of its parallel partner (do not re-run the passing gate) unless code changes were made that could affect it.
+- Track remediation loops independently: each of the 5 gates (lint, typecheck, test, security, QA) has its own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
+- When remediating a single gate failure, preserve the passing results of its parallel partners (do not re-run the passing gates) unless code changes were made that could affect them.
 
 ## References
 
