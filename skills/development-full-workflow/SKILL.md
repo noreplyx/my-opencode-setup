@@ -51,20 +51,14 @@ Wait for all four feedback items.
 
 ### Step 5: Consolidate Feedback with Conflict Resolution
 
-Collect all four review verdicts and apply priority-based conflict resolution:
+Collect all four review verdicts and apply equal-weight conflict resolution:
 
-**Priority hierarchy (highest to lowest):** Security > Architecture > Engineer > QA
-- Security `reject` — overrides all other verdicts (safety-critical issues must be resolved first)
-- Architecture `reject` — overrides Engineer and QA (structural issues are expensive to fix later)
-- Engineer `reject` — overrides QA (engineering quality is foundational)
-- QA `reject` — lowest priority (testability can be improved after structural/engineering issues)
+**Equal-weight conflict resolution:** All four reviewers have equal standing. Any single `reject` blocks the plan — no reviewer's verdict overrides another's.
 
-**Conflict detection:** For each pair of reviewers, if a higher-priority reviewer returns `reject` and a lower-priority one returns `pass`, flag the conflict and document why the higher-priority verdict prevails.
-
-**Same-level conflicts:** If two reviewers at the same priority level disagree (e.g., both are reviewers with equal standing), escalate to the user with both positions documented.
+**Conflict detection:** If any reviewer returns `reject` and another returns `pass`, flag the conflict. Since all reviewers are equal, a single `reject` always prevails regardless of which reviewer issued it.
 
 **Output:** A consolidated feedback report that:
-- Lists all four verdicts in priority order
+- Lists all four verdicts
 - Flags any conflicts between reviewers
 - States the final gating decision with rationale
 - Documents dissenting opinions for the final report
@@ -73,7 +67,7 @@ Return the consolidated report to the `planner` agent to update the plan.
 
 ### Step 6: Plan Review Gate
 
-Confirm the plan has passed review using the consolidated verdict. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. Apply the priority hierarchy: if the highest-priority reviewer that returned a verdict other than `not-applicable` returned `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, the plan is ready for user review. Surface any `pass-with-concerns` items and any documented conflicts in the final report.
+Confirm the plan has passed review using the consolidated verdict. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. Apply the equal-weight rule: if **any** reviewer returned `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, the plan is ready for user review. Surface any `pass-with-concerns` items and any documented conflicts in the final report.
 
 ### Step 7: User Approval Gate
 
