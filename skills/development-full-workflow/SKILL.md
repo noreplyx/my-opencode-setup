@@ -96,7 +96,7 @@ Launch the `linter` agent (which returns both lint and typecheck verdicts) and t
 
 **TypeCheck Gate** — Delegate to the `linter` agent with instructions to run the project's type checker (e.g., `tsc --noEmit`, `mypy`, `cargo check`, `gotype`, etc.) as a separate step after linting. The linter agent will detect the type checker from project manifests and run it. Wait for a clear verdict.
 
-**Test Gate** — Delegate to the `tester` agent to run the project's local tests and verify acceptance-criterion coverage. Wait for a clear verdict.
+**Test Gate** — Delegate to the `tester` agent to run the project's local tests. Wait for a clear verdict.
 
 Wait for all three gates to return before proceeding.
 
