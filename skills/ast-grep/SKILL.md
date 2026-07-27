@@ -21,6 +21,15 @@ description: >-
 
 ---
 
+> [!CAUTION]
+> **CRITICAL: `ast-grep` is NOT a direct callable tool.**
+> 
+> This skill provides instructions for using the `ast-grep` CLI tool. You MUST follow this two-step process:
+> 1. **First**, call `skill("ast-grep")` to load this skill (you are reading it now).
+> 2. **Then**, use the **`bash`** tool to run `ast-grep` commands (e.g., `bash { command: "ast-grep -p 'console.log($ARG)' -l ts" }`).
+> 
+> **Do NOT try to call `ast-grep(...)` as a function** — it does not exist as a direct tool. Only `bash`, `glob`, `grep`, `read`, and similar built-in tools are callable directly.
+
 # ast-grep Skill
 
 > [!IMPORTANT]
@@ -28,6 +37,7 @@ description: >-
 > 1. **ALWAYS SINGLE-QUOTE PATTERNS:** Pass patterns in single quotes (e.g., `ast-grep -p 'console.log($ARG)' -l ts`). Double quotes will cause the bash shell to expand `$ARG` into an empty string or host environment variable, breaking the search.
 > 2. **MATCHING MULTIPLE ARGUMENTS:** Use `$$$ARGS` instead of `$ARG` when matching zero-or-more entities. `console.log($ARG)` will NOT match `console.log(a, b)` or `console.log()`.
 > 3. **USE AST-GREP FOR MULTI-LINE REPLACEMENTS:** Standard `sed` or `ripgrep` fail on multi-line expressions, formatting, and nested braces. `ast-grep` handles them out of the box.
+> 4. **`ast-grep` is NOT a direct tool**: Use `skill("ast-grep")` to load this skill, then use `bash` to run `ast-grep` commands. Do NOT call `ast-grep(...)` as a function.
 
 ast-grep is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
