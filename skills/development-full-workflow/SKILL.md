@@ -118,8 +118,8 @@ Only after **all three** of the lint, typecheck, and test gates have passed (ste
 Wait for both gates to return before proceeding.
 
 **Remediation (both gates):**
-- If **only the security gate** returns `reject`: route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 8 (coder re-implements the fix), re-run step 9 (lint, typecheck, and test gates), and re-run **only the security gate** (step 10a). The QA gate result is preserved — do not re-run it.
-- If **only the QA gate** returns `reject`: route the findings back to the `planner` agent to update the plan. Then return to step 8 (coder implements the fixes), re-run step 9 (lint, typecheck, and test gates), and re-run **only the QA gate** (step 10b). The security gate result is preserved — do not re-run it.
+- If **only the security gate** returns `reject`: route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 8 (coder re-implements the fix), re-run step 9 (lint, typecheck, and test gates), and re-run **both gates** (step 10).
+- If **only the QA gate** returns `reject`: route the findings back to the `planner` agent to update the plan. Then return to step 8 (coder implements the fixes), re-run step 9 (lint, typecheck, and test gates), and re-run **both gates** (step 10).
 - If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run step 9 (lint, typecheck, and test gates), and re-run both gates (step 10).
 - Allow up to **2 remediation loops per gate** (tracked independently). If either gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
@@ -139,7 +139,6 @@ Return a concise final summary to the user: what was done, key decisions, risks,
 - Do **not** advance to parallel pair 2 (security + QA) until **all three** gates in parallel pair 1 (lint + typecheck + test) have passed.
 - Do **not** report final success until **both** gates in parallel pair 2 (security + QA) have passed.
 - Track remediation loops independently: each of the 5 gates (lint, typecheck, test, security, QA) has its own 2-loop budget. If any gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
-- When remediating a single gate failure, preserve the passing results of its parallel partners (do not re-run the passing gates) unless code changes were made that could affect them.
 
 ## References
 
