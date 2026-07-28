@@ -11,8 +11,11 @@ permission:
   skill:
     "*": deny
     ast-grep: allow
+    graphify: allow
   bash:
     "*": deny
+    "echo *": allow
+    "graphify *": allow
     "ast-grep *": allow
     "git diff*": allow
     "git status*": allow

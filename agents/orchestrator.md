@@ -29,6 +29,7 @@ permission:
   bash:
     "*": deny
     "gh pr*": allow
+    "echo *": allow
 ---
 
 # Orchestrator
