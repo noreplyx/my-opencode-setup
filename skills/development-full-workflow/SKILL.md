@@ -101,10 +101,10 @@ Launch the `linter` agent (which returns both lint and typecheck verdicts) and t
 Wait for all three gates to return before proceeding.
 
 **Remediation (all three gates):**
-- If **only the lint gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run **all three** gates (lint, typecheck, test) — code changes from lint fixes may affect typecheck and test results.
-- If **only the typecheck gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and test must re-run because code changed.
-- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and typecheck must re-run because code changed.
-- If **two or more gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues) and re-run all three gates (step 9).
+- If **only the lint gate** returns `reject`: route findings directly to the `coder` agent (the plan is unchanged — only code formatting/style needs fixing). Then re-run **all three** gates (lint, typecheck, test) — code changes from lint fixes may affect typecheck and test results.
+- If **only the typecheck gate** returns `reject`: route findings directly to the `coder` agent (the plan is unchanged — only type errors need fixing). Then re-run **all three** gates (lint, typecheck, test) — lint and test must re-run because code changed.
+- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent (test failures may reveal missing ACs or scope issues). Then return to step 8 (coder fixes the issues), re-run **all three** gates (lint, typecheck, test) — lint and typecheck must re-run because code changed.
+- If **two or more gates** return `reject`: route the plan and findings back to the `planner` agent (broader issues likely need plan adjustments). Then return to step 8 (coder fixes the issues) and re-run all three gates (step 9).
 - Allow up to **2 remediation loops per gate** (tracked independently across lint, typecheck, and test). If any gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
 ### Step 10: Security Scan + QA Verification Gates (Parallel Pair 2)
