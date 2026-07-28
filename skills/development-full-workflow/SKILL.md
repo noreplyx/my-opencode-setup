@@ -63,11 +63,15 @@ Collect all four review verdicts and apply equal-weight conflict resolution:
 - States the final gating decision with rationale
 - Documents dissenting opinions for the final report
 
-Return the consolidated report to the `planner` agent to update the plan.
+Return the consolidated report as input to the Plan Review Gate (step 6).
 
 ### Step 6: Plan Review Gate
 
-Confirm the plan has passed review using the consolidated verdict. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. Apply the equal-weight rule: if **any** reviewer returned `reject`, send the plan back to the `planner` for another iteration. If all reviewers return `pass`, `pass-with-concerns`, or `not-applicable`, the plan is ready for user review. Surface any `pass-with-concerns` items and any documented conflicts in the final report.
+Evaluate the consolidated verdict. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. Apply the equal-weight rule:
+- If **any** reviewer returned `reject`: route the consolidated report and plan back to the `planner` agent for revision, then re-enter the review cycle at step 4.
+- If all reviewers returned `pass`, `pass-with-concerns`, or `not-applicable`: the plan is ready for user review. Proceed to step 7.
+
+Surface any `pass-with-concerns` items and any documented conflicts in the final report.
 
 ### Step 7: User Approval Gate
 
