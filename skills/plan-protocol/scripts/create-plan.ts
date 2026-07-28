@@ -1,9 +1,17 @@
-import { writeFileSync } from "fs";
+import { writeFileSync, existsSync, mkdirSync } from "fs";
+import { resolve } from "path";
 import { validatePlan } from "./validate-plan.ts";
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 function showHelp(): void {
   const help = `
-Usage: bun scripts/create-plan.ts [options] <title> <description> <overview> <output-path> [checkpoints...]
+Usage: bun scripts/create-plan.ts [options] <title> <description> <overview> [output-path] [checkpoints...]
 
 Create a plan JSON scaffold.
 
@@ -11,10 +19,12 @@ Options:
   <title>             Plan title (required)
   <description>       One-sentence summary (required)
   <overview>          Detailed overview (required)
-  <output-path>       Output file path (default: plan.json)
+  [output-path]       Output file path (default: plan.json, or auto-generated with --name)
   [checkpoints...]    Descriptions for each checkpoint in order.
                       Special format: "Title::Description" for custom titles.
                       Use "~" to indicate no dependency on previous checkpoint (parallelizable).
+  --name <name>       Auto-generate path as plans/{date}-{slug}.json (slugified from <name>).
+                      Overrides [output-path] if both are provided.
   --ac "desc::verify"  Custom acceptance criteria for the last checkpoint (repeatable).
                       Format: "description::verification_method" or just "description".
                       If omitted, 2 default ACs are generated per checkpoint.
@@ -28,6 +38,7 @@ Examples:
   bun scripts/create-plan.ts "My API" "Build an API" "Full plan" plan.json 5
   bun scripts/create-plan.ts "My API" "Build" "Plan" plan.json "Setup" "~Auth" "Core"
   bun scripts/create-plan.ts "My API" "Build" "Plan" plan.json "Login" --ac "Returns JWT::curl POST /login; assert 200 with token" --ac "Rejects bad password::curl POST /login with wrong password; assert 401"
+  bun scripts/create-plan.ts "My API" "Build an API" "Full plan" --name "Add Auth"
 `;
   console.log(help);
 }
@@ -88,13 +99,17 @@ let outPath: string;
 let checkpointInputs: string[];
 let customACs: { desc: string; verify: string }[] = [];
 
-// Extract --ac flags before parsing other args
+// Extract --ac and --name flags before parsing other args
+let nameFlag: string | undefined;
 const acFlags: { desc: string; verify: string }[] = [];
 const filteredArgs: string[] = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--ac" && i + 1 < args.length) {
     const parts = args[i + 1].split("::");
     acFlags.push({ desc: parts[0], verify: parts[1] || `Run tests; assert expected behavior` });
+    i++;
+  } else if (args[i] === "--name" && i + 1 < args.length) {
+    nameFlag = args[i + 1];
     i++;
   } else {
     filteredArgs.push(args[i]);
@@ -122,6 +137,14 @@ if (filteredArgs.length >= 4 && !isNaN(Number(filteredArgs[3]))) {
   overview = filteredArgs[2];
   outPath = filteredArgs[3];
   checkpointInputs = filteredArgs.slice(4);
+} else if (filteredArgs.length >= 3 && nameFlag) {
+  title = filteredArgs[0];
+  description = filteredArgs[1];
+  overview = filteredArgs[2];
+  const date = new Date().toISOString().slice(0, 10);
+  const slug = slugify(nameFlag);
+  outPath = `plans/${date}-${slug}.json`;
+  checkpointInputs = filteredArgs.slice(3);
 } else {
   console.error("Error: insufficient arguments. See --help for usage.");
   process.exit(1);
@@ -214,6 +237,10 @@ export function createPlanFile(
   };
 
   const output = JSON.stringify(template, null, 2);
+  const dir = outputPath.includes("/") ? outputPath.slice(0, outputPath.lastIndexOf("/")) : ".";
+  if (dir !== "." && !existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
   writeFileSync(outputPath, output, "utf-8");
   console.log(`Plan scaffold written to ${outputPath}`);
 

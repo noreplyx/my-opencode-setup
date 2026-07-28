@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync, existsSync } from "fs";
 import { resolve } from "path";
 import { validatePlan } from "./validate-plan.ts";
 import type { SecurityConcern, AcceptanceCriterion, Checkpoint, Plan, PlanData } from "./types.ts";
@@ -419,12 +419,15 @@ function renderSchemaDocs(): string {
   lines.push("| Tool | Command | Purpose |");
   lines.push("|------|---------|---------|");
   lines.push("| Create | `scripts/create-plan.ts -- <title> <desc> <overview> <path> [N]` | Scaffold a plan skeleton |");
+  lines.push("| Create (auto-path) | `scripts/create-plan.ts -- <title> <desc> <overview> --name <name>` | Scaffold with auto-generated `plans/{date}-{slug}.json` path |");
   lines.push("| Render | `scripts/read-plan.ts -- <plan.json>` | Display plan as Markdown |");
+  lines.push("| List | `scripts/read-plan.ts -- --list [dir]` | List all plan files in a directory |");
   lines.push("| Validate | `scripts/validate-plan.ts -- <plan.json>` | Check schema + integrity |");
   lines.push("| Validate (strict) | `scripts/validate-plan.ts -- --strict <plan.json>` | + semantic quality checks |");
   lines.push("| Understand | `scripts/read-plan.ts -- --understand <plan.json>` | Analyze execution order, critical path, security, progress |");
   lines.push("| Update | `scripts/update-plan.ts -- <plan.json> <cmd> [args]` | Modify plan in-place |");
   lines.push("| Diff | `scripts/diff-plan.ts -- <a.json> <b.json>` | Compare two plan versions |");
+  lines.push("| Delete | `scripts/delete-plan.ts -- <plan.json>` | Delete a plan file from disk |");
   lines.push("| Schema | `scripts/read-plan.ts -- --schema` | Display this schema reference |");
   lines.push("");
   return lines.join("\n");
@@ -443,6 +446,7 @@ Options:
   --understand <plan.json>  Analyze plan structure (execution order, critical path, security, progress)
   --json <plan.json>     Output analysis as structured JSON (for programmatic consumption)
   --schema               Display the plan protocol schema reference (field descriptions, relationships, constraints)
+  --list [dir]           List all plan files in the given directory (default: plans/)
   --no-emoji             Use text labels instead of emoji icons
   --force                Render even if validation fails (for debugging malformed plans)
   --help, -h             Show this help message
@@ -453,6 +457,8 @@ Examples:
   bun scripts/read-plan.ts --understand plan.json
   bun scripts/read-plan.ts --json plan.json > analysis.json
   bun scripts/read-plan.ts --schema
+  bun scripts/read-plan.ts --list
+  bun scripts/read-plan.ts --list my-plans/
   bun scripts/read-plan.ts --force plan.json
 `;
   console.log(help);
@@ -467,6 +473,40 @@ if (import.meta.main) {
   }
   if (args.includes("--schema")) {
     console.log(renderSchemaDocs());
+    process.exit(0);
+  }
+  if (args.includes("--list")) {
+    const listIdx = args.indexOf("--list");
+    const listDir = (listIdx + 1 < args.length && !args[listIdx + 1].startsWith("--")
+      ? args[listIdx + 1]
+      : "plans").replace(/\/+$/, "");
+    if (!existsSync(listDir)) {
+      console.log(`No plans directory found at "${listDir}".`);
+      process.exit(0);
+    }
+    const files = readdirSync(listDir).filter(f => f.endsWith(".json")).sort();
+    if (files.length === 0) {
+      console.log(`No plan files found in "${listDir}".`);
+      process.exit(0);
+    }
+    console.log(`Plan files in "${listDir}/":\n`);
+    for (const file of files) {
+      try {
+        const data: PlanData = JSON.parse(readFileSync(resolve(listDir, file), "utf-8"));
+        const p = data.plan;
+        const totalACs = p.checkpoints.reduce((s, c) => s + c.acceptance_criteria.length, 0);
+        const passedACs = p.checkpoints.reduce((s, c) => s + c.acceptance_criteria.filter(a => a.status === "passed").length, 0);
+        console.log(`  ${file}`);
+        console.log(`    Title: ${p.title}`);
+        console.log(`    Description: ${p.description}`);
+        console.log(`    Checkpoints: ${p.checkpoints.length} | ACs: ${passedACs}/${totalACs} passed`);
+        console.log(`    Version: ${p.version || "N/A"} | Updated: ${p.updated_at || "N/A"}`);
+        console.log();
+      } catch {
+        console.log(`  ${file}  (unreadable or invalid JSON)`);
+        console.log();
+      }
+    }
     process.exit(0);
   }
   const summaryMode = args.includes("--summary") || args.includes("--analyze");

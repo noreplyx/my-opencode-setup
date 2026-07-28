@@ -38,14 +38,16 @@ This skill supports seven operations:
 
 | Capability | Description | Command |
 |---|---|---|
-| **Create** | Produce a plan JSON + Markdown from user intent | Follow the Create workflow below, or scaffold with `scripts/create-plan.ts -- "Title" "Description" "Overview" plan.json [N]` where N is checkpoint count (default 3). Supports `--ac` for custom acceptance criteria. Run from skill directory. |
+| **Create** | Produce a plan JSON + Markdown from user intent | Follow the Create workflow below, or scaffold with `scripts/create-plan.ts -- "Title" "Description" "Overview" plan.json [N]` where N is checkpoint count (default 3). Supports `--ac` for custom acceptance criteria and `--name` for auto-path generation. Run from skill directory. |
 | **Read / Render** | Parse an existing plan JSON and display as full Markdown | `scripts/read-plan.ts -- plan.json` (run from skill directory) |
+| **List** | List all plan files in a directory with title, checkpoint count, and AC status | `scripts/read-plan.ts -- --list [dir]` (default: `plans/`) |
 | **Verify** | Validate a plan JSON for schema conformance, dependency integrity, ID uniqueness, and semantic quality | `scripts/validate-plan.ts -- plan.json` or `scripts/validate-plan.ts -- --strict plan.json` (run from skill directory) |
 | **Understand** | Analyze a plan for execution order, critical path, parallel groups, security context, and progress | `scripts/read-plan.ts -- --understand plan.json` (run from skill directory) |
 | **Understand (JSON)** | Same analysis as structured JSON for programmatic consumption | `scripts/read-plan.ts -- --json plan.json` (run from skill directory) |
 | **Update** | Modify a plan in-place (add/remove/reorder checkpoints, set AC status, manage blockers). Supports `--dry-run` to preview changes. | `scripts/update-plan.ts -- plan.json <command> [args]` (run from skill directory) |
 | **Update (strict)** | Same as Update but with strict semantic validation | `scripts/update-plan.ts -- --strict plan.json <command> [args]` (run from skill directory) |
 | **Diff** | Compare two plan versions for changes | `scripts/diff-plan.ts -- plan-a.json plan-b.json` (run from skill directory) |
+| **Delete** | Delete a plan JSON file from disk with confirmation | `scripts/delete-plan.ts -- plan.json` (run from skill directory) |
 | **Schema** | Display the full schema reference with field descriptions, relationships, constraints, and allowed values | `scripts/read-plan.ts -- --schema` (run from skill directory) |
 | **Help** | Show usage info for any script | `scripts/<script>.ts -- --help` |
 
@@ -213,16 +215,21 @@ If the user chooses "Modify", update the affected checkpoints/ACs/SCs and re-con
       scripts/create-plan.ts -- "Login Feature" "Add user login" "JWT-based login" plan.json "Login Endpoint" --ac "Returns JWT on valid credentials::curl POST /login; assert 200 with token" --ac "Rejects invalid password::curl POST /login with wrong password; assert 401"
       ```
       The `--ac` flag is repeatable. Each value uses format `"description::verification_method"` or just `"description"` (uses default verification method). Custom ACs are applied to the last checkpoint only.
+    - To auto-generate the output path as `plans/{date}-{slug}.json`, use `--name`:
+      ```
+      scripts/create-plan.ts -- "Add Auth" "Implement JWT auth" "Full plan" --name "Add Auth"
+      ```
+      This creates `plans/2026-07-28-add-auth.json` and creates the `plans/` directory if needed. The `--name` flag overrides any explicit output path.
     2. **Validate the JSON** — run a programmatic validation check against the schema before proceeding (strict mode is enabled by default):
        ```
        scripts/validate-plan.ts -- --strict plan.json
        ```
        (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/validate-plan.ts -- plan.json`)
-   3. **Fix if invalid** — if validation fails, correct the JSON and re-validate until it passes
-   4. **Derive the Markdown** — generate the Markdown summary from the validated JSON by running:
-     ```
-     scripts/read-plan.ts -- plan.json > plan.md
-     ```
+    3. **Fix if invalid** — if validation fails, correct the JSON and re-validate until it passes
+    4. **Derive the Markdown** — generate the Markdown summary from the validated JSON by running:
+      ```
+      scripts/read-plan.ts -- plan.json > plan.md
+      ```
        (Run from the skill directory, or use `bun --cwd <skill-dir> scripts/read-plan.ts -- plan.json > plan.md`)
 
 ---
@@ -311,6 +318,22 @@ scripts/read-plan.ts -- --json plan.json
 ```
 
 This outputs the `AnalysisResult` object as JSON with fields: `executionOrder`, `criticalPath`, `parallelGroups`, `severityCounts`, and `criticalHighSCs`.
+
+### List Mode
+
+To list all plan files in a directory with metadata (title, checkpoints, AC status):
+
+```
+scripts/read-plan.ts -- --list [dir]
+```
+
+If no directory is specified, defaults to `plans/`. Output shows each file's title, description, checkpoint count, AC pass rate, version, and last-updated timestamp.
+
+Examples:
+```
+scripts/read-plan.ts -- --list
+scripts/read-plan.ts -- --list my-plans/
+```
 
 ---
 
@@ -428,6 +451,35 @@ The diff output shows:
 - **Progress summary** — overall AC pass rate change
 
 Both plans are validated before diffing. If either plan fails validation, the diff is rejected with error details.
+
+---
+
+## Delete Workflow
+
+Use this workflow to delete a plan JSON file from disk.
+
+```
+scripts/delete-plan.ts -- plan.json
+```
+
+The script shows a confirmation prompt before deleting. Use `-y` to skip the prompt.
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--list [dir]` | List plan files in the given directory (default: `plans/`) before deleting |
+| `--yes, -y` | Skip confirmation prompt |
+
+### Examples
+
+```
+scripts/delete-plan.ts -- plan.json
+scripts/delete-plan.ts -- plans/2026-07-28-add-auth.json
+scripts/delete-plan.ts -- --list plans/
+scripts/delete-plan.ts -- --list plans/ plan.json
+scripts/delete-plan.ts -- -y plan.json
+```
 
 ---
 

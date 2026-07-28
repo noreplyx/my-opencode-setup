@@ -497,7 +497,7 @@ if (entryScript.endsWith('validate-plan.ts') || entryScript.endsWith('validate-p
   }
   const strict = args.includes("--strict");
   const nonFlagArgs = args.filter(a => !a.startsWith("--"));
-  const dataPath = resolve(nonFlagArgs[0] || "output.json");
+  const dataPath = resolve(nonFlagArgs[0] || "plan.json");
   const data = JSON.parse(readFileSync(dataPath, "utf-8"));
   const errors = validatePlan(data, strict);
 
