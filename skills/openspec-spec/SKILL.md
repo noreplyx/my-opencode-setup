@@ -16,7 +16,6 @@ description: >-
   captured as living documentation before decomposition into implementation
   checkpoints. Do NOT use for simple single-step tasks or when the user
   already has a clear, detailed plan ready.
-allowed-tools: Bash(*) task(*) question(*) read(*) write(*) edit(*) glob(*) grep(*)
 ---
 # OpenSpec Spec Stage
 
@@ -32,7 +31,7 @@ cd <project-root>
 openspec init
 ```
 
-The `openspec init` command creates the `openspec/` folder structure:
+Running `openspec init` is idempotent — it is safe to re-run if the `openspec/` folder already exists. It creates the `openspec/` folder structure:
 ```
 openspec/
 ├── specs/              # Your specifications (source of truth)
@@ -50,7 +49,7 @@ openspec/
 | **Update** | Revise a change's planning artifacts and keep them coherent | `openspec update <change-name>` (via `/opsx:update` equivalent) |
 | **Validate** | Check changes and specs for structural issues | `openspec validate <change-name>` or `openspec validate --all --json` |
 | **Status** | Display artifact completion status for a change | `openspec status --change <name> --json` |
-| **Verify** | Validate implementation matches spec scenarios | Manual review of tasks, requirements, and scenarios |
+| **Verify** | Validate implementation matches spec scenarios | `openspec verify <change-name>` or manual review of tasks, requirements, and scenarios |
 | **Archive** | Finalize a completed change, merge delta specs into main specs | `openspec archive <change-name>` |
 
 ## Spec Artifacts
@@ -87,6 +86,8 @@ The system SHALL <behavior description>.
 
 ## Spec Stage Workflow
 
+> **Pipeline mapping:** This skill's steps correspond to steps 3-5 of the parent pipeline (`development-full-workflow`). Step 1 here = pipeline step 3 (Spec Creation), steps 2-3 here = pipeline step 4 (Spec Review Gate) + step 5 (Spec Update Loop), step 4 here = handoff to pipeline step 6 (Plan).
+
 ### Step 1: Create Spec Change
 
 The spec-writer agent creates a new OpenSpec change:
@@ -115,7 +116,7 @@ Use the `question` tool with these options:
 If the user requests changes:
 1. Update the affected artifacts (proposal, specs, design, tasks)
 2. Re-present for review
-3. Loop until approved or cancelled
+3. Loop until approved or cancelled (up to **3 revision loops** before escalating to the user)
 
 ### Step 4: Hand Off to Planner
 
@@ -132,8 +133,8 @@ This validates three dimensions:
 
 ## Hard Rules
 
-- MUST ensure OpenSpec CLI is installed before attempting any spec operations
-- MUST run `openspec init` in the project root before creating changes
+- MUST ensure OpenSpec CLI is installed before attempting any spec operations. If the CLI is unavailable, create the `openspec/` folder structure and all four artifact files manually following the spec format defined above.
+- MUST run `openspec init` in the project root before creating changes (safe to re-run if already initialized)
 - MUST present spec artifacts to the user for review before proceeding to planning
 - MUST NOT proceed to planning if the user rejects or cancels the spec
 - MUST update artifacts in-place when the user requests revisions (not recreate from scratch)

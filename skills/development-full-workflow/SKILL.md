@@ -16,7 +16,6 @@ description: >-
   "development pipeline", "multi-agent workflow", "orchestrated development",
   or "complete implementation process" with planning, review, implementation,
   and verification phases.
-allowed-tools: Bash(*) task(*) question(*) webfetch(*) searxng(*) github(*) clickup(*) sql-reader(*) redis(*)
 ---
 
 # Development Full Workflow
