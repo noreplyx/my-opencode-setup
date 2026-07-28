@@ -2,12 +2,13 @@
 name: development-full-workflow
 description: >-
   Full development workflow orchestrator skill that coordinates the complete
-  multi-agent pipeline: clarify scope, explore context, plan, parallel review
+  multi-agent pipeline: clarify scope, explore context, spec creation with
+  OpenSpec, spec review gate, plan, parallel review
   (security/engineer/architecture/qa), consolidate feedback, plan review gate,
   user approval gate, implement, lint gate, test gate, security scan gate, QA
   verification gate, and final report. This skill is automatically loaded by the
   Orchestrator agent at the start of every pipeline. It defines the exact
-  11-step workflow, conflict resolution rules, remediation loops, gate
+  14-step workflow, conflict resolution rules, remediation loops, gate
   sequencing, and verdict taxonomy usage. Use when the Orchestrator is running
   a full development pipeline that requires structured planning, multi-reviewer
   gates, parallel quality gates (lint || test, then security || QA), and
@@ -20,7 +21,7 @@ allowed-tools: Bash(*) task(*) question(*) webfetch(*) searxng(*) github(*) clic
 
 # Development Full Workflow
 
-This skill defines the complete 11-step development pipeline used by the Orchestrator agent. It coordinates a team of specialized subagents to deliver high-quality, secure, well-architected, and tested code.
+This skill defines the complete 14-step development pipeline used by the Orchestrator agent. It coordinates a team of specialized subagents to deliver high-quality, secure, well-architected, and tested code.
 
 ## Workflow (execute in order)
 
@@ -35,11 +36,41 @@ If the user's request is vague, delegate to the `brainstormer` agent to gather r
 
 Delegate to the `code-explorer` agent to explore the codebase, gather relevant files, conventions, and constraints. Collect a concise context summary.
 
-### Step 3: Plan
+### Step 3: Spec Creation
 
-Delegate to the `planner` agent to create a structured plan following the `plan-protocol` skill, using the gathered requirements and context.
+Delegate to the `spec-writer` agent to create OpenSpec specification artifacts. The spec-writer will:
+1. Scaffold a new OpenSpec change with `openspec new change <feature-name>`
+2. Generate the **proposal** — what and why
+3. Generate the **specs** — requirements with GIVEN/WHEN/THEN scenarios
+4. Generate the **design** — technical approach and decisions
+5. Generate the **tasks** — implementation checklist
+6. Validate the change with `openspec validate`
 
-### Step 4: Parallel Review
+Pass the requirements summary and codebase context from steps 1-2 to the spec-writer.
+
+### Step 4: Spec Review Gate
+
+Present the spec artifacts to the user for review. Use the `question` tool with these options (the "Type your own answer" option must always be present):
+- **"Approve"** — specs are ready, proceed to planning (continue to step 6)
+- **"Revise"** — let the user describe changes, then route back to the `spec-writer` agent to update artifacts and re-enter the review cycle at step 4
+- **"Cancel"** — stop the workflow and report to the user
+- **"Type your own answer"** — let the user type anything; interpret their response and act accordingly
+
+Do **not** proceed to planning until the user selects "Approve".
+
+### Step 5: Spec Update Loop
+
+If the user selected "Revise" in step 4:
+1. Route the revision requests back to the `spec-writer` agent
+2. The spec-writer updates the affected artifacts (proposal, specs, design, tasks)
+3. Re-enter the review cycle at step 4
+4. Allow up to **3 revision loops** before escalating to the user
+
+### Step 6: Plan
+
+Delegate to the `planner` agent to create a structured plan following the `plan-protocol` skill, using the gathered requirements, codebase context, and **OpenSpec spec artifacts**. The planner must read the spec files to derive checkpoints and acceptance criteria from the spec requirements and scenarios.
+
+### Step 7: Parallel Review
 
 Launch concurrent tasks to all four reviewers:
 - `security` — review the plan for security concerns and mitigations
@@ -49,7 +80,7 @@ Launch concurrent tasks to all four reviewers:
 
 Wait for all four feedback items.
 
-### Step 5: Consolidate Feedback with Conflict Resolution
+### Step 8: Consolidate Feedback with Conflict Resolution
 
 Collect all four review verdicts and apply equal-weight conflict resolution:
 
@@ -63,17 +94,17 @@ Collect all four review verdicts and apply equal-weight conflict resolution:
 - States the final gating decision with rationale
 - Documents dissenting opinions for the final report
 
-Return the consolidated report as input to the Plan Review Gate (step 6).
+Return the consolidated report as input to the Plan Review Gate (step 9).
 
-### Step 6: Plan Review Gate
+### Step 9: Plan Review Gate
 
 Evaluate the consolidated verdict. All reviewer verdicts use the unified taxonomy in `VERDICT-TAXONOMY.md`. Apply the equal-weight rule:
-- If **any** reviewer returned `reject`: route the consolidated report and plan back to the `planner` agent for revision, then re-enter the review cycle at step 4.
-- If all reviewers returned `pass`, `pass-with-concerns`, or `not-applicable`: the plan is ready for user review. Proceed to step 7.
+- If **any** reviewer returned `reject`: route the consolidated report and plan back to the `planner` agent for revision, then re-enter the review cycle at step 7.
+- If all reviewers returned `pass`, `pass-with-concerns`, or `not-applicable`: the plan is ready for user review. Proceed to step 10.
 
 Surface any `pass-with-concerns` items and any documented conflicts in the final report.
 
-### Step 7: User Approval Gate
+### Step 10: User Approval Gate
 
 Present the reviewed plan to the user with a comprehensive summary:
 - List each checkpoint with its acceptance criteria
@@ -81,18 +112,18 @@ Present the reviewed plan to the user with a comprehensive summary:
 - Surface any `pass-with-concerns` items and notices from security/engineer/architecture/qa
 
 Use the `question` tool with these options (the "Type your own answer" option must always be present):
-- **"Approve"** — proceed to implementation (continue to step 8)
+- **"Approve"** — proceed to implementation (continue to step 11)
 - **"Change"** — let the user type free-form modifications, then route back to the `planner` agent to update the plan and re-run the review cycle
 - **"Cancel"** — stop the workflow and report to the user
 - **"Type your own answer"** — let the user type anything; interpret their response and act accordingly (e.g., if they type approval text, treat as approve; if they type modifications, route to planner)
 
 Do **not** proceed to implementation until the user selects "Approve".
 
-### Step 8: Implement
+### Step 11: Implement
 
-Delegate to the `coder` agent with the approved plan. The coder implements the code and runs relevant tests and scans. For plans with independent checkpoints, the coder may dispatch parallel sub-coder tasks to implement multiple checkpoints concurrently.
+Delegate to the `coder` agent with the approved plan and the OpenSpec change name. The coder implements the code and runs relevant tests and scans. For plans with independent checkpoints, the coder may dispatch parallel sub-coder tasks to implement multiple checkpoints concurrently.
 
-### Step 9: Lint/TypeCheck + Test Gates (Parallel Pair 1)
+### Step 12: Lint/TypeCheck + Test Gates (Parallel Pair 1)
 
 Launch the `linter` agent (which returns both lint and typecheck verdicts) and the `tester` agent **concurrently** in a single message (parallel tool calls). The linter agent covers two gates (lint + typecheck); the tester agent covers the test gate. These three sub-gates are independent — failures in one do not affect the others.
 
@@ -107,29 +138,35 @@ Wait for both agents (linter and tester) to return before proceeding. The linter
 **Remediation (all three sub-gates):**
 - If **only the lint sub-gate** returns `reject`: route findings directly to the `coder` agent (the plan is unchanged — only code formatting/style needs fixing). Then re-run **both agents** (linter and tester) — code changes from lint fixes may affect typecheck and test results.
 - If **only the typecheck sub-gate** returns `reject`: route findings directly to the `coder` agent (the plan is unchanged — only type errors need fixing). Then re-run **both agents** (linter and tester) — lint and test must re-run because code changed.
-- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent (test failures may reveal missing ACs or scope issues). Then return to step 8 (coder fixes the issues), re-run **both agents** (linter and tester) — lint and typecheck must re-run because code changed.
-- If **two or more sub-gates** return `reject`: route the plan and findings back to the `planner` agent (broader issues likely need plan adjustments). Then return to step 8 (coder fixes the issues) and re-run both agents (step 9).
+- If **only the test gate** returns `reject`: route the plan and findings back to the `planner` agent (test failures may reveal missing ACs or scope issues). Then return to step 11 (coder fixes the issues), re-run **both agents** (linter and tester) — lint and typecheck must re-run because code changed.
+- If **two or more sub-gates** return `reject`: route the plan and findings back to the `planner` agent (broader issues likely need plan adjustments). Then return to step 11 (coder fixes the issues) and re-run both agents (step 12).
 - Allow up to **2 remediation loops per sub-gate** (tracked independently across lint, typecheck, and test). If any sub-gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
-### Step 10: Security Scan + QA Verification Gates (Parallel Pair 2)
+### Step 13: Security Scan + QA Verification Gates (Parallel Pair 2)
 
-Only after **all three** sub-gates (lint, typecheck, test) have passed (step 9), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
+Only after **all three** sub-gates (lint, typecheck, test) have passed (step 12), launch **both** the `security` and `qa` agents **concurrently** in a single message (parallel tool calls). These two gates are independent — security vulnerabilities do not affect AC coverage and vice versa.
 
 **Security Scan Gate** — Delegate to the `security` agent to analyze the diff, select applicable scanners based on changed files, run them, and perform a mandatory manual security code review of all changed files. Wait for a clear verdict.
 
-**QA Verification Gate** — Delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run `bun scripts/verify-plan-coverage.ts` as part of its workflow to produce an objective coverage baseline.
+**QA Verification Gate** — Delegate to the `qa` agent to verify the implemented code against the plan and acceptance criteria. The QA agent will run `bun scripts/verify-plan-coverage.ts` as part of its workflow to produce an objective coverage baseline. The QA agent will also perform manual spec verification (reviewing tasks, requirements, and scenarios) to validate implementation against spec artifacts.
 
 Wait for both gates to return before proceeding.
 
 **Remediation (both gates):**
-- If **only the security gate** returns `reject`: route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 8 (coder re-implements the fix), re-run step 9 (both agents: linter + tester), and re-run **both gates** (step 10).
-- If **only the QA gate** returns `reject`: route the findings back to the `planner` agent to update the plan. Then return to step 8 (coder implements the fixes), re-run step 9 (both agents: linter + tester), and re-run **both gates** (step 10).
-- If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 8 (coder fixes the issues), re-run step 9 (both agents: linter + tester), and re-run both gates (step 10).
+- If **only the security gate** returns `reject`: route the plan and findings back to the `planner` agent to add mitigations/update acceptance criteria. Then return to step 11 (coder re-implements the fix), re-run step 12 (both agents: linter + tester), and re-run **both gates** (step 13).
+- If **only the QA gate** returns `reject`: route the findings back to the `planner` agent to update the plan. Then return to step 11 (coder implements the fixes), re-run step 12 (both agents: linter + tester), and re-run **both gates** (step 13).
+- If **both gates** return `reject`: route the plan and findings back to the `planner` agent. Then return to step 11 (coder fixes the issues), re-run step 12 (both agents: linter + tester), and re-run both gates (step 13).
 - Allow up to **2 remediation loops per gate** (tracked independently). If either gate persists in rejecting after its 2-loop budget, stop and escalate to the user.
 
-### Step 11: Report
+### Step 14: Report + Archive
 
 Return a concise final summary to the user: what was done, key decisions, risks, lint results, test results (including coverage percentage from the automated verification), security scan results, QA verdict, any `pass-with-concerns` items raised at each gate, any documented reviewer conflicts, and next steps.
+
+After reporting, delegate to the `spec-writer` agent to archive the OpenSpec change:
+```bash
+openspec archive <change-name>
+```
+This merges delta specs into main specs and moves the change to `openspec/changes/archive/`.
 
 ## Rules
 
@@ -137,12 +174,14 @@ Return a concise final summary to the user: what was done, key decisions, risks,
 - Do not implement code yourself unless an agent is unavailable.
 - Preserve the user's original wording and intent when delegating.
 - When the `coder` agent returns an unapproved plan, route it back to the `planner` agent with the reason.
-- Always obtain explicit user approval (step 7) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate.
+- Always obtain explicit user approval (step 10) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate.
 - Launch lint, typecheck, and test gates **concurrently** (parallel pair 1). The linter agent handles both lint and typecheck sub-gates; the tester agent handles the test gate. Wait for both agents to finish before proceeding.
 - Launch security scan and QA verification gates **concurrently** (parallel pair 2). Wait for both to finish before proceeding.
 - Do **not** advance to parallel pair 2 (security + QA) until **all three** sub-gates in parallel pair 1 (lint + typecheck + test) have passed.
 - Do **not** report final success until **both** gates in parallel pair 2 (security + QA) have passed.
 - Track remediation loops independently: each of the 5 sub-gates (lint, typecheck, test, security, QA) has its own 2-loop budget. If any sub-gate repeatedly returns `reject`, escalate to the user rather than looping indefinitely.
+- The spec review gate (step 4) has its own 3-loop budget independent of other gates.
+- Always pass the OpenSpec change name to the `coder` and `qa` agents so they can reference spec artifacts.
 
 ## References
 
@@ -150,4 +189,5 @@ Return a concise final summary to the user: what was done, key decisions, risks,
 - `scripts/verify-plan-coverage.ts` — Coverage verification script for test gate
 - `agents/orchestrator.md` — The orchestrator agent that loads this skill
 - `skills/plan-protocol/SKILL.md` — Plan creation skill used by the planner agent
-
+- `skills/openspec-spec/SKILL.md` — Spec creation skill used by the spec-writer agent
+- `agents/spec-writer.md` — The spec-writer agent that creates and manages spec artifacts
