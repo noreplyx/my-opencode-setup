@@ -26,8 +26,11 @@ Options:
   --name <name>       Auto-generate path as plans/{date}-{slug}.json (slugified from <name>).
                       Overrides [output-path] if both are provided.
   --ac "desc::verify"  Custom acceptance criteria for the last checkpoint (repeatable).
-                      Format: "description::verification_method" or just "description".
-                      If omitted, 2 default ACs are generated per checkpoint.
+                       Format: "description::verification_method" or just "description".
+                       If omitted, 2 default ACs are generated per checkpoint.
+  --tags "tag1,tag2"   Comma-separated tags for all checkpoints (e.g., "frontend,api").
+  --effort XS|S|M|L|XL Estimated effort size for all checkpoints.
+  --no-sc              Omit default security concerns from all checkpoints.
 
   --help, -h          Show this help message
 
@@ -81,6 +84,8 @@ interface CheckpointInput {
   description: string;
   dependsOnPrev: boolean;
   customACs?: { desc: string; verify: string }[];
+  tags?: string[];
+  effort?: "xs" | "s" | "m" | "l" | "xl";
 }
 
 function parseCheckpointArgs(arg: string): CheckpointInput {
@@ -99,8 +104,11 @@ let outPath: string;
 let checkpointInputs: string[];
 let customACs: { desc: string; verify: string }[] = [];
 
-// Extract --ac and --name flags before parsing other args
+// Extract --ac, --name, --tags, --effort, --no-sc flags before parsing other args
 let nameFlag: string | undefined;
+let noScFlag = false;
+let effortFlag: "xs" | "s" | "m" | "l" | "xl" | undefined;
+let tagsFlag: string[] = [];
 const acFlags: { desc: string; verify: string }[] = [];
 const filteredArgs: string[] = [];
 for (let i = 0; i < args.length; i++) {
@@ -111,6 +119,20 @@ for (let i = 0; i < args.length; i++) {
   } else if (args[i] === "--name" && i + 1 < args.length) {
     nameFlag = args[i + 1];
     i++;
+  } else if (args[i] === "--tags" && i + 1 < args.length) {
+    tagsFlag = args[i + 1].split(",").map(t => t.trim()).filter(Boolean);
+    i++;
+  } else if (args[i] === "--effort" && i + 1 < args.length) {
+    const val = args[i + 1].toLowerCase();
+    if (["xs", "s", "m", "l", "xl"].includes(val)) {
+      effortFlag = val as "xs" | "s" | "m" | "l" | "xl";
+    } else {
+      console.error(`Error: invalid effort value "${val}". Must be one of: xs, s, m, l, xl`);
+      process.exit(1);
+    }
+    i++;
+  } else if (args[i] === "--no-sc") {
+    noScFlag = true;
   } else {
     filteredArgs.push(args[i]);
   }
@@ -159,7 +181,7 @@ if (acFlags.length > 0 && checkpointInputs.length > 0) {
   customACs = acFlags;
 }
 
-function buildCheckpoint(index: number, prevId: string | null, input: CheckpointInput, customACs?: { desc: string; verify: string }[]) {
+function buildCheckpoint(index: number, prevId: string | null, input: CheckpointInput, customACs?: { desc: string; verify: string }[], noSc = false) {
   const num = String(index + 1).padStart(2, "0");
   const deps = input.dependsOnPrev && prevId ? [prevId] : [];
   const title = input.title
@@ -187,21 +209,30 @@ function buildCheckpoint(index: number, prevId: string | null, input: Checkpoint
           status: "pending" as const
         }
       ];
-  return {
+  const cp: Record<string, unknown> = {
     id: `CP-${num}`,
     title,
     description: input.description || `Implement and verify "${title}"`,
     dependencies: deps,
     acceptance_criteria,
-    security_concerns: [
+  };
+  if (!noSc) {
+    cp.security_concerns = [
       {
         id: `SC-${num}`,
         description: `${title} may expose sensitive data or allow unauthorized access if access controls are missing`,
         severity: SEVERITIES[index % SEVERITIES.length],
         mitigation: `Add input validation, authentication checks, and data sanitization to ${titleLower}`
       }
-    ]
-  };
+    ];
+  }
+  if (input.tags && input.tags.length > 0) {
+    cp.tags = input.tags;
+  }
+  if (input.effort) {
+    cp.effort = input.effort;
+  }
+  return cp as { id: string; title: string; description: string; dependencies: string[]; acceptance_criteria: unknown[]; security_concerns?: unknown[]; tags?: string[]; effort?: string };
 }
 
 export function createPlanFile(
@@ -210,14 +241,15 @@ export function createPlanFile(
   planOverview: string,
   outputPath: string,
   inputs: CheckpointInput[] = [],
-  customACs?: { desc: string; verify: string }[]
+  customACs?: { desc: string; verify: string }[],
+  noSc = false
 ): boolean {
   const checkpoints: unknown[] = [];
   let prevId: string | null = null;
   for (let i = 0; i < inputs.length; i++) {
     const inp = inputs[i];
     const acs = (i === inputs.length - 1) ? customACs : undefined;
-    const cp = buildCheckpoint(i, prevId, inp, acs);
+    const cp = buildCheckpoint(i, prevId, inp, acs, noSc);
     checkpoints.push(cp);
     if (inp.dependsOnPrev) {
       prevId = cp.id;
@@ -257,7 +289,11 @@ export function createPlanFile(
 }
 
 if (import.meta.main) {
-  const parsed = checkpointInputs.map(parseCheckpointArgs);
-  const ok = createPlanFile(title, description, overview, outPath, parsed, customACs);
+  const parsed = checkpointInputs.map(parseCheckpointArgs).map(inp => ({
+    ...inp,
+    tags: inp.tags && inp.tags.length > 0 ? inp.tags : tagsFlag.length > 0 ? tagsFlag : undefined,
+    effort: inp.effort || effortFlag,
+  }));
+  const ok = createPlanFile(title, description, overview, outPath, parsed, customACs, noScFlag);
   process.exit(ok ? 0 : 1);
 }

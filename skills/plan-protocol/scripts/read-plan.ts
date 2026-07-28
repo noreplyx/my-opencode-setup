@@ -14,13 +14,23 @@ export function renderCheckpoint(cp: Checkpoint, noEmoji = false): string {
   const passedACs = cp.acceptance_criteria.filter(ac => ac.status === "passed").length;
   const failedACs = cp.acceptance_criteria.filter(ac => ac.status === "failed").length;
   const blockedACs = cp.acceptance_criteria.filter(ac => ac.status === "blocked").length;
-  const statusTag = passedACs === acCount ? icon("✅", "[done]", noEmoji) : failedACs > 0 ? icon("❌", "[fail]", noEmoji) : blockedACs > 0 ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[pending]", noEmoji);
+  const skippedACs = cp.acceptance_criteria.filter(ac => ac.status === "skipped").length;
+  const nonSkipped = acCount - skippedACs;
+  const unresolvedBlockers = (cp.blockers || []).filter(b => !b.resolved).length;
+  const statusTag = nonSkipped === 0 ? icon("⏭️", "[SKIP]", noEmoji) : passedACs === nonSkipped ? icon("✅", "[done]", noEmoji) : failedACs > 0 ? icon("❌", "[fail]", noEmoji) : unresolvedBlockers > 0 ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[pending]", noEmoji);
   lines.push(`### [${cp.id}] ${cp.title} ${statusTag} (${passedACs}/${acCount} ACs, ${scCount} SCs)`);
   lines.push("");
   lines.push(`**Description:** ${cp.description}`);
   lines.push("");
   const deps = cp.dependencies.length > 0 ? cp.dependencies.join(", ") : "None";
   lines.push(`**Dependencies:** ${deps}`);
+  if (cp.tags && cp.tags.length > 0) {
+    lines.push("");
+    lines.push(`**Tags:** ${cp.tags.join(", ")}`);
+  }
+  if (cp.effort) {
+    lines.push(`**Effort:** ${cp.effort.toUpperCase()}`);
+  }
   const blockers = cp.blockers || [];
   if (blockers.length > 0) {
     lines.push("");
@@ -33,7 +43,7 @@ export function renderCheckpoint(cp: Checkpoint, noEmoji = false): string {
   lines.push("");
   lines.push("**Acceptance Criteria:**");
   for (const ac of cp.acceptance_criteria) {
-    const statusIcon = ac.status === "passed" ? icon("✅", "[PASS]", noEmoji) : ac.status === "failed" ? icon("❌", "[FAIL]", noEmoji) : ac.status === "blocked" ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[ ]", noEmoji);
+    const statusIcon = ac.status === "passed" ? icon("✅", "[PASS]", noEmoji) : ac.status === "failed" ? icon("❌", "[FAIL]", noEmoji) : ac.status === "blocked" ? icon("🚫", "[BLOCKED]", noEmoji) : ac.status === "skipped" ? icon("⏭️", "[SKIP]", noEmoji) : icon("⬜", "[ ]", noEmoji);
     const statusSuffix = ac.status && ac.status !== "pending" ? ` [${ac.status}]` : "";
     lines.push(`- ${statusIcon} [${ac.id}] ${ac.description}${statusSuffix} — *Verify: ${ac.verification_method}*`);
   }
@@ -215,25 +225,29 @@ export function renderAnalysis(plan: Plan, noEmoji = false): string {
   let passedACs = 0;
   let failedACs = 0;
   let blockedACs = 0;
+  let skippedACs = 0;
   for (const cp of plan.checkpoints) {
     const total = cp.acceptance_criteria.length;
     const passed = cp.acceptance_criteria.filter(ac => ac.status === "passed").length;
     const failed = cp.acceptance_criteria.filter(ac => ac.status === "failed").length;
     const blocked = cp.acceptance_criteria.filter(ac => ac.status === "blocked").length;
+    const skipped = cp.acceptance_criteria.filter(ac => ac.status === "skipped").length;
     totalACs += total;
     passedACs += passed;
     failedACs += failed;
     blockedACs += blocked;
-    const statusIcon = passed === total ? icon("✅", "[done]", noEmoji) : failed > 0 ? icon("❌", "[fail]", noEmoji) : blocked > 0 ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[pending]", noEmoji);
-    const blockers = (cp.blockers || []).length > 0 ? ` ${icon("🚫", "[BLOCKED]", noEmoji)} ${cp.blockers!.length} blocker(s)` : "";
+    skippedACs += skipped;
+    const nonSkipped = total - skipped;
+    const statusIcon = nonSkipped === 0 ? icon("⏭️", "[SKIP]", noEmoji) : passed === nonSkipped ? icon("✅", "[done]", noEmoji) : failed > 0 ? icon("❌", "[fail]", noEmoji) : blocked > 0 ? icon("🚫", "[BLOCKED]", noEmoji) : icon("⬜", "[pending]", noEmoji);
+    const blockers = (cp.blockers || []).filter(b => !b.resolved).length > 0 ? ` ${icon("🚫", "[BLOCKED]", noEmoji)} ${cp.blockers!.filter(b => !b.resolved).length} blocker(s)` : "";
     lines.push(`- ${statusIcon} ${cp.id}: ${passed}/${total} ACs passed${blockers}`);
   }
   lines.push("");
-  lines.push(`**Overall:** ${passedACs}/${totalACs} ACs passed, ${failedACs} failed, ${blockedACs} blocked`);
+  lines.push(`**Overall:** ${passedACs}/${totalACs} ACs passed, ${failedACs} failed, ${blockedACs} blocked, ${skippedACs} skipped`);
   const allBlockers: string[] = [];
   for (const cp of plan.checkpoints) {
     for (const b of cp.blockers || []) {
-      allBlockers.push(`${cp.id}: ${b.reason}`);
+      if (!b.resolved) allBlockers.push(`${cp.id}: ${b.reason}`);
     }
   }
   if (allBlockers.length > 0) {
@@ -248,15 +262,45 @@ export function renderAnalysis(plan: Plan, noEmoji = false): string {
   return lines.join("\n");
 }
 
+export function exportPlanCSV(plan: Plan): string {
+  const rows: string[] = [];
+  rows.push("CP ID,CP Title,CP Description,Dependencies,AC ID,AC Description,AC Status,AC Verification,SC ID,SC Description,SC Severity,SC Mitigation,Tags,Effort");
+  for (const cp of plan.checkpoints) {
+    const deps = cp.dependencies.join(";") || "none";
+    const tags = (cp.tags || []).join(";") || "";
+    const effort = cp.effort || "";
+    if (cp.acceptance_criteria.length === 0) {
+      rows.push(`"${cp.id}","${cp.title}","${cp.description}","${deps}","","","","","","","","","${tags}","${effort}"`);
+    }
+    for (const ac of cp.acceptance_criteria) {
+      const acScs = ac.security_concerns || [];
+      if (acScs.length === 0) {
+        rows.push(`"${cp.id}","${cp.title}","${cp.description}","${deps}","${ac.id}","${ac.description}","${ac.status || "pending"}","${ac.verification_method}","","","","","${tags}","${effort}"`);
+      }
+      for (const sc of acScs) {
+        rows.push(`"${cp.id}","${cp.title}","${cp.description}","${deps}","${ac.id}","${ac.description}","${ac.status || "pending"}","${ac.verification_method}","${sc.id}","${sc.description}","${sc.severity}","${sc.mitigation}","${tags}","${effort}"`);
+      }
+    }
+    for (const sc of cp.security_concerns || []) {
+      rows.push(`"${cp.id}","${cp.title}","${cp.description}","${deps}","","","","","${sc.id}","${sc.description}","${sc.severity}","${sc.mitigation}","${tags}","${effort}"`);
+    }
+  }
+  return rows.join("\n");
+}
+
 export function renderSummary(plan: Plan): string {
   const checkpoints = plan.checkpoints;
   let totalACs = 0;
   let totalSCs = 0;
+  const effortCounts: Record<string, number> = {};
   for (const cp of checkpoints) {
     totalACs += cp.acceptance_criteria.length;
     totalSCs += (cp.security_concerns || []).length;
     for (const ac of cp.acceptance_criteria) {
       totalSCs += (ac.security_concerns || []).length;
+    }
+    if (cp.effort) {
+      effortCounts[cp.effort] = (effortCounts[cp.effort] || 0) + 1;
     }
   }
   const sev = countSeverities(plan);
@@ -272,6 +316,13 @@ export function renderSummary(plan: Plan): string {
   lines.push(`- **High Concerns:** ${sev.high}`);
   lines.push(`- **Medium Concerns:** ${sev.medium}`);
   lines.push(`- **Low Concerns:** ${sev.low}`);
+  if (Object.keys(effortCounts).length > 0) {
+    const effortStr = Object.entries(effortCounts)
+      .sort(([a], [b]) => ["xs","s","m","l","xl"].indexOf(a) - ["xs","s","m","l","xl"].indexOf(b))
+      .map(([k, v]) => `${k.toUpperCase()}: ${v}`)
+      .join(", ");
+    lines.push(`- **Effort Distribution:** ${effortStr}`);
+  }
   return lines.join("\n");
 }
 
@@ -449,6 +500,10 @@ Options:
   --list [dir]           List all plan files in the given directory (default: plans/)
   --no-emoji             Use text labels instead of emoji icons
   --force                Render even if validation fails (for debugging malformed plans)
+  --search <keyword>     Filter checkpoints by keyword (matches title, description, ACs, tags, SCs)
+  --filter <expr>        Filter checkpoints by expression (e.g., status=passed, tag=frontend, effort=M, severity=critical)
+                         Multiple --filter flags are combined with AND logic.
+  --export <format>      Export plan data (csv)
   --help, -h             Show this help message
 
 Examples:
@@ -522,11 +577,15 @@ if (import.meta.main) {
         ? "--understand"
         : "--json";
     const flagIdx = args.indexOf(flag);
-    if (flagIdx + 1 >= args.length || args[flagIdx + 1].startsWith("--")) {
+    // Try to find the plan file path: after the flag, or before it
+    if (flagIdx + 1 < args.length && !args[flagIdx + 1].startsWith("--")) {
+      dataPath = resolve(args[flagIdx + 1]);
+    } else if (flagIdx > 0 && !args[0].startsWith("--")) {
+      dataPath = resolve(args[0]);
+    } else {
       console.error(`Error: ${flag} requires a plan file path`);
       process.exit(1);
     }
-    dataPath = resolve(args[flagIdx + 1]);
   } else {
     dataPath = resolve(args[0] || "plan.json");
   }
@@ -555,12 +614,70 @@ if (import.meta.main) {
     }
   }
 
+  // Apply search/filter
+  const searchKeyword = (() => {
+    const idx = args.indexOf("--search");
+    return idx !== -1 && idx + 1 < args.length ? args[idx + 1].toLowerCase() : null;
+  })();
+  const filterExprs: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--filter" && i + 1 < args.length) {
+      filterExprs.push(args[i + 1]);
+    }
+  }
+
+  let filteredPlan = data.plan;
+  if (searchKeyword || filterExprs.length > 0) {
+    const matched = data.plan.checkpoints.filter(cp => {
+      if (searchKeyword) {
+        const haystack = [cp.id, cp.title, cp.description, ...(cp.tags || []), ...cp.acceptance_criteria.flatMap(a => [a.id, a.description]), ...(cp.security_concerns || []).map(s => s.description), ...cp.acceptance_criteria.flatMap(a => (a.security_concerns || []).map(s => s.description))].join(" ").toLowerCase();
+        if (!haystack.includes(searchKeyword)) return false;
+      }
+      for (const expr of filterExprs) {
+        const [key, val] = expr.split("=").map(s => s.trim().toLowerCase());
+        if (key === "status") {
+          const allPassed = cp.acceptance_criteria.every(a => a.status === "passed");
+          const allSkipped = cp.acceptance_criteria.every(a => a.status === "skipped");
+          const nonSkipped = cp.acceptance_criteria.filter(a => a.status !== "skipped");
+          const nonSkippedPassed = nonSkipped.every(a => a.status === "passed");
+          if (val === "passed" && !(nonSkipped.length === 0 || nonSkippedPassed)) return false;
+          if (val === "pending" && (nonSkippedPassed || allSkipped)) return false;
+          if (val === "blocked" && !cp.acceptance_criteria.some(a => a.status === "blocked")) return false;
+          if (val === "failed" && !cp.acceptance_criteria.some(a => a.status === "failed")) return false;
+        } else if (key === "tag") {
+          if (!cp.tags || !cp.tags.some(t => t.toLowerCase() === val)) return false;
+        } else if (key === "effort") {
+          if (cp.effort?.toLowerCase() !== val) return false;
+        } else if (key === "severity") {
+          const hasSeverity = [...(cp.security_concerns || []), ...cp.acceptance_criteria.flatMap(a => a.security_concerns || [])]
+            .some(s => s.severity === val);
+          if (!hasSeverity) return false;
+        }
+      }
+      return true;
+    });
+    filteredPlan = { ...data.plan, checkpoints: matched };
+  }
+
+  const exportFormat = (() => {
+    const idx = args.indexOf("--export");
+    return idx !== -1 && idx + 1 < args.length ? args[idx + 1].toLowerCase() : null;
+  })();
+
+  if (exportFormat === "csv") {
+    console.log(exportPlanCSV(filteredPlan));
+    process.exit(0);
+  } else if (exportFormat) {
+    console.error(`Error: unsupported export format "${exportFormat}". Supported: csv`);
+    process.exit(1);
+  }
+
   if (jsonMode) {
-    console.log(JSON.stringify(analyzePlan(data.plan), null, 2));
+    console.log(JSON.stringify(analyzePlan(filteredPlan), null, 2));
   } else if (summaryMode || understandMode) {
-    console.log(renderAnalysis(data.plan, noEmoji));
+    console.log(renderAnalysis(filteredPlan, noEmoji));
   } else {
-    console.log(renderPlan(data.plan, noEmoji));
+    console.log(renderPlan(filteredPlan, noEmoji));
   }
 }
 

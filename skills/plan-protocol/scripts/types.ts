@@ -16,7 +16,7 @@ export interface AcceptanceCriterion {
   description: string;
   verification_method: string;
   security_concerns?: SecurityConcern[];
-  status?: "pending" | "passed" | "failed" | "blocked";
+  status?: "pending" | "passed" | "failed" | "blocked" | "skipped";
 }
 
 export interface Checkpoint {
@@ -27,6 +27,8 @@ export interface Checkpoint {
   acceptance_criteria: AcceptanceCriterion[];
   security_concerns?: SecurityConcern[];
   blockers?: Blocker[];
+  tags?: string[];
+  effort?: "xs" | "s" | "m" | "l" | "xl";
 }
 
 export interface Plan {

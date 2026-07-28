@@ -94,6 +94,19 @@
           "items": {
             "$ref": "#/definitions/blocker"
           }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Labels for categorizing this checkpoint (e.g., frontend, backend, security)",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "effort": {
+          "type": "string",
+          "description": "Estimated effort size for this checkpoint",
+          "enum": ["xs", "s", "m", "l", "xl"]
         }
       },
       "additionalProperties": false,
@@ -125,7 +138,7 @@
         "status": {
           "type": "string",
           "description": "Current status of this acceptance criterion",
-          "enum": ["pending", "passed", "failed", "blocked"],
+          "enum": ["pending", "passed", "failed", "blocked", "skipped"],
           "default": "pending"
         }
       },

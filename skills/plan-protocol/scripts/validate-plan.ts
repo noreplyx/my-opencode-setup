@@ -414,7 +414,26 @@ function checkNfrCoverage(errors: ValidationError[], plan: Plan): void {
   }
 }
 
+const ISO8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+function checkTimestamps(errors: ValidationError[], plan: Plan): void {
+  if (plan.created_at && !ISO8601_PATTERN.test(plan.created_at)) {
+    addError(errors, "plan.created_at", `created_at is not valid ISO 8601: "${plan.created_at}"`);
+  }
+  if (plan.updated_at && !ISO8601_PATTERN.test(plan.updated_at)) {
+    addError(errors, "plan.updated_at", `updated_at is not valid ISO 8601: "${plan.updated_at}"`);
+  }
+  for (const cp of plan.checkpoints) {
+    for (const b of cp.blockers || []) {
+      if (b.created_at && !ISO8601_PATTERN.test(b.created_at)) {
+        addError(errors, `plan.checkpoints.${cp.id}.blockers`, `blocker created_at is not valid ISO 8601: "${b.created_at}"`);
+      }
+    }
+  }
+}
+
 function validateSemantic(errors: ValidationError[], plan: Plan): void {
+  checkTimestamps(errors, plan);
   for (const cp of plan.checkpoints) {
     if (PLACEHOLDER_PATTERNS.some(p => p.test(cp.description))) {
       addError(errors, `plan.checkpoints.${cp.id}.description`, `checkpoint description is a generic placeholder: "${cp.description}"`);

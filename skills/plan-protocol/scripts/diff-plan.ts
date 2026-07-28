@@ -11,6 +11,7 @@ Compare two plan versions and show what changed.
 
 Options:
   --summary     Show concise summary only (added/removed/modified counts + progress)
+  --no-emoji    Use text labels instead of emoji icons
   --help, -h    Show this help message
 
 Output shows:
@@ -22,8 +23,11 @@ Output shows:
   console.log(help);
 }
 
-export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
+export function diffPlans(planA: Plan, planB: Plan, summary = false, noEmoji = false): string {
   const lines: string[] = [];
+  const metaIcon = noEmoji ? "[CHANGED]" : "🔄";
+  const addedIcon = noEmoji ? "[ADDED]" : "➕";
+  const removedIcon = noEmoji ? "[REMOVED]" : "➖";
   if (!summary) {
     lines.push(`# Plan Diff`);
     lines.push("");
@@ -40,7 +44,7 @@ export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
   if (planA.updated_at !== planB.updated_at) metaChanges.push(`  - updated_at: "${planA.updated_at || "N/A"}" → "${planB.updated_at || "N/A"}"`);
   if (metaChanges.length > 0) {
     if (!summary) {
-      lines.push("### Plan Metadata 🔄");
+      lines.push(`### Plan Metadata ${metaIcon}`);
       for (const c of metaChanges) lines.push(c);
       lines.push("");
     }
@@ -59,7 +63,7 @@ export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
     if (!cpA) {
       added++;
       if (!summary) {
-        lines.push(`### [${id}] ➕ ADDED in B`);
+        lines.push(`### [${id}] ${addedIcon} ADDED in B`);
         lines.push(`**Title:** ${cpB!.title}`);
         lines.push(`**Description:** ${cpB!.description}`);
         lines.push("");
@@ -69,7 +73,7 @@ export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
     if (!cpB) {
       removed++;
       if (!summary) {
-        lines.push(`### [${id}] ➖ REMOVED in B`);
+        lines.push(`### [${id}] ${removedIcon} REMOVED in B`);
         lines.push(`**Title:** ${cpA.title}`);
         lines.push(`**Description:** ${cpA.description}`);
         lines.push("");
@@ -127,7 +131,7 @@ export function diffPlans(planA: Plan, planB: Plan, summary = false): string {
     if (changes.length > 0) {
       modified++;
       if (!summary) {
-        lines.push(`### [${id}] ${cpA.title} 🔄`);
+        lines.push(`### [${id}] ${cpA.title} ${metaIcon}`);
         for (const c of changes) lines.push(c);
       }
     }
@@ -154,6 +158,7 @@ if (args.includes("--help") || args.includes("-h")) {
 }
 
 const summary = args.includes("--summary");
+const noEmoji = args.includes("--no-emoji");
 const nonFlagArgs = args.filter(a => !a.startsWith("--"));
 
 if (nonFlagArgs.length < 2) {
@@ -185,5 +190,5 @@ if (errorsA.length > 0 || errorsB.length > 0) {
   process.exit(1);
 }
 
-console.log(diffPlans(dataA.plan, dataB.plan, summary));
+console.log(diffPlans(dataA.plan, dataB.plan, summary, noEmoji));
 }
