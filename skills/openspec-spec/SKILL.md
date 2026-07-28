@@ -49,7 +49,6 @@ openspec/
 | **Update** | Revise a change's planning artifacts and keep them coherent | `openspec update <change-name>` (via `/opsx:update` equivalent) |
 | **Validate** | Check changes and specs for structural issues | `openspec validate <change-name>` or `openspec validate --all --json` |
 | **Status** | Display artifact completion status for a change | `openspec status --change <name> --json` |
-| **Verify** | Validate implementation matches spec scenarios | `openspec verify <change-name>` or manual review of tasks, requirements, and scenarios |
 | **Archive** | Finalize a completed change, merge delta specs into main specs | `openspec archive <change-name>` |
 
 ## Spec Artifacts
@@ -148,7 +147,7 @@ This validates three dimensions:
 
 - `agents/spec-writer.md` — The spec-writer agent that executes this skill
 - `skills/plan-protocol/SKILL.md` — Plan creation skill that consumes spec artifacts
-- `agents/qa.md` — QA agent that runs `openspec verify` at verification time
+- `agents/qa.md` — QA agent that performs spec verification at verification time
 - `skills/development-full-workflow/SKILL.md` — The parent pipeline that includes this stage
 - OpenSpec CLI docs: https://openspec.dev
 - OpenSpec GitHub: https://github.com/Fission-AI/OpenSpec
