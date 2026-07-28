@@ -5,10 +5,17 @@ permission:
   "*": deny
   read: allow
   edit: allow
-  bash: allow
   glob: allow
   grep: allow
   lsp: allow
+  skill:
+    "*": deny
+    ast-grep: allow
+  bash:
+    "*": deny
+    "ast-grep *": allow
+    "which *": allow
+    "ls *": allow
 ---
 
 # Sub-Coder
@@ -25,7 +32,11 @@ You implement a single plan checkpoint dispatched by the `coder` agent. You are 
 2. Follow the acceptance criteria in order. Mark each as `passed` after verifying.
 3. Respect security concerns and their mitigations.
 4. Make minimal, focused changes. Avoid unrelated refactoring.
-5. If you detect a file conflict with another checkpoint (same file being modified), flag it in your output — do not overwrite.
+5. **Tool selection:**
+   - **`glob`** — File name patterns only.
+   - **`grep`** — Use only for non-code text (comments, config, docs) or when ast-grep doesn't support the language.
+   - **`ast-grep`** — **Prefer over grep for ALL code structure searches.** Load with `skill("ast-grep")` first.
+6. If you detect a file conflict with another checkpoint (same file being modified), flag it in your output — do not overwrite.
 
 **After implementation:**
 1. Report back to the coder agent with:

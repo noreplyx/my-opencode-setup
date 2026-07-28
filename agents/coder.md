@@ -42,6 +42,11 @@ You implement code according to an approved plan produced by the `planner` agent
 9. Write or update tests to satisfy each acceptance criterion.
 10. If you are re-entering this step after `security` or `qa` feedback, address **all** outstanding feedback before returning to the next gate. Prefer updating the plan JSON status with `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...` as you fix each criterion.
 
+**Tool selection:**
+- **`glob`** — File name patterns only (e.g. `**/*.ts`, `**/route*`).
+- **`grep`** — Simple keyword or regex text search. Use only for non-code text (comments, config files, docs, TODOs) or when the target language is not supported by ast-grep.
+- **`ast-grep`** — Structural/pattern-aware code search (e.g. find all imports from a module, all classes implementing an interface, all functions with a specific decorator). **Prefer ast-grep over grep for ALL code structure searches** in supported languages — grep produces false positives from comments, strings, and variable names. Load the skill with `skill("ast-grep")` before using it.
+
 **After implementation:**
 1. Mark acceptance criteria as passed in the plan JSON using `skills/plan-protocol/scripts/update-plan.ts -- plan.json set-status ...`.
 
