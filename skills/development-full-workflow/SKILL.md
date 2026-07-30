@@ -173,7 +173,7 @@ This merges delta specs into main specs and moves the change to `openspec/change
 - Do not implement code yourself unless an agent is unavailable.
 - Preserve the user's original wording and intent when delegating.
 - When the `coder` agent returns an unapproved plan, route it back to the `planner` agent with the reason.
-- Always obtain explicit user approval (step 10) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate.
+- Always obtain explicit user approval (step 10) before proceeding to implementation. The auto-advance rule does not apply to the user approval gate. This rule applies regardless of whether the full 14-step pipeline or a dynamic subset is used — never skip user approval before implementation.
 - Launch lint, typecheck, and test gates **concurrently** (parallel pair 1). The linter agent handles both lint and typecheck sub-gates; the tester agent handles the test gate. Wait for both agents to finish before proceeding.
 - Launch security scan and QA verification gates **concurrently** (parallel pair 2). Wait for both to finish before proceeding.
 - Do **not** advance to parallel pair 2 (security + QA) until **all three** sub-gates in parallel pair 1 (lint + typecheck + test) have passed.
