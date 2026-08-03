@@ -25,7 +25,11 @@ permission:
   bash:
     "*": deny
     "gh pr*": allow
+    "gh pr create*": deny
     "echo *": allow
+    "git add *": allow
+    "git commit *": ask
+    "git push *": ask
 ---
 
 # Orchestrator
