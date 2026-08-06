@@ -41,7 +41,6 @@ description: >-
 
 ast-grep is a structural code search and rewrite tool based on Abstract Syntax Trees (tree-sitter). Unlike text-based `grep`, ast-grep understands code structure -- it matches AST nodes, not lines.
 
-> **Installed version**: 0.44.1 | **Short alias**: `sg` (e.g. `sg -p 'console.log($ARG)' -l ts`)
 
 ## Quick Reference
 
@@ -472,18 +471,18 @@ Use the [ast-grep playground](https://ast-grep.github.io/playground.html) to dis
 
 ---
 
-## Subagent Usage
+## When to Use ast-grep
 
-ast-grep is an **on-demand structural code tool** for subagents -- NOT a pipeline gate. Use it for structural search, discovery, and codemod/rewrite operations that text-based grep cannot perform.
+ast-grep is an **on-demand structural code tool** -- NOT a pipeline gate. Use it for structural search, discovery, and codemod/rewrite operations that text-based grep cannot perform.
 
-| Agent | Typical Task | ast-grep Command |
-|-------|-------------|------------------|
-| **code-explorer** | Find all classes implementing an interface | `sg -p 'class $NAME implements $IFACE { $$$ }' -l ts` |
-| **code-explorer** | Find all function declarations with a decorator | `sg -p '@$DECORATOR\ndef $NAME($$$):' -l py` |
-| **Implementor** | Rename a function across all call sites | `sg -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U` |
-| **Implementor** | Discover existing patterns before writing code | `sg -p 'repository.$METHOD($$$)' -l ts` |
-| **Fixer** | Find try/catch blocks without error logging | `sg scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}"` |
-| **Fixer** | Find deprecated API calls | `sg -p 'deprecatedApi($$$)' -l ts` |
-| **QA** | Find all test files using a specific pattern | `sg -p 'describe("$NAME", $$$)' --globs '*.test.ts'` |
+| Task | ast-grep Command |
+|------|------------------|
+| Find all classes implementing an interface | `ast-grep -p 'class $NAME implements $IFACE { $$$ }' -l ts` |
+| Find all function declarations with a decorator | `ast-grep -p '@$DECORATOR\ndef $NAME($$$):' -l py` |
+| Rename a function across all call sites | `ast-grep -p 'oldName($$$)' --rewrite 'newName($$$)' -l ts -U` |
+| Discover existing patterns before writing code | `ast-grep -p 'repository.$METHOD($$$)' -l ts` |
+| Find try/catch blocks without error logging | `ast-grep scan --inline-rules "id: ec language: ts rule: {kind: catch_clause has: {pattern: '{}'}}"` |
+| Find deprecated API calls | `ast-grep -p 'deprecatedApi($$$)' -l ts` |
+| Find all test files using a specific pattern | `ast-grep -p 'describe("$NAME", $$$)' --globs '*.test.ts'` |
 
 **When NOT to use**: simple keyword search (use grep/rg), lint rules already enforced by ESLint, security patterns already covered by semgrep SAST, or TypeScript strict mode checks.
