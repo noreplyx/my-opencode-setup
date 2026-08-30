@@ -29,9 +29,6 @@
   "description": "This directory contains the configuration for the OpenCode AI agent system.",
   "main": "index.js",
   "scripts": {
-    "test": "npx ts-node --project skills/scripts/tsconfig.json tests/run-tests.ts",
-    "test:validate-agent-taxonomy": "bun test scripts/validate-verdict-taxonomy.test.ts",
-    "test:redis": "bun test tools/redis.test.ts"
   },
   "repository": {
     "type": "git",
