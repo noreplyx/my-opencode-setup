@@ -7,6 +7,12 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    # Port contract: the pinned image serves on container port 8080 via granian
+    # (GRANIAN_PORT=8080, GRANIAN_HOST=:: owned by the image itself); the
+    # settings.yml server block is kept aligned with this binding. The publish
+    # below MUST remain loopback-only ("127.0.0.1:8080:8080"); SEARXNG_SECRET
+    # stays an environment pass-through and is never interpolated here; the
+    # core-config mount below stays read-only.
     ports:
       - "127.0.0.1:8080:8080"
     env_file: ./.env
@@ -16,6 +22,16 @@ services:
       - ./core-config/:/etc/searxng/:ro,Z
       - core-data:/var/cache/searxng/
       - searxng-secret:/var/lib/searxng-secret
+    healthcheck:
+      # python3 is the only HTTP-capable tool confirmed present in the pinned
+      # image (wget/curl unconfirmed). Probes the exact loopback endpoint the
+      # MCP client uses, so a dead or port-drifted backend surfaces as an
+      # unhealthy container instead of silent MCP failures.
+      test: ["CMD", "python3", "-c", "import sys, urllib.request; r = urllib.request.urlopen('http://127.0.0.1:8080/', timeout=3); sys.exit(0 if r.status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
 
   valkey:
     image: docker.io/valkey/valkey@sha256:a174b894902bd3367e330d47cc2054367dc4917701776aaf336f41d83b65ec7a

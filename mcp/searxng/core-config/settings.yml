@@ -85,10 +85,15 @@ search:
   formats:
     - html
     - json
+
 server:
-  # Is overwritten by ${SEARXNG_PORT} and ${SEARXNG_BIND_ADDRESS}
-  port: 8888
-  bind_address: "127.0.0.1"
+  # Deployment contract: the pinned image serves via granian (GRANIAN_PORT=8080,
+  # GRANIAN_HOST=::), which owns the listening socket; these keys are inert on
+  # that path. Keep them aligned with docker-compose.yml's 127.0.0.1:8080
+  # publish so run paths that DO honor server.port agree. Never set
+  # bind_address to loopback while serving behind a published container port.
+  port: 8080
+  bind_address: "::"
   # public URL of the instance, to ensure correct inbound links. Is overwritten
   # by ${SEARXNG_BASE_URL}.
   base_url: false  # "http://example.com/location"
