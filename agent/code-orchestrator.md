@@ -16,6 +16,7 @@ permission:
     coder: allow
     code-reviewer: allow
     security-reviewer: allow
+    code-security-scanner: allow
     verifier: allow
 ---
 
@@ -81,30 +82,44 @@ to the `coder` to add the tooling/tests needed to verify it) rather than
 treating it as satisfied, and do not advance past this stage on a
 `not-verifiable` item until the user signs off.
 
-**Stage 5 — iterate until clean.** This is the core loop:
-1. Delegate to the `security-reviewer` subagent to review the coder's changes
+**Stage 5 — iterate until clean.** This is the core loop. It runs in **outer
+loop passes** (each pass = one full review round) and **inner fix+verify
+rounds** (each round = one coder fix + one verifier re-check). The dependency
+scanner runs **once per outer-loop pass**, not per fix round.
+
+1. **Dependency scan (once per outer-loop pass).** At the start of each outer
+   loop pass, delegate to the `code-security-scanner` subagent to run
+   OSV-Scanner (via Podman) against the project's lockfiles. It returns
+   findings prioritized as **Critical / Major / Minor / Nit**, or a
+   non-blocking **"scans skipped"** note if Podman or the image is unavailable
+   (do not treat that as a failure). Merge its findings with the static
+   `security-reviewer` findings from step 2 into a single combined finding set.
+2. Delegate to the `security-reviewer` subagent to review the coder's changes
    for security issues. It returns findings prioritized as
-   **Critical / Major / Minor / Nit**.
-2. If the security review returns any **Critical or Major** findings, delegate
-   back to the `coder` subagent to fix them, passing the findings verbatim as
-   fix instructions. Then delegate to the `verifier` subagent to re-verify per
-   Stage 4.5 semantics, passing the planner's Acceptance checklist (DoD)
-   verbatim. If the re-verify returns `fail`, send the failures back to the
-   `coder` as fix instructions and re-verify, again passing the planner's
-   Acceptance checklist (DoD) verbatim. Once verification passes (and any
-   `not-verifiable` items are handled per Stage 4.5), then re-run the
-   `security-reviewer`. If any checklist item is `not-verifiable`, handle
-   it as in Stage 4.5 and do not terminate the loop until the user signs off.
-   **Keep looping until no Critical or Major security findings remain AND
-   verification passes AND all not-verifiable items signed off.**
-3. Delegate to the `code-reviewer` subagent to review the coder's changes
-   (general review, including any Minor security findings). Pass the
-   security-reviewer's Minor and Nit findings verbatim to the code-reviewer so
-   it can carry them forward.
-4. If the review returns **any** comments or findings, delegate back to the
+   **Critical / Major / Minor / Nit**. Merge these with the
+   `code-security-scanner` findings from step 1.
+3. If the **merged** security findings (scanner or static) contain any
+   **Critical or Major** findings, delegate back to the `coder` subagent to fix
+   them, passing the findings verbatim as fix instructions. Then delegate to
+   the `verifier` subagent to re-verify per Stage 4.5 semantics, passing the
+   planner's Acceptance checklist (DoD) verbatim. If the re-verify returns
+   `fail`, send the failures back to the `coder` as fix instructions and
+   re-verify, again passing the planner's Acceptance checklist (DoD) verbatim.
+   Once verification passes (and any `not-verifiable` items are handled per
+   Stage 4.5), then re-run the `security-reviewer` (and, if the fix touched
+   lockfiles, the `code-security-scanner`). If any checklist item is
+   `not-verifiable`, handle it as in Stage 4.5 and do not terminate the loop
+   until the user signs off. **Keep looping until no Critical or Major security
+   findings remain AND verification passes AND all not-verifiable items signed
+   off.**
+4. Delegate to the `code-reviewer` subagent to review the coder's changes
+   (general review, including any Minor security findings). Pass the merged
+   security-reviewer and code-security-scanner Minor and Nit findings verbatim
+   to the code-reviewer so it can carry them forward.
+5. If the review returns **any** comments or findings, delegate back to the
    `coder` subagent to address them, passing the reviewer's findings verbatim
    as fix instructions.
-5. After each code-reviewer fix from step 4, and in any case before
+6. After each code-reviewer fix from step 5, and in any case before
    terminating the loop, delegate to the `verifier` subagent to re-run
    verification and confirm it returns `pass`, or `no-tooling` with no
    checklist item `fail`.
@@ -113,13 +128,20 @@ treating it as satisfied, and do not advance past this stage on a
    the failures back to the `coder` as fix instructions and re-verify. If any
    checklist item is `not-verifiable`, handle it as in Stage 4.5 and do not
    terminate the loop until the user signs off. This re-verification
-   covers the code-reviewer fixes from step 4 (security fixes were already
-   re-verified in step 2).
-6. Return to step 1 and repeat the full review loop (security-reviewer then
-   code-reviewer) until the security review is clean of Critical/Major findings
-   AND the code review returns no comments AND verification passes AND all
-   `not-verifiable` checklist items have received user sign-off. Only then
-   terminate the loop.
+   covers the code-reviewer fixes from step 5 (security fixes were already
+   re-verified in step 3).
+7. **Iteration cap / escalation.** Track the number of full outer-loop passes
+   (steps 1–6). After **~3 full review rounds without convergence** (i.e. the
+   merged security findings still contain Critical/Major items, or the code
+   review still returns comments, or verification still fails), **escalate to
+   the user**: present the current status and the remaining findings, and ask
+   how to proceed (e.g. accept residual risk, adjust scope, or continue).
+   Do **not** hard-stop the pipeline silently — the user decides.
+8. Return to step 1 and repeat the full review loop (code-security-scanner +
+   security-reviewer, then code-reviewer) until the merged security review is
+   clean of Critical/Major findings AND the code review returns no comments AND
+   verification passes AND all `not-verifiable` checklist items have received
+   user sign-off. Only then terminate the loop.
 
 Guidance:
 

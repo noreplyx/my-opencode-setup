@@ -1,13 +1,13 @@
 ---
 name: osv-scanner
-description: "Use when the user asks to scan code for dependency vulnerabilities, run osv-scanner, check for known CVEs in packages, or perform software composition analysis (SCA) on lockfiles (package-lock.json, Cargo.lock, go.mod, Gemfile.lock, requirements.txt, pom.xml, and more). Runs Google's OSV-Scanner via a Podman container (ghcr.io/google/osv-scanner:latest) with zero local Go installation. Output formats: table, markdown, vertical, JSON, SARIF, HTML."
+description: "Use when the user asks to scan code for dependency vulnerabilities, run osv-scanner, check for known CVEs in packages, or perform software composition analysis (SCA) on lockfiles (package-lock.json, Cargo.lock, go.mod, Gemfile.lock, requirements.txt, pom.xml, and more). Runs Google's OSV-Scanner via a Podman container (ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511) with zero local Go installation. Output formats: table, markdown, vertical, JSON, SARIF, HTML."
 ---
 
 # OSV-Scanner Skill (Podman)
 
 ## Purpose
 
-Run [OSV-Scanner](https://github.com/google/osv-scanner) -- Google's open-source vulnerability scanner -- to find known vulnerabilities in a project's dependencies by scanning lockfiles. **All via a Podman container** with zero local Go installation required. Uses the official `ghcr.io/google/osv-scanner:latest` image.
+Run [OSV-Scanner](https://github.com/google/osv-scanner) -- Google's open-source vulnerability scanner -- to find known vulnerabilities in a project's dependencies by scanning lockfiles. **All via a Podman container** with zero local Go installation required. Uses the official `ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511` image.
 
 OSV-Scanner maps your lockfiles to the [OSV.dev](https://osv.dev) vulnerability database, covering 11+ package ecosystems (npm, PyPI, Go, Rust, Maven, RubyGems, NuGet, etc.).
 
@@ -19,21 +19,21 @@ OSV-Scanner maps your lockfiles to the [OSV.dev](https://osv.dev) vulnerability 
 | **Single lockfile** | `osv-scanner-docker scan source -L /src/package-lock.json` |
 | **JSON output** | `osv-scanner-docker scan source -r --format json /src` |
 | **Shell wrapper** | Source `scripts/osv-scanner-wrapper.sh` then run `osv-scanner-docker ...` |
-| **First-time setup** | `podman pull ghcr.io/google/osv-scanner:latest` |
+| **First-time setup** | `podman pull ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511` |
 | **Check version** | `osv-scanner-docker --version` |
 
 ## Quick Start
 
 ```bash
 # Pull the image (first time only)
-podman pull ghcr.io/google/osv-scanner:latest
+podman pull ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511
 
 # Scan a project directory (auto-detects lockfiles)
-podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner:latest \
+podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511 \
   scan source -r /src
 
 # Scan a specific lockfile
-podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner:latest \
+podman run --rm -v "${PWD}:/src:Z" ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511 \
   scan source --lockfile=/src/package-lock.json
 ```
 
@@ -90,8 +90,8 @@ osv-scanner-docker scan source -L /src/package-lock.json -L /src/Cargo.lock
 # Scan with config override
 osv-scanner-docker scan source -r --config /src/osv-scanner.toml /src
 
-# Save output to file (persists inside the /src mount)
-osv-scanner-docker scan source -r --format json --output-file /src/results.json /src
+# Save output to file (persists inside the /src mount, under /src/.scans/)
+osv-scanner-docker scan source -r --format json --output-file /src/.scans/results.json /src
 
 # Exclude test/vendor directories for faster scans
 osv-scanner-docker scan source -r \
@@ -111,7 +111,7 @@ osv-scanner-docker scan source -r \
 | `--format sarif` | SARIF v2.1.0 | Code Scanning integration |
 | `--format html` | HTML (interactive) | Rich vulnerability analysis |
 
-**Important**: Use `--output-file /src/<filename>` to persist results to the host filesystem (inside the `/src` mount). Without this, results go to stdout. Paths outside `/src/` are lost when the container exits.
+**Important**: Use `--output-file /src/.scans/<filename>` to persist results to the host filesystem (inside the `/src` mount). Without this, results go to stdout. Paths outside `/src/` are lost when the container exits. The wrapper enforces that output files must live under the dedicated `/src/.scans/` subdirectory so fixed, non-colliding artifact names cannot overwrite an existing project file.
 
 ### Step 4: Understand Findings
 
@@ -157,7 +157,7 @@ Structure findings reports like this:
 ## OSV-Scanner Vulnerability Report
 
 ### Configuration
-- **Runtime**: Podman container (ghcr.io/google/osv-scanner:latest)
+- **Runtime**: Podman container (ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511)
 - **Mode**: Source scan (recursive)
 - **Format**: JSON
 
@@ -187,8 +187,8 @@ Structure findings reports like this:
 - [x] **Always mount with SELinux**: `-v "${PWD}:/src:Z"` (`:Z` flag for SELinux systems)
 - [x] **Always use `--rm`** to clean up the container
 - [x] **Always use `/src` paths** for all file targets inside the container
-- [x] **Use `--output-file /src/<file>`** to persist results to host
-- [x] **Read-only operation** -- never modify project source files; only write scan artifacts (e.g. via `--output-file /src/...`)
+- [x] **Use `--output-file /src/.scans/<file>`** to persist results to host
+- [x] **Read-only operation** -- never modify project source files; only write scan artifacts (e.g. via `--output-file /src/.scans/...`)
 - [x] **Place `osv-scanner.toml`** at project root for project-specific config
 
 ## Key References
