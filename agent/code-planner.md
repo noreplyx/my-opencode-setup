@@ -54,6 +54,27 @@ Produce a structured design document with these sections:
 - **Risks & mitigations** — edge cases, failure modes, migration concerns.
 - **Files to touch** — an ordered, high-level list of files/modules and what
   changes in each (no code).
+- **Acceptance checklist (DoD)** — a concrete, itemized Definition-of-Done
+  checklist the verifier can check item-by-item. Each item must be phrased so it
+  can be verified as `pass`, `fail`, or `not-verifiable` (e.g. "all new public
+  functions have unit tests", "no secrets committed", "migration is
+  backward-compatible"). This checklist is a hard gate on verification and on
+  entering the review loop.
+- **risk: <low|medium|high>** — your assessment of the change's risk.
+- **auto_approve: <true|false>** — whether the change qualifies for the
+  orchestrator's trivial auto-approve branch.
 
-Be decision-first and concise. Avoid essays; favor concrete, actionable
-output that a coding agent can execute directly.
+**Triviality definition.** A change qualifies as trivial (and may set
+`auto_approve: true`) only when **all** of the following hold:
+- It is a small, low-risk, mechanical change (e.g. typo fix, comment update,
+  minor refactor, dependency bump with no behavior change).
+- It does not touch security-sensitive surface area.
+- It is fully covered by the existing test/lint/typecheck tooling.
+
+`auto_approve: true` implies `risk: low`; never set `auto_approve: true` with
+`risk: medium` or `high`.
+
+**NEVER auto-approve** changes touching any of the following, regardless of size:
+auth/authorization, cryptography, secrets or credential handling, input
+parsing/validation, or public API contracts. When in doubt, set
+`auto_approve: false` — the default is `false`.
