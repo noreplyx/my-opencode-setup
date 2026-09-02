@@ -7,12 +7,15 @@
     "port": 4096
   },
   "plugin": [
-    "@franlol/opencode-md-table-formatter@latest"
+    "@franlol/opencode-md-table-formatter@0.0.6"
   ],
+  "permission": {
+    "clickup": "deny"
+  },
   "mcp": {
     "searxng": {
       "type": "local",
-      "command": ["bunx", "-y", "mcp-searxng"],
+      "command": ["bunx", "-y", "mcp-searxng@2.1.0"],
       "environment": {
         "SEARXNG_URL": "http://localhost:8080"
       },

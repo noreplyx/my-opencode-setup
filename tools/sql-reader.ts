@@ -3,6 +3,7 @@ import { Parser } from "node-sql-parser"
 import type { Client } from "pg"
 import type { Connection } from "mysql2/promise"
 import type { ConnectionPool } from "mssql"
+import { validateMssqlTlsConnectionString } from "./mssql-tls"
 
 /**
  * Module-level cache for dynamically imported database driver modules.
@@ -179,20 +180,7 @@ function isReadOnlyQuery(sql: string): boolean {
 
     // Check that the top-level statement is a SELECT or WITH
     if (ast.type === "select" || (ast as any).with) {
-      // Post-AST check: strip comments AND string literals, then check for write patterns
-      // that node-sql-parser misclassifies as SELECT (e.g., SELECT INTO, SELECT FOR UPDATE)
-      const cleaned = stripCommentsAndStrings(sql)
-      const noStrings = cleaned.replace(/'(?:[^']|'')*'/g, "").replace(/"(?:[^"]|"")*"/g, "")
-      const upper = noStrings.toLocaleUpperCase("en-US")
-      // Reject SELECT INTO (table creation, file write, variable assignment)
-      if (/\bINTO\b/.test(upper)) {
-        return false
-      }
-      // Reject FOR UPDATE / FOR SHARE (write locks)
-      if (/\bFOR\s+(UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)\b/.test(upper)) {
-        return false
-      }
-      return true
+      return !containsWriteOperation(sql)
     }
 
     return false
@@ -210,6 +198,14 @@ function isReadOnlyQuery(sql: string): boolean {
     return false
   }
 
+  return !containsWriteOperation(sql)
+}
+
+function containsWriteOperation(sql: string): boolean {
+  const cleaned = stripCommentsAndStrings(sql)
+  const noStrings = cleaned.replace(/'(?:[^']|'')*'/g, "").replace(/"(?:[^"]|"")*"/g, "")
+  const upper = noStrings.toLocaleUpperCase("en-US")
+
   // Single-word write keywords (checked with \b word boundaries)
   const writeKeywords = [
     "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
@@ -222,7 +218,7 @@ function isReadOnlyQuery(sql: string): boolean {
     const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     const regex = new RegExp(`\\b${escaped}\\b`)
     if (regex.test(upper)) {
-      return false
+      return true
     }
   }
 
@@ -231,14 +227,20 @@ function isReadOnlyQuery(sql: string): boolean {
     /\bEXECUTE\s+IMMEDIATE\b/,
     /\bLOAD\s+DATA\b/,
     /\bBULK\s+INSERT\b/,
+    /\bNEXT\s+VALUE\s+FOR\b/,
+    /\bOPEN(?:ROWSET|QUERY|DATASOURCE)\s*\(/,
+    /\b(?:XP|SP)_[A-Z0-9_]+\s*\(/,
+    /\b(?:DBLINK|PG_READ_FILE|PG_READ_BINARY_FILE|PG_LS_DIR|LO_IMPORT|LO_EXPORT|SET_CONFIG|PG_ADVISORY_LOCK|GET_LOCK|RELEASE_LOCK|SLEEP|LOAD_FILE)\s*\(/,
+    /\bWAITFOR\b/,
   ]
   for (const pattern of multiWordPatterns) {
     if (pattern.test(upper)) {
-      return false
+      return true
     }
   }
 
-  return true
+  if (/\bFOR\s+(UPDATE|NO\s+KEY\s+UPDATE|SHARE|KEY\s+SHARE)\b/.test(upper)) return true
+  return false
 }
 
 /**
@@ -456,15 +458,23 @@ class PostgresDriver implements DatabaseDriver {
         throw new Error("PostgreSQL driver (pg) is not installed. Run: bun add pg")
       }
     }
-    // CP-05: Enforce TLS — check for sslmode=require or verify-full
-    const upper = connectionString.toLocaleUpperCase("en-US")
-    if (!upper.includes("SSLMODE=REQUIRE") && !upper.includes("SSLMODE=VERIFY-FULL")) {
-      console.warn(
-        "⚠️  PostgreSQL connection is not using TLS/SSL. " +
-        "Add '?sslmode=require' to your connection string for secure connections.",
-      )
+    let url: URL
+    try {
+      url = new URL(connectionString)
+    } catch {
+      throw new Error("PostgreSQL connections require a valid connection URI with sslmode=verify-full.")
     }
-    this.client = new pg.Client({ connectionString, connectionTimeoutMillis: 10000 })
+    const sslMode = [...url.searchParams.entries()]
+      .filter(([key]) => key.toLocaleLowerCase("en-US") === "sslmode")
+      .at(-1)?.[1].toLocaleLowerCase("en-US")
+    if (sslMode !== "verify-full") {
+      throw new Error("PostgreSQL connections require TLS with certificate verification. Add '?sslmode=verify-full'.")
+    }
+    this.client = new pg.Client({
+      connectionString,
+      ssl: { rejectUnauthorized: true },
+      connectionTimeoutMillis: 10000,
+    })
     await this.client.connect()
     // DB-level read-only enforcement & query timeout
     await this.client.query("SET default_transaction_read_only = ON")
@@ -565,20 +575,25 @@ class MySQLDriver implements DatabaseDriver {
         throw new Error("MySQL driver (mysql2) is not installed. Run: bun add mysql2")
       }
     }
-    // CP-05: Enforce TLS — check for ssl=true or ssl={} in connection string/options
-    const hasSSL = /[?&]ssl=true\b/i.test(connectionString) || /[?&]ssl=\{\}/i.test(connectionString)
-    if (!hasSSL) {
-      console.warn(
-        "⚠️  MySQL connection is not using TLS/SSL. " +
-        "Add '?ssl=true' to your connection string for secure connections.",
-      )
+    let url: URL
+    try {
+      url = new URL(connectionString)
+    } catch {
+      throw new Error("MySQL connections require a valid connection URI with ssl=true.")
+    }
+    const ssl = [...url.searchParams.entries()]
+      .filter(([key]) => key.toLocaleLowerCase("en-US") === "ssl")
+      .at(-1)?.[1].toLocaleLowerCase("en-US")
+    if (ssl !== "true") {
+      throw new Error("MySQL connections require TLS with certificate verification. Add '?ssl=true' to your connection string.")
     }
     this.connection = await mysql2.createConnection({
       uri: connectionString,
+      ssl: { rejectUnauthorized: true },
       connectTimeout: 10000,
     })
     // DB-level read-only enforcement
-    await this.connection.execute("SET SESSION TRANSACTION READ ONLY").catch(() => {})
+    await this.connection.execute("SET SESSION TRANSACTION READ ONLY")
 
     // CP-05: Set query timeout (30s) for MySQL 5.7+ / MariaDB
     try {
@@ -696,14 +711,8 @@ class MSSQLDriver implements DatabaseDriver {
         throw new Error("SQL Server driver (mssql) is not installed. Run: bun add mssql")
       }
     }
-    // CP-05: Enforce TLS — check for Encrypt=true in connection string
-    const upper = connectionString.toLocaleUpperCase("en-US")
-    if (!upper.includes("ENCRYPT=TRUE")) {
-      console.warn(
-        "⚠️  SQL Server connection is not using TLS/SSL. " +
-        "Add 'Encrypt=true' to your connection string for secure connections.",
-      )
-    }
+    // CP-05: Enforce TLS and reject explicit insecure settings.
+    validateMssqlTlsConnectionString(connectionString)
     this.mssql = mssql
     this.pool = (await mssql.connect({
       connectionString,
@@ -859,7 +868,7 @@ Results are returned as formatted markdown tables or code blocks.`,
       "Full connection string. (Optional fallback if connectionId is not used). Examples:\n" +
       "- PostgreSQL: postgresql://user:password@host:5432/dbname\n" +
       "- MySQL: mysql://user:password@host:3306/dbname\n" +
-      "- SQL Server: Server=host;Database=dbname;User Id=user;Password=password;TrustServerCertificate=true;",
+      "- SQL Server: Server=host;Database=dbname;User Id=user;Password=password;Encrypt=true;TrustServerCertificate=false;",
     ),
     query: tool.schema.string().optional().describe(
       "For action='query' or 'explain': a SELECT SQL statement (e.g. SELECT * FROM users WHERE id = 1).\n" +

@@ -1,4 +1,5 @@
 import { tool } from "@opencode-ai/plugin"
+import { createHash } from "node:crypto"
 
 /**
  * Module-level cache for the ioredis module.
@@ -69,6 +70,12 @@ function parseConnectionString(connStr: string): {
   const db = parseInt((url.pathname || "").replace(/^\//, "") || "0", 10)
   const tls = url.protocol === "rediss:" || url.searchParams.get("tls") === "true"
   return { host, port, username, password, db, tls }
+}
+
+function connectionCredentialFingerprint(options: { username?: string; password?: string; tls: boolean }): string {
+  return createHash("sha256")
+    .update(`${options.username ?? ""}\0${options.password ?? ""}\0${options.tls ? "tls" : "plain"}`)
+    .digest("hex")
 }
 
 /**
@@ -189,7 +196,7 @@ class RedisDriver {
 
     const opts = parseConnectionString(connectionString)
     this.connection = { host: opts.host, port: opts.port, db: opts.db }
-    this.connKey = `${opts.username || ""}:${opts.host}:${opts.port}/${opts.db}`
+    this.connKey = `${opts.host}:${opts.port}/${opts.db}:tls=${opts.tls}:auth=${connectionCredentialFingerprint(opts)}`
 
     const cached = connectionCache.get(this.connKey)
     if (cached && (cached.client.status === "ready" || cached.client.status === "connect")) {
@@ -1167,6 +1174,7 @@ export {
   extractRedisIdentifier,
   sanitizeConnectionString,
   parseConnectionString,
+  connectionCredentialFingerprint,
   formatValue,
   formatKeyValueTable,
   formatList,

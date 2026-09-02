@@ -1,0 +1,59 @@
+{
+  "expectedCriteria": [
+    { "id": "AC-1" },
+    { "id": "AC-2" }
+  ],
+  "success": {
+    "verdict": "pass",
+    "expectedCriteria": [{ "id": "AC-1" }, { "id": "AC-2" }],
+    "criteria": [
+      { "id": "AC-1", "status": "pass", "evidence": "node --test: 2 passed" },
+      { "id": "AC-2", "status": "pass", "evidence": "file inspection: agent/verifier.md" }
+    ]
+  },
+  "failed": {
+    "verdict": "fail",
+    "expectedCriteria": [{ "id": "AC-1" }, { "id": "AC-2" }],
+    "criteria": [
+      { "id": "AC-1", "status": "fail", "evidence": "node --test: 1 failed" }
+    ]
+  },
+  "missingEvidence": {
+    "verdict": "pass",
+    "expectedCriteria": [{ "id": "AC-1" }, { "id": "AC-2" }],
+    "criteria": [
+      { "id": "AC-1", "status": "pass", "evidence": "" }
+    ]
+  },
+  "notVerifiable": {
+    "verdict": "pass",
+    "expectedCriteria": [{ "id": "AC-1" }, { "id": "AC-2" }],
+    "criteria": [
+      { "id": "AC-1", "status": "not-verifiable", "evidence": "requires external approval" }
+    ]
+  },
+  "endToEndHandoff": {
+    "contract": {
+      "Goal": "Validate a complete delegation handoff",
+      "Scope": "Prompt contracts and deterministic fixture validation; external services excluded",
+      "Constraints": "Preserve permissions, credentials, and unrelated behavior",
+      "Inputs": "User request and repository context",
+      "Expected output": "Structured handoffs and a validated planner result",
+      "Completion criteria": "Every supported path receives the unchanged contract",
+      "Risks/ambiguities": "External agent execution is deferred"
+    },
+    "plannerResult": {
+      "risk": "medium",
+      "auto_approve": false
+    },
+    "handoffs": [
+      { "name": "brainstormer", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "code-planner", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "coder", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "verifier", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "code-reviewer", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "security-reviewer", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } },
+      { "name": "code-security-scanner", "contract": { "Goal": "Validate a complete delegation handoff", "Scope": "Prompt contracts and deterministic fixture validation; external services excluded", "Constraints": "Preserve permissions, credentials, and unrelated behavior", "Inputs": "User request and repository context", "Expected output": "Structured handoffs and a validated planner result", "Completion criteria": "Every supported path receives the unchanged contract", "Risks/ambiguities": "External agent execution is deferred" } }
+    ]
+  }
+}

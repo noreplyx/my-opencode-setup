@@ -67,5 +67,7 @@ Suggested flow (adapt as needed):
 **Output contract.** When invoked by the orchestrator, converge to a concise
 **Decision & requirements** summary that the `code-planner` subagent can act on.
 Include: the goal, constraints, success criteria, the chosen option with brief
-rationale, and any open questions. Do not leave the choice open-ended — the
+rationale, and any open questions. Also echo the canonical contract fields:
+Goal, Scope, Constraints, Inputs, Expected output, Completion criteria, and
+Risks/ambiguities. Do not leave the choice open-ended — the
 orchestrator needs a concrete decision to hand to the planner.

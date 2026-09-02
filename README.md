@@ -14,7 +14,7 @@ The following tools must be installed to use this system:
 | [Podman](https://podman.io) | latest | Container runtime for security scanning skills |
 | [ast-grep](https://ast-grep.net) | 0.42+ | Structural AST-based code search, linting, and rewriting |
 | [Python 3](https://python.org) | 3.10+ | Skill evaluation and benchmarking scripts |
-| [Playwright CLI](https://playwright.dev) | latest | Browser automation and web testing |
+| [Playwright CLI](https://playwright.dev) | 0.1.19 | Browser automation and web testing |
 
 ### Optional MCP Services
 
@@ -70,6 +70,17 @@ verify → iterate pipeline by delegating to subagents. Key agents:
   practices. Neither has access to the **clickup** MCP (it is denied to keep
   their surface read-only). Both are best-effort and non-blocking.
 
+### Delegation contract and completion gate
+
+All orchestrator handoffs use `agent/delegation-contract.md` with the fields
+Goal, Scope, Constraints, Inputs, Expected output, Completion criteria, and
+Risks/ambiguities. The planner owns stable, testable acceptance-criterion IDs;
+the coder maps implementation and evidence to them; and the independent
+verifier reports `pass`, `fail`, or `not-verifiable` for each item. Completion
+requires a passing verifier result and concrete evidence for every criterion;
+failed, not-verifiable, or unsupported criteria remain blocked until remediated
+or explicitly signed off where allowed.
+
 ## Operational Prerequisites
 
 - **Podman** — required for the `code-security-scanner` subagent (OSV-Scanner
@@ -81,3 +92,33 @@ verify → iterate pipeline by delegating to subagents. Key agents:
 - **ClickUp** — remote MCP (requires authentication). Not granted to the
   brainstormer or planner (denied to keep their surface read-only).
   Best-effort; a failure does not block the pipeline.
+
+## Security operation notes
+
+- ClickUp access is denied globally and in every authored agent. A dedicated
+  approved agent must be introduced before any ClickUp workflow is enabled.
+- SearXNG accepts `SEARXNG_SECRET` from the ignored `mcp/searxng/.env` file or
+  an explicitly passed container environment value. The Compose service uses
+  environment pass-through rather than interpolating the secret into rendered
+  configuration. When it is empty or absent, the deployment wrapper
+  generates a 256-bit secret in the persistent `searxng-secret` named volume
+  and reuses it on restart. Explicit non-empty values always take precedence
+  and never modify the fallback file. Missing, unwritable, or malformed
+  persistent storage stops startup rather than using an ephemeral secret.
+  Remove and recreate that volume to intentionally rotate the fallback secret;
+  this invalidates sessions and other data signed with the previous key. The
+  previously committed signing key must be rotated wherever it was used. Secret
+  rotation is a required external action; this repository cannot verify
+  completion of rotation or access to external secret stores.
+- Verification is restricted to the verifier agent's reviewed command allowlist:
+  explicit test/validation scripts, typecheck, bounded Node and shell syntax
+  checks, the reviewed SearXNG Compose lifecycle/inspection commands, the OSV
+  wrapper, and read-only Git status/diff checks. If task-runner configuration
+  changes, explicit approval is required before verification.
+- The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
+  its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
+  files mode `0600`; security validation rejects weaker modes.
+
+The security remediation also tightened SQL read-only enforcement and requires
+TLS for database connections. These are intentional scope expansions because
+they close the associated review findings.
