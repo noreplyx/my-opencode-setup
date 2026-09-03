@@ -96,14 +96,51 @@ test("authorized OSV verification requests machine-readable output", async () =>
   const verifier = await readFile(path.join(root, "agent/verifier.md"), "utf8");
   const scanner = await readFile(path.join(root, "agent/code-security-scanner.md"), "utf8");
   const wrapper = await readFile(path.join(root, "skills/osv-scanner/scripts/osv-scanner-wrapper.sh"), "utf8");
-  const invocation = "source /home/tanutchakorn/.config/opencode/skills/osv-scanner/scripts/osv-scanner-wrapper.sh && osv-scanner-docker scan source -r --format json --output-file /src/.scans/final-osv-results.json /src";
-  assert.ok(verifier.includes(`"${invocation}": allow`));
-  assert.ok(scanner.includes(`"${invocation}": allow`));
-  for (const permissions of [verifier, scanner]) {
-    assert.match(permissions, /"\*": deny/);
-    assert.doesNotMatch(permissions, /"osv-scanner-docker \*": allow/);
-    assert.doesNotMatch(permissions, /"source (?![^"]*&&)[^"]+": allow/);
+  const WRAPPER_KEY = "source ~/.config/opencode/skills/osv-scanner/scripts/osv-scanner-wrapper.sh";
+  const OSV_KEY = "osv-scanner-docker scan source -r --format json --output-file /src/.scans/final-osv-results.json /src";
+  // The trailing \*? is a deliberate leniency approved in the split-grant review; the pinned
+  // `scan source` verb prefix and the wrapper's `:Z` workdir mount bound the extra args — the
+  // `/src/.scans/` output guard is the second check. The source shape gets no such tolerance.
+  const osvKeyRe = /^osv-scanner-docker scan source -r --format json --output-file \/src\/\.scans\/final-osv-results\.json \/src\*?$/;
+  const sourceKeyRe = /^source ~\/\.config\/opencode\/skills\/osv-scanner\/scripts\/osv-scanner-wrapper\.sh$/;
+  const GIT_DENY_TAIL = ["git * --out*", "git * --ext*", "git diff --output*", "git diff --ext-diff*", "git show --ext-diff*", "git difftool*"];
+  const SCANNER_DENY_TAIL = ["source", "podman*", "docker*", "kubectl*"];
+  const parseBash = (doc, name) => {
+    const frontmatter = doc.match(/^---\n([\s\S]*?)\n---\n/);
+    assert.ok(frontmatter, `${name}: missing frontmatter`);
+    return yaml.load(frontmatter[1]).permission.bash;
+  };
+  for (const [name, doc] of [["verifier", verifier], ["scanner", scanner]]) {
+    const rules = parseBash(doc, name);
+    const keys = Object.keys(rules);
+    assert.equal(keys[0], "*", `${name}: catch-all must be the first bash rule`);
+    assert.equal(rules[WRAPPER_KEY], "allow", `${name}: wrapper source segment must be allowed`);
+    assert.equal(rules[OSV_KEY], "allow", `${name}: pinned osv-scanner invocation must be allowed`);
+    assert.equal(rules["*"], "deny", `${name}: bash must be deny-by-default`);
+    const lastAllowIndex = Math.max(...keys.map((key, i) => (rules[key] === "allow" ? i : -1)));
+    for (const key of keys) {
+      assert.ok(!key.includes("&&"), `${name}: compound && keys are structurally dead: ${key}`);
+      if (key.startsWith("osv-scanner-docker")) {
+        assert.match(key, osvKeyRe, `${name}: osv-scanner-docker grant is broader than the pinned invocation`);
+      }
+      if (key.startsWith("source")) {
+        assert.ok(
+          sourceKeyRe.test(key) || key === "source",
+          `${name}: source grant is broader than the wrapper path: ${key}`,
+        );
+      }
+    }
+    for (const key of name === "verifier" ? GIT_DENY_TAIL : SCANNER_DENY_TAIL) {
+      assert.ok(keys.indexOf(key) > lastAllowIndex, `${name}: deny-tail key must come after every allow: ${key}`);
+    }
   }
+  // This hardening tail is deliberately scanner-only: a blanket "podman*": deny would
+  // shadow the verifier's seven project-scoped podman-compose allows.
+  const scannerRules = parseBash(scanner, "scanner");
+  assert.equal(scannerRules["source"], "deny");
+  assert.equal(scannerRules["podman*"], "deny");
+  assert.equal(scannerRules["docker*"], "deny");
+  assert.equal(scannerRules["kubectl*"], "deny");
   assert.match(verifier, /secret-output prohibition|secret files/);
   assert.match(scanner, /secret|credentials/);
   assert.match(wrapper, /podman run --rm/);
