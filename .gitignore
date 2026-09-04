@@ -5,6 +5,7 @@ tmp_*
 __pycache__/
 
 # Pipeline runtime artifacts
+.scans/
 .opencode/pipeline-logs/
 .opencode/audit/
 .opencode/dispatch/

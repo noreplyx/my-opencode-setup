@@ -85,6 +85,29 @@ routes it to the `code-planner` as a design re-issue (a versioned revision that
 preserves acceptance-criterion IDs) and re-runs the Stage 3 approval checkpoint
 before resuming implementation.
 
+### User-facing communication format
+
+Every message the `code-orchestrator` sends to the user — each blocking
+checkpoint issued via the `question` tool, the Stage 1 decision/requirements
+presentation, the Stage 5 step 7 escalation, the Stage 6 sign-off, and the
+final report — contains the four parts in order: Overview, Non-technical,
+Technical, and Summary. The Non-technical part is plain language for a reader
+without a programming background; the Technical part carries the precise
+files, commands, findings, verifier verdicts, and acceptance-criterion IDs.
+When a message's topic calls for more, the orchestrator may also add zero or
+more optional topic-labeled parts — for example a Security or Cost impact
+section — between the Technical and Summary parts. When the message uses
+domain terms or abbreviations a non-specialist reader would not know —
+pipeline vocabulary such as verifier or DoD, or engineering vocabulary such
+as lockfile or CVE — the orchestrator adds a Terms explained part, after any
+optional topic-labeled parts and immediately before the Summary part,
+explaining each such term on its own line in plain language. The Summary
+part always stays last, so every checkpoint closes with its question, and a
+message contains no labeled parts beyond the four required parts, the Terms
+explained part when its rule applies, and these optional ones. Parts stay
+proportional — one sentence each is enough for a short quick-confirm
+checkpoint — but a required part is never omitted.
+
 ## Operational Prerequisites
 
 - **Podman** — required for the `code-security-scanner` subagent (OSV-Scanner

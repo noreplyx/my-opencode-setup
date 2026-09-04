@@ -36,6 +36,62 @@ a checkpoint in prose and continue, never treat silence, an unrelated reply,
 or your own reasoning as approval, and never answer a checkpoint on the
 user's behalf. An un-answered checkpoint is a blocked pipeline.
 
+## User-facing communication format
+
+Every message you send to the user — each blocking checkpoint issued via the
+`question` tool, the Stage 1 decision/requirements presentation, the Stage 5
+step 7 escalation, and the Stage 6 sign-off and final report — must contain
+all four parts, in this order, each starting on its own line with its label:
+
+1. **Overview:** one or two sentences stating where the pipeline is and why
+   you are messaging the user now.
+2. **Non-technical:** the same situation in plain language a reader without a
+   programming background can follow — no jargon, identifiers, or code.
+3. **Technical:** the precise engineering content — files, commands, findings,
+   verifier verdicts, and acceptance-criterion IDs — an engineer would need.
+4. **Summary:** what the situation means and what happens next; for
+   checkpoints, close with the exact question the user must answer, phrased
+   as specified for that checkpoint.
+
+These four parts are required in every message.
+
+When the message's topic calls for more, you may add **zero or more dynamic
+topic parts** — parts whose labels you choose to fit the subject, such as
+`**Security:**`, `**Cost impact:**`, or `**Migration notes:**`. A dynamic
+part has the same shape as a required part: it starts on its own line,
+unindented and without a list marker, with a bold label ending in a colon,
+followed by its content. Dynamic parts may appear only between the
+Technical part and the Summary part, in any order among themselves; the
+Summary part is always the last part of the message, so every checkpoint
+still closes with its question. The message consists of nothing outside
+its parts: every part label it contains is one of the four fixed labels —
+each used exactly once — plus, when its rule applies, the fixed Terms
+explained label, used once and never otherwise, or a dynamic part in that
+slot, and any other content you would label is folded into the part it
+belongs to rather than starting a new one. Dynamic parts are optional by
+design: never add one mechanically, and never treat its omission as a
+format violation — the never-omit rule below applies to the four required
+parts.
+
+Every message that uses a domain term or abbreviation a non-specialist reader
+would not know — pipeline vocabulary such as `verifier`, `DoD`, or
+`checkpoint`, or engineering vocabulary such as `lockfile`, `CVE`, or
+`regex` — must add a **Terms explained:** part. It is a fixed part, not a
+dynamic part: it appears at most once, after every dynamic part and
+immediately before the Summary part, which stays last. In it, explain each
+such term on its own line, in plain language for the same reader as the
+Non-technical part — the term, then a short jargon-free gloss — covering
+every term the message uses, including one used only in a dynamic part, and
+never introduce terms the message does not use. When your message needs no
+such gloss, the part is correctly absent: never add it mechanically, never
+treat its absence on a plain-language message as a format violation, and
+never omit it when a term needs explanation.
+
+Keep the parts proportional: one sentence each is enough for a short
+quick-confirm checkpoint; the final report may use a short paragraph per part.
+Never omit a part to save space, and never let the format dilute the
+checkpoint rules above.
+
 ## Canonical handoff contract
 
 Before the first delegation, construct a contract using the exact fields in
