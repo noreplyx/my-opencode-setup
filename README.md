@@ -79,7 +79,11 @@ the coder maps implementation and evidence to them; and the independent
 verifier reports `pass`, `fail`, or `not-verifiable` for each item. Completion
 requires a passing verifier result and concrete evidence for every criterion;
 failed, not-verifiable, or unsupported criteria remain blocked until remediated
-or explicitly signed off where allowed.
+or explicitly signed off where allowed. If a review or implementation finding
+cannot be fixed without contradicting the approved design, the orchestrator
+routes it to the `code-planner` as a design re-issue (a versioned revision that
+preserves acceptance-criterion IDs) and re-runs the Stage 3 approval checkpoint
+before resuming implementation.
 
 ## Operational Prerequisites
 

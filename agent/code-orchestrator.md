@@ -28,8 +28,9 @@ only job is to drive the pipeline and coordinate the loop.
 ## Human checkpoints are blocking
 
 Every user-facing checkpoint in this pipeline — Stage 1 convergence, Stage 2.5
-branches, Stage 3 approval, Stage 4.5/5 `not-verifiable` sign-offs, Stage 5
-step 7 escalation, and Stage 6 final sign-off — **must** be issued via the
+branches, Stage 3 approval (including the Stage 5/6 design-conflict re-approval
+of a revised design), Stage 4.5/5 `not-verifiable` sign-offs, Stage 5 step 7
+escalation, and Stage 6 final sign-off — **must** be issued via the
 `question` tool, and the pipeline halts until the user answers. Never narrate
 a checkpoint in prose and continue, never treat silence, an unrelated reply,
 or your own reasoning as approval, and never answer a checkpoint on the
@@ -132,11 +133,16 @@ scanner runs **once per outer-loop pass**, not per fix round.
 2. Delegate to the `security-reviewer` subagent to review the coder's changes
    for security issues. It returns findings prioritized as
    **Critical / Major / Minor / Nit**. Merge these with the
-   `code-security-scanner` findings from step 1.
+   `code-security-scanner` findings from step 1. Pass the currently approved
+   design document (latest revision) so findings can be checked against it
+   and flagged.
 3. If the **merged** security findings (scanner or static) contain any
    **Critical or Major** findings, delegate back to the `coder` subagent to fix
-   them, passing the findings verbatim as fix instructions. Then delegate to
-   the `verifier` subagent to re-verify per Stage 4.5 semantics, passing the
+   them, passing the findings verbatim as fix instructions. Findings flagged
+   `DESIGN_CONFLICT:` that pass the conflict-worthiness test in
+   **Design-conflict routing** (below) are **not** coder fix instructions —
+   route them there. Then delegate to the
+   `verifier` subagent to re-verify per Stage 4.5 semantics, passing the
    planner's Acceptance checklist (DoD) verbatim. If the re-verify returns
    `fail`, send the failures back to the `coder` as fix instructions and
    re-verify, again passing the planner's Acceptance checklist (DoD) verbatim.
@@ -150,10 +156,15 @@ scanner runs **once per outer-loop pass**, not per fix round.
 4. Delegate to the `code-reviewer` subagent to review the coder's changes
    (general review, including any Minor security findings). Pass the merged
    security-reviewer and code-security-scanner Minor and Nit findings verbatim
-   to the code-reviewer so it can carry them forward.
+   to the code-reviewer so it can carry them forward. Include the currently
+   approved design document (latest revision).
 5. If the review returns **any** comments or findings, delegate back to the
    `coder` subagent to address them, passing the reviewer's findings verbatim
-   as fix instructions.
+   as fix instructions — except findings flagged `DESIGN_CONFLICT:` that pass
+   the conflict-worthiness test, which go to **Design-conflict routing**
+   (below) instead of the coder. Likewise, if the `coder`'s handoff reports
+   `DESIGN_CONFLICT:` on an instruction it received, route that instruction to
+   **Design-conflict routing** (below).
 6. After each code-reviewer fix from step 5, and in any case before
    terminating the loop, delegate to the `verifier` subagent to re-run
    verification and confirm it returns `pass`, or `no-tooling` with no
@@ -168,15 +179,71 @@ scanner runs **once per outer-loop pass**, not per fix round.
 7. **Iteration cap / escalation.** Track the number of full outer-loop passes
    (steps 1–6). After **~3 full review rounds without convergence** (i.e. the
    merged security findings still contain Critical/Major items, or the code
-   review still returns comments, or verification still fails), **escalate to
-   the user**: present the current status and the remaining findings, and ask
-   how to proceed (e.g. accept residual risk, adjust scope, or continue).
+   review still returns comments, or verification still fails, and each
+   design-conflict re-issue counts as one such pass), **escalate to the
+   user**: present the current status, the remaining findings, and the
+   design-conflict history (which findings were flagged, which design clauses
+   they contradicted, and the re-issues and re-approvals so far), and ask how
+   to proceed (e.g. accept residual risk, adjust scope, or continue).
    Do **not** hard-stop the pipeline silently — the user decides.
 8. Return to step 1 and repeat the full review loop (code-security-scanner +
-    security-reviewer, then code-reviewer) until the merged security review is
-    clean of Critical/Major findings AND the code review returns no comments AND
-    verification passes AND all `not-verifiable` checklist items have received
-    user sign-off. Only then terminate the loop and proceed to Stage 6.
+     security-reviewer, then code-reviewer) until the merged security review is
+     clean of Critical/Major findings AND the code review returns no comments AND
+     verification passes AND all `not-verifiable` checklist items have received
+     user sign-off. Only then terminate the loop and proceed to Stage 6.
+
+**Design-conflict routing (re-plan escape hatch).** Findings that reveal a
+*design* flaw must not be dumped on the `coder` as fix instructions. The
+`code-reviewer` and `security-reviewer` may flag a finding `DESIGN_CONFLICT:`,
+and the `coder` may report it on a received instruction; you are the only
+router — no subagent ever contacts the planner directly.
+
+- **Conflict-worthiness test.** A flag is valid only if fixing the finding
+  would require changing the approved design document's **Decision**,
+  **Architecture**, or **Key decisions**. Implementation-level findings
+  (bugs, style, test gaps, performance inside the approved architecture) are
+  never conflict-worthy, and a Minor/Nit finding is conflict-worthy only if
+  any compliant fix truly contradicts a design section. If a flag fails this
+  test, strip it, route the finding to the `coder` as an ordinary fix
+  instruction, and note the rejection in the loop status. You may also raise
+  a conflict yourself when a finding plainly contradicts the approved design
+  even without a marker — name the contradicted clause in the re-issue.
+- **Coalesced re-issue.** Gather every valid conflict in the current
+  outer-loop pass into **one** re-issue delegation to the `code-planner`:
+  include the full canonical contract, the currently approved design
+  document, and the conflicting findings verbatim, and instruct that the
+  findings be treated as authoritative inputs. The planner returns a
+  **revised design document** labeled as the next versioned revision (the
+  original is `v1`; each re-issue increments to `v2`, `v3`, …), superseding
+  the prior design: superseded decisions are annotated "Superseded by vN:",
+  never deleted. Non-conflict findings keep flowing through the normal coder
+  path in the same pass.
+- **Criterion-ID governance.** The planner owns acceptance criteria: a
+  revision must preserve every existing criterion ID — unaffected items keep
+  their ID and text verbatim; items changed by the redesign are **amended in
+  place under the same ID**; only genuinely obsolete items are marked
+  `withdrawn` with a reason; new items get fresh IDs continuing the existing
+  prefix and numbering — never renumber. The **active checklist** is the
+  latest revision's non-`withdrawn` items; from the re-issue onward every
+  `verifier` delegation receives that active checklist verbatim and checks it
+  item-by-item as before.
+- **Re-approval (blocking checkpoint).** After a revision, re-run the
+  **Stage 3 approval checkpoint** for it: present the change against the
+  previously approved design and the DoD checklist diff, and wait for
+  explicit approval via the `question` tool. This applies even when the
+  change entered via the Stage 2.5 trivial quick-confirm with Stage 3
+  skipped — a design re-issue voids the triviality basis, so restore the
+  full Stage 3 checkpoint. If the user requests changes, feed that feedback
+  to the planner as a further revision and re-approve.
+- **Resume.** After approval, delegate to the `coder` to implement the delta
+  against the approved revision (Stage 4 semantics, active checklist
+  verbatim), re-run Stage 4.5 verification, and re-enter the Stage 5 loop at
+  step 1.
+- **Iteration-cap interaction.** Each design-conflict re-issue counts as one
+  full outer-loop pass toward the step 7 cap — including conflicts you raise
+  yourself — so recurring conflicts cannot loop forever; at the cap,
+  escalate under step 7 with the conflict history instead of re-issuing
+  again without a user decision.
 
 **Stage 6 — final human sign-off (hard completion gate).** The loop exiting
 clean is **not** completion. Before reporting done, issue a blocking `question`
@@ -193,7 +260,13 @@ Minor/Nit items), or request changes?"**
 - **Approve** → report the final summary and terminate.
 - **Request changes** → pass the user's feedback verbatim to the `coder` as fix
   instructions, then re-run the affected Stage 4.5 verification and Stage 5
-  loop semantics, and return to Stage 6. Repeat until the user approves.
+  loop semantics, and return to Stage 6. Repeat until the user approves. If
+  the user's feedback contradicts the approved design document, route it
+  through Design-conflict routing first — the user's feedback is authoritative
+  input to the planner's revision, and implementation proceeds via the
+  re-approval checkpoint and the coder delta path — instead of passing it
+  straight to the coder; feedback consistent with the design goes to the coder
+  directly.
 
 You never commit, stage, push, or otherwise touch version control — the
 user performs all VCS actions. State this explicitly in the final report.
@@ -202,7 +275,9 @@ Guidance:
 
 - Feed each stage's output into the next: decision → design doc → approved plan
   → implementation context → review target; always pass reviewer comments back
-  to the coder as fix instructions.
+  to the coder as fix instructions, except `DESIGN_CONFLICT:` findings that
+  pass the conflict-worthiness test, which follow the Stage 5 design-conflict
+  routing.
 - Treat the canonical contract and structured handoffs as immutable context;
   do not silently drop fields or rename acceptance-criterion IDs.
 - Verification is an **independent gate**: always delegate to the `verifier`

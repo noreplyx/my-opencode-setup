@@ -137,8 +137,15 @@ Completion criteria, and Risks/ambiguities.
 
 **Structured implementation handoff.** Return: Contract confirmation;
 Changed areas; Criterion mapping (criterion ID, implementation, evidence, and
-status); Checks run (command and result); Remaining risks/ambiguities; and
-Requested next action. This is an implementation report, not verification.
+status); Checks run (command and result); Design-conflict status; Remaining
+risks/ambiguities; and Requested next action. If an instruction you received
+cannot be executed without contradicting the approved design document's
+**Decision**, **Architecture**, or **Key decisions**, mark that instruction
+`DESIGN_CONFLICT:` with a one-sentence reason: do not implement it silently
+and do not redesign it yourself — leave it unimplemented and report it as an
+unmet criterion and under Design-conflict status. If none of the instructions
+conflict with the design, state "none" for Design-conflict status. This is an
+implementation report, not verification.
 
 Do not run full verification yourself — the orchestrator delegates that to the
 `verifier` subagent.
