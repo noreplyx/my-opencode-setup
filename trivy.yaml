@@ -1,0 +1,12 @@
+# Trivy repo-root config, auto-loaded from the working directory (=/src via
+# the wrapper's --workdir) when Trivy scans THIS repo. The pinned 0.74 build
+# accepts flat flag-name keys here; `ignorefile` must be set via config
+# because the flat .trivyignore text format cannot scope ignores by path.
+# Trivy marks the YAML ignore-file format EXPERIMENTAL (v0.74) — revisit this
+# pointer if the pinned digest changes.
+#
+# This points at the path-scoped fixture suppressions in .trivyignore.yaml.
+# Both files live OUTSIDE the fixture directory, so the e2e gate — which
+# mounts tests/fixtures/secure-scan-demo/ itself as /src — sees neither file
+# and every fixture oracle keeps firing. See README "Security operation notes".
+ignorefile: .trivyignore.yaml

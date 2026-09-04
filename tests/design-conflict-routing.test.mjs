@@ -90,7 +90,7 @@ test("orchestrator contains the unnumbered Design-conflict routing block between
 test("Stage 5 step numbering 1–8 and loop cross-references stay intact", async () => {
   const body = await bodyOf("agent/code-orchestrator.md");
   for (const anchor of [
-    "1. **Dependency scan (once per outer-loop pass).**",
+    "1. **Security scans (once per outer-loop pass).**",
     "2. Delegate to the `security-reviewer` subagent",
     "3. If the **merged** security findings",
     "4. Delegate to the `code-reviewer` subagent",

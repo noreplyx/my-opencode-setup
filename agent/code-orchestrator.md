@@ -179,13 +179,20 @@ loop passes** (each pass = one full review round) and **inner fix+verify
 rounds** (each round = one coder fix + one verifier re-check). The dependency
 scanner runs **once per outer-loop pass**, not per fix round.
 
-1. **Dependency scan (once per outer-loop pass).** At the start of each outer
-   loop pass, delegate to the `code-security-scanner` subagent to run
-   OSV-Scanner (via Podman) against the project's lockfiles. It returns
-   findings prioritized as **Critical / Major / Minor / Nit**, or a
-   non-blocking **"scans skipped"** note if Podman or the image is unavailable
-   (do not treat that as a failure). Merge its findings with the static
-   `security-reviewer` findings from step 2 into a single combined finding set.
+1. **Security scans (once per outer-loop pass).** At the start of each
+   outer-loop pass, delegate to the `code-security-scanner` subagent to run
+   the multi-tool security suite — OSV-Scanner (lockfiles), Semgrep (SAST),
+   and Trivy (dependency vulns, misconfig, secrets) — via pinned Podman
+    containers. It returns findings prioritized **Critical / Major / Minor /
+    Nit** (duplicates across tools merged once, tagged with both sources),
+    plus non-blocking per-tool **"scans skipped"** notes for any tool whose
+    infrastructure was unavailable (do not treat those as failures). The
+    scanner also pre-flights the target project's own `.gitignore`: raw
+    `.scans/` artifacts embed secret-adjacent lines and this repo's ignore
+    rule is repo-local, so a missing `.scans/` entry in the target comes back
+    as a Major finding that must be fixed before any commit. Merge its
+    findings with the static `security-reviewer` findings from step 2 into a
+    single combined finding set.
 2. Delegate to the `security-reviewer` subagent to review the coder's changes
    for security issues. It returns findings prioritized as
    **Critical / Major / Minor / Nit**. Merge these with the
@@ -203,8 +210,10 @@ scanner runs **once per outer-loop pass**, not per fix round.
    `fail`, send the failures back to the `coder` as fix instructions and
    re-verify, again passing the planner's Acceptance checklist (DoD) verbatim.
    Once verification passes (and any `not-verifiable` items are handled per
-   Stage 4.5), then re-run the `security-reviewer` (and, if the fix touched
-   lockfiles, the `code-security-scanner`). If any checklist item is
+   Stage 4.5), then re-run the `security-reviewer` (and, when the fix touched
+   scanned file classes, the `code-security-scanner` — lockfiles →
+   OSV-Scanner + Trivy, source code → Semgrep + Trivy, Dockerfiles/IaC →
+   Trivy misconfig, credential files → Trivy secret). If any checklist item is
    `not-verifiable`, handle it as in Stage 4.5 and do not terminate the loop
    until the user signs off. **Keep looping until no Critical or Major security
    findings remain AND verification passes AND all not-verifiable items signed

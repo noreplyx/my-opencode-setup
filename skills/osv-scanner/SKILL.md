@@ -18,6 +18,7 @@ OSV-Scanner maps your lockfiles to the [OSV.dev](https://osv.dev) vulnerability 
 | **Quick source scan** | `osv-scanner-docker scan source -r .` |
 | **Single lockfile** | `osv-scanner-docker scan source -L /src/package-lock.json` |
 | **JSON output** | `osv-scanner-docker scan source -r --format json /src` |
+| **Pipeline invocation** | `osv-scanner-docker scan source -r --format json --output-file /src/.scans/final-osv-results.json /src` |
 | **Shell wrapper** | Source `scripts/osv-scanner-wrapper.sh` then run `osv-scanner-docker ...` |
 | **First-time setup** | `podman pull ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511` |
 | **Check version** | `osv-scanner-docker --version` |
@@ -91,7 +92,7 @@ osv-scanner-docker scan source -L /src/package-lock.json -L /src/Cargo.lock
 osv-scanner-docker scan source -r --config /src/osv-scanner.toml /src
 
 # Save output to file (persists inside the /src mount, under /src/.scans/)
-osv-scanner-docker scan source -r --format json --output-file /src/.scans/results.json /src
+osv-scanner-docker scan source -r --format json --output-file /src/.scans/final-osv-results.json /src
 
 # Exclude test/vendor directories for faster scans
 osv-scanner-docker scan source -r \
@@ -111,7 +112,7 @@ osv-scanner-docker scan source -r \
 | `--format sarif` | SARIF v2.1.0 | Code Scanning integration |
 | `--format html` | HTML (interactive) | Rich vulnerability analysis |
 
-**Important**: Use `--output-file /src/.scans/<filename>` to persist results to the host filesystem (inside the `/src` mount). Without this, results go to stdout. Paths outside `/src/` are lost when the container exits. The wrapper enforces that output files must live under the dedicated `/src/.scans/` subdirectory so fixed, non-colliding artifact names cannot overwrite an existing project file.
+**Important**: Use `--output-file /src/.scans/<filename>` to persist results to the host filesystem (inside the `/src` mount). Without this, results go to stdout. Paths outside `/src/` are lost when the container exits. The wrapper enforces that output files must live under the dedicated `/src/.scans/` subdirectory for every output-flag spelling the pinned CLI accepts — `--output-file` in space and `=` forms, its Go-style single-dash `-output-file` variants, and outright rejection of the deprecated `--output`/`-output` aliases and the `-O` short form — so fixed, non-colliding artifact names cannot overwrite an existing project file.
 
 ### Step 4: Understand Findings
 
@@ -130,12 +131,29 @@ Each vulnerability finding includes:
 |------|---------|
 | 0 | No vulnerabilities found |
 | 1 | Vulnerabilities found |
-| 127 | General error |
-| 128 | No packages found (check scan target) |
+| 127 | CLI/flag misuse (live-verified on the pinned 2.5.1 build: unknown flags such as `-O` exit 127) |
+
+v1-era documentation additionally listed 128 ("no packages found"); that
+code was **not verified** against the pinned v2 build — treat any non-zero
+exit beyond 0/1 as a tooling error and read the artifacts, not the code.
 
 ### Step 5: Configuration (osv-scanner.toml)
 
-Place an `osv-scanner.toml` file at the project root, or use `--config` to override:
+Place an `osv-scanner.toml` file **next to each lockfile** it should govern:
+on the pinned 2.5.1 build, auto-discovery is per-directory — a config applies
+only to lockfiles in its own directory and does **not** propagate into child
+directories (live-verified). One file can instead govern the whole tree only
+when passed explicitly with `--config`, which then overrides all
+per-directory configs for that scan.
+
+**Repo self-scan exclusion (this config repo only):** the Stage 5 seed
+fixture under `tests/fixtures/secure-scan-demo/` carries intentionally
+vulnerable lockfile entries; repo-root `osv-scanner.self-scan.toml` (ID-based
+`[[IgnoredVulns]]` — the pinned build has no path-exclusion config key, so
+this is deliberately ID-scoped and documented in-file) plus the wrapper's
+marker-gated `--config` injection keep whole-repo self-scans clean while
+leaving ordinary pipeline targets and the fixture-backed `--live:e2e` gate
+byte-for-byte unaffected. See the root README, "Security operation notes".
 
 ```toml
 # Ignore specific vulnerabilities

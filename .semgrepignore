@@ -1,0 +1,20 @@
+# Semgrep repo-root exclusion for whole-repo self-scans.
+#
+# The Stage 5 pipeline's working directory is this repo, so the scanner agent
+# runs `semgrep-docker scan ... /src` with /src = this repo root. The seed
+# fixture under tests/fixtures/secure-scan-demo/ contains intentionally
+# vulnerable injection patterns; reporting them as fresh findings on every
+# self-scan would block the pipeline with human triage forever. Semgrep
+# auto-loads this file from the scan's working directory (=/src via the
+# wrapper's --workdir), so these paths are excluded ONLY when scanning this
+# repo; real code everywhere else stays scanned.
+#
+# This file sits OUTSIDE the fixture directory, which is what keeps
+# `npm run validate:security:live:e2e` intact: that gate mounts and scans
+# tests/fixtures/secure-scan-demo/ itself, where no .semgrepignore exists, so
+# each tool's fixture oracle still fires. See README "Security operation
+# notes" and tests/fixtures/secure-scan-demo/README.md.
+
+# Deliberately scoped to the only seeded tree: any future REAL file under
+# tests/fixtures/ still gets scanned.
+tests/fixtures/secure-scan-demo/

@@ -34,16 +34,17 @@ opencode
 
 ## Skills Overview
 
-Only **`osv-scanner`** is present on disk as an authored skill file. The other
-skills listed below are documented for reference but are **not** authored as
-skill files in this repository.
+The three **scanner skills** (`osv-scanner`, `semgrep-scanner`,
+`trivy-scanner`) are present on disk as authored skill files and back the
+Stage 5 security suite. The other skills listed below are documented for
+reference but are **not** authored as skill files in this repository.
 
 | Skill | Tool Required | Description | On Disk |
 |-------|---------------|-------------|---------|
 | osv-scanner | Podman | Dependency vulnerability scanning (OSV-Scanner) | ✅ |
-| trivy-scan | Podman | Container and filesystem vulnerability scanning | — |
+| trivy-scanner | Podman | Dependency vulns, misconfigurations, and leaked secrets (Trivy) | ✅ |
 | gitleaks-scan | Podman | Secret detection in Git repositories | — |
-| semgrep-scan | Podman | SAST static code analysis | — |
+| semgrep-scanner | Podman | SAST static code analysis (Semgrep) | ✅ |
 | owasp-zap-scan | Podman | DAST web application security scanning | — |
 | pmd-scan | Podman | Static code analysis (Java, JS, etc.) | — |
 | playwright-cli | Playwright CLI | Browser automation and testing | — |
@@ -56,15 +57,22 @@ skill files in this repository.
 The `code-orchestrator` drives the brainstorm → plan → approve → implement →
 verify → iterate pipeline by delegating to subagents. Key agents:
 
-- **`code-security-scanner`** — Stage 5 dependency scanner. Runs OSV-Scanner via
-  a pinned Podman container with a writable `/src` mount restricted to scan
-  artifacts
-  (`ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511`)
-  against the project's lockfiles. Returns findings in the same
-  Critical / Major / Minor / Nit taxonomy as the static `security-reviewer`, so
-  the orchestrator merges them into the same fix+verify loop. It runs once per
-  outer-loop pass and degrades gracefully (returns a non-blocking "scans
-  skipped" note) if Podman or the image is unavailable.
+- **`code-security-scanner`** — Stage 5 multi-tool security scanner. Runs the
+  three-tool suite via pinned Podman containers with writable `/src` mounts
+  restricted to scan artifacts: OSV-Scanner against lockfiles
+  (`ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511`),
+  Semgrep SAST against source code
+  (`docker.io/semgrep/semgrep@sha256:b94b53d02fd4a022f9eac4e2af1380f5c3c4c21400e79d3336bdff1d1db5e796`),
+  and Trivy dependency-vuln/misconfig/secret scanning
+  (`docker.io/aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969`).
+  Findings come from the JSON artifacts under `.scans/` and are merged and
+  deduplicated (OSV/Trivy CVE overlaps reported once, tagged with both
+  sources, at the maximum mapped severity) into the same Critical / Major /
+  Minor / Nit taxonomy as the static `security-reviewer`, so the orchestrator
+  folds them into the same fix+verify loop. It runs once per outer-loop pass
+  and degrades **per tool** (a non-blocking "scans skipped" note for any tool
+  whose Podman/image/network infrastructure is unavailable; the other tools
+  still count; SonarQube is a deliberate deferred future extension).
 - **`brainstormer`** / **`code-planner`** — granted tool-level access to the
   **searxng** MCP (web search) for grounding decisions in current docs/best
   practices. Neither has access to the **clickup** MCP (it is denied to keep
@@ -110,15 +118,34 @@ checkpoint — but a required part is never omitted.
 
 ## Operational Prerequisites
 
-- **Podman** — required for the `code-security-scanner` subagent (OSV-Scanner
-  container). If Podman or the image is unavailable, the scanner reports
-  "scans skipped" and the pipeline continues.
+- **Podman** — required for the `code-security-scanner` subagent's three
+  scan containers (OSV-Scanner, Semgrep, Trivy). The wrappers pull their
+  pinned images on first use; the first scan pass also pays one-time
+  startup costs — Trivy downloads its
+  vulnerability DB into the `trivy-cache` named volume and Semgrep fetches
+  the `p/default` ruleset — so **network access is required** for the Trivy
+  and Semgrep legs. If Podman, an image, or the network is unavailable, the
+  scanner reports a per-tool "scans skipped" note and the pipeline continues.
+- **Session restart** — opencode loads its configuration once at startup and
+  does not hot-reload it. After installing or altering skills, agent
+  permission frontmatter, or wrapper scripts, quit and restart the opencode
+  session so the new skills and permission grants take effect in a fresh
+  session.
 - **SearXNG** — local web search instance (expected at `http://localhost:8080`),
   used by the brainstormer/planner for grounding. Best-effort; a failure does
   not block the pipeline.
 - **ClickUp** — remote MCP (requires authentication). Not granted to the
   brainstormer or planner (denied to keep their surface read-only).
   Best-effort; a failure does not block the pipeline.
+
+## Validation
+
+| Script | What it does | Requirements |
+|--------|--------------|--------------|
+| `npm test` | Hermetic unit tests (`node --test tests/**/*.test.mjs`), including the security-configuration validator and the wrapper guard/hardening tests run against a stub `podman` in temp dirs. Never touches real containers or the network. | Node 18+ |
+| `npm run validate:security` | Static security-configuration validation only (pins, grants, wrapper contract, SearXNG compose hardening). No containers. | — |
+| `npm run validate:security:live` | Live probe: pulls (or reuses) each wrapper's pinned image and proves it starts and prints a version through the real `podman run --rm` path, per wrapper. | Podman + network on first pull |
+| `npm run validate:security:live:e2e` | The deeper fixture-backed gate: runs the three exact authorized scan invocations against `tests/fixtures/secure-scan-demo/` and requires a fresh, parseable artifact with at least one expected finding per tool (dependency advisory / ERROR-severity SAST result / misconfig-or-secret). Heavy — three full container scans; first pass pays the vuln-DB and ruleset downloads — so it is a separate opt-in command, never part of `npm test` or `--live`. | Podman + network |
 
 ## Security operation notes
 
@@ -139,9 +166,42 @@ checkpoint — but a required part is never omitted.
   completion of rotation or access to external secret stores.
 - Verification is restricted to the verifier agent's reviewed command allowlist:
   explicit test/validation scripts, typecheck, bounded Node and shell syntax
-  checks, the reviewed SearXNG Compose lifecycle/inspection commands, the OSV
-  wrapper, and read-only Git status/diff checks. If task-runner configuration
-  changes, explicit approval is required before verification.
+  checks, the reviewed SearXNG Compose lifecycle/inspection commands, the
+  three pinned scanner wrappers (OSV-Scanner, Semgrep, Trivy — six exact
+  `source`+invocation grants, mirrored from the scanner agent into the
+  verifier), and read-only Git status/diff checks. If task-runner
+  configuration changes, explicit approval is required before verification.
+- Trivy secret findings are reported to reviewers as `file:line` + rule ID
+  only; the scanner agent is instructed never to quote the matched snippet,
+  because the raw `.scans/final-trivy-results.json` artifact embeds
+  secret-adjacent context lines. This repository gitignores `.scans/`, but
+  that protection is repo-local: the suite scans arbitrary pipeline targets
+  and the wrappers create `<target>/.scans/` on the host, so the **scanned
+  project must also ignore `.scans/`**. The scanner agent pre-flights the
+  target's `.gitignore` for a `.scans/` entry and reports a missing one as a
+  Major finding, so the ignore is added before any commit can capture the
+  artifacts. SonarQube was evaluated and is
+  deliberately deferred (it needs a persistent server URL/token); the suite
+  is designed so a future scanner is added by cloning this skill + wrapper +
+  allow-pair pattern.
+- **Seed-fixture exclusion from repo self-scans.** The pipeline's working
+  directory is this repo, so a Stage 5 pass scans it recursively — and the
+  deliberately vulnerable seed fixture under `tests/fixtures/secure-scan-demo/`
+  (minimist lockfile, synthetic GitHub-PAT-shaped secret, injection patterns)
+  would otherwise re-block every future self-scan with seeded Critical/Major
+  findings. Each tool's own repo-root ignore mechanism excludes the seeded fixture
+  from whole-repo self-scans while real code stays scanned: Semgrep's
+  `.semgrepignore`; `trivy.yaml` (auto-loaded, `ignorefile:` pointer) plus the
+  path-scoped `.trivyignore.yaml` suppressions — Trivy's flat `.trivyignore`
+  format cannot scope by path, so the experimental YAML format is used instead;
+  and `osv-scanner.self-scan.toml` + the OSV wrapper's marker-gated `--config`
+  injection — OSV-Scanner 2.5.1 has no path-exclusion config key and per-directory
+  configs do not propagate, so the exclusion there is deliberately advisory-ID-
+  scoped and documented in the file. All of these sit at the repo root, outside
+  the fixture mount, so `npm run validate:security:live:e2e` — which scans the
+  fixture directory itself — still asserts every seeded bug fires. The
+  `toml@4.1.1` finding in this repo's own lockfile is a real dependency issue
+  (not fixture noise) and stays visible pending user-approved remediation.
 - The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
   its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
   files mode `0600`; security validation rejects weaker modes.

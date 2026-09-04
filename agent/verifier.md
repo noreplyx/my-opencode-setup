@@ -63,6 +63,10 @@ permission:
     "docker compose -p opencode-verify-* *": allow
     "source ~/.config/opencode/skills/osv-scanner/scripts/osv-scanner-wrapper.sh": allow
     "osv-scanner-docker scan source -r --format json --output-file /src/.scans/final-osv-results.json /src": allow
+    "source ~/.config/opencode/skills/semgrep-scanner/scripts/semgrep-scanner-wrapper.sh": allow
+    "semgrep-docker scan --json --metrics off --disable-version-check --config p/default --output /src/.scans/final-semgrep-results.json /src": allow
+    "source ~/.config/opencode/skills/trivy-scanner/scripts/trivy-scanner-wrapper.sh": allow
+    "trivy-docker fs --scanners vuln,misconfig,secret --format json --output /src/.scans/final-trivy-results.json /src": allow
     "podman system *": deny
     "podman container prune": deny
     "podman image prune": deny
@@ -102,12 +106,12 @@ families (`npm`/`pnpm`/`bun` `test`|`lint`|`typecheck`|`check`|`validate`,
 `make test`|`make lint`|`make check`, `dotnet test`), bounded Node and shell
 syntax checks, read-only Git inspection, the reviewed SearXNG Compose
 configuration/build/up/inspection/exec/restart/cleanup lifecycle, the generic
-`-p opencode-verify-*` project-scoped Compose lifecycle, and the pinned OSV
-wrapper (granted per segment: the wrapper `source` plus the pinned
-`osv-scanner-docker` invocation — invoke the pair as a single `&&` chain in one
-command (the exact two-segment command as in the code-security-scanner's
-'Run the scan' step — do not expand `~`); the scan segment depends on the shell function defined by the sourced
-wrapper, so separate invocations will fail). Verification container runs must use a fresh project name beginning
+`-p opencode-verify-*` project-scoped Compose lifecycle, and the pinned
+OSV/Semgrep/Trivy wrappers (granted per segment as exact source+invocation
+pairs — invoke each pair as a single `&&` chain in one command (the exact
+two-segment commands as in the code-security-scanner's 'Run the scans' step —
+do not expand `~`); each scan segment depends on the shell function defined by
+its sourced wrapper, so separate invocations will fail). Verification container runs must use a fresh project name beginning
 with `searxng-verification-` (for the SearXNG Compose file) or
 `opencode-verify-` (for generic project-scoped Compose). These prefixes are
 convention-based isolation — the command patterns cannot anchor argument

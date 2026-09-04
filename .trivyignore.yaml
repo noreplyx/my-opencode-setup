@@ -1,0 +1,68 @@
+# Trivy repo-root ignore file for whole-repo self-scans; loaded via the
+# `ignorefile` pointer in trivy.yaml (Trivy's auto-loaded root config), NOT
+# via a CLI flag — the scanner agent's exact authorized invocation never
+# carries `--ignorefile`/`--skip-dirs`, and this file also survives the
+# wrapper's injected `--skip-dirs /src/.scans` (verified live against the
+# pinned 0.74.0 digest: config-loaded ignores apply alongside flag-injected
+# skip-dirs).
+#
+# Every entry below is PATH-SCOPED to the deliberately vulnerable Stage 5
+# seed fixture (tests/fixtures/), so identical findings in REAL code anywhere
+# else in a self-scan still fire — suppression is never global (verified
+# live: the same advisory/secret under a non-ignored path was still
+# reported). Prefer adding a path-scoped entry over the flat `.trivyignore`
+# format or `[[IgnoredVulns]]`-style global ID ignores.
+#
+# The file lives OUTSIDE the fixture directory on purpose: the
+# `--live:e2e` gate mounts tests/fixtures/secure-scan-demo/ itself as /src,
+# where neither trivy.yaml nor this file is visible, so all three fixture
+# oracles keep firing. See README "Security operation notes".
+
+vulnerabilities:
+  # minimist 1.2.0, seeded in tests/fixtures/secure-scan-demo/package-lock.json
+  # (prototype pollution; HIGH/CRITICAL). Real deps must stay visible.
+  - id: CVE-2021-44906
+    paths:
+      - "tests/fixtures/**"
+    statement: synthetic fixture advisory for the Stage 5 scanner-suite e2e gate
+  - id: CVE-2020-7598
+    paths:
+      - "tests/fixtures/**"
+    statement: synthetic fixture advisory for the Stage 5 scanner-suite e2e gate
+
+misconfigurations:
+  # Checks fired by the intentionally insecure
+  # tests/fixtures/secure-scan-demo/Dockerfile (unpinned :latest base, root
+  # user, exposed port 22, missing HEALTHCHECK, apt-get without
+  # --no-install-recommends). If the fixture Dockerfile changes, update this
+  # path-scoped list to cover any newly fired DS IDs.
+  - id: DS-0001
+    paths:
+      - "tests/fixtures/**"
+    statement: intentional fixture pattern for the Stage 5 misconfig oracle
+  - id: DS-0002
+    paths:
+      - "tests/fixtures/**"
+    statement: intentional fixture pattern for the Stage 5 misconfig oracle
+  - id: DS-0004
+    paths:
+      - "tests/fixtures/**"
+    statement: intentional fixture pattern for the Stage 5 misconfig oracle
+  - id: DS-0026
+    paths:
+      - "tests/fixtures/**"
+    statement: intentional fixture pattern for the Stage 5 misconfig oracle
+  - id: DS-0029
+    paths:
+      - "tests/fixtures/**"
+    statement: intentional fixture pattern for the Stage 5 misconfig oracle
+
+secrets:
+  # Synthetic GitHub-PAT-shaped placeholder in
+  # tests/fixtures/secure-scan-demo/config/settings.yaml (triggers Trivy's
+  # github-pat rule, which the scanner agent maps to always-Critical).
+  # Path-scoped here, so a REAL token anywhere else still blocks.
+  - id: github-pat
+    paths:
+      - "tests/fixtures/**"
+    statement: synthetic fixture secret for the Stage 5 secret-scan oracle

@@ -1,0 +1,37 @@
+# OSV-Scanner repo-root self-scan config for whole-repo scans of THIS repo.
+#
+# Purpose: the Stage 5 seed fixture under tests/fixtures/secure-scan-demo/
+# carries a deliberately vulnerable lockfile (minimist 1.2.0). Any future
+# whole-repo self-scan of this config repo must not re-report it as a fresh
+# finding. The wrapper (scripts/osv-scanner-wrapper.sh) passes this file as
+# `--config` when it exists at the scan root; ordinary pipeline targets do
+# not have it, so they stay byte-for-byte unaffected, and the e2e gate mounts
+# the fixture itself — where no marker exists — so the fixture oracle still
+# fires. See README "Security operation notes".
+#
+# Why ID-based rather than path-based: the pinned 2.5.1 build has no
+# path-exclusion config key ([[IgnoredPaths]] is rejected as an unknown key —
+# live-verified), and auto-discovered osv-scanner.toml files are scoped to
+# their own directory and do NOT propagate to nested lockfiles, so a
+# repo-root config without --config is inert for tests/fixtures/ (also
+# live-verified). An explicit --config with [[IgnoredVulns]] is therefore the
+# only supported mechanism from a single root file. This is acceptable here
+# because this repo's real lockfile contains no minimist (the root scan's
+# only non-fixture finding is toml@4.1.1, a separate user-escalated item),
+# and adding a REAL vulnerable dependency here is a deliberate edit where
+# this file's re-audit is obvious.
+#
+# NOTE: an explicit --config OVERRIDES per-directory osv-scanner.toml files
+# for the scan (upstream semantics) — this file is therefore deliberately
+# named `osv-scanner.self-scan.toml` (not `osv-scanner.toml`) so it can never
+# shadow the standard per-directory config in any scanned tree.
+
+# minimist 1.2.0 prototype pollution (aliases CVE-2020-7598)
+[[IgnoredVulns]]
+id = "GHSA-vh95-rmgr-6w4m"
+reason = "synthetic fixture advisory for the Stage 5 scanner-suite e2e gate (tests/fixtures/secure-scan-demo); real code must never depend on minimist 1.2.0 — re-audit if it ever does"
+
+# minimist 1.2.0 prototype pollution, HIGH/CRITICAL 9.8 (alias CVE-2021-44906)
+[[IgnoredVulns]]
+id = "GHSA-xvch-5gv4-984h"
+reason = "synthetic fixture advisory for the Stage 5 scanner-suite e2e gate (tests/fixtures/secure-scan-demo); real code must never depend on minimist 1.2.0 — re-audit if it ever does"

@@ -1,0 +1,12 @@
+# SYNTHETIC fixture configuration (see README.md).
+# The token below is NOT a real credential: it is the literal string "ghp_"
+# followed by 36 capital A characters, shaped to trigger Trivy's `github-pat`
+# secret rule for scanner-suite validation.
+
+service:
+  name: secure-scan-demo
+  port: 8443
+
+github:
+  # Fake, fixed-pattern placeholder — rotate nothing; there is nothing real here.
+  token: "ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
