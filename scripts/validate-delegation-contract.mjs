@@ -14,7 +14,8 @@ export const CONTRACT_FIELDS = [
 
 export const SUPPORTED_DELEGATION_PATHS = [
   "brainstormer", "code-planner", "coder", "verifier",
-  "code-reviewer", "security-reviewer", "code-security-scanner",
+  "code-reviewer", "security-reviewer", "performance-reviewer",
+  "best-practices-reviewer", "code-security-scanner",
 ];
 
 export function validatePlannerResult(result) {

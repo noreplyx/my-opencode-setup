@@ -73,6 +73,24 @@ verify → iterate pipeline by delegating to subagents. Key agents:
   and degrades **per tool** (a non-blocking "scans skipped" note for any tool
   whose Podman/image/network infrastructure is unavailable; the other tools
   still count; SonarQube is a deliberate deferred future extension).
+- **`performance-reviewer`** / **`best-practices-reviewer`** — Stage 5 static
+  review lenses that run in step 2, in parallel with the
+  `security-reviewer`, on the same `git diff HEAD` and the same approved
+  design document. The performance reviewer covers measurable work
+  (algorithmic complexity, hot-path waste, resource leaks, memory
+  discipline, caching correctness, concurrency throughput); the
+  best-practices reviewer covers usage patterns and idioms (API misuse
+  against current docs, framework idioms, N+1 and repeated-fetch access
+  patterns, deprecated or unsafe APIs, resource-management and
+  error-handling idioms). Critical/Major findings from both are blocking
+  and join the shared step 3 fix+verify round; Minor/Nit findings are
+  carried verbatim to the `code-reviewer`, which keeps style and
+  conventions. Both are static-only: no build, test, benchmark, or
+  profiling commands, read-only git grants (always `git diff HEAD`, never
+  bare `git diff`), and best-effort, non-blocking **searxng** grounding.
+  Measured performance profiling (a containerized profiler-runner
+  following the `code-security-scanner` wrapper + image-pin pattern) is a
+  deliberate deferred future extension.
 - **`brainstormer`** / **`code-planner`** — granted tool-level access to the
   **searxng** MCP (web search) for grounding decisions in current docs/best
   practices. Neither has access to the **clickup** MCP (it is denied to keep
@@ -132,8 +150,8 @@ checkpoint — but a required part is never omitted.
   session so the new skills and permission grants take effect in a fresh
   session.
 - **SearXNG** — local web search instance (expected at `http://localhost:8080`),
-  used by the brainstormer/planner for grounding. Best-effort; a failure does
-  not block the pipeline.
+  used by the brainstormer/planner and the review subagents for grounding.
+  Best-effort; a failure does not block the pipeline.
 - **ClickUp** — remote MCP (requires authentication). Not granted to the
   brainstormer or planner (denied to keep their surface read-only).
   Best-effort; a failure does not block the pipeline.

@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import { SUPPORTED_DELEGATION_PATHS } from "../scripts/validate-delegation-contract.mjs";
+
+const require = createRequire(import.meta.url);
+const yaml = require("js-yaml");
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -22,20 +27,27 @@ async function bodyOf(relativePath) {
 const EDITED_AGENTS = [
   "agent/code-reviewer.md",
   "agent/security-reviewer.md",
+  "agent/performance-reviewer.md",
+  "agent/best-practices-reviewer.md",
   "agent/coder.md",
   "agent/code-orchestrator.md",
 ];
 
-test("DESIGN_CONFLICT token appears in the body of all four design-conflict agents", async () => {
+test("DESIGN_CONFLICT token appears in the body of all design-conflict agents", async () => {
   for (const relativePath of EDITED_AGENTS) {
     const body = await bodyOf(relativePath);
     assert.ok(body.includes("DESIGN_CONFLICT:"), `${relativePath}: body must mention the DESIGN_CONFLICT: marker`);
   }
 });
 
-test("both reviewers carry the identical Design-conflict flag bullet", async () => {
+test("all four reviewers carry the identical Design-conflict flag bullet", async () => {
   const bullets = [];
-  for (const relativePath of ["agent/code-reviewer.md", "agent/security-reviewer.md"]) {
+  for (const relativePath of [
+    "agent/code-reviewer.md",
+    "agent/security-reviewer.md",
+    "agent/performance-reviewer.md",
+    "agent/best-practices-reviewer.md",
+  ]) {
     const body = await bodyOf(relativePath);
     const match = body.match(/- \*\*Design-conflict flag\.\*\*[\s\S]*?nowhere in your report\./);
     assert.ok(match, `${relativePath}: missing Design-conflict flag bullet`);
@@ -44,7 +56,140 @@ test("both reviewers carry the identical Design-conflict flag bullet", async () 
     assert.match(match[0], w("Never mark implementation-level findings"));
     bullets.push(match[0].replace(/\s+/g, " ").trim());
   }
-  assert.equal(bullets[0], bullets[1], "the Design-conflict flag bullet must be identical across reviewers");
+  const [first, ...rest] = bullets;
+  for (const bullet of rest) {
+    assert.equal(first, bullet, "the Design-conflict flag bullet must be identical across reviewers");
+  }
+});
+
+test("dedicated reviewers keep the static-only, git-diff-HEAD, and taxonomy rules", async () => {
+  for (const relativePath of [
+    "agent/performance-reviewer.md",
+    "agent/best-practices-reviewer.md",
+    "agent/security-reviewer.md",
+  ]) {
+    const body = await bodyOf(relativePath);
+    assert.match(body, w("never bare `git diff`"), `${relativePath}: must require git diff HEAD`);
+    assert.match(body, w("This is a **static** review only"), `${relativePath}: must state the static-only boundary`);
+    assert.match(body, w("**Critical / Major / Minor / Nit**"), `${relativePath}: must use the shared severity taxonomy`);
+  }
+});
+
+// Stage 5 review-round parity gate: mirrors the security-config.test.mjs
+// permission-structure idiom (parse the frontmatter, assert ordering) plus
+// byte-equality of the shared blocks — byte-equality is the arbiter.
+const GIT_DENY_TAIL = ["git * --out*", "git * --ext*", "git diff --output*", "git diff --ext-diff*", "git show --ext-diff*", "git difftool*"];
+const GIT_ALLOW_KEYS = ["git status*", "git diff*", "git log*", "git show*", "git branch --show-current*", "git rev-parse*", "git for-each-ref*"];
+const SEARCH_ALLOW_KEYS = ["searxng_searxng_web_search", "searxng_searxng_instance_info", "searxng_searxng_search_suggestions"];
+
+test("dedicated reviewers carry byte-identical, deny-by-default permission blocks", async () => {
+  const blocks = [];
+  for (const relativePath of [
+    "agent/security-reviewer.md",
+    "agent/performance-reviewer.md",
+    "agent/best-practices-reviewer.md",
+  ]) {
+    const doc = await readFile(path.join(root, relativePath), "utf8");
+    const frontmatter = doc.match(/^---\n([\s\S]*?)\n---\n/);
+    assert.ok(frontmatter, `${relativePath}: missing frontmatter`);
+    const block = frontmatter[1].match(/^permission:[\s\S]*?^ {2}task: deny$/m);
+    assert.ok(block, `${relativePath}: missing permission frontmatter block`);
+    blocks.push(block[0]);
+    const permission = yaml.load(frontmatter[1]).permission;
+    const rules = permission.bash;
+    const keys = Object.keys(rules);
+    assert.equal(keys[0], "*", `${relativePath}: catch-all must be the first bash rule`);
+    assert.equal(rules["*"], "deny", `${relativePath}: bash must be deny-by-default`);
+    const lastAllowIndex = Math.max(...keys.map((key, i) => (rules[key] === "allow" ? i : -1)));
+    for (const key of GIT_DENY_TAIL) {
+      assert.ok(keys.indexOf(key) > lastAllowIndex, `${relativePath}: git deny-tail key must come after every allow: ${key}`);
+    }
+    assert.deepEqual(
+      Object.keys(rules).filter((k) => rules[k] === "allow"),
+      GIT_ALLOW_KEYS,
+      `${relativePath}: exactly the seven read-only git patterns may be allowed`,
+    );
+    for (const key of ["edit", "webfetch", "websearch", "searxng_web_url_read", "clickup", "task"]) {
+      assert.equal(permission[key], "deny", `${relativePath}: top-level ${key} must be denied`);
+    }
+    assert.deepEqual(
+      Object.keys(permission).filter((key) => permission[key] === "allow"),
+      SEARCH_ALLOW_KEYS,
+      `${relativePath}: exactly the three searxng search tools may be allowed`,
+    );
+  }
+  const [first, ...rest] = blocks;
+  for (const block of rest) {
+    assert.equal(first, block, "the permission frontmatter block must be byte-identical across the dedicated reviewers");
+  }
+});
+
+test("orchestrator task allowlist exactly covers the supported delegation paths", async () => {
+  const doc = await readFile(path.join(root, "agent/code-orchestrator.md"), "utf8");
+  const frontmatter = doc.match(/^---\n([\s\S]*?)\n---\n/);
+  assert.ok(frontmatter, "agent/code-orchestrator.md: missing frontmatter");
+  const task = yaml.load(frontmatter[1]).permission.task;
+  assert.equal(task["*"], "deny", "agent/code-orchestrator.md: task must be deny-by-default");
+  assert.deepEqual(
+    Object.keys(task).filter((key) => task[key] === "allow").sort(),
+    [...SUPPORTED_DELEGATION_PATHS].sort(),
+    "every supported delegation path must be allowed and nothing else",
+  );
+});
+
+test("dedicated reviewers carry the identical See-the-change bullet", async () => {
+  const bullets = [];
+  for (const relativePath of [
+    "agent/security-reviewer.md",
+    "agent/performance-reviewer.md",
+    "agent/best-practices-reviewer.md",
+  ]) {
+    const body = await bodyOf(relativePath);
+    const match = body.match(/- \*\*See the change\.\*\*[\s\S]*?non-git commands\./);
+    assert.ok(match, `${relativePath}: missing See-the-change bullet`);
+    bullets.push(match[0].replace(/\s+/g, " ").trim());
+  }
+  const [first, ...rest] = bullets;
+  for (const bullet of rest) {
+    assert.equal(first, bullet, "the See-the-change bullet must be identical across the dedicated reviewers");
+  }
+});
+
+test("best-practices trust boundary stays identical (whitespace-normalized) to the security reviewer's", async () => {
+  const paragraphOf = async (relativePath) => {
+    const body = await bodyOf(relativePath);
+    const match = body.match(/\*\*Trust boundary\.\*\*[\s\S]*$/);
+    assert.ok(match, `${relativePath}: missing Trust boundary paragraph`);
+    return match[0].replace(/\s+/g, " ").trim();
+  };
+  assert.equal(
+    await paragraphOf("agent/best-practices-reviewer.md"),
+    await paragraphOf("agent/security-reviewer.md"),
+    "the Trust boundary paragraph must stay identical between best-practices and security reviewers (AC-6 verbatim clone)",
+  );
+});
+
+test("trust-boundary tails stay identical across the dedicated reviewers", async () => {
+  const marker = "lookups in current data.";
+  const tails = [];
+  for (const relativePath of [
+    "agent/security-reviewer.md",
+    "agent/performance-reviewer.md",
+    "agent/best-practices-reviewer.md",
+  ]) {
+    const body = await bodyOf(relativePath);
+    const match = body.match(/\*\*Trust boundary\.\*\*[\s\S]*$/);
+    assert.ok(match, `${relativePath}: missing Trust boundary paragraph`);
+    // The grounding clause before the marker is the one permitted per-lens
+    // adaptation (CVE vs library/runtime/platform wording); the shared policy
+    // after it must stay identical.
+    assert.equal((match[0].match(/lookups in current data\./g) ?? []).length, 1, `${relativePath}: the grounding marker must appear exactly once`);
+    tails.push(match[0].slice(match[0].indexOf(marker) + marker.length).replace(/\s+/g, " ").trim());
+  }
+  const [first, ...rest] = tails;
+  for (const tail of rest) {
+    assert.equal(first, tail, "the trust-boundary tail after the grounding marker must stay identical across the dedicated reviewers");
+  }
 });
 
 test("coder handoff adds Design-conflict status while preserving the original fields", async () => {

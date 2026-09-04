@@ -17,6 +17,8 @@ permission:
     coder: allow
     code-reviewer: allow
     security-reviewer: allow
+    performance-reviewer: allow
+    best-practices-reviewer: allow
     code-security-scanner: allow
     verifier: allow
 ---
@@ -135,7 +137,8 @@ doc, branch on three cases:
    **"Trivial low-risk change (fully covered by existing tooling) — approve
    and skip Stage 3?"** If the user approves, skip Stage 3 and proceed
    directly to Stage 4. The change still passes through Stage 4.5 verification
-   and Stage 5 security review, and Stage 6 final sign-off still applies. If
+   and Stage 5 review (security, performance, and best-practices lenses), and
+   Stage 6 final sign-off still applies. If
    the user declines or defers, fall through to full Stage 3 manual approval.
    (`risk: low` is guaranteed by the planner's `auto_approve: true`; it is
    kept here as defense-in-depth.)
@@ -191,15 +194,27 @@ scanner runs **once per outer-loop pass**, not per fix round.
     `.scans/` artifacts embed secret-adjacent lines and this repo's ignore
     rule is repo-local, so a missing `.scans/` entry in the target comes back
     as a Major finding that must be fixed before any commit. Merge its
-    findings with the static `security-reviewer` findings from step 2 into a
-    single combined finding set.
+    findings with the static `security-reviewer`, `performance-reviewer`, and
+    `best-practices-reviewer` findings from step 2 into a single combined
+    finding set.
 2. Delegate to the `security-reviewer` subagent to review the coder's changes
    for security issues. It returns findings prioritized as
-   **Critical / Major / Minor / Nit**. Merge these with the
-   `code-security-scanner` findings from step 1. Pass the currently approved
+   **Critical / Major / Minor / Nit**. Fold these into the combined finding
+   set from step 1. Pass the currently approved
    design document (latest revision) so findings can be checked against it
-   and flagged.
-3. If the **merged** security findings (scanner or static) contain any
+   and flagged. In the **same step, in parallel** with the security review,
+   delegate to the `performance-reviewer` and `best-practices-reviewer`
+   subagents to review the same changes (same `git diff HEAD` under review)
+   against the same design document — security, performance, and best
+   practices are three independent lenses on one change. Each returns
+   findings prioritized as **Critical / Major / Minor / Nit** and may flag
+   `DESIGN_CONFLICT:`. Merge all three reviewers' findings into the single
+   combined finding set from step 1. Dedup rule: when two reviewers report
+   the same `file:line` with the same root cause, keep it **once** at the
+   maximum severity of the two, tagged with both perspectives — mirroring
+   the scanner's cross-tool merge in step 1.
+3. If the **merged** security findings (scanner or static), performance
+   findings, or best-practices findings contain any
    **Critical or Major** findings, delegate back to the `coder` subagent to fix
    them, passing the findings verbatim as fix instructions. Findings flagged
    `DESIGN_CONFLICT:` that pass the conflict-worthiness test in
@@ -210,18 +225,22 @@ scanner runs **once per outer-loop pass**, not per fix round.
    `fail`, send the failures back to the `coder` as fix instructions and
    re-verify, again passing the planner's Acceptance checklist (DoD) verbatim.
    Once verification passes (and any `not-verifiable` items are handled per
-   Stage 4.5), then re-run the `security-reviewer` (and, when the fix touched
+   Stage 4.5), then re-run the `security-reviewer`, `performance-reviewer`,
+   and `best-practices-reviewer` on the revised diff (and, when the fix touched
    scanned file classes, the `code-security-scanner` — lockfiles →
    OSV-Scanner + Trivy, source code → Semgrep + Trivy, Dockerfiles/IaC →
    Trivy misconfig, credential files → Trivy secret). If any checklist item is
    `not-verifiable`, handle it as in Stage 4.5 and do not terminate the loop
-   until the user signs off. **Keep looping until no Critical or Major security
-   findings remain AND verification passes AND all not-verifiable items signed
+   until the user signs off. **Keep looping until no Critical or Major
+   security, performance, or best-practices findings remain AND
+   verification passes AND all not-verifiable items signed
    off.**
 4. Delegate to the `code-reviewer` subagent to review the coder's changes
-   (general review, including any Minor security findings). Pass the merged
-   security-reviewer and code-security-scanner Minor and Nit findings verbatim
-   to the code-reviewer so it can carry them forward. Include the currently
+   (general review, including any Minor/Nit security, performance, and
+   best-practices findings). Pass the merged security-reviewer,
+   performance-reviewer, best-practices-reviewer, and code-security-scanner
+   Minor and Nit findings verbatim to the code-reviewer so it can carry them
+   forward. Include the currently
    approved design document (latest revision).
 5. If the review returns **any** comments or findings, delegate back to the
    `coder` subagent to address them, passing the reviewer's findings verbatim
@@ -239,29 +258,33 @@ scanner runs **once per outer-loop pass**, not per fix round.
    the failures back to the `coder` as fix instructions and re-verify. If any
    checklist item is `not-verifiable`, handle it as in Stage 4.5 and do not
    terminate the loop until the user signs off. This re-verification
-   covers the code-reviewer fixes from step 5 (security fixes were already
-   re-verified in step 3).
+   covers the code-reviewer fixes from step 5 (security, performance, and
+   best-practices fixes were already re-verified in step 3).
 7. **Iteration cap / escalation.** Track the number of full outer-loop passes
    (steps 1–6). After **~3 full review rounds without convergence** (i.e. the
-   merged security findings still contain Critical/Major items, or the code
-   review still returns comments, or verification still fails, and each
-   design-conflict re-issue counts as one such pass), **escalate to the
+   merged security, performance, or best-practices findings still contain
+   Critical/Major items, or the code review still returns comments, or
+   verification still fails, and each design-conflict re-issue counts as one
+   such pass), **escalate to the
    user**: present the current status, the remaining findings, and the
    design-conflict history (which findings were flagged, which design clauses
    they contradicted, and the re-issues and re-approvals so far), and ask how
    to proceed (e.g. accept residual risk, adjust scope, or continue).
    Do **not** hard-stop the pipeline silently — the user decides.
 8. Return to step 1 and repeat the full review loop (code-security-scanner +
-     security-reviewer, then code-reviewer) until the merged security review is
-     clean of Critical/Major findings AND the code review returns no comments AND
-     verification passes AND all `not-verifiable` checklist items have received
-     user sign-off. Only then terminate the loop and proceed to Stage 6.
+   `security-reviewer`, `performance-reviewer`, and
+   `best-practices-reviewer`, then `code-reviewer`) until the merged
+   security, performance, and best-practices review is clean of
+   Critical/Major findings AND the code review returns no comments AND
+   verification passes AND all `not-verifiable` checklist items have received
+   user sign-off. Only then terminate the loop and proceed to Stage 6.
 
 **Design-conflict routing (re-plan escape hatch).** Findings that reveal a
 *design* flaw must not be dumped on the `coder` as fix instructions. The
-`code-reviewer` and `security-reviewer` may flag a finding `DESIGN_CONFLICT:`,
-and the `coder` may report it on a received instruction; you are the only
-router — no subagent ever contacts the planner directly.
+`code-reviewer`, `security-reviewer`, `performance-reviewer`, and
+`best-practices-reviewer` may flag a finding `DESIGN_CONFLICT:`, and the
+`coder` may report it on a received instruction; you are the only router — no
+subagent ever contacts the planner directly.
 
 - **Conflict-worthiness test.** A flag is valid only if fixing the finding
   would require changing the approved design document's **Decision**,
@@ -317,8 +340,9 @@ checkpoint presenting to the user:
   mapping from its structured handoff.
 - **Verification:** the final `verifier` verdict and per-criterion evidence.
 - **Residual findings:** every remaining **Minor / Nit** finding from the
-  security-reviewer, code-security-scanner, and code-reviewer that was left
-  unfixed, listed verbatim so the user can decide to accept or fix them.
+  security-reviewer, performance-reviewer, best-practices-reviewer,
+  code-security-scanner, and code-reviewer that was left unfixed, listed
+  verbatim so the user can decide to accept or fix them.
 
 Ask: **"Approve and finish (including acceptance of the listed residual
 Minor/Nit items), or request changes?"**
@@ -349,8 +373,8 @@ Guidance:
   subagent after implementation and after each review fix. Never treat the
   coder's self-reported verification as authoritative.
 - Keep each loop iteration flat (one coder call, then one verifier call, then
-  one reviewer call) rather than nesting — you do not implement or verify
-  anything yourself.
+  the reviewer batch — the three Stage 5 step 2 static lenses run in parallel)
+  rather than nesting — you do not implement or verify anything yourself.
 - After the loop terminates with a clean review and passing verification,
   obtain the Stage 6 sign-off first; only then report a concise summary of each
   stage and the final outcome, including the verification results, the user's

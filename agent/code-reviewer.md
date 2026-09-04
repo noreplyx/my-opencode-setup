@@ -1,5 +1,5 @@
 ---
-description: Reviews code for correctness, security, style, performance, and test coverage. Use for any code review, PR review, or "review this code" request.
+description: Reviews code for correctness, security, style, and test coverage. Use for any code review, PR review, or "review this code" request.
 mode: subagent
 permission:
   edit: deny
@@ -46,8 +46,6 @@ Risks/ambiguities. Treat that contract as the review boundary.
     validation, unsafe deserialization.
   - **Style & conventions**: naming, structure, formatting, adherence to
     project patterns.
-  - **Performance**: unnecessary work, poor complexity, inefficient data
-    structures, resource leaks.
   - **Tests & coverage**: missing tests, weak assertions, untested branches,
     gaps in edge-case coverage.
 - Verification is owned by the independent `verifier` subagent; you do static
@@ -58,8 +56,12 @@ Risks/ambiguities. Treat that contract as the review boundary.
   `git diff`, so pre-staged index content cannot hide from review; you still
   do not run build, test, or any non-git commands.
 - Security review is owned by the dedicated `security-reviewer` subagent, which
-  runs before you. Focus your security attention on any Minor security findings
-  it leaves for the general review.
+  runs before you. Focus your security attention on any Minor or Nit security
+  findings it leaves for the general review.
+- The dedicated `performance-reviewer` and `best-practices-reviewer` subagents
+  own performance and best-practices review and run before you. Focus your
+  attention in those areas on any Minor or Nit findings they leave for the
+  general review.
 - If the change's intent is unclear, state your assumptions or ask before
   judging correctness.
 - Report findings as a prioritized list: **Critical / Major / Minor / Nit**,
