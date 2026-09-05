@@ -116,7 +116,7 @@ const SCAN_TOOL_TEST_EXTRAS = {
     probeArgs: "scan source -r --format json",
     imageRe: /ghcr\.io\/google\/osv-scanner@sha256:[a-f0-9]{64}/,
     guardFlag: "--output-file",
-    shortFormRejected: false,
+    shortForm: "-O",
     // F3: the OSV guard now covers the Go-style single-dash long form and
     // rejects the deprecated aliases / -O short form outright.
     alternateOutputForms: ["-output-file", "-output-file=", "--output", "--output=", "-output", "-O"],
@@ -128,7 +128,7 @@ const SCAN_TOOL_TEST_EXTRAS = {
     probeArgs: "scan --json",
     imageRe: /docker\.io\/semgrep\/semgrep@sha256:[a-f0-9]{64}/,
     guardFlag: "--output",
-    shortFormRejected: true,
+    shortForm: "-o",
   },
   trivy: {
     errorPrefix: "[trivy] ERROR:",
@@ -137,7 +137,29 @@ const SCAN_TOOL_TEST_EXTRAS = {
     probeArgs: "fs --scanners vuln,misconfig,secret --format json",
     imageRe: /docker\.io\/aquasec\/trivy@sha256:[a-f0-9]{64}/,
     guardFlag: "--output",
-    shortFormRejected: true,
+    shortForm: "-o",
+  },
+  gitleaks: {
+    errorPrefix: "[gitleaks] ERROR:",
+    skillPath: "skills/gitleaks-scan/SKILL.md",
+    invocationRe: /^gitleaks-docker detect --source \/src --report-format json --report-path \/src\/\.scans\/final-gitleaks-results\.json \/src$/,
+    probeArgs: "detect --source /src --report-format json",
+    imageRe: /docker\.io\/zricethezav\/gitleaks@sha256:[a-f0-9]{64}/,
+    guardFlag: "--report-path",
+    shortForm: "-r",
+    // Unlike the other scanners, gitleaks' -r short form is guarded by VALUE
+    // (validated under /src/.scans/) rather than rejected outright, so the
+    // reject-outright string assertion is skipped for it.
+    shortFormValidated: true,
+  },
+  pmd: {
+    errorPrefix: "[pmd] ERROR:",
+    skillPath: "skills/pmd-scan/SKILL.md",
+    invocationRe: /^pmd-docker check -d \/src -R category\/java\/errorprone\.xml -f json --report-file \/src\/\.scans\/final-pmd-results\.json$/,
+    probeArgs: "check -d /src -R category/java/errorprone.xml -f json",
+    imageRe: /docker\.io\/pmdcode\/pmd@sha256:[a-f0-9]{64}/,
+    guardFlag: "--report-file",
+    shortForm: "-r",
   },
 };
 
@@ -218,8 +240,13 @@ test("authorized OSV/Semgrep/Trivy verification requests machine-readable output
     assert.ok(wrapper.includes("#/src/.scans/"), `${tool.label}: guard must compare the /src/.scans/ prefix outside [[ (basename strip)`);
     assert.ok(wrapper.includes(`"${tool.guardFlag}"`), `${tool.label}: guard must cover the ${tool.guardFlag} prev-arg form`);
     assert.ok(wrapper.includes(`${tool.guardFlag}=*`), `${tool.label}: guard must cover the ${tool.guardFlag}= value form`);
-    if (tool.shortFormRejected) {
-      assert.ok(wrapper.includes("== -o*"), `${tool.label}: guard must reject the -o short form outright`);
+    if (tool.shortForm && !tool.shortFormValidated) {
+      assert.ok(wrapper.includes(`== ${tool.shortForm}*`), `${tool.label}: guard must reject the ${tool.shortForm} short form outright`);
+    }
+    if (tool.shortForm && tool.shortFormValidated) {
+      assert.ok(wrapper.includes(`== "${tool.shortForm}"`), `${tool.label}: guard must validate the ${tool.shortForm} prev-arg value form`);
+      assert.ok(wrapper.includes(`== ${tool.shortForm}=*`), `${tool.label}: guard must validate the ${tool.shortForm}= value form`);
+      assert.ok(wrapper.includes(`== ${tool.shortForm}*`), `${tool.label}: guard must validate the ${tool.shortForm}<path> concatenated form (absolute and relative)`);
     }
     // Full OSV-parity shape: pull-if-missing, the :Z mount, the workdir, and .scans creation.
     assert.match(wrapper, /-v "\$\{workdir\}:\/src:Z"/, `${tool.label}: must mount the workdir at /src with :Z`);
@@ -259,11 +286,11 @@ test("scanner wrapper output guards reject every unguarded output path", () => {
     for (const value of ["/src/evil.json", "/src/.scans/../evil.json", "/src/.scans/", "/src/.scans/.hidden"]) {
       cases.push(`${tool.guardFlag}=${value}`);
     }
-    if (tool.shortFormRejected) {
-      // The broad `-o*` rejection also covers Go-style single-dash long
+    if (tool.shortForm) {
+      // The broad `-o*`-style rejection also covers Go-style single-dash long
       // forms (`-output`, `-output=...`), which must never reach the CLI
       // unguarded.
-      cases.push("-o /src/evil.json", "-o=/src/evil.json", "-o/src/evil.json", "-output /src/evil.json", "-output=/src/evil.json");
+      cases.push(`${tool.shortForm} /src/evil.json`, `${tool.shortForm}=/src/evil.json`, `${tool.shortForm}/src/evil.json`, `${tool.shortForm}.scans/../evil.json`);
     }
     if (tool.alternateOutputForms) {
       // F3: OSV's guard must cover every output-flag spelling the CLI
@@ -481,27 +508,30 @@ test("scanner agent prose mirrors the machine-readable grants, digests, and hand
     assert.ok(body.includes(`${tool.wrapperKey} && ${tool.invocationKey}`), `${tool.label}: prose chain must byte-match the allow keys`);
   }
   assert.match(flat, /each scan is its own single `source … && <function> …` authorized command/i, "per-segment authorization must be stated");
-  assert.match(flat, /three legs are \*\*independent\*\*/, "leg independence must be stated");
-  assert.match(flat, /`--output-file` for OSV-Scanner, `--output` for Semgrep and Trivy/, "per-tool guard flag names must be distinguished");
+  assert.match(flat, /five legs are \*\*independent\*\*/, "leg independence must be stated");
+  assert.match(flat, /`--output-file` for OSV-Scanner, `--output` for Semgrep and Trivy, `--report-path` for Gitleaks, and `--report-file` for PMD/, "per-tool guard flag names must be distinguished");
   assert.match(flat, /read findings from the artifacts, not exit codes/i, "artifacts-over-exit-codes guidance must be stated");
   assert.match(flat, /operates on the host filesystem and does not shell-expand/, "host-path pre-check guidance must be stated");
   assert.match(flat, /ERROR → Major, WARNING → Minor, INFO → Nit/, "Semgrep severity mapping must be stated");
   assert.match(flat, /Elevate to Critical.*injection, RCE, or a hardcoded-secret/, "Semgrep elevation rule must be stated");
   assert.match(flat, /CRITICAL → Critical, HIGH → Major, MEDIUM → Minor, LOW → Nit/, "Trivy severity mapping must be stated");
   assert.match(flat, /secret findings are always critical \(blocking\)/i, "Trivy secrets must always be Critical");
+  assert.match(flat, /every leak is a secret in history — \*\*ALWAYS Critical \(blocking\)\*\*/, "Gitleaks secrets must always be Critical");
+  assert.match(flat, /priority 1 → Critical, 2 → Major, 3 → Minor, 4-5 → Nit/, "PMD priority mapping must be stated");
   assert.match(flat, /report only the `file:line` location and the rule id/i, "secret redaction must cite file:line + rule ID only");
   assert.match(flat, /never\*\* copy the `code` snippet/i, "secret redaction must never quote snippet content");
   assert.match(flat, /narrow `grep`\*\* on the artifact/, "secret handling must avoid reading whole secret sections");
   assert.match(flat, /"scans skipped"\*\*\s+\*per tool\*/, "per-tool degradation must be stated");
   assert.match(flat, /Findings from the tools that did run still count/i, "skipped tools must not void the others");
-  assert.match(flat, /if \*\*all three\*\* were skipped the whole report is still a non-blocking/, "all-skipped must stay non-blocking");
+  assert.match(flat, /if \*\*all five\*\* were skipped the whole report is still a non-blocking/, "all-skipped must stay non-blocking");
   assert.match(flat, /same package at the same version.*same CVE\/GHSA\/OSV alias ID/i, "dedup key must be package@version + advisory ID");
   assert.match(flat, /one finding tagged with both sources/i, "deduped findings must be tagged with both sources");
   assert.match(flat, /maximum of the two mapped severities/i, "dedup severity must take the maximum");
   assert.match(flat, /Different advisory IDs stay separate/i, "distinct advisory IDs must not merge");
+  assert.match(flat, /\*\*same secret\*\* at the \*\*same `file:line`\*\* is reported by both tools/, "gitleaks/trivy dedup key must be secret + file:line");
   assert.match(flat, /SonarQube is a deliberate deferred future extension/, "SonarQube deferral must be stated");
   assert.ok(body.includes("/src/.scans/"), "artifacts must be pinned under /src/.scans/");
-  for (const artifact of ["final-osv-results.json", "final-semgrep-results.json", "final-trivy-results.json"]) {
+  for (const artifact of ["final-osv-results.json", "final-semgrep-results.json", "final-trivy-results.json", "final-gitleaks-results.json", "final-pmd-results.json"]) {
     assert.ok(body.includes(artifact), `artifact ${artifact} must appear in the prose`);
   }
 });
@@ -546,7 +576,7 @@ test("exit-code and opt-out prose matches the live-verified behavior", async () 
 // The wrappers advertise ~/.zshrc persistence; the semgrep injection uses
 // bash-style array slicing. Prove they all at least PARSE under zsh when it
 // is installed (skipped, not failed, on machines without zsh).
-test("all three scanner wrappers parse under zsh (advertised ~/.zshrc persistence)", (t) => {
+test("all five scanner wrappers parse under zsh (advertised ~/.zshrc persistence)", (t) => {
   const probe = spawnSync("zsh", ["--version"], { encoding: "utf8", timeout: 15000 });
   if (probe.error || probe.status !== 0) {
     t.skip("zsh is not available in this environment");
@@ -608,7 +638,15 @@ test("valid wrapper invocations leak no stray name=value lines under zsh or bash
     assert.ok(!STRAY_LINE_RE.test(`${res.stdout}\n${res.stderr}`), `${id}: combined output must carry no name=value noise: ${res.stdout}${res.stderr}`);
     if (verbatim) {
       const pinnedArgs = tool.invocationKey.slice(tool.fnPrefix.length + 1);
-      assert.ok(logged().includes(pinnedArgs), `${id}: podman run must receive the pinned arguments verbatim: ${logged()}`);
+      if (tool.label === "gitleaks") {
+        // gitleaks' safe defaults (--no-banner --redact) are injected right
+        // after the `detect` subcommand token, so the pinned invocation must
+        // arrive with that pair present; the rest passes through verbatim.
+        const expectedArgs = pinnedArgs.replace(/^detect /, "detect --no-banner --redact ");
+        assert.ok(logged().includes(expectedArgs), `${id}: podman run must receive the pinned arguments with injected safe defaults: ${logged()}`);
+      } else {
+        assert.ok(logged().includes(pinnedArgs), `${id}: podman run must receive the pinned arguments verbatim: ${logged()}`);
+      }
     }
   };
   // (a) No marker file at the scan root: faithful passthrough, no
@@ -658,14 +696,14 @@ test("live-e2e legs byte-match the allow-key invocations and count findings fail
   // an error" doctrine.
   const wrapperFiles = await listScanWrappers(root);
   assert.deepEqual(wrapperFiles.sort(), LIVE_E2E_LEGS.map((leg) => leg.wrapperPath).sort(), "the live-e2e legs must cover exactly the scanned wrapper files, one apiece (adding a scanner forces a leg decision)");
-  assert.equal(LIVE_E2E_LEGS.length, 3, "one e2e leg per scanner");
+  assert.equal(LIVE_E2E_LEGS.length, 5, "one e2e leg per scanner");
   for (const tool of SCAN_TOOLS) {
     const leg = LIVE_E2E_LEGS.find((candidate) => candidate.tool === tool.label);
     assert.ok(leg, `${tool.label}: must have a live-e2e leg`);
     assert.equal(leg.invocation, tool.invocationKey, `${tool.label}: e2e invocation must byte-match the agent allow-key`);
     assert.equal(leg.wrapperPath, tool.wrapperPath, `${tool.label}: e2e leg must source the reviewed wrapper`);
-    assert.match(tool.invocationKey, /\/src\/\.scans\/(\S+) \/src$/, `${tool.label}: allow-key must carry a /src/.scans/<artifact> output path before the /src target`);
-    assert.equal(leg.artifact, tool.invocationKey.match(/\/src\/\.scans\/(\S+) \/src$/)[1], `${tool.label}: e2e artifact must be the allow-key's output file`);
+    assert.match(tool.invocationKey, /\/src\/\.scans\/(\S+?)(?: \/src)?$/, `${tool.label}: allow-key must carry a /src/.scans/<artifact> output path`);
+    assert.equal(leg.artifact, tool.invocationKey.match(/\/src\/\.scans\/(\S+?)(?: \/src)?$/)[1], `${tool.label}: e2e artifact must be the allow-key's output file`);
     assert.equal(leg.countFindings({}), 0, `${tool.label}: empty artifact never passes the gate`);
     assert.equal(leg.countFindings(null), 0, `${tool.label}: null artifact never passes the gate`);
   }
@@ -675,6 +713,10 @@ test("live-e2e legs byte-match the allow-key invocations and count findings fail
   assert.equal(LIVE_E2E_LEGS[1].countFindings({ results: [{ extra: { severity: "WARNING" } }] }), 0, "semgrep: warnings alone do not satisfy the gate");
   assert.equal(LIVE_E2E_LEGS[2].countFindings({ Results: [{ Misconfigurations: [{}], Secrets: [{}, {}] }] }), 3, "trivy: misconfigs and secrets counted");
   assert.equal(LIVE_E2E_LEGS[2].countFindings({ Results: [{ Vulnerabilities: [{}] }] }), 0, "trivy: vulns alone do not satisfy the gate");
+  assert.equal(LIVE_E2E_LEGS[3].countFindings({ Leaks: [{}, {}] }), 2, "gitleaks: Leaks[] counted");
+  assert.equal(LIVE_E2E_LEGS[3].countFindings({}), 0, "gitleaks: empty artifact never passes the gate");
+  assert.equal(LIVE_E2E_LEGS[4].countFindings({ files: [{ violations: [{}, {}] }] }), 2, "pmd: files[].violations counted");
+  assert.equal(LIVE_E2E_LEGS[4].countFindings({ files: [] }), 0, "pmd: empty files never passes the gate");
 });
 
 // The npm wiring must exist and the default unit-test path must stay
@@ -740,7 +782,7 @@ test("checkScanWrapper is fail-closed on synthetic wrappers and passes every rea
   // Real repo wrappers must all satisfy the same contract, and the sweep must
   // see them (zero wrappers is fail-closed in validateSecurityConfiguration).
   const wrappers = await listScanWrappers(root);
-  assert.ok(wrappers.length >= 3, "the sweep must find the OSV, semgrep, and trivy wrappers");
+  assert.ok(wrappers.length >= 5, "the sweep must find the OSV, semgrep, trivy, gitleaks, and pmd wrappers");
   for (const rel of wrappers) {
     assert.deepEqual(checkScanWrapper(rel, await readFile(path.join(root, rel), "utf8")), [], `${rel}: must pass`);
   }

@@ -405,17 +405,18 @@ const LIVE_SCAN_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 // regression gate for C1/M1-class breakage. The fast `--version` probe above
 // cannot catch a wrapper whose real scan invocation is rejected by the CLI
 // (wrong flag position, duplicated non-repeatable flag, ...), so this runs
-// each of the three EXACT authorized scan invocations against
-// tests/fixtures/secure-scan-demo/ and asserts every leg writes a fresh,
-// valid artifact that contains its required finding class. Invocations and
-// wrapper paths are derived from SCAN_TOOL_KEYS, the single-source table that
-// byte-matches the scanner agent's allow-keys (pinned by
-// tests/security-config.test.mjs); only the wrapper path crosses into bash
-// as a positional argument. Heavy (three container scans; first pass pays
-// the vuln-DB/ruleset downloads) — hence a separate opt-in command, never
+// each of the five EXACT authorized scan invocations against its fixture and
+// asserts every leg writes a fresh, valid artifact that contains its required
+// finding class. Invocations and wrapper paths are derived from SCAN_TOOL_KEYS,
+// the single-source table that byte-matches the scanner agent's allow-keys
+// (pinned by tests/security-config.test.mjs); only the wrapper path crosses
+// into bash as a positional argument. Heavy (five container scans; first pass
+// pays the vuln-DB/ruleset downloads) — hence a separate opt-in command, never
 // part of `npm test` or the plain `--live` path.
 const LIVE_E2E_FIXTURE = "tests/fixtures/secure-scan-demo";
-const LIVE_E2E_REQUIRED_FILES = ["package-lock.json", "Dockerfile", "app/server.py", "config/settings.yaml"];
+const LIVE_E2E_GITLEAKS_FIXTURE = "tests/fixtures/gitleaks-demo";
+const LIVE_E2E_REQUIRED_FILES = ["package-lock.json", "Dockerfile", "app/server.py", "config/settings.yaml", "app/App.java"];
+const LIVE_E2E_GITLEAKS_REQUIRED_FILES = ["README.md", "config/credentials.txt", ".gitignore"];
 
 function osvAdvisoryCount(report) {
   let total = 0;
@@ -451,6 +452,16 @@ export const SCAN_TOOL_KEYS = [
     wrapperPath: "skills/trivy-scanner/scripts/trivy-scanner-wrapper.sh",
     invocation: "trivy-docker fs --scanners vuln,misconfig,secret --format json --output /src/.scans/final-trivy-results.json /src",
   },
+  {
+    tool: "gitleaks",
+    wrapperPath: "skills/gitleaks-scan/scripts/gitleaks-scanner-wrapper.sh",
+    invocation: "gitleaks-docker detect --source /src --report-format json --report-path /src/.scans/final-gitleaks-results.json /src",
+  },
+  {
+    tool: "pmd",
+    wrapperPath: "skills/pmd-scan/scripts/pmd-scanner-wrapper.sh",
+    invocation: "pmd-docker check -d /src -R category/java/errorprone.xml -f json --report-file /src/.scans/final-pmd-results.json",
+  },
 ];
 
 // Per-leg acceptance: exit-code contract observed live against the pinned
@@ -479,6 +490,19 @@ const LIVE_E2E_ORACLES = {
       0,
     ),
   },
+  gitleaks: {
+    okExitCodes: [0, 1],
+    findingsLabel: "at least one git-history secret leak",
+    countFindings: (report) => (Array.isArray(report?.Leaks) ? report.Leaks : []).length,
+  },
+  pmd: {
+    okExitCodes: [0, 4, 5],
+    findingsLabel: "at least one rule violation",
+    countFindings: (report) => (Array.isArray(report?.files) ? report.files : []).reduce(
+      (n, f) => n + (Array.isArray(f?.violations) ? f.violations.length : 0),
+      0,
+    ),
+  },
 };
 
 // DO NOT EDIT THESE STRINGS: byte-matched by tests/security-config.test.mjs.
@@ -487,7 +511,7 @@ const LIVE_E2E_ORACLES = {
 // to the shared table forces an explicit oracle entry here (and the tests
 // assert one leg per wrapper file — see the legs test).
 export const LIVE_E2E_LEGS = SCAN_TOOL_KEYS.map((key) => {
-  const artifact = key.invocation.match(/\/src\/\.scans\/(\S+) \/src$/)?.[1];
+  const artifact = key.invocation.match(/\/src\/\.scans\/(\S+?)(?: \/src)?$/)?.[1];
   if (!artifact) {
     throw new Error(`live-e2e leg "${key.tool}": allow-key invocation carries no /src/.scans/<artifact> output path`);
   }
@@ -495,7 +519,7 @@ export const LIVE_E2E_LEGS = SCAN_TOOL_KEYS.map((key) => {
   if (!oracle) {
     throw new Error(`live-e2e leg "${key.tool}": shared scan-tool entry has no e2e oracle; add one deliberately`);
   }
-  return { tool: key.tool, wrapperPath: key.wrapperPath, invocation: key.invocation, artifact, ...oracle };
+  return { tool: key.tool, wrapperPath: key.wrapperPath, invocation: key.invocation, artifact, fixture: key.tool === "gitleaks" ? LIVE_E2E_GITLEAKS_FIXTURE : LIVE_E2E_FIXTURE, ...oracle };
 });
 
 async function runLiveE2EValidation(root) {
@@ -507,6 +531,7 @@ async function runLiveE2EValidation(root) {
     return 1;
   }
   const fixtureDir = path.join(root, LIVE_E2E_FIXTURE);
+  const gitleaksFixtureDir = path.join(root, LIVE_E2E_GITLEAKS_FIXTURE);
   const missing = [];
   for (const rel of LIVE_E2E_REQUIRED_FILES) {
     try {
@@ -515,9 +540,33 @@ async function runLiveE2EValidation(root) {
       missing.push(`${LIVE_E2E_FIXTURE}/${rel}`);
     }
   }
+  for (const rel of LIVE_E2E_GITLEAKS_REQUIRED_FILES) {
+    try {
+      await stat(path.join(gitleaksFixtureDir, rel));
+    } catch {
+      missing.push(`${LIVE_E2E_GITLEAKS_FIXTURE}/${rel}`);
+    }
+  }
   if (missing.length) {
     console.error(`live-e2e fixture incomplete; missing: ${missing.join(", ")}`);
     return 1;
+  }
+  // Pre-seed the gitleaks fixture as a git repo so the synthetic secret lives
+  // in history (the surface gitleaks scans). Idempotent: init only if `.git`
+  // is absent, then commit the working files so a fresh clone has them. The
+  // fixture's own .gitignore excludes .scans/ so re-runs never commit scan
+  // artifacts. This is operator-run CLI behavior (never the verifier agent).
+  if (!(await stat(path.join(gitleaksFixtureDir, ".git")).then(() => true).catch(() => false))) {
+    await run("git", ["init", "-q"], { cwd: gitleaksFixtureDir });
+  }
+  await run("git", ["add", "-A"], { cwd: gitleaksFixtureDir });
+  // Commit only when there is something staged, so the idempotent
+  // "nothing to commit" case is skipped up front instead of being swallowed
+  // by a .catch — a real commit failure (e.g. commit.gpgsign/hooks) still
+  // surfaces here rather than being masked until the later findings check.
+  const porcelain = await run("git", ["status", "--porcelain"], { cwd: gitleaksFixtureDir });
+  if (porcelain.stdout.trim() !== "") {
+    await run("git", ["-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "seed gitleaks fixture"], { cwd: gitleaksFixtureDir });
   }
   // ACCEPTED (review round 2, carried Security Nit-1): the 5s slack absorbs
   // coarse filesystem mtime granularity on volume/network mounts; a pre-seed
@@ -539,7 +588,8 @@ async function runLiveE2EValidation(root) {
       failures.push(`${leg.tool}: cannot extract the pinned image/function or invocation does not match the wrapper function name`);
       continue;
     }
-    const artifactPath = path.join(fixtureDir, ".scans", leg.artifact);
+    const legFixtureDir = path.join(root, leg.fixture);
+    const artifactPath = path.join(legFixtureDir, ".scans", leg.artifact);
     // -1 for an absent prior artifact: "nothing was there before" must not
     // impose a stricter freshness floor than this run's own startedAt gate.
     const previousMtime = await stat(artifactPath).then((s) => s.mtimeMs).catch(() => -1);
@@ -547,11 +597,11 @@ async function runLiveE2EValidation(root) {
     try {
       // env inheritance is deliberate and safe here: even a stray exported
       // *_SCANNER_WORKDIR cannot fake a pass, because the artifact path the
-      // gate stats is derived from fixtureDir, not from the env'd mount — a
-      // redirected write leaves fixtureDir/.scans stale and the freshness
+      // gate stats is derived from legFixtureDir, not from the env'd mount — a
+      // redirected write leaves legFixtureDir/.scans stale and the freshness
       // check fails closed.
       await run("bash", ["-c", `source "$1" && ${leg.invocation}`, "bash", wrapperAbs], {
-        cwd: fixtureDir,
+        cwd: legFixtureDir,
         timeout: LIVE_SCAN_TIMEOUT_MS,
         maxBuffer: LIVE_SCAN_MAX_BUFFER_BYTES,
       });
@@ -592,7 +642,7 @@ async function runLiveE2EValidation(root) {
     console.error(failures.join("\n"));
     return 1;
   }
-  console.log("live end-to-end security-scan validation passed (all three fixture-backed legs produced required findings)");
+  console.log("live end-to-end security-scan validation passed (all five fixture-backed legs produced required findings)");
   return 0;
 }
 

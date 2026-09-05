@@ -15,6 +15,7 @@
 # each tool's fixture oracle still fires. See README "Security operation
 # notes" and tests/fixtures/secure-scan-demo/README.md.
 
-# Deliberately scoped to the only seeded tree: any future REAL file under
+# Deliberately scoped to the seeded trees: any future REAL file under
 # tests/fixtures/ still gets scanned.
 tests/fixtures/secure-scan-demo/
+tests/fixtures/gitleaks-demo/

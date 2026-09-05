@@ -67,6 +67,10 @@ permission:
     "semgrep-docker scan --json --metrics off --disable-version-check --config p/default --output /src/.scans/final-semgrep-results.json /src": allow
     "source ~/.config/opencode/skills/trivy-scanner/scripts/trivy-scanner-wrapper.sh": allow
     "trivy-docker fs --scanners vuln,misconfig,secret --format json --output /src/.scans/final-trivy-results.json /src": allow
+    "source ~/.config/opencode/skills/gitleaks-scan/scripts/gitleaks-scanner-wrapper.sh": allow
+    "gitleaks-docker detect --source /src --report-format json --report-path /src/.scans/final-gitleaks-results.json /src": allow
+    "source ~/.config/opencode/skills/pmd-scan/scripts/pmd-scanner-wrapper.sh": allow
+    "pmd-docker check -d /src -R category/java/errorprone.xml -f json --report-file /src/.scans/final-pmd-results.json": allow
     "podman system *": deny
     "podman container prune": deny
     "podman image prune": deny
@@ -107,11 +111,12 @@ families (`npm`/`pnpm`/`bun` `test`|`lint`|`typecheck`|`check`|`validate`,
 syntax checks, read-only Git inspection, the reviewed SearXNG Compose
 configuration/build/up/inspection/exec/restart/cleanup lifecycle, the generic
 `-p opencode-verify-*` project-scoped Compose lifecycle, and the pinned
-OSV/Semgrep/Trivy wrappers (granted per segment as exact source+invocation
-pairs — invoke each pair as a single `&&` chain in one command (the exact
-two-segment commands as in the code-security-scanner's 'Run the scans' step —
-do not expand `~`); each scan segment depends on the shell function defined by
-its sourced wrapper, so separate invocations will fail). Verification container runs must use a fresh project name beginning
+OSV/Semgrep/Trivy/Gitleaks/PMD wrappers (granted per segment as exact
+source+invocation pairs — invoke each pair as a single `&&` chain in one
+command (the exact two-segment commands as in the code-security-scanner's
+'Run the scans' step — do not expand `~`); each scan segment depends on the
+shell function defined by its sourced wrapper, so separate invocations will
+fail). Verification container runs must use a fresh project name beginning
 with `searxng-verification-` (for the SearXNG Compose file) or
 `opencode-verify-` (for generic project-scoped Compose). These prefixes are
 convention-based isolation — the command patterns cannot anchor argument

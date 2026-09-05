@@ -185,7 +185,8 @@ scanner runs **once per outer-loop pass**, not per fix round.
 1. **Security scans (once per outer-loop pass).** At the start of each
    outer-loop pass, delegate to the `code-security-scanner` subagent to run
    the multi-tool security suite — OSV-Scanner (lockfiles), Semgrep (SAST),
-   and Trivy (dependency vulns, misconfig, secrets) — via pinned Podman
+   Trivy (dependency vulns, misconfig, secrets), Gitleaks (git-history
+   secrets), and PMD (rule-based Java/JS static analysis) — via pinned Podman
     containers. It returns findings prioritized **Critical / Major / Minor /
     Nit** (duplicates across tools merged once, tagged with both sources),
     plus non-blocking per-tool **"scans skipped"** notes for any tool whose
@@ -228,13 +229,12 @@ scanner runs **once per outer-loop pass**, not per fix round.
    Stage 4.5), then re-run the `security-reviewer`, `performance-reviewer`,
    and `best-practices-reviewer` on the revised diff (and, when the fix touched
    scanned file classes, the `code-security-scanner` — lockfiles →
-   OSV-Scanner + Trivy, source code → Semgrep + Trivy, Dockerfiles/IaC →
-   Trivy misconfig, credential files → Trivy secret). If any checklist item is
-   `not-verifiable`, handle it as in Stage 4.5 and do not terminate the loop
-   until the user signs off. **Keep looping until no Critical or Major
-   security, performance, or best-practices findings remain AND
-   verification passes AND all not-verifiable items signed
-   off.**
+   OSV-Scanner + Trivy, source code → Semgrep + Trivy + PMD, Dockerfiles/IaC →
+   Trivy misconfig, credential files → Trivy secret + Gitleaks history). If any
+   checklist item is `not-verifiable`, handle it as in Stage 4.5 and do not
+   terminate the loop until the user signs off. **Keep looping until no
+   Critical or Major security, performance, or best-practices findings remain
+   AND verification passes AND all not-verifiable items signed off.**
 4. Delegate to the `code-reviewer` subagent to review the coder's changes
    (general review, including any Minor/Nit security, performance, and
    best-practices findings). Pass the merged security-reviewer,

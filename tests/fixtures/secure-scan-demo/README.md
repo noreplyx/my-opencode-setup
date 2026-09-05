@@ -2,9 +2,9 @@
 
 A deliberately vulnerable, **synthetic** demo project used to validate the
 code-orchestrator Stage 5 multi-scanner security suite (AC-18): the pinned
-`osv-scanner`, `semgrep`, and `trivy` containers must each produce at least
-one finding against this directory, mapped into the Critical/Major/Minor/Nit
-taxonomy.
+`osv-scanner`, `semgrep`, `trivy`, and `pmd` containers must each produce at
+least one finding against this directory, mapped into the
+Critical/Major/Minor/Nit taxonomy.
 
 | File | Expected detection | Tool(s) |
 |------|--------------------|---------|
@@ -12,6 +12,7 @@ taxonomy.
 | `app/server.py` | `subprocess` with `shell=True`, `eval()` of untrusted input, `os.system()` concat | Semgrep |
 | `Dockerfile` | unpinned `:latest` base, root user, exposed port 22, missing `HEALTHCHECK`, `apt-get` without `--no-install-recommends` (fires DS-0001/0002/0004/0026/0029; the `curl … \| bash` line is decorative for SAST only) | Trivy (misconfig) |
 | `config/settings.yaml` | GitHub-PAT-shaped secret pattern | Trivy (secret) |
+| `app/App.java` | empty `catch` block (`EmptyCatchBlock`) | PMD |
 
 **Safety notes**
 

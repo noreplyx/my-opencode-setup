@@ -34,19 +34,20 @@ opencode
 
 ## Skills Overview
 
-The three **scanner skills** (`osv-scanner`, `semgrep-scanner`,
-`trivy-scanner`) are present on disk as authored skill files and back the
-Stage 5 security suite. The other skills listed below are documented for
-reference but are **not** authored as skill files in this repository.
+The five **scanner skills** (`osv-scanner`, `semgrep-scanner`,
+`trivy-scanner`, `gitleaks-scan`, `pmd-scan`) are present on disk as authored
+skill files and back the Stage 5 security suite. The other skills listed below
+are documented for reference but are **not** authored as skill files in this
+repository.
 
 | Skill | Tool Required | Description | On Disk |
 |-------|---------------|-------------|---------|
 | osv-scanner | Podman | Dependency vulnerability scanning (OSV-Scanner) | ✅ |
 | trivy-scanner | Podman | Dependency vulns, misconfigurations, and leaked secrets (Trivy) | ✅ |
-| gitleaks-scan | Podman | Secret detection in Git repositories | — |
+| gitleaks-scan | Podman | Secret detection in Git commit history (Gitleaks) | ✅ |
 | semgrep-scanner | Podman | SAST static code analysis (Semgrep) | ✅ |
+| pmd-scan | Podman | Rule-based static code analysis (Java, JS, etc.) | ✅ |
 | owasp-zap-scan | Podman | DAST web application security scanning | — |
-| pmd-scan | Podman | Static code analysis (Java, JS, etc.) | — |
 | playwright-cli | Playwright CLI | Browser automation and testing | — |
 | ast-grep | ast-grep (sg) | Structural code search and rewriting | — |
 | plan-protocol | Bun | Structured implementation planning | — |
@@ -58,21 +59,26 @@ The `code-orchestrator` drives the brainstorm → plan → approve → implement
 verify → iterate pipeline by delegating to subagents. Key agents:
 
 - **`code-security-scanner`** — Stage 5 multi-tool security scanner. Runs the
-  three-tool suite via pinned Podman containers with writable `/src` mounts
+  five-tool suite via pinned Podman containers with writable `/src` mounts
   restricted to scan artifacts: OSV-Scanner against lockfiles
   (`ghcr.io/google/osv-scanner@sha256:1547b7c2783d4f266b24fe86ab4dfc18d058588244c58384ac9f56dddb304511`),
   Semgrep SAST against source code
   (`docker.io/semgrep/semgrep@sha256:b94b53d02fd4a022f9eac4e2af1380f5c3c4c21400e79d3336bdff1d1db5e796`),
-  and Trivy dependency-vuln/misconfig/secret scanning
-  (`docker.io/aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969`).
+  Trivy dependency-vuln/misconfig/secret scanning
+  (`docker.io/aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969`),
+  Gitleaks git-history secret detection
+  (`docker.io/zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f`),
+  and PMD rule-based Java/JS static analysis
+  (`docker.io/pmdcode/pmd@sha256:e234f36a0a4b74a257c55f01acb512a9da7a135315446150281190ab1f4969dc`).
   Findings come from the JSON artifacts under `.scans/` and are merged and
-  deduplicated (OSV/Trivy CVE overlaps reported once, tagged with both
-  sources, at the maximum mapped severity) into the same Critical / Major /
-  Minor / Nit taxonomy as the static `security-reviewer`, so the orchestrator
-  folds them into the same fix+verify loop. It runs once per outer-loop pass
-  and degrades **per tool** (a non-blocking "scans skipped" note for any tool
-  whose Podman/image/network infrastructure is unavailable; the other tools
-  still count; SonarQube is a deliberate deferred future extension).
+  deduplicated (OSV/Trivy CVE overlaps and Gitleaks/Trivy secret overlaps
+  reported once, tagged with both sources, at the maximum mapped severity)
+  into the same Critical / Major / Minor / Nit taxonomy as the static
+  `security-reviewer`, so the orchestrator folds them into the same fix+verify
+  loop. It runs once per outer-loop pass and degrades **per tool** (a
+  non-blocking "scans skipped" note for any tool whose Podman/image/network
+  infrastructure is unavailable; the other tools still count; SonarQube is a
+  deliberate deferred future extension).
 - **`performance-reviewer`** / **`best-practices-reviewer`** — Stage 5 static
   review lenses that run in step 2, in parallel with the
   `security-reviewer`, on the same `git diff HEAD` and the same approved
@@ -136,14 +142,14 @@ checkpoint — but a required part is never omitted.
 
 ## Operational Prerequisites
 
-- **Podman** — required for the `code-security-scanner` subagent's three
-  scan containers (OSV-Scanner, Semgrep, Trivy). The wrappers pull their
-  pinned images on first use; the first scan pass also pays one-time
-  startup costs — Trivy downloads its
-  vulnerability DB into the `trivy-cache` named volume and Semgrep fetches
-  the `p/default` ruleset — so **network access is required** for the Trivy
-  and Semgrep legs. If Podman, an image, or the network is unavailable, the
-  scanner reports a per-tool "scans skipped" note and the pipeline continues.
+- **Podman** — required for the `code-security-scanner` subagent's five
+  scan containers (OSV-Scanner, Semgrep, Trivy, Gitleaks, PMD). The wrappers
+  pull their pinned images on first use; the first scan pass also pays
+  one-time startup costs — Trivy downloads its vulnerability DB into the
+  `trivy-cache` named volume and Semgrep fetches the `p/default` ruleset — so
+  **network access is required** for the Trivy and Semgrep legs. If Podman, an
+  image, or the network is unavailable, the scanner reports a per-tool "scans
+  skipped" note and the pipeline continues.
 - **Session restart** — opencode loads its configuration once at startup and
   does not hot-reload it. After installing or altering skills, agent
   permission frontmatter, or wrapper scripts, quit and restart the opencode
@@ -163,7 +169,7 @@ checkpoint — but a required part is never omitted.
 | `npm test` | Hermetic unit tests (`node --test tests/**/*.test.mjs`), including the security-configuration validator and the wrapper guard/hardening tests run against a stub `podman` in temp dirs. Never touches real containers or the network. | Node 18+ |
 | `npm run validate:security` | Static security-configuration validation only (pins, grants, wrapper contract, SearXNG compose hardening). No containers. | — |
 | `npm run validate:security:live` | Live probe: pulls (or reuses) each wrapper's pinned image and proves it starts and prints a version through the real `podman run --rm` path, per wrapper. | Podman + network on first pull |
-| `npm run validate:security:live:e2e` | The deeper fixture-backed gate: runs the three exact authorized scan invocations against `tests/fixtures/secure-scan-demo/` and requires a fresh, parseable artifact with at least one expected finding per tool (dependency advisory / ERROR-severity SAST result / misconfig-or-secret). Heavy — three full container scans; first pass pays the vuln-DB and ruleset downloads — so it is a separate opt-in command, never part of `npm test` or `--live`. | Podman + network |
+| `npm run validate:security:live:e2e` | The deeper fixture-backed gate: runs the five exact authorized scan invocations against their fixtures and requires a fresh, parseable artifact with at least one expected finding per tool (dependency advisory / ERROR-severity SAST result / misconfig-or-secret / git-history secret leak / rule violation). The gitleaks leg pre-seeds `tests/fixtures/gitleaks-demo/` as a git repo (git init + commit) so its synthetic secret lives in history. Heavy — five full container scans; first pass pays the vuln-DB and ruleset downloads — so it is a separate opt-in command, never part of `npm test` or `--live`. | Podman + network |
 
 ## Security operation notes
 
@@ -185,9 +191,9 @@ checkpoint — but a required part is never omitted.
 - Verification is restricted to the verifier agent's reviewed command allowlist:
   explicit test/validation scripts, typecheck, bounded Node and shell syntax
   checks, the reviewed SearXNG Compose lifecycle/inspection commands, the
-  three pinned scanner wrappers (OSV-Scanner, Semgrep, Trivy — six exact
-  `source`+invocation grants, mirrored from the scanner agent into the
-  verifier), and read-only Git status/diff checks. If task-runner
+  five pinned scanner wrappers (OSV-Scanner, Semgrep, Trivy, Gitleaks, PMD —
+  ten exact `source`+invocation grants, mirrored from the scanner agent into
+  the verifier), and read-only Git status/diff checks. If task-runner
   configuration changes, explicit approval is required before verification.
 - Trivy secret findings are reported to reviewers as `file:line` + rule ID
   only; the scanner agent is instructed never to quote the matched snippet,
@@ -204,22 +210,27 @@ checkpoint — but a required part is never omitted.
   allow-pair pattern.
 - **Seed-fixture exclusion from repo self-scans.** The pipeline's working
   directory is this repo, so a Stage 5 pass scans it recursively — and the
-  deliberately vulnerable seed fixture under `tests/fixtures/secure-scan-demo/`
-  (minimist lockfile, synthetic GitHub-PAT-shaped secret, injection patterns)
-  would otherwise re-block every future self-scan with seeded Critical/Major
-  findings. Each tool's own repo-root ignore mechanism excludes the seeded fixture
-  from whole-repo self-scans while real code stays scanned: Semgrep's
-  `.semgrepignore`; `trivy.yaml` (auto-loaded, `ignorefile:` pointer) plus the
-  path-scoped `.trivyignore.yaml` suppressions — Trivy's flat `.trivyignore`
-  format cannot scope by path, so the experimental YAML format is used instead;
-  and `osv-scanner.self-scan.toml` + the OSV wrapper's marker-gated `--config`
-  injection — OSV-Scanner 2.5.1 has no path-exclusion config key and per-directory
-  configs do not propagate, so the exclusion there is deliberately advisory-ID-
-  scoped and documented in the file. All of these sit at the repo root, outside
-  the fixture mount, so `npm run validate:security:live:e2e` — which scans the
-  fixture directory itself — still asserts every seeded bug fires. The
-  `toml@4.1.1` finding in this repo's own lockfile is a real dependency issue
-  (not fixture noise) and stays visible pending user-approved remediation.
+  deliberately vulnerable seed fixtures under `tests/fixtures/secure-scan-demo/`
+  (minimist lockfile, synthetic GitHub-PAT-shaped secret, injection patterns,
+  empty-catch Java) and `tests/fixtures/gitleaks-demo/` (synthetic secret in
+  git history) would otherwise re-block every future self-scan with seeded
+  Critical/Major findings. Each tool's own repo-root ignore mechanism excludes
+  the seeded fixtures from whole-repo self-scans while real code stays
+  scanned: Semgrep's `.semgrepignore`; `trivy.yaml` (auto-loaded,
+  `ignorefile:` pointer) plus the path-scoped `.trivyignore.yaml`
+  suppressions — Trivy's flat `.trivyignore` format cannot scope by path, so
+  the experimental YAML format is used instead; `osv-scanner.self-scan.toml`
+  + the OSV wrapper's marker-gated `--config` injection — OSV-Scanner 2.5.1
+  has no path-exclusion config key and per-directory configs do not propagate,
+  so the exclusion there is deliberately advisory-ID-scoped and documented in
+  the file; `.gitleaks.toml` + the Gitleaks wrapper's marker-gated `--config`
+  injection (path-scoped `[[allowlists]]`); and `pmd.self-scan.marker` + the
+  PMD wrapper's marker-gated `--exclude-pattern` injection. All of these sit at the
+  repo root, outside the fixture mounts, so
+  `npm run validate:security:live:e2e` — which scans the fixture directories
+  themselves — still asserts every seeded bug fires. The `toml@4.1.1` finding
+  in this repo's own lockfile is a real dependency issue (not fixture noise)
+  and stays visible pending user-approved remediation.
 - The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
   its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
   files mode `0600`; security validation rejects weaker modes.

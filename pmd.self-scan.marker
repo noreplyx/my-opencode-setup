@@ -1,0 +1,11 @@
+# PMD repo-root self-scan marker for whole-repo scans of THIS repo.
+#
+# Purpose: the Stage 5 seed fixture under tests/fixtures/secure-scan-demo/
+# carries a deliberately vulnerable Java file (app/App.java, EmptyCatchBlock).
+# Any future whole-repo self-scan of this config repo must not re-report it as
+# a fresh finding. The wrapper (scripts/pmd-scanner-wrapper.sh) injects
+# `--exclude-pattern 'tests/fixtures/'` when this marker exists at the scan root;
+# ordinary pipeline targets do not have it, so they stay byte-for-byte
+# unaffected, and the e2e gate mounts the fixture itself — where no marker
+# exists — so the fixture oracle still fires. See README "Security operation
+# notes".

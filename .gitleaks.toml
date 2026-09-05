@@ -1,0 +1,20 @@
+# Gitleaks repo-root self-scan config for whole-repo scans of THIS repo.
+#
+# Purpose: the Stage 5 seed fixture under tests/fixtures/gitleaks-demo/
+# carries a deliberately leaky synthetic secret committed to its git history.
+# Any future whole-repo self-scan of this config repo must not re-report it
+# as a fresh finding. The wrapper (scripts/gitleaks-scanner-wrapper.sh) passes
+# this file as `--config` when it exists at the scan root; ordinary pipeline
+# targets do not have it, so they stay byte-for-byte unaffected, and the e2e
+# gate mounts the fixture itself — where no marker exists — so the fixture
+# oracle still fires. See README "Security operation notes".
+#
+# The [[allowlists]] path entry is scoped to the deliberately leaky fixture
+# directory, so identical findings in REAL code anywhere else in a self-scan
+# still fire — suppression is never global.
+
+[[allowlists]]
+description = "synthetic gitleaks fixture for the Stage 5 scanner-suite e2e gate (tests/fixtures/gitleaks-demo); real code must never commit a credential"
+paths = [
+  '''tests/fixtures/gitleaks-demo/''',
+]
