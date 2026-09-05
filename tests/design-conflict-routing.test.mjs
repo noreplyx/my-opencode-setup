@@ -258,7 +258,7 @@ test("routing consistency: review steps exclude conflict-worthy findings and pas
   assert.match(body, w("except findings flagged `DESIGN_CONFLICT:` that pass the conflict-worthiness test, which go to **Design-conflict routing** (below) instead of the coder"));
   assert.match(body, w("Likewise, if the `coder`'s handoff reports `DESIGN_CONFLICT:` on an instruction it received, route that instruction to **Design-conflict routing** (below)."));
   assert.match(body, w("or verification still fails, and each design-conflict re-issue counts as one such pass"));
-  assert.match(body, w("present the current status, the remaining findings, and the design-conflict history (which findings were flagged, which design clauses they contradicted, and the re-issues and re-approvals so far), and ask how to proceed"));
+  assert.match(body, w("present the current status, the remaining findings, and the design-conflict history (which findings were flagged, which design clauses they contradicted, and the re-issues and re-approvals so far), each remaining finding per the **Per-finding dual explanation** rule, and ask how to proceed"));
   assert.match(body, w("always pass reviewer comments back to the coder as fix instructions, except `DESIGN_CONFLICT:` findings that pass the conflict-worthiness test, which follow the Stage 5 design-conflict routing."));
   const unconditional = (body.match(/back\s+to\s+the\s+coder/g) ?? []).length;
   assert.equal(unconditional, 1, "the only plain-text 'back to the coder' sentence must be the conditioned Guidance bullet");

@@ -165,3 +165,22 @@ test("README documents the user-facing communication format", async () => {
   const nextTopLevel = readme.indexOf("\n## ", delegation);
   assert.ok(nextTopLevel >= 0 && format < nextTopLevel, "format subsection must stay within the Agents section");
 });
+
+test("orchestrator format section mandates the per-finding header and its three fields", async () => {
+  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
+  assert.match(section, w("**Finding <N> — <Title> (`<name>`):**"));
+  assert.match(section, w("sequential integer starting at 1"));
+  assert.match(section, w("unique within the message"));
+  assert.match(section, w("short human-readable phrase"));
+  assert.match(section, w("stable identifier"));
+  assert.match(section, w("once-per-message part invariant"));
+});
+
+test("README mirrors the per-finding header without drift", async () => {
+  const readme = readmeFormatSection(await readFile(path.join(root, "README.md"), "utf8"));
+  assert.match(readme, w("**Finding <N> — <Title> (`<name>`):**"));
+  assert.match(readme, w("sequential number"));
+  assert.match(readme, w("short title"));
+  assert.match(readme, w("stable name"));
+  assert.match(readme, w("each unique within the message"));
+});

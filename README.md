@@ -145,7 +145,13 @@ part always stays last, so every checkpoint closes with its question, and a
 message contains no labeled parts beyond the four required parts, the Terms
 explained part when its rule applies, and these optional ones. Parts stay
 proportional — one sentence each is enough for a short quick-confirm
-checkpoint — but a required part is never omitted.
+checkpoint — but a required part is never omitted. Each finding the
+orchestrator presents — review findings, scanner findings, verifier verdicts,
+`not-verifiable` checklist items, or residual findings — is introduced by a
+per-finding header of the form **Finding <N> — <Title> (`<name>`):**
+carrying a sequential number, a short title, and a stable name, each unique
+within the message, followed by the plain-language and technical explanations
+for that finding.
 
 ## Operational Prerequisites
 

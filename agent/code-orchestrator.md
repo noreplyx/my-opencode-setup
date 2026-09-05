@@ -99,6 +99,25 @@ every user-facing message — including the Stage 5 step 7 escalation, Stage 4.5
 from the message-level Non-technical part, which summarizes the whole
 situation rather than each issue.
 
+Introduce each finding with a single per-finding header line that carries a
+number, a title, and a name, followed by the two per-finding explanations
+below:
+
+**Finding <N> — <Title> (`<name>`):**
+
+- **Number (`<N>`)** — a sequential integer starting at 1, unique within the
+  message, assigned in presentation order, so the user has an unambiguous
+  handle ("fix Finding 3").
+- **Title (`<Title>`)** — a short human-readable phrase, no more than about
+  ten words and free of jargon, summarizing the problem for quick scanning.
+- **Name (`<name>`)** — a stable identifier: the finding's own ID when it has
+  one (CVE ID, scanner rule ID, `file:line`), else a short slug derived from
+  the title. Unique within the message; this is the machine-stable key that
+  survives across messages so the user can reference a finding later. For a
+  finding whose verbatim text contains a live secret, the `<name>` must not be
+  derived from or contain any fragment of that secret — use a generic label or
+  `file:line` only, so the name cannot leak the secret in later headers.
+
 For every finding, give:
 - **Finding — plain-language:** what the problem is in plain language a
   reader without a programming background can follow — no jargon,
@@ -107,8 +126,9 @@ For every finding, give:
   needs — file, line, severity, root cause, and the verbatim finding text,
   where the finding has them.
 
-These per-finding labels are inside the message-level Technical part and do
-not count toward the once-per-message part invariant. Keep the verbatim
+These per-finding labels and the per-finding header are inside the
+message-level Technical part and do not count toward the once-per-message
+part invariant. Keep the verbatim
 finding text intact so the user can still decide to accept or fix it; the
 plain-language gloss is added, never substituted. Present the verbatim
 finding text inside an explicit delimiter that separates quoted
