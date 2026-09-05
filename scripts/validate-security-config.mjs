@@ -15,6 +15,12 @@ export const LOOPBACK_PUBLISH = /^127\.0\.0\.1:8080:8080(\/tcp)?$/;
 const SEARXNG_CONFIG_MOUNT = "/etc/searxng";
 
 export const SECRET_INTERPOLATION_RE = /\$\{?\s*SEARXNG_SECRET\b/;
+// Standalone opt-in skills that ship a wrapper but are NOT Stage 5 loop legs.
+// listScanWrappers still enumerates them (so checkScanWrapper fail-closed-sweeps
+// them), but the loop-legs SET-equality gate and the --live probe exclude them.
+export const STANDALONE_WRAPPER_KEYS = [
+  "skills/owasp-zap-scan/scripts/zap-scanner-wrapper.sh",
+];
 export const SETTINGS_PORT_RE = /^\s+port:\s*8080\s*(#.*)?$/m;
 export const SETTINGS_BIND_RE = /^\s+bind_address:\s*"::"/m;
 export const SETTINGS_8888_RE = /^\s+port:\s*8888/m;
@@ -341,7 +347,9 @@ async function runLiveValidation(root) {
     console.error("live validation unavailable: podman not installed");
     return 1;
   }
-  const wrappers = await listScanWrappers(root);
+  const wrappers = (await listScanWrappers(root)).filter(
+    (relPath) => !STANDALONE_WRAPPER_KEYS.includes(relPath),
+  );
   if (wrappers.length === 0) {
     console.error("wrapper sweep found no skills/*/scripts/*-wrapper.sh files; nothing to live-validate");
     return 1;

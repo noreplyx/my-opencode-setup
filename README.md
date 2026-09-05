@@ -36,9 +36,15 @@ opencode
 
 The five **scanner skills** (`osv-scanner`, `semgrep-scanner`,
 `trivy-scanner`, `gitleaks-scan`, `pmd-scan`) are present on disk as authored
-skill files and back the Stage 5 security suite. The other skills listed below
-are documented for reference but are **not** authored as skill files in this
-repository.
+skill files and back the Stage 5 security suite. Two further skills —
+`owasp-zap-scan` (DAST) and `sbom-generation` (Trivy CycloneDX SBOM) — are
+also authored on disk, but they are **standalone opt-in skills, NOT Stage 5
+loop legs**: DAST needs a live target URL the code-review loop does not have,
+and SBOM is artifact *generation*, not a pass/fail finding, so neither fits
+the loop's finding-gate semantics (the same rationale that defers SonarQube).
+They are invoked on demand, not run as loop members. The other skills listed
+below are documented for reference but are **not** authored as skill files in
+this repository.
 
 | Skill | Tool Required | Description | On Disk |
 |-------|---------------|-------------|---------|
@@ -47,7 +53,8 @@ repository.
 | gitleaks-scan | Podman | Secret detection in Git commit history (Gitleaks) | ✅ |
 | semgrep-scanner | Podman | SAST static code analysis (Semgrep) | ✅ |
 | pmd-scan | Podman | Rule-based static code analysis (Java, JS, etc.) | ✅ |
-| owasp-zap-scan | Podman | DAST web application security scanning | — |
+| owasp-zap-scan | Podman | DAST web application security scanning | ✅ |
+| sbom-generation | Podman | Software Bill of Materials generation (Trivy CycloneDX JSON) | ✅ |
 | playwright-cli | Playwright CLI | Browser automation and testing | — |
 | ast-grep | ast-grep (sg) | Structural code search and rewriting | — |
 | plan-protocol | Bun | Structured implementation planning | — |

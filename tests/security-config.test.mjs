@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { validateSecurityConfiguration, checkScanWrapper, listScanWrappers, LOOPBACK_PUBLISH, collidesWithSearxngConfigMount, volumeMountIsReadOnly, volumeMountTarget, extractServerBlock, extractWrapperPin, SETTINGS_PORT_RE, SETTINGS_BIND_RE, SETTINGS_8888_RE, SECRET_INTERPOLATION_RE, SCAN_TOOL_KEYS, LIVE_E2E_LEGS } from "../scripts/validate-security-config.mjs";
+import { validateSecurityConfiguration, checkScanWrapper, listScanWrappers, LOOPBACK_PUBLISH, collidesWithSearxngConfigMount, volumeMountIsReadOnly, volumeMountTarget, extractServerBlock, extractWrapperPin, SETTINGS_PORT_RE, SETTINGS_BIND_RE, SETTINGS_8888_RE, SECRET_INTERPOLATION_RE, SCAN_TOOL_KEYS, LIVE_E2E_LEGS, STANDALONE_WRAPPER_KEYS } from "../scripts/validate-security-config.mjs";
 import { validateMssqlTlsConnectionString } from "../tools/mssql-tls.mjs";
 
 const require = createRequire(import.meta.url);
@@ -319,6 +319,95 @@ test("scanner wrapper output guards reject every unguarded output path", () => {
       assert.ok(res.stderr.includes(tool.errorPrefix), `${id}: guard must report via stderr: ${res.stderr}`);
       assert.ok(!res.stderr.includes("PODMAN_STUB_INVOKED"), `${id}: guard must fire before any podman invocation`);
     }
+  }
+});
+
+test("ZAP standalone wrapper guards reject report paths outside /src/.scans/ (DAST-4)", () => {
+  // Hermetic: a stub podman on PATH proves the guard fires before any podman
+  // invocation. ZAP's file-write flags -r/-J/-w/-x/-g/-p are validated BY
+  // VALUE (like gitleaks' -r), so out-of-tree paths are rejected while
+  // /src/.scans/ paths pass through to the stub. The boolean -a takes no
+  // value, so value-carrying -a=*/-a<path> tokens are rejected outright.
+  const dir = mkdtempSync(path.join(tmpdir(), "zap-guard-negative-"));
+  const binDir = path.join(dir, "bin");
+  mkdirSync(binDir);
+  const stub = path.join(binDir, "podman");
+  writeFileSync(stub, "#!/bin/sh\necho PODMAN_STUB_INVOKED >&2\nexit 0\n");
+  chmodSync(stub, 0o755);
+  const wrapper = path.join(root, STANDALONE_WRAPPER_KEYS[0]);
+  const run = (invocation) => spawnSync("bash", ["-c", `source "$1" && ${invocation}`, "bash", wrapper], {
+    cwd: dir,
+    env: { PATH: `${binDir}:${process.env.PATH}`, HOME: dir },
+    encoding: "utf8",
+    timeout: 30000,
+  });
+  // Out-of-tree / traversal / empty / dot-basename report paths are rejected
+  // for each of the value-carrying write flags -r, -J, -w, -x, -g, -p in
+  // every spelling (space, =, concatenated).
+  for (const flag of ["-r", "-J", "-w", "-x", "-g", "-p"]) {
+    for (const value of ["/src/evil.json", "/src/.scans/../evil.json", "/src/.scans/", "/src/.scans/.hidden"]) {
+      for (const form of [`${flag} ${value}`, `${flag}=${value}`, `${flag}${value}`]) {
+        const res = run(`zap-docker -t https://example.com ${form}`);
+        assert.notEqual(res.status, 0, `[zap] guard must reject '${form}'`);
+        assert.ok(res.stderr.includes("[zap] ERROR:"), `[zap] rejection must report via stderr: ${res.stderr}`);
+        assert.ok(!res.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] guard must fire before any podman invocation for '${form}'`);
+      }
+    }
+  }
+  // The argparse long forms of the six write flags are guarded in both the
+  // space and `=` spellings (long flags are not concatenated).
+  for (const flag of ["--report-html", "--report-json", "--report-md", "--report-xml", "--gen-conf", "--progress"]) {
+    for (const value of ["/src/evil.json", "/src/.scans/../evil.json", "/src/.scans/", "/src/.scans/.hidden"]) {
+      for (const form of [`${flag} ${value}`, `${flag}=${value}`]) {
+        const res = run(`zap-docker -t https://example.com ${form}`);
+        assert.notEqual(res.status, 0, `[zap] guard must reject '${form}'`);
+        assert.ok(res.stderr.includes("[zap] ERROR:"), `[zap] rejection must report via stderr: ${res.stderr}`);
+        assert.ok(!res.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] guard must fire before any podman invocation for '${form}'`);
+      }
+    }
+  }
+  // -a is a boolean flag (include alpha rules) and takes no value; any
+  // value-carrying -a=* / -a<path> token, or a non-flag token following a
+  // bare -a, is invalid ZAP usage and is rejected outright (fail-closed),
+  // while the bare boolean -a passes through.
+  for (const form of ["-a=/src/evil.json", "-a/src/evil.json", "-a/src/.scans/../evil.json"]) {
+    const res = run(`zap-docker -t https://example.com ${form}`);
+    assert.notEqual(res.status, 0, `[zap] guard must reject value-carrying '${form}'`);
+    assert.ok(res.stderr.includes("[zap] ERROR:"), `[zap] -a rejection must report via stderr: ${res.stderr}`);
+    assert.ok(!res.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] -a guard must fire before any podman invocation for '${form}'`);
+  }
+  // Space form: a bare -a followed by a non-flag value is rejected...
+  const aSpaceValue = run("zap-docker -t https://example.com -a /src/evil.json");
+  assert.notEqual(aSpaceValue.status, 0, `[zap] guard must reject '-a <value>'`);
+  assert.ok(aSpaceValue.stderr.includes("[zap] ERROR:"), `[zap] -a space-form rejection must report via stderr: ${aSpaceValue.stderr}`);
+  assert.ok(!aSpaceValue.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] -a space-form guard must fire before any podman invocation`);
+  const bareA = run("zap-docker -t https://example.com -a -J /src/.scans/zap-baseline.json");
+  assert.equal(bareA.status, 0, `[zap] the bare boolean -a must pass: ${bareA.stderr}`);
+  assert.ok(bareA.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] a passing bare -a must reach podman: ${bareA.stderr}`);
+  // -z / --zap-options is a value-carrying raw-option passthrough and is
+  // rejected outright (fail-closed) in every spelling.
+  for (const form of ["-z -config", "-z=-config", "-z-config", "--zap-options -config", "--zap-options=-config"]) {
+    const res = run(`zap-docker -t https://example.com ${form}`);
+    assert.notEqual(res.status, 0, `[zap] guard must reject raw-option passthrough '${form}'`);
+    assert.ok(res.stderr.includes("[zap] ERROR:"), `[zap] -z rejection must report via stderr: ${res.stderr}`);
+    assert.ok(!res.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] -z guard must fire before any podman invocation for '${form}'`);
+  }
+  // A report under /src/.scans/ passes the guard and reaches the stub.
+  const ok = run("zap-docker -t https://example.com -J /src/.scans/zap-baseline.json");
+  assert.equal(ok.status, 0, `[zap] an in-tree /src/.scans/ report must pass: ${ok.stderr}`);
+  assert.ok(ok.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] a passing report must reach podman: ${ok.stderr}`);
+  // argparse also accepts single-dash long options; a single-dash long-form
+  // write flag under /src/.scans/ must pass (not be false-rejected as a
+  // concatenated short-flag value), while an out-of-tree single-dash long-form
+  // value is still rejected by value.
+  for (const flag of ["-report-html", "-report-json", "-report-md", "-report-xml", "-gen-conf", "-progress"]) {
+    const okSingle = run(`zap-docker -t https://example.com ${flag} /src/.scans/zap-baseline.out`);
+    assert.equal(okSingle.status, 0, `[zap] single-dash long form '${flag}' under /src/.scans/ must pass: ${okSingle.stderr}`);
+    assert.ok(okSingle.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] a passing single-dash long form must reach podman: ${okSingle.stderr}`);
+    const badSingle = run(`zap-docker -t https://example.com ${flag} /src/evil.json`);
+    assert.notEqual(badSingle.status, 0, `[zap] single-dash long form '${flag}' with an out-of-tree value must be rejected`);
+    assert.ok(badSingle.stderr.includes("[zap] ERROR:"), `[zap] single-dash long-form rejection must report via stderr: ${badSingle.stderr}`);
+    assert.ok(!badSingle.stderr.includes("PODMAN_STUB_INVOKED"), `[zap] single-dash long-form guard must fire before any podman invocation`);
   }
 });
 
@@ -694,9 +783,23 @@ test("live-e2e legs byte-match the allow-key invocations and count findings fail
   // means adding a scanner wrapper without an explicit e2e leg, or a leg
   // without its wrapper, is a test failure, mirroring the "zero wrappers is
   // an error" doctrine.
-  const wrapperFiles = await listScanWrappers(root);
+  const wrapperFiles = (await listScanWrappers(root)).filter(
+    (p) => !STANDALONE_WRAPPER_KEYS.includes(p),
+  );
   assert.deepEqual(wrapperFiles.sort(), LIVE_E2E_LEGS.map((leg) => leg.wrapperPath).sort(), "the live-e2e legs must cover exactly the scanned wrapper files, one apiece (adding a scanner forces a leg decision)");
   assert.equal(LIVE_E2E_LEGS.length, 5, "one e2e leg per scanner");
+  // Standalone opt-in skills carry a wrapper (so checkScanWrapper sweeps them)
+  // but are deliberately NOT Stage 5 loop members: none may appear in the
+  // shared SCAN_TOOL_KEYS table (no standalone fnPrefix), so they cannot
+  // become a live-e2e leg.
+  for (const relPath of STANDALONE_WRAPPER_KEYS) {
+    const standaloneFnPrefix = extractWrapperPin(await readFile(path.join(root, relPath), "utf8")).fn;
+    assert.ok(standaloneFnPrefix, `${relPath}: standalone wrapper must define a *-docker function`);
+    assert.ok(
+      !SCAN_TOOL_KEYS.some((key) => key.invocation.split(" ")[0] === standaloneFnPrefix),
+      `standalone wrapper '${standaloneFnPrefix}' must NOT be in SCAN_TOOL_KEYS (standalone skills are not loop members)`,
+    );
+  }
   for (const tool of SCAN_TOOLS) {
     const leg = LIVE_E2E_LEGS.find((candidate) => candidate.tool === tool.label);
     assert.ok(leg, `${tool.label}: must have a live-e2e leg`);
