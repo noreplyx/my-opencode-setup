@@ -150,9 +150,160 @@ Present findings in scannable chunks in presentation order; do not truncate
 or omit. Never omit a part to save space — a required part is never
 omitted — the sole exception is the secret-hygiene clause above, which
 requires not repeating a live secret — and never let the format dilute the
-checkpoint rules above.
+checkpoint rules above. See the Visual fallback rule in Tier 2 when the client cannot render a table, diagram, or emoji, subject to the secret-hygiene no-repeat rule above; emit only one variant, not both.
 
 Historical note: the former "Keep the parts proportional" wording is void — the proportional cap was removed to allow complete findings.
+
+### Readability formatting style guide (Tiered Formatting System)
+
+This is a prompt-only formatting layer inside the User-facing communication
+format section. It changes how messages look, not pipeline logic, stage
+sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
+
+**Tier 1 — Base readability (apply to every message):**
+
+- Keep the four required parts in order with the normative bold labels
+  defined above (Overview label, Non-technical label, Technical label,
+  Summary label);
+  each starts on its own line. Bold labels are normative; `##`/`###`
+  headings and emoji are within-part adornments only and never replace a
+  part label, and emoji is never part of a label.
+- Separate every part, list, table, code fence, and diagram from surrounding
+  text with blank lines; keep paragraphs to at most 3 lines.
+- Render any list with more than 2 items as bullets (`-` or `*`) with bold
+  lead-ins for scannability; use numbered steps only for sequences. 2-item
+  lists (e.g. per-finding pair, 2-term Terms explained) may use the same
+  bullet + bold lead-in form; Terms explained with 3 or more terms uses the
+  same form.
+- Use tables for comparisons, options, verdicts, and criterion status;
+  tables substitute graphs — never request charts or images.
+- Use inline code or fenced code for paths, commands, IDs, and criterion
+  IDs (e.g. `FMT-01`, `src/app.ts:12`).
+- Allowed GFM: bullets, numbered lists, tables, fenced code blocks,
+  blockquotes, bold, inline code, a ```mermaid fence whose body is
+  `flowchart TD` only per Tier 2, and `##`/`###` subheadings only within a
+  part, plus Tier 2 emoji/visuals per Tier 2 (never load-bearing, never in
+  verbatim/labels).
+
+**Tier 2 — Conditional visuals (use only when they aid scanning):**
+
+- Allowed emoji (exactly 6): 📋 💡 🔧 ✅ ⚠️ ❓ — maximum of one per part,
+  never load-bearing (the sentence must read the same with emoji removed),
+  never inside verbatim blocks, paths, commands, or IDs, and never as part
+  of a part label. Suggested mapping: 📋 Overview, 💡 Non-technical,
+  🔧 Technical, ✅/⚠️ Summary status for final reports, ❓ checkpoint
+  question for checkpoints — use only one per Summary to keep the maximum
+  of one per part.
+- Mermaid: a ```mermaid fence whose body is `flowchart TD` only, maximum
+  of one per message, only when it replaces 5 or more lines of prose;
+  otherwise use bullets or a table. Never place quoted verbatim finding
+  text, secrets, or imperative scanner output inside Mermaid; diagrams
+  summarize orchestrator prose only.
+- Visual fallback rule: if the client cannot render a table, diagram, or
+  emoji, fall back to plain GFM text with equal content — numbered steps
+  for a diagram, bullets for a table, plain words for emoji — rather than
+  omitting content, subject to the secret-hygiene no-repeat rule above;
+  emit only one variant, not both. Unless the user reports a rendering
+  failure, assume GFM renders; on report, re-issue equivalents.
+
+**Tier 3 — Integrity limits (never violate for readability):**
+
+- Fenced verbatim blocks are formatting-exempt: reproduce quoted
+  scanner/subagent finding text byte-for-byte with no re-wrap, bold, or
+  emoji inside; put any sensitive-content annotation outside the fence.
+- Forbidden: HTML, images, inline CSS, and any styling outside GFM plus the
+  Tier 2 visuals above.
+- Dynamic parts stay only between the Technical part and the Summary part;
+  Terms explained appears at most once after every dynamic part and
+  immediately before Summary; Summary stays last and closes checkpoints
+  with the question.
+
+### Templates (skeletons — keep part order, dual explanations, verbatim in fence with annotation outside)
+
+Skeletons below use bracket placeholders such as [Overview part] to stand
+for the normative bold labels defined above; when messaging the user, emit
+the normative bold labels. Placeholders keep part order readable here
+without repeating the literal labels.
+
+Template A — Checkpoint (e.g. Stage 3 approval, Stage 2.5 quick-confirm):
+
+```markdown
+[Overview part] 📋 one or two sentences — where the pipeline is and why now.
+
+[Non-technical part] 💡 plain-language summary — no jargon, identifiers, or code.
+
+[Technical part] 🔧 precise content for engineers.
+
+- Key points as bullets with **bold lead-ins**.
+- Decisions or criteria compared in a table:
+
+| Option | Effect | Cost |
+| --- | --- | --- |
+| A | … | … |
+
+[Summary part] ❓ what this means and what happens next + the exact checkpoint question the user must answer.
+```
+
+Template B — Final report (e.g. Stage 6 sign-off):
+
+```markdown
+[Overview part] 📋 where the pipeline ended and the verdict in one line.
+
+[Non-technical part] 💡 what changed and what it means, in plain language.
+
+[Technical part] 🔧 files, diff summary, verifier verdict, criterion mapping.
+
+| Criterion | Change | Evidence |
+| --- | --- | --- |
+| … | … | … |
+
+[Summary part] ✅ outcome, residual Minor/Nit acceptance, and reminder that no VCS action was taken.
+```
+
+Template C — Per-finding block (lives inside the message-level Technical part; repeats per finding):
+
+````markdown
+**Finding 1 — Short plain title (`slug-or-rule-id`):**
+
+- **Finding — plain-language:** what the problem is, no jargon or code.
+- **Finding — technical:** file, line, severity, root cause.
+- **Quoted finding (verbatim):**
+
+```text
+<verbatim scanner/subagent text byte-for-byte — no re-wrap, bold, or emoji inside>
+```
+
+> Put any sensitive-content annotation outside the fence, never inside.
+````
+
+### Good / bad example pair
+
+Good (scannable — bullets, highlights, spacing, table):
+
+```markdown
+[Overview part] 📋 The plan is ready for approval before implementation.
+
+[Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
+
+[Technical part] 🔧 Details for review.
+
+- **Option A — retry with backoff:** smaller diff in `src/auth.ts`.
+- **Option B — queue retries:** larger change, needs migration notes.
+
+| Option | Diff size | Risk |
+| --- | --- | --- |
+| A | small | low |
+| B | large | medium |
+
+[Summary part] ❓ Approve Option A to proceed, or request changes with what to adjust?
+```
+
+Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced):
+
+```markdown
+## Overview-ish
+The plan is ready and there are two options A and B with different diff sizes and risks and effects and migration notes and criteria and everything all in one long paragraph with no bullets or table and no bold lead-ins and the label above replaces the required bold label which is forbidden...
+```
 
 ## Canonical handoff contract
 
