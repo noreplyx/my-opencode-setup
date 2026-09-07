@@ -143,12 +143,22 @@ optional topic-labeled parts and immediately before the Summary part,
 explaining each such term on its own line in plain language. The Summary
 part always stays last, so every checkpoint closes with its question, and a
 message contains no labeled parts beyond the four required parts, the Terms
-explained part when its rule applies, and these optional ones. Parts stay
-proportional — one sentence each is enough for a short quick-confirm
-checkpoint — but a required part is never omitted. Each finding the
-orchestrator presents — review findings, scanner findings, verifier verdicts,
-`not-verifiable` checklist items, or residual findings — is introduced by a
-per-finding header of the form **Finding <N> — <Title> (`<name>`):**
+explained part when its rule applies, and these optional ones.
+
+Length guidance: be concise yet complete, use as much length as needed for
+clarity, no maximum — one sentence each is enough for a short
+quick-confirm checkpoint, and longer messages use as much length as needed.
+Present findings in scannable chunks in presentation order; do not truncate
+or omit. Never omit a part to save space — a required part is never
+omitted — the sole exception is the secret-hygiene rule in agent/code-orchestrator.md (do not repeat a live secret verbatim in later messages; annotate it as sensitive) — and never let the format dilute the
+checkpoint rules above.
+
+Normative wording lives in agent/code-orchestrator.md; this paragraph
+mirrors it.
+
+Each finding the orchestrator presents — review findings, scanner findings,
+verifier verdicts, `not-verifiable` checklist items, or residual findings —
+is introduced by a per-finding header of the form **Finding <N> — <Title> (`<name>`):**
 carrying a sequential number, a short title, and a stable name, each unique
 within the message, followed by the plain-language and technical explanations
 for that finding.

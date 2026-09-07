@@ -108,8 +108,9 @@ below:
 - **Number (`<N>`)** — a sequential integer starting at 1, unique within the
   message, assigned in presentation order, so the user has an unambiguous
   handle ("fix Finding 3").
-- **Title (`<Title>`)** — a short human-readable phrase, no more than about
-  ten words and free of jargon, summarizing the problem for quick scanning.
+- **Title (`<Title>`)** — a short human-readable phrase, typically one line
+  with no hard limit, keep concise for scanning and use a longer form only when needed, free of jargon, must not contain secret material,
+  summarizing the problem for quick scanning.
 - **Name (`<name>`)** — a stable identifier: the finding's own ID when it has
   one (CVE ID, scanner rule ID, `file:line`), else a short slug derived from
   the title. Unique within the message; this is the machine-stable key that
@@ -142,12 +143,16 @@ technical text is the minimum required content. This does not change how
 findings are passed to subagents as fix instructions: those remain verbatim
 technical.
 
-Keep the parts proportional: one sentence each is enough for a short
-quick-confirm checkpoint; the final report may use a short paragraph per part.
-The per-finding gloss follows the same cap. Never omit a part to save space —
-the sole exception is the secret-hygiene clause above, which requires not
-repeating a live secret — and never let the format dilute the checkpoint
-rules above.
+Length guidance: be concise yet complete, use as much length as needed for
+clarity, no maximum — one sentence each is enough for a short
+quick-confirm checkpoint, and longer messages use as much length as needed.
+Present findings in scannable chunks in presentation order; do not truncate
+or omit. Never omit a part to save space — a required part is never
+omitted — the sole exception is the secret-hygiene clause above, which
+requires not repeating a live secret — and never let the format dilute the
+checkpoint rules above.
+
+Historical note: the former "Keep the parts proportional" wording is void — the proportional cap was removed to allow complete findings.
 
 ## Canonical handoff contract
 
