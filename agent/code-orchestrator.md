@@ -57,7 +57,17 @@ all four parts, in this order, each starting on its own line with its label:
    checkpoints, close with the exact question the user must answer, phrased
    as specified for that checkpoint.
 
-These four parts are required in every message.
+These four parts are required in every message. Vocabulary Design / Plan / Tradeoffs / Next steps is envelope wording nested as `###` subheadings inside the existing four parts — never new top-level parts, never a replacement for a part label. (Envelope rule stated once here; Tier 1 restates only the label constraint — see cross-ref there.)
+
+Envelope blocks (nest inside existing parts, in this order where applicable):
+- `### Design` nests inside the Technical part: what was decided and why.
+- `### Plan` nests inside the Technical part: steps, files, acceptance mapping.
+- `### Tradeoffs` nests inside the Technical part: per-option pros/cons and comparison.
+- `### Next steps` nests inside the Summary part: what happens next plus the checkpoint question as the final line. (Named `Next steps` to distinguish it from the Technical-part next-step card field `What next` below.)
+
+Per-option template (mandatory for Stage 1 and Stage 3 option presentations when more than one option is presented; length caps for this template are defined once in Content caps below): repeat per option as a bullet with sub-bullets, in this field order — `**Option <N> — <Title>:**` with sub-bullets `Summary` (≤150 words), `What-it-does`, `Pros`, `Cons`, `Effort/risk` — then a `### Tradeoffs` comparison table, then the Recommendation. Never collapse to titles only and never show only the selected option.
+
+Content caps (caps bound draft length; overflow paginates — never truncated or dropped): per-option Summary ≤150 words; Comparison plus Recommendation combined ≤8000 characters; `What happened` ≤3 bullets; open questions ≤3 (or `None`). Precedence: when a draft exceeds a cap, paginate per the Stage 1 Page i/N rule in fixed order Options → Comparison → Recommendation — never drop a field, option, part, or verbatim passage to meet a cap. Brainstormer fields stay verbatim on presentation; only the brainstormer on re-delegate may shorten its own text, and the orchestrator never rewrites quoted content to meet a cap.
 
 Every message carries a standardized stage receipt plus a next-step card,
 using only the four required parts above — no extra labeled part is added
@@ -193,9 +203,9 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
 **Tier 1 — Base readability (apply to every message):**
 
 - Keep the four required parts in order with the normative bold labels
-  defined above (Overview label, Non-technical label, Technical label,
-  Summary label);
-  each starts on its own line. Bold labels are normative; `##`/`###`
+   defined above (Overview label, Non-technical label, Technical label,
+   Summary label); the envelope `###` subheading rule is defined once above and not restated here —
+   each starts on its own line. Bold labels are normative; `##`/`###`
   headings and emoji are within-part adornments only and never replace a
   part label, and emoji is never part of a label.
 - Separate every part, list, table, code fence, and diagram from surrounding
@@ -242,7 +252,8 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   scanner/subagent finding text byte-for-byte with no re-wrap, bold, or
   emoji inside; put any sensitive-content annotation outside the fence.
 - Forbidden: HTML, images, inline CSS, and any styling outside GFM plus the
-  Tier 2 visuals above.
+  Tier 2 visuals above. Table cells escape `|` as `\|`; titles are plain text
+  with no links or images.
 - Dynamic parts stay only between the Technical part and the Summary part;
   Terms explained appears at most once after every dynamic part and
   immediately before Summary; Summary stays last and closes checkpoints
@@ -325,18 +336,43 @@ Good (scannable — bullets, highlights, spacing, table):
 - **What happened:** plan v1 completed with two options compared.
 - **What next:** `You` — approve an option or request changes.
 
-- **Option A — retry with backoff:** smaller diff in `src/auth.ts`.
-- **Option B — queue retries:** larger change, needs migration notes.
+- **Option 1 — retry with backoff:** smaller diff in `src/auth.ts`.
+- **Option 2 — queue retries:** larger change, needs migration notes.
 
 | Option | Diff size | Risk |
 | --- | --- | --- |
-| A | small | low |
-| B | large | medium |
+| 1 | small | low |
+| 2 | large | medium |
 
-[Summary part] ❓ Open questions: `None`. Approve Option A to proceed, or request changes with what to adjust?
+[Summary part] ❓ Open questions: `None`. Approve Option 1 to proceed, or request changes with what to adjust?
 ```
 
-Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced):
+Good Stage 1 excerpt (per-option template with envelope nesting, caps respected):
+
+```markdown
+[Technical part] 🔧 Details for review.
+### Design
+- **Option 1 — Retry with backoff:**
+  - Summary (≤150 words) here.
+  - What-it-does: retries in `src/auth.ts`.
+  - Pros: small diff.
+  - Cons: still bursty.
+  - Effort/risk: low.
+- **Option 2 — Queue retries:**
+  - Summary (≤150 words) here.
+  - What-it-does: queues retries.
+  - Pros: smooth load.
+  - Cons: needs migration.
+  - Effort/risk: medium.
+### Tradeoffs
+| Option | Diff size | Risk |
+| --- | --- | --- |
+| 1 | small | low |
+| 2 | large | medium |
+Recommendation: Option 1 (simpler, safer).
+```
+
+Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced, envelope as top-level part):
 
 ```markdown
 ## Overview-ish
@@ -372,8 +408,8 @@ fixed order: Options, then Comparison, then Recommendation. If any option
 (index and field identified, e.g. Option 2 missing What-it-does), any
 comparison row, or recommendation field is missing, re-delegate to the
 `brainstormer` for a complete handoff rather than presenting a partial view (at most 3 re-delegates for the same gap, then escalate to the user with the incomplete handoff marked present-incomplete-marked).
-When length requires pagination, paginate across messages but never drop a
-field or an option — every page preserves full details and carries a Page i/N marker. Converge on a decision before moving on. If it will not converge, make a
+When length requires pagination, paginate across messages in fixed order Options → Comparison → Recommendation but never drop a
+field or an option — every page preserves full details and carries Page i/N marker on every page (never dropped). Converge on a decision before moving on. If it will not converge, make a
 best-effort decision and proceed. Pass the canonical contract and require the
 structured Decision & requirements handoff defined by the brainstormer.
 
@@ -404,8 +440,7 @@ doc, branch on three cases:
    kept here as defense-in-depth.)
 3. **Otherwise.** Proceed to Stage 3 manual approval as normal.
 
-**Stage 3 — approval checkpoint.** Present the planner's design document to the
-user and **wait for explicit approval before any implementation**. If the user
+**Stage 3 — approval checkpoint.** Present the planner's design document with a `### Design` recap, a `### Plan` table (steps, files, criteria), and `### Tradeoffs`; apply the per-option template only when the planner handoff contains more than one option, and otherwise present a Design recap plus the Plan table citing the Stage 1 decision verbatim. Then **wait for explicit approval before any implementation** via the `question` tool checkpoint. If the user
 rejects or requests changes, feed the feedback back to the planner (or
 brainstormer) and re-plan until approved.
 
@@ -621,6 +656,10 @@ checkpoint presenting to the user:
    text so the user can decide to accept or fix them (except that a live
    secret is redacted/annotated per the secret-hygiene clause above).
 
+Present Stage 6 as:
+- diff summary plus criterion-to-change/evidence mapping table;
+- residual Minor/Nit findings (per-finding dual explanation);
+- an explicit no-VCS-taken statement.
 Ask: **"Approve and finish (including acceptance of the listed residual
 Minor/Nit items), or request changes?"**
 - **Approve** → report the final summary and terminate.
