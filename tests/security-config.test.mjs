@@ -967,3 +967,42 @@ test("LOOPBACK_PUBLISH accepts only single loopback 8080 mappings", () => {
     assert.equal(LOOPBACK_PUBLISH.test(entry), expected, `loopback verdict for ${JSON.stringify(entry)}`);
   }
 });
+
+test("coder permissions stay verify-only with allow-before-deny ordering", async () => {
+  const coder = await readFile(path.join(root, "agent/coder.md"), "utf8");
+  const { rules } = parseBashRules(coder, "coder");
+  const keys = Object.keys(rules);
+  assert.equal(keys[0], "*", "coder: catch-all must be the first bash rule");
+  assert.equal(rules["*"], "deny", "coder: bash must be deny-by-default");
+  const EXPECTED_ALLOW = [
+    "npm test*", "npm run test*", "npm run build*", "npm run lint*", "npm run typecheck*", "npm run check*", "npm run validate*", "npm ci*",
+    "pnpm test*", "pnpm run test*", "pnpm run build*", "pnpm run lint*", "pnpm run typecheck*", "pnpm run check*", "pnpm run validate*", "pnpm install --frozen-lockfile*",
+    "bun test*", "bun run test*", "bun run build*", "bun run lint*", "bun run typecheck*", "bun run check*", "bun run validate*", "bun install --frozen-lockfile*",
+    "dotnet test*", "dotnet build*", "dotnet restore --locked-mode*", "dotnet format --verify-no-changes*", "dotnet --version*",
+    "node --check*", "bash -n*",
+  ];
+  for (const key of EXPECTED_ALLOW) {
+    assert.equal(rules[key], "allow", `coder: expected allow ${key}`);
+  }
+  const lastAllowIndex = Math.max(...keys.map((key, i) => (rules[key] === "allow" ? i : -1)));
+  for (const key of keys) {
+    assert.ok(!key.includes("&&"), `coder: compound && keys are structurally dead: ${key}`);
+  }
+  for (const key of ["npm install*", "pnpm add*", "bun add*", "dotnet add*", "dotnet run*", "dotnet restore*", "dotnet format*", "npx *", "bunx *", "pnpm dlx*"]) {
+    assert.ok(keys.indexOf(key) > lastAllowIndex, `coder: deny-tail key must come after every allow: ${key}`);
+  }
+  assert.ok(!keys.some((k) => rules[k] === "allow" && /^(npm exec|npx |bunx |dotnet run|dotnet watch|dotnet exec)/.test(k)), "coder: no open exec allow");
+  assert.equal(rules["dotnet restore*"], "deny", "coder: unrestricted dotnet restore must be denied (frozen --locked-mode only)");
+  assert.equal(rules["dotnet format --verify-no-changes*"], "allow", "coder: dotnet format verify-only");
+  assert.equal(rules["dotnet format*"], "deny", "coder: unrestricted dotnet format must be denied (verify-only --verify-no-changes only)");
+  assert.ok(keys.indexOf("dotnet restore*") > keys.indexOf("dotnet restore --locked-mode*"), "coder: broad dotnet restore deny must come after the frozen allow (most-specific-wins)");
+  assert.ok(keys.indexOf("dotnet format*") > keys.indexOf("dotnet format --verify-no-changes*"), "coder: broad dotnet format deny must come after the verify-only allow (most-specific-wins)");
+  const verifier = await readFile(path.join(root, "agent/verifier.md"), "utf8");
+  const { rules: vrules } = parseBashRules(verifier, "verifier");
+  assert.equal(vrules["*"], "deny", "verifier: deny-by-default preserved");
+  assert.match(verifier, /"\*": deny/);
+  const cflat = coder.replace(/\s+/g, " ");
+  assert.match(cflat, /deny-by-default/i, "coder: prose must state deny-by-default");
+  assert.doesNotMatch(cflat, /allow-by-default/i, "coder: prose must not claim allow-by-default");
+  assert.match(cflat, /most-specific-wins/i, "coder: prose must state the allow/deny precedence");
+});

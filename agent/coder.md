@@ -7,7 +7,39 @@ permission:
   clickup: deny
   task: deny
   bash:
-    "*": allow
+    "*": deny
+    "npm test*": allow
+    "npm run test*": allow
+    "npm run build*": allow
+    "npm run lint*": allow
+    "npm run typecheck*": allow
+    "npm run check*": allow
+    "npm run validate*": allow
+    "npm ci*": allow
+    "pnpm test*": allow
+    "pnpm run test*": allow
+    "pnpm run build*": allow
+    "pnpm run lint*": allow
+    "pnpm run typecheck*": allow
+    "pnpm run check*": allow
+    "pnpm run validate*": allow
+    "pnpm install --frozen-lockfile*": allow
+    "bun test*": allow
+    "bun run test*": allow
+    "bun run build*": allow
+    "bun run lint*": allow
+    "bun run typecheck*": allow
+    "bun run check*": allow
+    "bun run validate*": allow
+    "bun install --frozen-lockfile*": allow
+    "dotnet test*": allow
+    "dotnet build*": allow
+    # Precedence: most-specific-wins — "dotnet restore --locked-mode*" allow beats the broad "dotnet restore*" deny below; verify-only "dotnet format --verify-no-changes*" allow likewise beats the broad "dotnet format*" deny below.
+    "dotnet restore --locked-mode*": allow
+    "dotnet format --verify-no-changes*": allow
+    "dotnet --version*": allow
+    "node --check*": allow
+    "bash -n*": allow
     "git push*": deny
     "git commit*": deny
     "git reset*": deny
@@ -113,6 +145,15 @@ permission:
     "cargo install*": deny
     "cargo update*": deny
     "dotnet add package*": deny
+    "dotnet add*": deny
+    "dotnet remove*": deny
+    "dotnet restore*": deny
+    "dotnet format*": deny
+    "dotnet new*": deny
+    "dotnet tool*": deny
+    "dotnet run*": deny
+    "dotnet watch*": deny
+    "dotnet exec*": deny
 ---
 
 You are a focused coding subagent. You implement changes precisely and
@@ -172,14 +213,16 @@ Write code following best practices:
 - Use meaningful names and keep functions/classes cohesive and loosely coupled.
 - Prefer composition over inheritance where appropriate.
 
-**Guardrails.** Your `bash` permission is allow-by-default with a deny tail
-covering destructive VCS writes (`git push`/`commit`/`reset`/… and friends),
-file destruction (`rm`/`mv`/… and friends), privilege escalation, direct
+**Guardrails.** Your `bash` permission is deny-by-default (`"*": deny`
+first); the narrow allows below are verify-only (test/build/lint/typecheck,
+frozen-lockfile restore, `node --check`, `bash -n`). Overlapping allow/deny
+pairs resolve most-specific-wins with the deny tail listed after every allow.
+Destructive VCS writes (`git push`/`commit`/`reset`/… and friends), file
+destruction (`rm`/`mv`/… and friends), privilege escalation, direct
 networking, container runtimes, and dependency-install mutations (including
-package aliases such as `i`, `rm`, `un`, `up`, and `create`/`init`). Never
-attempt to bypass the tail with absolute paths or shell wrappers. If a blocked
+package aliases such as `i`, `rm`, `un`, `up`, and `create`/`init`) are
+denied. Never attempt to bypass a denial via env-var prefixes, `git -c`,
+`command`, absolute paths, or `$(...)` substitution. If a blocked
 operation is genuinely required (a file move in a refactor, adding a
 dependency), report it in the structured handoff so the orchestrator can route
-it to the user. The tail is an accident guardrail, not a sandbox. Note the
-tail is bypassable via env-var prefixes, `git -c`, `command`, absolute paths,
-and `$(...)` substitution — never use them.
+it to the user.
