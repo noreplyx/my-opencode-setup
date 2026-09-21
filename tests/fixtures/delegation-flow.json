@@ -32,6 +32,14 @@
       { "id": "AC-1", "status": "not-verifiable", "evidence": "requires external approval" }
     ]
   },
+  "brainstormHandoff": {
+    "optionsCatalog": [
+      { "title": "Option A — incremental fix", "summary": "Small targeted change with low risk.", "pros": "Small diff", "cons": "Limited scope", "rejected": false },
+      { "title": "Option B — rework", "summary": "Larger rework with broader coverage.", "pros": "Durable", "cons": "Higher cost", "rejected": true, "rejectedIndex": 1, "rejectionReason": "Higher cost than value" }
+    ],
+    "comparison": "Option A is cheaper and lower risk; Option B is durable but costlier. Selected Option A.",
+    "selected": 0
+  },
   "endToEndHandoff": {
     "contract": {
       "Goal": "Validate a complete delegation handoff",

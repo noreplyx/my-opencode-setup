@@ -143,6 +143,12 @@ Then append these **supplementary** sections (additive — they never replace
 or rename a canonical field):
 
 - **Assumptions** — load-bearing assumptions; verified vs untested.
+- **Options catalog** — every option considered, each entry with Title,
+  Summary (cap ~150 words per option), Pros, Cons, and Effort/risk note.
+  Retain all options including rejected ones; mark each rejected entry with
+  its rejected index pointer (e.g. `Rejected: Option 2 — reason`).
+- **Comparison** — required when ≥2 options: a brief comparison of the
+  options (tradeoffs table or equivalent) supporting the recommendation.
 - **Options considered & rejected** — each with a one-line rejection reason.
 - **Confidence** — high / medium / low, and the dominant uncertainty.
 - **Kill criteria** — what observed evidence would overturn the decision.

@@ -63,11 +63,32 @@ export function isCompletionReady(report, expectedCriteria = report?.expectedCri
   });
 }
 
+export function validateBrainstormHandoff(handoff) {
+  const errors = [];
+  const catalog = handoff?.optionsCatalog;
+  if (!Array.isArray(catalog) || catalog.length === 0) {
+    errors.push("options catalog is missing or empty");
+    return errors;
+  }
+  for (const [index, option] of catalog.entries()) {
+    for (const field of ["title", "summary", "pros", "cons"]) {
+      if (typeof option?.[field] !== "string" || !option[field].trim()) errors.push(`option ${index}: missing ${field}`);
+    }
+    if (typeof option?.summary === "string" && option.summary.split(/\s+/).filter(Boolean).length > 150) errors.push(`option ${index}: summary exceeds ~150 words`);
+    if (option?.rejected === true && (typeof option?.rejectedIndex !== "number" || typeof option?.rejectionReason !== "string" || !option.rejectionReason.trim())) errors.push(`option ${index}: rejected entry must retain rejectedIndex pointer and rejectionReason`);
+  }
+  if (catalog.length >= 2 && (typeof handoff?.comparison !== "string" || !handoff.comparison.trim())) errors.push("comparison required when ≥2 options");
+  return errors;
+}
+
 export function validatePrompt(name, source) {
   const missing = CONTRACT_FIELDS.filter((field) => !source.includes(field));
   if (name === "code-planner" && !/stable ID|stable IDs/.test(source)) missing.push("stable criterion IDs");
   if (name === "coder" && !/Criterion mapping/.test(source)) missing.push("criterion mapping");
   if (name === "verifier" && !/not-verifiable/.test(source)) missing.push("not-verifiable verdict");
+  if (name === "brainstormer" && !/Options catalog/.test(source)) missing.push("options catalog schema");
+  if (name === "brainstormer" && !/Comparison/.test(source)) missing.push("comparison artifact");
+  if (name === "code-orchestrator" && !/Do not collapse options to titles/.test(source)) missing.push("present-all rule");
   return missing;
 }
 

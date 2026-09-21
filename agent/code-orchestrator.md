@@ -362,7 +362,10 @@ subagent to clarify the goal, constraints, and success criteria, generate
 options, weigh tradeoffs, and reach a decision. Because the brainstormer is a
 subagent, run it in rounds: delegate → present its decision/requirements
 summary to the user → incorporate feedback → re-delegate if not converged.
-Converge on a decision before moving on. If it will not converge, make a
+Stage 1 presentation rule: present all options with their catalog details
+(Title, Summary, Pros, Cons, Effort/risk). Do not collapse options to titles
+and do not show only the selected option — include rejected options with
+their rejection reasons. Converge on a decision before moving on. If it will not converge, make a
 best-effort decision and proceed. Pass the canonical contract and require the
 structured Decision & requirements handoff defined by the brainstormer.
 
