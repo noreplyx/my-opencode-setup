@@ -6,6 +6,7 @@ permission:
   bash:
     "*": deny
     "npm test*": allow
+    "npm run build*": allow
     "npm run test*": allow
     "npm run lint*": allow
     "npm run typecheck*": allow
@@ -13,12 +14,15 @@ permission:
     "npm run validate*": allow
     "./node_modules/.bin/tsc --noEmit*": allow
     "pnpm test*": allow
+    "pnpm run build*": allow
     "pnpm run test*": allow
     "pnpm run lint*": allow
     "pnpm run typecheck*": allow
     "pnpm run check*": allow
     "pnpm run validate*": allow
     "yarn test*": allow
+    "yarn build*": allow
+    "yarn run build*": allow
     "yarn lint*": allow
     "yarn typecheck*": allow
     "yarn run test*": allow
@@ -28,6 +32,7 @@ permission:
     "yarn run validate*": allow
     "yarn validate*": allow
     "bun test*": allow
+    "bun run build*": allow
     "bun run test*": allow
     "bun run lint*": allow
     "bun run typecheck*": allow
@@ -43,6 +48,16 @@ permission:
     "make lint*": allow
     "make check*": allow
     "dotnet test*": allow
+    "dotnet build*": allow
+    "dotnet format --verify-no-changes*": allow
+    "dotnet vstest*": allow
+    "npx --no-install eslint*": allow
+    "npx --no-install biome*": allow
+    "pnpm exec eslint*": allow
+    "pnpm exec biome*": allow
+    "./node_modules/.bin/eslint*": allow
+    "./node_modules/.bin/biome check*": allow
+    "./node_modules/.bin/biome lint*": allow
     "node --check*": allow
     "bash -n*": allow
     "git status*": allow
@@ -85,6 +100,21 @@ permission:
     "git diff --ext-diff*": deny
     "git show --ext-diff*": deny
     "git difftool*": deny
+    "npm * --fix*": deny
+    "pnpm * --fix*": deny
+    "yarn * --fix*": deny
+    "bun * --fix*": deny
+    "npx * --fix*": deny
+    "npm * --write*": deny
+    "pnpm * --write*": deny
+    "yarn * --write*": deny
+    "bun * --write*": deny
+    "npx * --write*": deny
+    "dotnet run*": deny
+    "dotnet add*": deny
+    "dotnet restore --force*": deny
+    "* --fix*": deny
+    "* --write*": deny
   clickup: deny
   webfetch: deny
   websearch: deny
@@ -103,11 +133,13 @@ scripts — that is the point. Shell command substitutions remain out of
 bounds, as do commands that print environment variables, connection strings,
 credentials, or secret files.
 The allowlist covers the project's declared test/lint/typecheck runner
-families (`npm`/`pnpm`/`bun` `test`|`lint`|`typecheck`|`check`|`validate`,
-`yarn` `test`|`lint`|`typecheck`|`validate`, the `yarn run` script forms
+families (`npm`/`pnpm`/`bun` `build`|`test`|`lint`|`typecheck`|`check`|`validate`,
+`yarn` `build`|`test`|`lint`|`typecheck`|`validate`, the `yarn run` script forms
 (bare `yarn check` is excluded — it can rewrite `yarn.lock`), the local
 `tsc --noEmit` form, `cargo test`|`cargo clippy`, `pytest`, `go test`,
-`make test`|`make lint`|`make check`, `dotnet test`), bounded Node and shell
+ `make test`|`make lint`|`make check`, `dotnet test`|`dotnet build`|`dotnet format --verify-no-changes`|`dotnet vstest` (the `vstest` test-runner subcommand only — do not use `dotnet vstest` for build or other subcommands),
+direct `./node_modules/.bin/eslint` and `./node_modules/.bin/biome check|lint` (preferred — fully local, hermetic),
+`npx --no-install` `eslint`|`biome` (fetch-off: never downloads missing packages — fails instead of hanging on network) and `pnpm exec` `eslint`|`biome` (local workspace resolution only) forms), bounded Node and shell
 syntax checks, read-only Git inspection, the reviewed SearXNG Compose
 configuration/build/up/inspection/exec/restart/cleanup lifecycle, the generic
 `-p opencode-verify-*` project-scoped Compose lifecycle, and the pinned
@@ -147,7 +179,11 @@ rather than installing silently. **Run declared scripts only:** invoke the
 project's test/lint/typecheck via its own config (e.g. `npm run test`,
 `pnpm lint`, `cargo test`). Do not assemble ad-hoc destructive shell constructs
 such as `rm`, `mv`, `cp`, output redirection into source paths (`> file`,
-`>> file`), or pipes feeding destructive commands. If the only way to verify
+`>> file`), or pipes feeding destructive commands. Out of bounds: mutating
+linter flags (`--fix`, `--write` — denied both by the broad `* --fix`/`* --write`
+entries and by explicit per-runner deny entries so the prohibition holds
+regardless of permission-engine precedence), `dotnet run`, and package-manager
+`install`|`add` (lockfile-changing installs stay forbidden). If the only way to verify
 requires a destructive step, do not run it — report `fail`/`no-tooling` with
 the reason.
 For Compose cleanup, record which named containers, network, and volumes were
@@ -167,7 +203,13 @@ Follow these rules:
   project config. Determine the idiomatic test/lint/typecheck commands for the
   project.
 - **Run each applicable command.** Run the test, lint, and typecheck commands
-  that exist. Do not skip one just because another passed.
+  that exist. Do not skip one just because another passed. Prefer the local
+  forms first (`./node_modules/.bin/*`, `pnpm exec`); use the `npx
+  --no-install` form only as a fallback when the local binary is absent, and
+   record the tool version from the command's own output when it prints one;
+   do not run a separate `--version` probe outside the allowlist. Run every
+   runner with the tool-call timeout parameter set (abort and report on hang
+   on network or watch-mode rather than waiting indefinitely).
 - **Report a structured verdict.** Return exactly one of:
   - `pass` — every applicable command was run and passed, every checklist item
     is `pass`, and evidence is recorded for every item.
