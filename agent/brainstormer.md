@@ -144,12 +144,19 @@ or rename a canonical field):
 
 - **Assumptions** — load-bearing assumptions; verified vs untested.
 - **Options catalog** — every option considered, each entry with Title,
-  Summary (cap ~150 words per option), Pros, Cons, and Effort/risk note.
+  What-it-does (one sentence on what the option does), Summary (cap ~150 words per option), Pros, Cons, and Effort/risk note.
   Retain all options including rejected ones; mark each rejected entry with
   its rejected index pointer (e.g. `Rejected: Option 2 — reason`).
+  Emit options verbatim with no summarize, no filter, no reorder, no truncate.
 - **Comparison** — required when ≥2 options: a brief comparison of the
   options (tradeoffs table or equivalent) supporting the recommendation.
+  Preserve every option's fields in the comparison; never drop an option to
+  save space — paginate across rounds but never drop a field or an option.
+  Keep Comparison and Recommendation each to ≤8000 characters so the
+  validator caps stay enforceable.
 - **Options considered & rejected** — each with a one-line rejection reason.
+- **Recommendation** — the chosen option with brief rationale, presented after
+  the Comparison in fixed order Options, then Comparison, then Recommendation.
 - **Confidence** — high / medium / low, and the dominant uncertainty.
 - **Kill criteria** — what observed evidence would overturn the decision.
 - **Next steps** — concrete actions for the planner.

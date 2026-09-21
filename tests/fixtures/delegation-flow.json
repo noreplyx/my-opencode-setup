@@ -34,10 +34,12 @@
   },
   "brainstormHandoff": {
     "optionsCatalog": [
-      { "title": "Option A — incremental fix", "summary": "Small targeted change with low risk.", "pros": "Small diff", "cons": "Limited scope", "rejected": false },
-      { "title": "Option B — rework", "summary": "Larger rework with broader coverage.", "pros": "Durable", "cons": "Higher cost", "rejected": true, "rejectedIndex": 1, "rejectionReason": "Higher cost than value" }
+      { "title": "Option A — incremental fix", "whatItDoes": "Applies a small targeted change to fix the issue.", "summary": "Small targeted change with low risk.", "pros": "Small diff", "cons": "Limited scope", "effortRisk": "Low effort, low risk", "rejected": false },
+      { "title": "Option B — rework", "whatItDoes": "Reworks the flow for broader coverage.", "summary": "Larger rework with broader coverage.", "pros": "Durable", "cons": "Higher cost", "effortRisk": "High effort, medium risk", "rejected": true, "rejectedIndex": 1, "rejectionReason": "Higher cost than value" },
+      { "title": "Option C — tooling assist", "whatItDoes": "Adds tooling to catch the issue earlier.", "summary": "Tooling assist with medium scope.", "pros": "Prevents recurrence", "cons": "Setup cost", "effortRisk": "Medium effort, low risk", "rejected": true, "rejectedIndex": 2, "rejectionReason": "Deferred until A lands" }
     ],
     "comparison": "Option A is cheaper and lower risk; Option B is durable but costlier. Selected Option A.",
+    "recommendation": "Recommend Option A — incremental fix: smallest complete change with low risk.",
     "selected": 0
   },
   "endToEndHandoff": {

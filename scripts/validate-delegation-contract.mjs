@@ -12,6 +12,13 @@ export const CONTRACT_FIELDS = [
   "Risks/ambiguities",
 ];
 
+export const HANDOFF_SCHEMA_VERSION = "v1";
+
+export const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function fieldAnchored(source, field) {
+  return new RegExp(`^[^\\n]*${escapeRegExp(field)}`, "m").test(source);
+}
 export const SUPPORTED_DELEGATION_PATHS = [
   "brainstormer", "code-planner", "coder", "verifier",
   "code-reviewer", "security-reviewer", "performance-reviewer",
@@ -63,32 +70,52 @@ export function isCompletionReady(report, expectedCriteria = report?.expectedCri
   });
 }
 
+export function handoffSchemaVersion(handoff) {
+  return handoff?.schemaVersion ?? HANDOFF_SCHEMA_VERSION;
+}
+
 export function validateBrainstormHandoff(handoff) {
   const errors = [];
+  if (handoff?.schemaVersion !== undefined && handoff.schemaVersion !== HANDOFF_SCHEMA_VERSION) {
+    errors.push(`unsupported handoff schema version: ${handoff.schemaVersion}`);
+  }
   const catalog = handoff?.optionsCatalog;
   if (!Array.isArray(catalog) || catalog.length === 0) {
     errors.push("options catalog is missing or empty");
     return errors;
   }
   for (const [index, option] of catalog.entries()) {
-    for (const field of ["title", "summary", "pros", "cons"]) {
+    for (const field of ["title", "summary", "pros", "cons", "effortRisk", "whatItDoes"]) {
       if (typeof option?.[field] !== "string" || !option[field].trim()) errors.push(`option ${index}: missing ${field}`);
     }
     if (typeof option?.summary === "string" && option.summary.split(/\s+/).filter(Boolean).length > 150) errors.push(`option ${index}: summary exceeds ~150 words`);
-    if (option?.rejected === true && (typeof option?.rejectedIndex !== "number" || typeof option?.rejectionReason !== "string" || !option.rejectionReason.trim())) errors.push(`option ${index}: rejected entry must retain rejectedIndex pointer and rejectionReason`);
+    if (option?.rejected === true && (typeof option?.rejectedIndex !== "number" || !Number.isInteger(option.rejectedIndex) || option.rejectedIndex < 0 || option.rejectedIndex >= catalog.length || typeof option?.rejectionReason !== "string" || !option.rejectionReason.trim())) errors.push(`option ${index}: rejected entry must retain rejectedIndex pointer and rejectionReason`);
   }
   if (catalog.length >= 2 && (typeof handoff?.comparison !== "string" || !handoff.comparison.trim())) errors.push("comparison required when ≥2 options");
+  // Recommendation is always required, even for a single option, so the
+  // downstream planner receives a compatible decision shape.
+  if (typeof handoff?.recommendation !== "string" || !handoff.recommendation.trim()) errors.push("recommendation required after comparison");
+  if (typeof handoff?.comparison === "string" && handoff.comparison.length > 8000) errors.push("comparison exceeds 8000 characters");
+  if (typeof handoff?.recommendation === "string" && handoff.recommendation.length > 8000) errors.push("recommendation exceeds 8000 characters");
   return errors;
 }
 
 export function validatePrompt(name, source) {
-  const missing = CONTRACT_FIELDS.filter((field) => !source.includes(field));
+  const missing = CONTRACT_FIELDS.filter((field) => !fieldAnchored(source, field));
   if (name === "code-planner" && !/stable ID|stable IDs/.test(source)) missing.push("stable criterion IDs");
   if (name === "coder" && !/Criterion mapping/.test(source)) missing.push("criterion mapping");
   if (name === "verifier" && !/not-verifiable/.test(source)) missing.push("not-verifiable verdict");
+  if (name === "brainstormer" && !/What-it-does/.test(source)) missing.push("what-it-does field");
   if (name === "brainstormer" && !/Options catalog/.test(source)) missing.push("options catalog schema");
   if (name === "brainstormer" && !/Comparison/.test(source)) missing.push("comparison artifact");
-  if (name === "code-orchestrator" && !/Do not collapse options to titles/.test(source)) missing.push("present-all rule");
+  if (name === "brainstormer" && !/Recommendation/.test(source)) missing.push("recommendation artifact");
+  if (name === "brainstormer" && !/Effort\/risk/.test(source)) missing.push("effort-risk field");
+  if (name === "brainstormer" && !/never drop/.test(source)) missing.push("paginate-never-drop rule");
+  if ((name === "code-orchestrator" || name === "orchestrator") && !/Do not collapse options to titles/.test(source)) missing.push("present-all rule");
+  if ((name === "code-orchestrator" || name === "orchestrator") && !/verbatim\s+pass-through/.test(source)) missing.push("verbatim pass-through renderer");
+  if ((name === "code-orchestrator" || name === "orchestrator") && !/fixed order/.test(source)) missing.push("fixed presentation order");
+  if ((name === "code-orchestrator" || name === "orchestrator") && !/re-delegate/.test(source)) missing.push("re-delegate guardrail");
+  if ((name === "code-orchestrator" || name === "orchestrator") && !/never drop/.test(source)) missing.push("paginate-never-drop rule");
   return missing;
 }
 
@@ -100,7 +127,14 @@ export async function validateRepository(root) {
   ]);
   const errors = [];
   for (const [name, relativePath] of Object.entries(files)) {
-    const source = await readFile(path.join(root, relativePath), "utf8");
+    let source;
+    try {
+      source = await readFile(path.join(root, relativePath), "utf8");
+    } catch (error) {
+      if (error?.code === "ENOENT") errors.push(`${relativePath}: unreadable file`);
+      else errors.push(`${relativePath}: unreadable file (${error?.code ?? error?.errno ?? "unknown error"})`);
+      continue;
+    }
     errors.push(...validatePrompt(name, source).map((item) => `${relativePath}: missing ${item}`));
   }
   return errors;

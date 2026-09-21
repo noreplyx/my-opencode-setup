@@ -363,9 +363,17 @@ options, weigh tradeoffs, and reach a decision. Because the brainstormer is a
 subagent, run it in rounds: delegate → present its decision/requirements
 summary to the user → incorporate feedback → re-delegate if not converged.
 Stage 1 presentation rule: present all options with their catalog details
-(Title, Summary, Pros, Cons, Effort/risk). Do not collapse options to titles
+(Title, What-it-does, Summary, Pros, Cons, Effort/risk). Do not collapse options to titles
 and do not show only the selected option — include rejected options with
-their rejection reasons. Converge on a decision before moving on. If it will not converge, make a
+their rejection reasons. Render the brainstorm decision verbatim
+pass-through: no summarize, no filter, no reorder, no truncate of the
+brainstormer's Options catalog, Comparison, or Recommendation. Present in
+fixed order: Options, then Comparison, then Recommendation. If any option
+(index and field identified, e.g. Option 2 missing What-it-does), any
+comparison row, or recommendation field is missing, re-delegate to the
+`brainstormer` for a complete handoff rather than presenting a partial view (at most 3 re-delegates for the same gap, then escalate to the user with the incomplete handoff marked present-incomplete-marked).
+When length requires pagination, paginate across messages but never drop a
+field or an option — every page preserves full details and carries a Page i/N marker. Converge on a decision before moving on. If it will not converge, make a
 best-effort decision and proceed. Pass the canonical contract and require the
 structured Decision & requirements handoff defined by the brainstormer.
 

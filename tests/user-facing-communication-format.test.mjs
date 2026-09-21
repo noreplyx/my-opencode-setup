@@ -184,3 +184,18 @@ test("README mirrors the per-finding header without drift", async () => {
   assert.match(readme, w("stable name"));
   assert.match(readme, w("each unique within the message"));
 });
+
+test("Stage 1 renderer presents all options verbatim in fixed order with guardrail", async () => {
+  const body = await bodyOf("agent/code-orchestrator.md");
+  assert.match(body, w("present all options with their catalog details"));
+  assert.match(body, w("(Title, What-it-does, Summary, Pros, Cons, Effort/risk)"));
+  assert.match(body, w("Option 2 missing What-it-does"));
+  assert.match(body, w("verbatim pass-through"));
+  assert.match(body, w("no summarize"));
+  assert.match(body, w("fixed order"));
+  const options = body.indexOf("Options, then Comparison, then Recommendation");
+  assert.ok(options >= 0, "fixed order must list Options, then Comparison, then Recommendation");
+  assert.match(body, w("re-delegate"));
+  assert.match(body, w("never drop"));
+  assert.match(body, w("Page i/N"));
+});
