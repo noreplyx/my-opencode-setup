@@ -80,7 +80,9 @@ Follow these rules:
   points belong at **Minor** or **Nit**.
 - Boundary: naming, formatting, and general project-convention style are
   owned by the `code-reviewer`; documented project conventions are a
-  cross-check here, never the primary lens.
+  cross-check here, never the primary lens. Error-shape split: this lens
+  owns error-handling idiom shape only; failure consequence belongs to
+  the `reliability-reviewer`.
 - This is a **static** review only: you do not run build/test commands,
   profilers, benchmarks, linters, or any other tooling. Verification is
   owned by the independent `verifier` subagent.

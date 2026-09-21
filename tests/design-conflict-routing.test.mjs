@@ -29,6 +29,8 @@ const EDITED_AGENTS = [
   "agent/security-reviewer.md",
   "agent/performance-reviewer.md",
   "agent/best-practices-reviewer.md",
+  "agent/reliability-reviewer.md",
+  "agent/test-correctness-reviewer.md",
   "agent/coder.md",
   "agent/code-orchestrator.md",
 ];
@@ -40,13 +42,15 @@ test("DESIGN_CONFLICT token appears in the body of all design-conflict agents", 
   }
 });
 
-test("all four reviewers carry the identical Design-conflict flag bullet", async () => {
+test("all six reviewers carry the identical Design-conflict flag bullet", async () => {
   const bullets = [];
   for (const relativePath of [
     "agent/code-reviewer.md",
     "agent/security-reviewer.md",
     "agent/performance-reviewer.md",
     "agent/best-practices-reviewer.md",
+    "agent/reliability-reviewer.md",
+    "agent/test-correctness-reviewer.md",
   ]) {
     const body = await bodyOf(relativePath);
     const match = body.match(/- \*\*Design-conflict flag\.\*\*[\s\S]*?nowhere in your report\./);
@@ -54,7 +58,10 @@ test("all four reviewers carry the identical Design-conflict flag bullet", async
     assert.match(match[0], w("**Decision**, **Architecture**, or **Key decisions**"));
     assert.match(match[0], w("mark that finding `DESIGN_CONFLICT:` with one sentence naming the design clause it contradicts"));
     assert.match(match[0], w("Never mark implementation-level findings"));
-    bullets.push(match[0].replace(/\s+/g, " ").trim());
+    // The parenthetical lens word is the one permitted per-reviewer
+    // adaptation (performance vs reliability vs correctness); the rest of
+    // the bullet must stay identical.
+    bullets.push(match[0].replace(/\s+/g, " ").trim().replace(/gaps, or (performance|reliability|correctness|security|best-practices) inside/, "gaps inside"));
   }
   const [first, ...rest] = bullets;
   for (const bullet of rest) {
@@ -67,6 +74,8 @@ test("dedicated reviewers keep the static-only, git-diff-HEAD, and taxonomy rule
     "agent/performance-reviewer.md",
     "agent/best-practices-reviewer.md",
     "agent/security-reviewer.md",
+    "agent/reliability-reviewer.md",
+    "agent/test-correctness-reviewer.md",
   ]) {
     const body = await bodyOf(relativePath);
     assert.match(body, w("never bare `git diff`"), `${relativePath}: must require git diff HEAD`);
@@ -88,6 +97,8 @@ test("dedicated reviewers carry byte-identical, deny-by-default permission block
     "agent/security-reviewer.md",
     "agent/performance-reviewer.md",
     "agent/best-practices-reviewer.md",
+    "agent/reliability-reviewer.md",
+    "agent/test-correctness-reviewer.md",
   ]) {
     const doc = await readFile(path.join(root, relativePath), "utf8");
     const frontmatter = doc.match(/^---\n([\s\S]*?)\n---\n/);
@@ -143,6 +154,8 @@ test("dedicated reviewers carry the identical See-the-change bullet", async () =
     "agent/security-reviewer.md",
     "agent/performance-reviewer.md",
     "agent/best-practices-reviewer.md",
+    "agent/reliability-reviewer.md",
+    "agent/test-correctness-reviewer.md",
   ]) {
     const body = await bodyOf(relativePath);
     const match = body.match(/- \*\*See the change\.\*\*[\s\S]*?non-git commands\./);
@@ -176,6 +189,8 @@ test("trust-boundary tails stay identical across the dedicated reviewers", async
     "agent/security-reviewer.md",
     "agent/performance-reviewer.md",
     "agent/best-practices-reviewer.md",
+    "agent/reliability-reviewer.md",
+    "agent/test-correctness-reviewer.md",
   ]) {
     const body = await bodyOf(relativePath);
     const match = body.match(/\*\*Trust boundary\.\*\*[\s\S]*$/);
