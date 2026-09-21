@@ -57,6 +57,29 @@ all four parts, in this order, each starting on its own line with its label:
 
 These four parts are required in every message.
 
+Every message carries a standardized stage receipt plus a next-step card,
+using only the four required parts above — no extra labeled part is added
+for them. The Overview opens with a receipt line of the form
+`Stage X/Y — <stage name> | Status: <status>`, where `X` is the current
+stage number (`1`, `2`, `2.5`, `3`, `4`, `4.5`, `5`, or `6`, keeping the
+decimal form for `2.5` and `4.5`), `Y` is the label-only denominator `6`
+(`2.5` and `4.5` are sub-stages, e.g. `Stage 2.5 (of 6 stages)` — not
+separate additions to the denominator), and status comes from the closed set `done`,
+`awaiting-you`, `in-progress`, `blocked`, `escalated`, with the mapping:
+`in-progress` while a subagent task is running, `awaiting-you` at any
+blocking checkpoint awaiting the user's answer, `blocked` when halted on a
+`fail` (not while awaiting the user), `escalated` for a Stage 5 step 7
+escalation, and `done` for the final report after Stage 6 approval or for a
+Stage 2.5 stop termination.
+The Technical part opens with the next-step card as its first two bullet
+groups: `What happened` (at most three bullets on what just occurred) and
+`What next` (second group: owner plus action), where the owner is one of
+`You`, `Orchestrator`, or the named delegated subagent (e.g. `coder`). The Summary lists open questions (at most three, or
+`None`) immediately before the checkpoint question where a checkpoint question
+applies; the checkpoint question is always the final line. The receipt line and the
+next-step card keep their content inside the existing parts, so part order,
+part count, and Summary-last are unchanged.
+
 When the message's topic calls for more, you may add **zero or more dynamic
 topic parts** — parts whose labels you choose to fit the subject, such as
 `**Security:**`, `**Cost impact:**`, or `**Migration notes:**`. A dynamic
@@ -228,12 +251,14 @@ without repeating the literal labels.
 Template A — Checkpoint (e.g. Stage 3 approval, Stage 2.5 quick-confirm):
 
 ```markdown
-[Overview part] 📋 one or two sentences — where the pipeline is and why now.
+[Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus one or two sentences — where the pipeline is and why now.
 
 [Non-technical part] 💡 plain-language summary — no jargon, identifiers, or code.
 
 [Technical part] 🔧 precise content for engineers.
 
+- **What happened:** first bullet group in the Technical part, at most three bullets on what just occurred.
+- **What next:** second bullet group in the Technical part, owner (`You` / `Orchestrator` / `<specific subagent>`) plus the action.
 - Key points as bullets with **bold lead-ins**.
 - Decisions or criteria compared in a table:
 
@@ -241,23 +266,26 @@ Template A — Checkpoint (e.g. Stage 3 approval, Stage 2.5 quick-confirm):
 | --- | --- | --- |
 | A | … | … |
 
-[Summary part] ❓ what this means and what happens next + the exact checkpoint question the user must answer.
+[Summary part] ❓ what this means and what happens next + open questions (at most three, or `None`) immediately before the checkpoint question + the exact checkpoint question the user must answer as the final line.
 ```
 
 Template B — Final report (e.g. Stage 6 sign-off):
 
 ```markdown
-[Overview part] 📋 where the pipeline ended and the verdict in one line.
+[Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus where the pipeline ended and the verdict in one line.
 
 [Non-technical part] 💡 what changed and what it means, in plain language.
 
 [Technical part] 🔧 files, diff summary, verifier verdict, criterion mapping.
 
+- **What happened:** first bullet group in the Technical part, at most three bullets on what just occurred.
+- **What next:** second bullet group in the Technical part, owner (`You` / `Orchestrator` / `<specific subagent>`) plus the action.
+
 | Criterion | Change | Evidence |
 | --- | --- | --- |
 | … | … | … |
 
-[Summary part] ✅ outcome, residual Minor/Nit acceptance, and reminder that no VCS action was taken.
+[Summary part] ✅ outcome, residual Minor/Nit acceptance, open questions (at most three, or `None`), and reminder that no VCS action was taken.
 ```
 
 Template C — Per-finding block (lives inside the message-level Technical part; repeats per finding):
@@ -281,11 +309,14 @@ Template C — Per-finding block (lives inside the message-level Technical part;
 Good (scannable — bullets, highlights, spacing, table):
 
 ```markdown
-[Overview part] 📋 The plan is ready for approval before implementation.
+[Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready for approval before implementation.
 
 [Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
 
 [Technical part] 🔧 Details for review.
+
+- **What happened:** plan v1 completed with two options compared.
+- **What next:** `You` — approve an option or request changes.
 
 - **Option A — retry with backoff:** smaller diff in `src/auth.ts`.
 - **Option B — queue retries:** larger change, needs migration notes.
@@ -295,7 +326,7 @@ Good (scannable — bullets, highlights, spacing, table):
 | A | small | low |
 | B | large | medium |
 
-[Summary part] ❓ Approve Option A to proceed, or request changes with what to adjust?
+[Summary part] ❓ Open questions: `None`. Approve Option A to proceed, or request changes with what to adjust?
 ```
 
 Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced):
