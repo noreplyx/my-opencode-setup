@@ -154,7 +154,14 @@ omitted — the sole exception is the secret-hygiene rule in agent/code-orchestr
 checkpoint rules above.
 
 Normative wording lives in agent/code-orchestrator.md; this paragraph
-mirrors it.
+mirrors it. The orchestrator applies a tiered evidence and citations policy
+with mutually exclusive tiers (low = quick-confirm only, no citations;
+standard = non-final checkpoints/escalations, inline IDs and verdicts;
+high = final/residual acceptances, evidence footer): evidence stays inside
+the existing parts with the Summary last and citations drawn from a closed
+syntax, never quoting secrets. See agent/code-orchestrator.md ### Evidence
+and citations (tiered) for the normative rubric, caps, and validator
+self-check.
 
 Each finding the orchestrator presents — review findings, scanner findings,
 verifier verdicts, `not-verifiable` checklist items, or residual findings —
