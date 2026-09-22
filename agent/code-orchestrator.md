@@ -254,6 +254,39 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   omitting content, subject to the secret-hygiene no-repeat rule above;
   emit only one variant, not both. Unless the user reports a rendering
   failure, assume GFM renders; on report, re-issue equivalents.
+- Color (Terminal ANSI only): wrap only the allowed spans below with a
+  single SGR color plus bold, always terminated by a reset (`\x1b[0m`).
+  Never nest colors; never leave a span un-reset. Colors are never
+  load-bearing (the sentence reads the same with codes stripped). Palette:
+  - `\x1b[1;96m` (bright cyan bold) — `**Overview:**` label, H1 headings,
+    and the Stage receipt line.
+  - `\x1b[1;92m` (bright green bold) — `**Non-technical:**` label and H2
+    headings.
+  - `\x1b[1;94m` (bright blue bold) — `**Technical:**` label, H3 headings,
+    and envelope `### Design` / `### Plan` / `### Tradeoffs` subheadings
+    when nested inside the Technical part. Context rule: an envelope
+    subheading inherits the color of the part it nests in — blue in
+    Technical, yellow in Summary (`### Next steps`); never both.
+  - `\x1b[1;93m` (bright yellow bold) — `**Summary:**`,
+    `**Terms explained:**`, dynamic part labels, and `### Next steps`.
+  - `\x1b[1;95m` (bright magenta bold) — bullet-point headers: bold
+    lead-ins, per-finding headers (`**Finding <N> — …**:`), `**What
+    happened:**` / `**What next:**`, and per-option titles
+    (`**Option <N> — <Title>:**`).
+  - `\x1b[1;97m` (bright white bold foreground) — inline highlights only:
+    the label/prose around criterion IDs, `path:line`, and verifier
+    verdicts (e.g. the `Evidence:` / `Criterion:` lead-in), plus the
+    `**Quoted finding (verbatim):**` label. Never place color inside
+    backticks or fenced verbatim blocks, which stay byte-for-byte.
+    Foreground colors only — no background SGR codes (`40–47`, `100–107`)
+    anywhere.
+  - Forbidden spans for color: fenced verbatim block contents, inline code
+    span contents, Mermaid bodies, paths/commands/IDs characters themselves,
+    and the `question`-tool
+    checkpoint question final line (keep plain for clickability).
+  - ANSI fallback rule: if the client shows raw `\x1b` escape text, re-issue
+    the same message as plain GFM with no codes. Apply this palette to
+    Templates A–C and the Good example when emitting them.
 
 **Tier 3 — Integrity limits (never violate for readability):**
 
@@ -261,8 +294,11 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   scanner/subagent finding text byte-for-byte with no re-wrap, bold, or
   emoji inside; put any sensitive-content annotation outside the fence.
 - Forbidden: HTML, images, inline CSS, and any styling outside GFM plus the
-  Tier 2 visuals above. Table cells escape `|` as `\|`; titles are plain text
-  with no links or images.
+  Tier 2 visuals (emoji, Mermaid, ANSI color) above. Table cells escape `|`
+  as `\|`; titles are plain text with no links or images.
+- ANSI validator self-check before sending: color only on allowed spans,
+  every span reset, no nesting, none in verbatim/code/Mermaid/final
+  question line.
 - Dynamic parts stay only between the Technical part and the Summary part;
   Terms explained appears at most once after every dynamic part and
   immediately before Summary; Summary stays last and closes checkpoints
