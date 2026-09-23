@@ -170,6 +170,23 @@ carrying a sequential number, a short title, and a stable name, each unique
 within the message, followed by the plain-language and technical explanations
 for that finding.
 
+When a message cites task or criterion IDs (for example `GH-01`) or code
+symbols (function, table, class, or variable names), the orchestrator adds
+separate explanatory catalogs between the Technical and Summary parts — a
+Task / Criterion details catalog (`[Tn] ID — title:` what-it-checks;
+fail-means; why-matters plus source) ordered by first appearance, then a
+Code reference details catalog (`[Cn] symbol (kind):` location; role;
+context) ordered case-sensitive code-unit alphabetically — each entry one to two lines with at most
+10 inline entries before `…continued (N/M)` pagination under the
+pagination-only Details continued label (the no-bracket rendering-degradation
+variant instead keeps the normal catalog headings with plain ID/symbol text;
+emit only one variant per condition), omitted when nothing of its kind is cited, with
+anchors cited only outside verbatim fences, unknown entries stated honestly
+without guessing, live secrets never repeated, verbatim fences kept
+byte-for-byte, and the Summary part always last. Normative schemas, anchor
+grammar, caps, and the Template D example live in
+agent/code-orchestrator.md; this paragraph mirrors them.
+
 ## Operational Prerequisites
 
 - **Podman** — required for the `code-security-scanner` subagent's five
@@ -258,9 +275,13 @@ for that finding.
   PMD wrapper's marker-gated `--exclude-pattern` injection. All of these sit at the
   repo root, outside the fixture mounts, so
   `npm run validate:security:live:e2e` — which scans the fixture directories
-  themselves — still asserts every seeded bug fires. The `toml@4.1.1` finding
-  in this repo's own lockfile is a real dependency issue (not fixture noise)
-  and stays visible pending user-approved remediation.
+   themselves — still asserts every seeded bug fires. The `toml@4.1.1` finding
+   in this repo's own lockfile (GHSA-v5mp-jgw5-2x6j / CVE-2026-63376 prototype
+   pollution and GHSA-82x6-q7mm-w9cf / CVE-2026-77465 uncontrolled recursion,
+   fix: upgrade `toml` to >=4.2.0) is a real pre-existing transitive-dependency
+   issue (not fixture noise and not introduced by the prompt-only dual-catalog
+   diff) and stays visible as a dependency-hygiene follow-up pending
+   user-approved remediation.
 - The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
   its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
   files mode `0600`; security validation rejects weaker modes.

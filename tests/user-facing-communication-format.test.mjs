@@ -54,14 +54,19 @@ test("orchestrator body contains the User-facing communication format section in
 
 test("section mandates the four required parts and the fixed terminology label, each exactly once, in order", async () => {
   const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
+  const prose = section.replace(/```[\s\S]*?```/g, "");
   const labels = ["**Overview:**", "**Non-technical:**", "**Technical:**", "**Summary:**", "**Terms explained:**"];
   const positions = labels.map((label) => {
-    const count = section.split(label).length - 1;
-    assert.equal(count, 1, `label ${label} must appear exactly once in the section`);
-    return section.indexOf(label);
+    const count = prose.split(label).length - 1;
+    assert.equal(count, 1, `label ${label} must appear exactly once in the section prose (outside fenced examples)`);
+    return prose.indexOf(label);
   });
   for (let i = 1; i < 4; i++) {
     assert.ok(positions[i - 1] < positions[i], `label ${labels[i]} must follow ${labels[i - 1]}`);
+  }
+  const templateD = section.slice(section.indexOf("Template D — Dual Catalog message"));
+  for (const label of labels.slice(0, 4)) {
+    assert.ok(templateD.includes(label), `Template D fenced example must emit literal ${label}`);
   }
   assert.match(section, w("all four parts, in this order"));
   assert.match(section, w("These four parts are required in every message"));

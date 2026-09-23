@@ -127,6 +127,16 @@ such gloss, the part is correctly absent: never add it mechanically, never
 treat its absence on a plain-language message as a format violation, and
 never omit it when a term needs explanation.
 
+**Dual Catalog — Task / Criterion details and Code reference details (Option 3):** When a message cites task or criterion IDs (for example `GH-01`) or code symbols (function, table, class, or variable names), add one or two separate explanatory catalog parts so the user need not guess what an ID or name means. Both catalogs are dynamic parts: they appear only between the Technical part and the Summary part, in the fixed order Technical part, then **Task / Criterion details:**, then **Code reference details:**, then the Terms explained part when its rule applies, then the Summary part, which stays last. Omit a catalog when the message references no ID or no symbol of its kind — never emit an empty catalog — and never treat such an omission as a format violation. Catalog entries are orchestrator prose, never a rewrite of quoted verbatim text.
+- **Section A — Task / Criterion details:** one entry per referenced task or criterion ID, each one to two lines, in this schema: `[Tn] ID — title:` what-it-checks; fail-means; why-matters `[Source]`, where `[Tn]` is the message-scoped anchor, `ID` is the cited ID in inline code (for example `GH-01`), `title` is a short plain phrase, and `[Source]` names the planner registry, design section, or criterion text the gloss derives from.
+- **Section B — Code reference details:** one entry per referenced code symbol, each one to two lines, in this schema: `[Cn] symbol (kind):` location; role; context, where `[Cn]` is the message-scoped anchor, `symbol` is the name in inline code, `kind` is one of function, table, class, or variable, `location` is `path:line` when known, `role` states what the symbol does, and `context` states how the message uses it.
+- **Anchor grammar and citation:** `[Tn]` anchors assign `T1`, `T2`, and so on in first-appearance order in the message; `[Cn]` anchors assign `C1`, `C2`, and so on in case-sensitive code-unit alphabetical order by symbol within the message (for example `AuthService` < `LoginAttempt` < `MAX_RETRIES` < `backoffMs` < `retryLogin`). Anchors are message-scoped and renumber per message. Cite an anchor only in orchestrator prose outside fenced verbatim blocks and outside inline-code verbatim spans — never inside a fenced code block, `Quoted finding (verbatim):` fence, or Mermaid body — using the form `[T1]` or `[C2]` beside the ID or symbol it explains. Catalog titles and symbols render as inline code or plain text, so embedded markdown (`|`, `*`, `_`, `#`) stays neutralized and never alters part structure.
+- **Dedup, ordering, and omission:** list each distinct ID and each distinct symbol once per message; repeated references reuse the same anchor rather than adding a new entry. Order Section A entries by first appearance and Section B entries alphabetically; keep a stable order across continued pages. Omit Section A when no ID is cited and omit Section B when no symbol is cited.
+- **Caps, pagination, and fallback labels (two distinct conditions — emit only one variant per condition, never both):** each catalog carries at most 10 inline entries; overflow paginates to a second message preserving the four-part shape (Overview, Non-technical, Technical, Summary in order with Summary last) with `…continued (N/M)` in the Technical part — never truncated or dropped. When both catalogs overflow, paginate each catalog's entries in place under the same pagination rule rather than merging them into one list. Continued catalog pages restart under the fallback label `**Details continued:**` followed by the same Section A or Section B schema and anchor sequence — this label is for `…continued (N/M)` pagination only. Separately, when the client cannot render bracket anchors (rendering-degradation, not pagination), keep the normal `**Task / Criterion details:**` / `**Code reference details:**` headings with plain ID or symbol text carrying equal content. The pagination trigger signal is entry count (>10), never a rendering report; the no-bracket trigger signal is a client rendering report, never entry count.
+- **Unknown handling:** when a check description, location, role, or source is not confirmed, state it honestly as `unknown — <what is missing>` and name where to confirm it; never hallucinate, guess, or invent a location, meaning, or source. A generic ID such as `GH-01` whose registry entry is unconfirmed is listed as `unknown — confirm in planner registry or design doc` rather than given a fabricated gloss.
+- **Secret hygiene:** never repeat a live secret, token, or credential in a catalog entry, title, anchor, citation, or source note — cite as `[redacted: secret — see file:line + rule ID]` and annotate sensitive entries outside any fence without repeating the secret, per the secret-hygiene no-repeat rule.
+- **Verbatim and dual-explanation preservation:** catalogs supplement but never replace the per-finding dual explanation and never alter verbatim fence contents byte-for-byte; the Technical part still carries each finding with its plain-language and technical explanations plus the delimited verbatim quote.
+
 **Per-finding dual explanation:** Whenever a message presents findings or
 issues to the user — review findings, scanner findings, verifier verdicts,
 `not-verifiable` checklist items, or residual findings — present **each
@@ -308,7 +318,9 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
 ### Templates (skeletons — keep part order, dual explanations, verbatim in fence with annotation outside)
 
 Skeletons below use bracket placeholders such as [Overview part] to stand
-for the normative bold labels defined above; when messaging the user, emit
+for the normative bold labels defined above (Templates A–C and the Good
+example); Template D instead emits the normative bold labels literally so a
+literal copy preserves the invariant. When messaging the user, emit
 the normative bold labels. Placeholders keep part order readable here
 without repeating the literal labels.
 
@@ -429,6 +441,49 @@ Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced, 
 ## Overview-ish
 The plan is ready and there are two options A and B with different diff sizes and risks and effects and migration notes and criteria and everything all in one long paragraph with no bullets or table and no bold lead-ins and the label above replaces the required bold label which is forbidden...
 ```
+
+Template D — Dual Catalog message (skeleton — catalogs sit between the Technical part and the Summary part; anchors cited outside fences only; Summary stays last):
+
+```markdown
+**Overview:** 📋 `Stage 5/6 — Review loop | Status: in-progress` Review found two issues tied to `GH-01`; fixes are in progress.
+
+**Non-technical:** 💡 Two checks failed and the team is fixing them; nothing needs your sign-off yet.
+
+**Technical:** 🔧 Details for review.
+
+- **What happened:** `verifier` returned `verdict: fail` on `GH-01` [T1]; `retryLogin` [C5] still bursts.
+- **What next:** `coder` — fix Finding 1 per its verbatim text, then re-verify.
+
+**Finding 1 — Retry bursts under load (`GH-01`):**
+
+- **Finding — plain-language:** logins can pile up and fail together during busy periods.
+- **Finding — technical:** `retryLogin` [C5] retries without backoff in `src/auth.ts:12`; see quoted text.
+- **Quoted finding (verbatim):**
+
+```text
+<verbatim scanner/subagent text byte-for-byte — no re-wrap, bold, or emoji inside>
+```
+
+> Put any sensitive-content annotation outside the fence, never inside.
+
+**Task / Criterion details:**
+
+- [T1] `GH-01` — Login retry limit: what-it-checks — retries stay bounded; fail-means — bursts can fail together; why-matters — keeps login stable [Source: planner registry].
+- [T2] `GH-02` — Backoff present: what-it-checks — retries wait longer each try; fail-means — still bursty; why-matters — smooths load [Source: design v1 § Retry].
+- [T3] `GH-03` — unknown — confirm in planner registry or design doc: what-it-checks — unknown — confirm check text; fail-means — unknown — confirm fail meaning; why-matters — listed so the ID is never unexplained [Source: unknown — confirm in planner registry].
+
+**Code reference details:**
+
+- [C1] `AuthService` (class): `src/auth.ts:20`; role — owns the login flow; context — calls the retry helper.
+- [C2] `LoginAttempt` (table): `db/schema.ts:8`; role — stores one row per attempt; context — Finding 1 counts rows here.
+- [C3] `MAX_RETRIES` (variable): `src/auth.ts:4`; role — caps retry count; context — Finding 1 bound under test.
+- [C4] `backoffMs` (variable): unknown — confirm in `src/auth.ts`; role — wait between retries; context — fix adds it here.
+- [C5] `retryLogin` (function): `src/auth.ts:12`; role — retries failed logins; context — Finding 1 bursts here.
+
+**Summary:** ❓ Open questions: `None`. The coder is fixing Finding 1 (`GH-01` [T1], `retryLogin` [C5]); what happens next is re-verify, then re-review — proceed?
+```
+
+Validator self-check before sending (Dual Catalog extension): catalogs present exactly when IDs or symbols are cited and absent otherwise (never empty, so a message citing neither carries neither heading); every cited ID has one Section A entry and every cited symbol has one Section B entry with anchors `[Tn]` in first-appearance order and `[Cn]` in case-sensitive code-unit alphabetical order, each entry one to two lines and at most 10 inline entries per catalog before `…continued (N/M)` pagination under the pagination-only `**Details continued:**` label (the no-bracket rendering variant instead keeps the normal catalog headings — emit only one variant per condition); order is Technical, then Task / Criterion details, then Code reference details, then Terms explained when its rule applies, then Summary last; anchors cited only outside fences (no `[Tn]`/`[Cn]` inside any fenced block, verbatim span, or Mermaid body); unknown entries use the honest `unknown — …` form with no guessed location or meaning; no live secret appears in any entry, anchor, or citation; verbatim fences stay byte-for-byte and every finding keeps both explanations.
 
 ## Canonical handoff contract
 
