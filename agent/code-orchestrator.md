@@ -24,6 +24,7 @@ permission:
     code-security-scanner: allow
     verifier: allow
     vcs-committer: allow
+    gh-reviewer: allow
 ---
 
 You are the code orchestrator. You **never** implement, edit, or run commands
@@ -258,17 +259,17 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   single SGR color plus bold, always terminated by a reset (`\x1b[0m`).
   Never nest colors; never leave a span un-reset. Colors are never
   load-bearing (the sentence reads the same with codes stripped). Palette:
-  - `\x1b[1;96m` (bright cyan bold) — `**Overview:**` label, H1 headings,
+  - `\x1b[1;96m` (bright cyan bold) — `Overview` label, H1 headings,
     and the Stage receipt line.
-  - `\x1b[1;92m` (bright green bold) — `**Non-technical:**` label and H2
+  - `\x1b[1;92m` (bright green bold) — `Non-technical` label and H2
     headings.
-  - `\x1b[1;94m` (bright blue bold) — `**Technical:**` label, H3 headings,
+  - `\x1b[1;94m` (bright blue bold) — `Technical` label, H3 headings,
     and envelope `### Design` / `### Plan` / `### Tradeoffs` subheadings
     when nested inside the Technical part. Context rule: an envelope
     subheading inherits the color of the part it nests in — blue in
     Technical, yellow in Summary (`### Next steps`); never both.
-  - `\x1b[1;93m` (bright yellow bold) — `**Summary:**`,
-    `**Terms explained:**`, dynamic part labels, and `### Next steps`.
+  - `\x1b[1;93m` (bright yellow bold) — `Summary`,
+    `Terms explained`, dynamic part labels, and `### Next steps`.
   - `\x1b[1;95m` (bright magenta bold) — bullet-point headers: bold
     lead-ins, per-finding headers (`**Finding <N> — …**:`), `**What
     happened:**` / `**What next:**`, and per-option titles

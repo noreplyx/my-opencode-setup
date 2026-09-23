@@ -23,7 +23,8 @@ export const SUPPORTED_DELEGATION_PATHS = [
   "brainstormer", "code-planner", "coder", "verifier",
   "code-reviewer", "security-reviewer", "performance-reviewer",
   "best-practices-reviewer", "reliability-reviewer",
-  "test-correctness-reviewer", "code-security-scanner",
+  "test-correctness-reviewer", "code-security-scanner", "vcs-committer",
+  "gh-reviewer",
 ];
 
 export function validatePlannerResult(result) {
@@ -115,6 +116,7 @@ export function validatePrompt(name, source) {
   if ((name === "code-orchestrator" || name === "orchestrator") && !/verbatim\s+pass-through/.test(source)) missing.push("verbatim pass-through renderer");
   if ((name === "code-orchestrator" || name === "orchestrator") && !/fixed order/.test(source)) missing.push("fixed presentation order");
   if ((name === "code-orchestrator" || name === "orchestrator") && !/re-delegate/.test(source)) missing.push("re-delegate guardrail");
+  if (name === "gh-reviewer" && !/only against.*Inputs|scope-pin|refuse cross-repo/i.test(source)) missing.push("scope-pin rule");
   if ((name === "code-orchestrator" || name === "orchestrator") && !/never drop/.test(source)) missing.push("paginate-never-drop rule");
   return missing;
 }
