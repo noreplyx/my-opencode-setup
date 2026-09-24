@@ -187,6 +187,12 @@ byte-for-byte, and the Summary part always last. Normative schemas, anchor
 grammar, caps, and the Template D example live in
 agent/code-orchestrator.md; this paragraph mirrors them.
 
+Readability mirror (non-normative):
+
+- Opens each decision-bearing Overview with the receipt line plus its Overview sentence(s), then one `**TL;DR:**` group (verdict + action + pointer, ≤60 words/≤3 hard lines, restating only body content with the body governing) per R-TL-1..R-TL-6.
+- Applies the H-01..H-08 checklist (ordered labels, inter-block spacing, bullets, tables, bold discipline, code spans, sentence budgets with merge-only-within-3-lines pagination, visuals containment) with Summary last and verbatim fences byte-for-byte.
+- Treats collapsible `<details>`/`<summary>` only as a non-load-bearing enhancement over plain-GFM order. Normative spec lives in agent/code-orchestrator.md; these bullets mirror it.
+
 ## Operational Prerequisites
 
 - **Podman** — required for the `code-security-scanner` subagent's five

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { before, test } from "node:test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,25 @@ const w = (phrase) => new RegExp(phrase.split(" ").map(escaped).join("\\s+"));
 // (folds the code-review Minor-1 finding into v4).
 const wi = (phrase) => new RegExp(w(phrase).source, "i");
 const atLineStart = (phrase) => new RegExp("^" + w(phrase).source, "m");
+const countWords = (group) => group.replace("**TL;DR:**", "").trim().split(/\s+/).filter(Boolean).length;
+const countLines = (group) => group.split("\n").length;
+const stripFences = (text) => {
+  const lines = text.split("\n");
+  const kept = [];
+  let fence = 0;
+  for (const line of lines) {
+    const m = line.match(/^\s*(`{3,}|~{3,})/);
+    if (m) {
+      const n = m[1].length;
+      if (fence === 0) fence = n;
+      else if (n >= fence) fence = 0;
+      continue;
+    }
+    if (fence === 0) kept.push(line);
+  }
+  assert.equal(fence, 0, "unclosed fence: stripped text ends inside a fenced block");
+  return kept.join("\n");
+};
 
 async function bodyOf(relativePath) {
   const doc = await readFile(path.join(root, relativePath), "utf8");
@@ -38,8 +57,22 @@ const readmeFormatSection = (readme) => {
   return readme.slice(start, end === -1 ? readme.length : end);
 };
 
+let cachedBody;
+let cachedSection;
+let cachedProse;
+let cachedReadme;
+let cachedReadmeSection;
+
+before(async () => {
+  cachedBody = await bodyOf("agent/code-orchestrator.md");
+  cachedSection = formatSection(cachedBody);
+  cachedProse = stripFences(cachedSection);
+  cachedReadme = await readFile(path.join(root, "README.md"), "utf8");
+  cachedReadmeSection = readmeFormatSection(cachedReadme);
+});
+
 test("orchestrator body contains the User-facing communication format section in place", async () => {
-  const body = await bodyOf("agent/code-orchestrator.md");
+  const body = cachedBody;
   assert.match(body, atLineStart("## User-facing communication format"));
   const checkpoints = body.indexOf("## Human checkpoints are blocking");
   const format = body.indexOf("## User-facing communication format");
@@ -53,8 +86,8 @@ test("orchestrator body contains the User-facing communication format section in
 });
 
 test("section mandates the four required parts and the fixed terminology label, each exactly once, in order", async () => {
-  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
-  const prose = section.replace(/```[\s\S]*?```/g, "");
+  const section = cachedSection;
+  const prose = cachedProse;
   const labels = ["**Overview:**", "**Non-technical:**", "**Technical:**", "**Summary:**", "**Terms explained:**"];
   const positions = labels.map((label) => {
     const count = prose.split(label).length - 1;
@@ -68,13 +101,13 @@ test("section mandates the four required parts and the fixed terminology label, 
   for (const label of labels.slice(0, 4)) {
     assert.ok(templateD.includes(label), `Template D fenced example must emit literal ${label}`);
   }
-  assert.match(section, w("all four parts, in this order"));
-  assert.match(section, w("These four parts are required in every message"));
-  assert.match(section, w("each used exactly once"));
+  assert.match(prose, w("all four parts, in this order"));
+  assert.match(prose, w("These four parts are required in every message"));
+  assert.match(prose, w("each used exactly once"));
 });
 
 test("section defines the optional dynamic topic parts convention", async () => {
-  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
+  const section = cachedSection;
   assert.match(section, w("zero or more dynamic topic parts"));
   assert.match(section, w("with a bold label ending in a colon"));
   assert.match(section, w("Dynamic parts may appear only between the Technical part and the Summary part"));
@@ -87,7 +120,7 @@ test("section defines the optional dynamic topic parts convention", async () => 
 });
 
 test("section enumerates message coverage and the proportionality rule", async () => {
-  const body = await bodyOf("agent/code-orchestrator.md");
+  const body = cachedBody;
   assert.match(body, w("Every message you send to the user — each blocking checkpoint issued via the `question` tool"));
   assert.match(body, w("the Stage 1 decision/requirements presentation"));
   assert.match(body, w("the Stage 5 step 7 escalation, and the Stage 6 sign-off and final report"));
@@ -111,42 +144,43 @@ test("format section and README carry no stale count or misclassification mandat
     "five fixed labels",
     "is a dynamic part",
   ];
-  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
+  const section = cachedSection;
   for (const phrase of stale) {
     assert.ok(!wi(phrase).test(section), `stale mandate "${phrase}" must not appear in the format section`);
   }
-  const readme = readmeFormatSection(await readFile(path.join(root, "README.md"), "utf8"));
+  const readme = cachedReadmeSection;
   for (const phrase of stale) {
     assert.ok(!wi(phrase).test(readme), `stale mandate "${phrase}" must not appear in the README format subsection`);
   }
 });
 
 test("section defines the conditional Terms explained part with fixed label, slot, and content rules", async () => {
-  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
-  assert.match(section, w("Every message that uses a domain term or abbreviation a non-specialist reader would not know"));
-  assert.match(section, w("pipeline vocabulary such as `verifier`, `DoD`, or `checkpoint`"));
-  assert.match(section, w("engineering vocabulary such as `lockfile`, `CVE`, or `regex`"));
-  assert.match(section, w("must add a **Terms explained:** part"));
-  assert.match(section, w("It is a fixed part, not a dynamic part"));
-  assert.match(section, w("it appears at most once, after every dynamic part and immediately before the Summary part, which stays last"));
-  assert.match(section, w("explain each such term on its own line, in plain language for the same reader as the Non-technical part"));
-  assert.match(section, w("covering every term the message uses, including one used only in a dynamic part"));
-  assert.match(section, w("never introduce terms the message does not use"));
-  assert.match(section, w("the part is correctly absent"));
-  assert.match(section, w("never add it mechanically"));
-  assert.match(section, w("never omit it when a term needs explanation"));
-  assert.match(section, w("plus, when its rule applies, the fixed Terms explained label, used once and never otherwise, or a dynamic part in that slot"));
-  const dynamicIntro = section.indexOf("When the message's topic calls for more");
-  const termsRule = section.indexOf("Every message that uses a domain term or abbreviation");
-  const proportionality = section.indexOf("Keep the parts proportional");
+  const section = cachedSection;
+  const prose = cachedProse;
+  assert.match(prose, w("Every message that uses a domain term or abbreviation a non-specialist reader would not know"));
+  assert.match(prose, w("pipeline vocabulary such as `verifier`, `DoD`, or `checkpoint`"));
+  assert.match(prose, w("engineering vocabulary such as `lockfile`, `CVE`, or `regex`"));
+  assert.match(prose, w("must add a **Terms explained:** part"));
+  assert.match(prose, w("It is a fixed part, not a dynamic part"));
+  assert.match(prose, w("it appears at most once, after every dynamic part and immediately before the Summary part, which stays last"));
+  assert.match(prose, w("explain each such term on its own line, in plain language for the same reader as the Non-technical part"));
+  assert.match(prose, w("covering every term the message uses, including one used only in a dynamic part"));
+  assert.match(prose, w("never introduce terms the message does not use"));
+  assert.match(prose, w("the part is correctly absent"));
+  assert.match(prose, w("never add it mechanically"));
+  assert.match(prose, w("never omit it when a term needs explanation"));
+  assert.match(prose, w("plus, when its rule applies, the fixed Terms explained label, used once and never otherwise, or a dynamic part in that slot"));
+  const dynamicIntro = prose.indexOf("When the message's topic calls for more");
+  const termsRule = prose.indexOf("Every message that uses a domain term or abbreviation");
+  const proportionality = prose.indexOf("Readability formatting style guide");
   assert.ok(
     dynamicIntro >= 0 && dynamicIntro < termsRule && termsRule < proportionality,
-    "terminology paragraph must sit between the dynamic-parts and proportionality paragraphs",
+    "terminology paragraph must sit between the dynamic-parts paragraph and the readability guide",
   );
 });
 
 test("README mirrors the terminology rule without drift", async () => {
-  const readme = readmeFormatSection(await readFile(path.join(root, "README.md"), "utf8"));
+  const readme = cachedReadmeSection;
   assert.match(readme, w("uses domain terms or abbreviations a non-specialist reader would not know"));
   assert.match(readme, w("the orchestrator adds a Terms explained part"));
   assert.match(readme, w("after any optional topic-labeled parts and immediately before the Summary part"));
@@ -155,7 +189,7 @@ test("README mirrors the terminology rule without drift", async () => {
 });
 
 test("README documents the user-facing communication format", async () => {
-  const readme = await readFile(path.join(root, "README.md"), "utf8");
+  const readme = cachedReadme;
   assert.match(readme, atLineStart("### User-facing communication format"));
   assert.match(readme, w("four parts in order"));
   assert.match(readme, w("verifier verdicts"));
@@ -172,7 +206,7 @@ test("README documents the user-facing communication format", async () => {
 });
 
 test("orchestrator format section mandates the per-finding header and its three fields", async () => {
-  const section = formatSection(await bodyOf("agent/code-orchestrator.md"));
+  const section = cachedSection;
   assert.match(section, w("**Finding <N> — <Title> (`<name>`):**"));
   assert.match(section, w("sequential integer starting at 1"));
   assert.match(section, w("unique within the message"));
@@ -182,7 +216,7 @@ test("orchestrator format section mandates the per-finding header and its three 
 });
 
 test("README mirrors the per-finding header without drift", async () => {
-  const readme = readmeFormatSection(await readFile(path.join(root, "README.md"), "utf8"));
+  const readme = cachedReadmeSection;
   assert.match(readme, w("**Finding <N> — <Title> (`<name>`):**"));
   assert.match(readme, w("sequential number"));
   assert.match(readme, w("short title"));
@@ -191,7 +225,7 @@ test("README mirrors the per-finding header without drift", async () => {
 });
 
 test("Stage 1 renderer presents all options verbatim in fixed order with guardrail", async () => {
-  const body = await bodyOf("agent/code-orchestrator.md");
+  const body = cachedBody;
   assert.match(body, w("present all options with their catalog details"));
   assert.match(body, w("(Title, What-it-does, Summary, Pros, Cons, Effort/risk)"));
   assert.match(body, w("Option 2 missing What-it-does"));
@@ -203,4 +237,82 @@ test("Stage 1 renderer presents all options verbatim in fixed order with guardra
   assert.match(body, w("re-delegate"));
   assert.match(body, w("never drop"));
   assert.match(body, w("Page i/N"));
+});
+
+test("R-TL-1..R-TL-6 rules exist outside fences with corrected order", async () => {
+  const section = cachedSection;
+  const prose = cachedProse;
+  assert.match(prose, w("R-TL-1 — Lead-in"));
+  assert.match(prose, w("R-TL-2 — Budget"));
+  assert.match(prose, w("R-TL-3 — Content"));
+  assert.match(prose, w("R-TL-4 — Consistency"));
+  assert.match(prose, w("R-TL-5 — Required on decision-bearing messages"));
+  assert.match(prose, w("R-TL-6 — Order: receipt line plus its Overview sentence(s) first"));
+  assert.ok(!w("then remaining Overview sentences").test(prose), "stale R-TL-6 order must not remain");
+});
+
+test("H-01..H-08 checklist exists outside fences with spacing and merge guards", async () => {
+  const section = cachedSection;
+  const prose = cachedProse;
+  for (const id of ["H-01", "H-02", "H-03", "H-04", "H-05", "H-06", "H-07", "H-08"]) {
+    assert.ok(prose.includes(id), `${id} must appear outside fences`);
+  }
+  assert.match(prose, w("keep the four bold labels in order on their own lines"));
+  assert.match(prose, w("exactly one blank line of inter-block spacing"));
+  assert.match(prose, w("no blank lines between items of the same tight list"));
+  assert.match(prose, w("more than 2 items as bullets with bold lead-ins"));
+  assert.match(prose, w("comparisons, options, verdicts, and criterion status as tables"));
+  assert.match(prose, w("bold for labels, lead-ins, finding headers, and option titles only"));
+  assert.match(prose, w("paths, commands, IDs, and criterion IDs in inline code"));
+  assert.match(prose, w("keep Overview to one or two sentences plus the TL;DR group"));
+  assert.match(prose, w("merging only while the merged paragraph stays at most 3 lines"));
+  assert.match(prose, w("never load-bearing, never in labels or verbatim"));
+  assert.match(prose, w("maximum of one emoji per part and maximum of one Mermaid per message"));
+});
+
+test("R-TL-2 counting rule is defined once with word and line boundaries", async () => {
+  const section = cachedSection;
+  const prose = cachedProse;
+  assert.match(prose, w("at most 60 words and at most 3 hard"));
+  assert.match(prose, w("whitespace-delimited tokens excluding the"));
+  assert.match(prose, w("newline-delimited lines of the group"));
+  // Helper self-checks: pin the local counting semantics above, not doc content.
+  assert.equal(countWords("**TL;DR:** verdict action pointer"), 3);
+  assert.equal(countWords("**TL;DR:**  verdict   action\npointer"), 3);
+  assert.equal(countLines("a\nb\nc"), 3);
+  assert.equal(countLines("a\nb\nc\nd"), 4);
+});
+
+test("README mirrors the TL;DR and hierarchy rules with parity", async () => {
+  const readme = cachedReadmeSection;
+  assert.match(readme, w("receipt line plus its Overview sentence(s), then one"));
+  assert.match(readme, w("restating only body content with the body governing"));
+  assert.match(readme, w("H-01..H-08"));
+  assert.match(readme, w("Summary last and verbatim fences byte-for-byte"));
+  assert.match(readme, w("non-load-bearing"));
+  assert.match(readme, w("≤60 words"));
+  assert.match(readme, w("≤3 hard lines"));
+});
+
+test("uncovered branches R-TL-4, R-TL-5, H-07, H-08, and collapsible fallback exist outside fences", async () => {
+  const section = cachedSection;
+  const prose = cachedProse;
+  assert.match(prose, w("R-TL-4 — Consistency"));
+  assert.match(prose, w("on conflict the body governs"));
+  assert.match(prose, w("R-TL-5 — Required on decision-bearing messages"));
+  assert.match(prose, w("never added mechanically"));
+  assert.match(prose, w("otherwise keeping two short paragraphs"));
+  assert.match(prose, w("maximum of one emoji per part and maximum of one Mermaid per message"));
+  assert.match(prose, w("Only `<details>`/`<summary>` are permitted"));
+  assert.match(prose, w("with no attributes except `open` on `<details>`"));
+  assert.match(prose, w("no other tags or attributes"));
+  assert.match(prose, w("catalog entries never wrap a fence"));
+  assert.match(prose, w("never alter verbatim fence contents byte-for-byte"));
+  assert.match(prose, w("plain-GFM order as fallback"));
+});
+
+test("stripFences supports backtick and tilde fences with leading whitespace and rejects unclosed fences", async () => {
+  const sample = "keep\n  ```text\nsecret\n  ```\nkeep2\n   ~~~text\nsecret2\n   ~~~\nkeep3";
+  assert.equal(stripFences(sample), "keep\nkeep2\nkeep3");
+  assert.throws(() => stripFences("keep\n```text\nunclosed"), /unclosed fence/);
 });

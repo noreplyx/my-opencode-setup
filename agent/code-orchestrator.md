@@ -95,6 +95,16 @@ applies; the checkpoint question is always the final line. The receipt line and 
 next-step card keep their content inside the existing parts, so part order,
 part count, and Summary-last are unchanged.
 
+**TL;DR block (inside Overview — not a new part):** the Overview part opens
+with the receipt line, then carries maximum of one `**TL;DR:**` line group with
+the verdict, action, and pointer below:
+- R-TL-1 — Lead-in: start the group with the bold lead-in `**TL;DR:**` on its own line inside Overview; never a new top-level part and never before the receipt line.
+- R-TL-2 — Budget: at most 60 words and at most 3 hard `\n`-delimited lines after the receipt line (soft wrap does not count). Count words as whitespace-delimited tokens excluding the `**TL;DR:**` lead-in; count lines as newline-delimited lines of the group.
+- R-TL-3 — Content: verdict (where things stand) + action (what you must do, or `None`) + pointer (which part holds details).
+- R-TL-4 — Consistency (anti-drift): restate only what the body already says; introduce no new facts, numbers, IDs, or verdicts — on conflict the body governs.
+- R-TL-5 — Required on decision-bearing messages (approvals, escalations, final reports); optional otherwise and never added mechanically.
+- R-TL-6 — Order: receipt line plus its Overview sentence(s) first, then `**TL;DR:**`; disclosure order is unchanged and Summary stays last.
+
 When the message's topic calls for more, you may add **zero or more dynamic
 topic parts** — parts whose labels you choose to fit the subject, such as
 `**Security:**`, `**Cost impact:**`, or `**Migration notes:**`. A dynamic
@@ -135,7 +145,7 @@ never omit it when a term needs explanation.
 - **Caps, pagination, and fallback labels (two distinct conditions — emit only one variant per condition, never both):** each catalog carries at most 10 inline entries; overflow paginates to a second message preserving the four-part shape (Overview, Non-technical, Technical, Summary in order with Summary last) with `…continued (N/M)` in the Technical part — never truncated or dropped. When both catalogs overflow, paginate each catalog's entries in place under the same pagination rule rather than merging them into one list. Continued catalog pages restart under the fallback label `**Details continued:**` followed by the same Section A or Section B schema and anchor sequence — this label is for `…continued (N/M)` pagination only. Separately, when the client cannot render bracket anchors (rendering-degradation, not pagination), keep the normal `**Task / Criterion details:**` / `**Code reference details:**` headings with plain ID or symbol text carrying equal content. The pagination trigger signal is entry count (>10), never a rendering report; the no-bracket trigger signal is a client rendering report, never entry count.
 - **Unknown handling:** when a check description, location, role, or source is not confirmed, state it honestly as `unknown — <what is missing>` and name where to confirm it; never hallucinate, guess, or invent a location, meaning, or source. A generic ID such as `GH-01` whose registry entry is unconfirmed is listed as `unknown — confirm in planner registry or design doc` rather than given a fabricated gloss.
 - **Secret hygiene:** never repeat a live secret, token, or credential in a catalog entry, title, anchor, citation, or source note — cite as `[redacted: secret — see file:line + rule ID]` and annotate sensitive entries outside any fence without repeating the secret, per the secret-hygiene no-repeat rule.
-- **Verbatim and dual-explanation preservation:** catalogs supplement but never replace the per-finding dual explanation and never alter verbatim fence contents byte-for-byte; the Technical part still carries each finding with its plain-language and technical explanations plus the delimited verbatim quote.
+- **Verbatim and dual-explanation preservation:** catalogs supplement but never replace the per-finding dual explanation and never alter verbatim fence contents byte-for-byte; catalog entries never wrap a fence — cite IDs and symbols in orchestrator prose outside fences while verbatim quotes stay in their own delimited fence, never nested inside a catalog entry; the Technical part still carries each finding with its plain-language and technical explanations plus the delimited verbatim quote.
 
 **Per-finding dual explanation:** Whenever a message presents findings or
 issues to the user — review findings, scanner findings, verifier verdicts,
@@ -245,6 +255,16 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   part, plus Tier 2 emoji/visuals per Tier 2 (never load-bearing, never in
   verbatim/labels).
 
+Hierarchy checklist (applies inside the four parts; Summary stays last):
+- H-01 — Parts/labels: keep the four bold labels in order on their own lines; envelope `###` nests inside parts only.
+- H-02 — Spacing: exactly one blank line of inter-block spacing between parts, lists, tables, fences, diagrams, envelope subheadings, finding headers, and footers; no blank lines between items of the same tight list; paragraphs at most 3 lines.
+- H-03 — Lists: more than 2 items as bullets with bold lead-ins; numbered steps for sequences only.
+- H-04 — Tables: comparisons, options, verdicts, and criterion status as tables; never charts or images.
+- H-05 — Bold discipline: bold for labels, lead-ins, finding headers, and option titles only; never bold inside verbatim fences or for whole sentences.
+- H-06 — Code spans: paths, commands, IDs, and criterion IDs in inline code or fenced code; never plain prose for IDs.
+- H-07 — Sentence budgets and merge rule: keep Overview to one or two sentences plus the TL;DR group; keep Non-technical a plain-language summary without jargon; merge short adjacent sentences rather than stacking one-line paragraphs, merging only while the merged paragraph stays at most 3 lines and otherwise keeping two short paragraphs; never drop a required part, field, option, or verbatim passage to meet a budget — paginate per the Content-caps rule instead.
+- H-08 — Visuals containment: emoji, Mermaid, and ANSI only as Tier 2 within-part adornments; never load-bearing, never in labels or verbatim, maximum of one emoji per part and maximum of one Mermaid per message.
+
 **Tier 2 — Conditional visuals (use only when they aid scanning):**
 
 - Allowed emoji (exactly 6): 📋 💡 🔧 ✅ ⚠️ ❓ — maximum of one per part,
@@ -304,8 +324,8 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
 - Fenced verbatim blocks are formatting-exempt: reproduce quoted
   scanner/subagent finding text byte-for-byte with no re-wrap, bold, or
   emoji inside; put any sensitive-content annotation outside the fence.
-- Forbidden: HTML, images, inline CSS, and any styling outside GFM plus the
-  Tier 2 visuals (emoji, Mermaid, ANSI color) above. Table cells escape `|`
+- Forbidden: HTML except `<details>`/`<summary>` per the Collapsible fallback rule below, images, inline CSS, and any styling outside GFM plus the
+  Tier 2 visuals (emoji, Mermaid, ANSI color) above. Only `<details>`/`<summary>` are permitted — only `<details>` and `<summary>` tags with no attributes except `open` on `<details>` and no other tags or attributes — no `script`, `style`, event-handler attributes, `iframe`, or `object`; the plain-GFM order must remain legible with codes stripped. Table cells escape `|`
   as `\|`; titles are plain text with no links or images.
 - ANSI validator self-check before sending: color only on allowed spans,
   every span reset, no nesting, none in verbatim/code/Mermaid/final
@@ -314,6 +334,8 @@ sequencing, checkpoint semantics, contract fields, or criterion-ID governance.
   Terms explained appears at most once after every dynamic part and
   immediately before Summary; Summary stays last and closes checkpoints
   with the question.
+- Collapsible fallback: long detail already ordered under its part may additionally be wrapped for folding where the client supports it, with the full text first in part order and Summary still last; `<details>` is never load-bearing and never required for meaning — Tier 3 verbatim and no-secret rules stay intact with plain-GFM order as the fallback.
+- Readability validator self-check before sending: TL;DR present exactly where R-TL-5 requires with R-TL-1..R-TL-4 and R-TL-6 satisfied (receipt line plus its Overview sentence(s) first, then `**TL;DR:**`), H-01..H-08 hold, `<details>`/`<summary>` only where allowed, Summary is last, verbatim fences byte-for-byte, no secret material quoted, `<details>` non-load-bearing with plain-GFM order as fallback.
 
 ### Templates (skeletons — keep part order, dual explanations, verbatim in fence with annotation outside)
 
@@ -328,6 +350,7 @@ Template A — Checkpoint (e.g. Stage 3 approval, Stage 2.5 quick-confirm):
 
 ```markdown
 [Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus one or two sentences — where the pipeline is and why now.
+**TL;DR:** verdict + action + pointer (inside Overview — not a new part).
 
 [Non-technical part] 💡 plain-language summary — no jargon, identifiers, or code.
 
@@ -349,6 +372,7 @@ Template B — Final report (e.g. Stage 6 sign-off):
 
 ```markdown
 [Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus where the pipeline ended and the verdict in one line.
+**TL;DR:** verdict + action + pointer (inside Overview — not a new part).
 
 [Non-technical part] 💡 what changed and what it means, in plain language.
 
@@ -364,7 +388,7 @@ Template B — Final report (e.g. Stage 6 sign-off):
 [Summary part] ✅ outcome, residual Minor/Nit acceptance, open questions (at most three, or `None`), and VCS outcome (`vcs: not-taken` unless opt-in Stage 7 completed).
 ```
 
-Template C — Per-finding block (lives inside the message-level Technical part; repeats per finding):
+Template C — Per-finding block (lives inside the message-level Technical part; repeats per finding; no per-finding TL;DR here — findings stay inside Technical; message-level Overview TL;DR per R-TL-5 still applies where required):
 
 ````markdown
 **Finding 1 — Short plain title (`slug-or-rule-id`):**
@@ -382,10 +406,11 @@ Template C — Per-finding block (lives inside the message-level Technical part;
 
 ### Good / bad example pair
 
-Good (scannable — bullets, highlights, spacing, table):
+Good-after (scannable — TL;DR inside Overview, bullets, highlights, spacing, table):
 
 ```markdown
 [Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready for approval before implementation.
+**TL;DR:** plan ready with two options; approve one — details in Technical.
 
 [Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
 
@@ -440,6 +465,35 @@ Bad — DO NOT DO (wall of text, no bullets/highlights/spacing, label replaced, 
 ```markdown
 ## Overview-ish
 The plan is ready and there are two options A and B with different diff sizes and risks and effects and migration notes and criteria and everything all in one long paragraph with no bullets or table and no bold lead-ins and the label above replaces the required bold label which is forbidden...
+```
+
+Bad-drift — DO NOT DO (TL;DR invents a fact the body never states):
+
+```markdown
+[Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready for approval before implementation.
+**TL;DR:** approved — migration done in `src/auth.ts`.
+
+[Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
+
+[Technical part] 🔧 Details for review.
+
+- **What happened:** plan v1 completed with two options compared.
+- **What next:** `You` — approve an option or request changes.
+
+[Summary part] ❓ Open questions: `None`. Approve an option to proceed, or request changes?
+```
+
+<!-- Drift note: body says only ready for approval, so this TL;DR invents a fact. -->
+
+Stage 3 before/after pair (TL;DR added without new part; Summary stays last):
+
+```markdown
+Before — no TL;DR:
+[Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready; two options compared.
+
+After — with TL;DR:
+[Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready; two options compared.
+**TL;DR:** two options ready; approve one — comparison in Technical.
 ```
 
 Template D — Dual Catalog message (skeleton — catalogs sit between the Technical part and the Summary part; anchors cited outside fences only; Summary stays last):
