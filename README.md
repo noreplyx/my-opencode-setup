@@ -165,7 +165,7 @@ self-check.
 
 Each finding the orchestrator presents — review findings, scanner findings,
 verifier verdicts, `not-verifiable` checklist items, or residual findings —
-is introduced by a per-finding header of the form **Finding <N> — <Title> (`<name>`):**
+is introduced by a per-finding header of the form **Finding <N> — <Title> (`<name>`)** [SEV: <x>] [STATUS: <y>]
 carrying a sequential number, a short title, and a stable name, each unique
 within the message, followed by the plain-language and technical explanations
 for that finding.
@@ -189,7 +189,7 @@ agent/code-orchestrator.md; this paragraph mirrors them.
 
 Readability mirror (non-normative):
 
-- Opens each decision-bearing Overview with the receipt line plus its Overview sentence(s), then one `**TL;DR:**` group (verdict + action + pointer, ≤60 words/≤3 hard lines, restating only body content with the body governing) per R-TL-1..R-TL-6.
+- Opens each decision-bearing Overview with the receipt line plus its Overview sentence(s), then one `**TL;DR:**` group of at most 5 bullets AND at most 60 words total (verdict + action + pointer, restating only body content with the body governing) per R-TL-1..R-TL-6.
 - Applies the H-01..H-08 checklist (ordered labels, inter-block spacing, bullets, tables, bold discipline, code spans, sentence budgets with merge-only-within-3-lines pagination, visuals containment) with Summary last and verbatim fences byte-for-byte.
 - Treats collapsible `<details>`/`<summary>` only as a non-load-bearing enhancement over plain-GFM order. Normative spec lives in agent/code-orchestrator.md; these bullets mirror it.
 
@@ -282,12 +282,18 @@ Readability mirror (non-normative):
   repo root, outside the fixture mounts, so
   `npm run validate:security:live:e2e` — which scans the fixture directories
    themselves — still asserts every seeded bug fires. The `toml@4.1.1` finding
-   in this repo's own lockfile (GHSA-v5mp-jgw5-2x6j / CVE-2026-63376 prototype
+   in this repo's own lockfiles (`package-lock.json` plus `bun.lock`, via the
+   `effect` transitive chain: GHSA-v5mp-jgw5-2x6j / CVE-2026-63376 prototype
    pollution and GHSA-82x6-q7mm-w9cf / CVE-2026-77465 uncontrolled recursion,
-   fix: upgrade `toml` to >=4.2.0) is a real pre-existing transitive-dependency
-   issue (not fixture noise and not introduced by the prompt-only dual-catalog
-   diff) and stays visible as a dependency-hygiene follow-up pending
-   user-approved remediation.
+   fix: upgrade `toml` to >=4.2.0) and the `js-yaml@5.2.1` entry pinned in
+   `bun.lock` (CVE-2026-73643, fix: >=5.2.2; `package.json` already requires
+   `js-yaml@^5.4.1`, so only the `bun.lock` pin is stale) are real
+   pre-existing transitive-dependency/lockfile issues (not fixture noise and
+   not introduced by the prompt-only dual-catalog diff) and stay visible as
+   dependency-hygiene follow-ups pending user-approved remediation
+   (`npm`/`bun` lockfile refresh regenerating `package-lock.json` + `bun.lock`;
+   no `overrides` escalation — see the `npm test` guard asserting
+   `package.json` carries no `overrides`).
 - The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
   its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
   files mode `0600`; security validation rejects weaker modes.

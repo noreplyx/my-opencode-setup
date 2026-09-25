@@ -99,7 +99,7 @@ part count, and Summary-last are unchanged.
 with the receipt line, then carries maximum of one `**TL;DR:**` line group with
 the verdict, action, and pointer below:
 - R-TL-1 — Lead-in: start the group with the bold lead-in `**TL;DR:**` on its own line inside Overview; never a new top-level part and never before the receipt line.
-- R-TL-2 — Budget: at most 60 words and at most 3 hard `\n`-delimited lines after the receipt line (soft wrap does not count). Count words as whitespace-delimited tokens excluding the `**TL;DR:**` lead-in; count lines as newline-delimited lines of the group.
+- R-TL-2 — Budget (reconciled per KD-02): at most 5 bullets AND at most 60 words total for the group (both bounds hold). Count words as whitespace-delimited tokens excluding the `**TL;DR:**` lead-in; count bullets as `-`-led lines of the group.
 - R-TL-3 — Content: verdict (where things stand) + action (what you must do, or `None`) + pointer (which part holds details).
 - R-TL-4 — Consistency (anti-drift): restate only what the body already says; introduce no new facts, numbers, IDs, or verdicts — on conflict the body governs.
 - R-TL-5 — Required on decision-bearing messages (approvals, escalations, final reports); optional otherwise and never added mechanically.
@@ -142,7 +142,7 @@ never omit it when a term needs explanation.
 - **Section B — Code reference details:** one entry per referenced code symbol, each one to two lines, in this schema: `[Cn] symbol (kind):` location; role; context, where `[Cn]` is the message-scoped anchor, `symbol` is the name in inline code, `kind` is one of function, table, class, or variable, `location` is `path:line` when known, `role` states what the symbol does, and `context` states how the message uses it.
 - **Anchor grammar and citation:** `[Tn]` anchors assign `T1`, `T2`, and so on in first-appearance order in the message; `[Cn]` anchors assign `C1`, `C2`, and so on in case-sensitive code-unit alphabetical order by symbol within the message (for example `AuthService` < `LoginAttempt` < `MAX_RETRIES` < `backoffMs` < `retryLogin`). Anchors are message-scoped and renumber per message. Cite an anchor only in orchestrator prose outside fenced verbatim blocks and outside inline-code verbatim spans — never inside a fenced code block, `Quoted finding (verbatim):` fence, or Mermaid body — using the form `[T1]` or `[C2]` beside the ID or symbol it explains. Catalog titles and symbols render as inline code or plain text, so embedded markdown (`|`, `*`, `_`, `#`) stays neutralized and never alters part structure.
 - **Dedup, ordering, and omission:** list each distinct ID and each distinct symbol once per message; repeated references reuse the same anchor rather than adding a new entry. Order Section A entries by first appearance and Section B entries alphabetically; keep a stable order across continued pages. Omit Section A when no ID is cited and omit Section B when no symbol is cited.
-- **Caps, pagination, and fallback labels (two distinct conditions — emit only one variant per condition, never both):** each catalog carries at most 10 inline entries; overflow paginates to a second message preserving the four-part shape (Overview, Non-technical, Technical, Summary in order with Summary last) with `…continued (N/M)` in the Technical part — never truncated or dropped. When both catalogs overflow, paginate each catalog's entries in place under the same pagination rule rather than merging them into one list. Continued catalog pages restart under the fallback label `**Details continued:**` followed by the same Section A or Section B schema and anchor sequence — this label is for `…continued (N/M)` pagination only. Separately, when the client cannot render bracket anchors (rendering-degradation, not pagination), keep the normal `**Task / Criterion details:**` / `**Code reference details:**` headings with plain ID or symbol text carrying equal content. The pagination trigger signal is entry count (>10), never a rendering report; the no-bracket trigger signal is a client rendering report, never entry count.
+- **Caps, pagination, and fallback labels (two distinct conditions — emit only one variant per condition, never both):** each catalog carries at most 10 inline entries; overflow paginates to a second message preserving the four-part shape (Overview, Non-technical, Technical, Summary in order with Summary last) with `…continued (N/M)` in the Technical part — never truncated or dropped. When both catalogs overflow, paginate each catalog's entries in place under the same pagination rule rather than merging them into one list. Each catalog numbers its own `…continued (N/M)` sequence independently of headline, card, chunk, and sibling-catalog counters. Continued catalog pages restart under the fallback label `**Details continued:**` followed by the same Section A or Section B schema and anchor sequence — this label is for `…continued (N/M)` pagination only. Separately, when the client cannot render bracket anchors (rendering-degradation, not pagination), keep the normal `**Task / Criterion details:**` / `**Code reference details:**` headings with plain ID or symbol text carrying equal content. The pagination trigger signal is entry count (>10), never a rendering report; the no-bracket trigger signal is a client rendering report, never entry count.
 - **Unknown handling:** when a check description, location, role, or source is not confirmed, state it honestly as `unknown — <what is missing>` and name where to confirm it; never hallucinate, guess, or invent a location, meaning, or source. A generic ID such as `GH-01` whose registry entry is unconfirmed is listed as `unknown — confirm in planner registry or design doc` rather than given a fabricated gloss.
 - **Secret hygiene:** never repeat a live secret, token, or credential in a catalog entry, title, anchor, citation, or source note — cite as `[redacted: secret — see file:line + rule ID]` and annotate sensitive entries outside any fence without repeating the secret, per the secret-hygiene no-repeat rule.
 - **Verbatim and dual-explanation preservation:** catalogs supplement but never replace the per-finding dual explanation and never alter verbatim fence contents byte-for-byte; catalog entries never wrap a fence — cite IDs and symbols in orchestrator prose outside fences while verbatim quotes stay in their own delimited fence, never nested inside a catalog entry; the Technical part still carries each finding with its plain-language and technical explanations plus the delimited verbatim quote.
@@ -157,11 +157,9 @@ every user-facing message — including the Stage 5 step 7 escalation, Stage 4.5
 from the message-level Non-technical part, which summarizes the whole
 situation rather than each issue.
 
-Introduce each finding with a single per-finding header line that carries a
-number, a title, and a name, followed by the two per-finding explanations
-below:
+Introduce each finding with a single per-finding header line in the Finding Card shape below (header carries number, title, name, and badges — no trailing colon; this card shape supersedes the earlier trailing-colon form, which is void):
 
-**Finding <N> — <Title> (`<name>`):**
+**Finding <N> — <Title> (`<name>`)** [SEV: <x>] [STATUS: <y>]
 
 - **Number (`<N>`)** — a sequential integer starting at 1, unique within the
   message, assigned in presentation order, so the user has an unambiguous
@@ -300,8 +298,8 @@ Hierarchy checklist (applies inside the four parts; Summary stays last):
     Technical, yellow in Summary (`### Next steps`); never both.
   - `\x1b[1;93m` (bright yellow bold) — `Summary`,
     `Terms explained`, dynamic part labels, and `### Next steps`.
-  - `\x1b[1;95m` (bright magenta bold) — bullet-point headers: bold
-    lead-ins, per-finding headers (`**Finding <N> — …**:`), `**What
+   - `\x1b[1;95m` (bright magenta bold) — bullet-point headers: bold
+     lead-ins, per-finding headers (`**Finding <N> — …** [SEV: …] [STATUS: …]`), `**What
     happened:**` / `**What next:**`, and per-option titles
     (`**Option <N> — <Title>:**`).
   - `\x1b[1;97m` (bright white bold foreground) — inline highlights only:
@@ -336,6 +334,129 @@ Hierarchy checklist (applies inside the four parts; Summary stays last):
   with the question.
 - Collapsible fallback: long detail already ordered under its part may additionally be wrapped for folding where the client supports it, with the full text first in part order and Summary still last; `<details>` is never load-bearing and never required for meaning — Tier 3 verbatim and no-secret rules stay intact with plain-GFM order as the fallback.
 - Readability validator self-check before sending: TL;DR present exactly where R-TL-5 requires with R-TL-1..R-TL-4 and R-TL-6 satisfied (receipt line plus its Overview sentence(s) first, then `**TL;DR:**`), H-01..H-08 hold, `<details>`/`<summary>` only where allowed, Summary is last, verbatim fences byte-for-byte, no secret material quoted, `<details>` non-load-bearing with plain-GFM order as fallback.
+
+### Readability template — disclosure stack + Finding Cards + visual signals (Options 1+2+4)
+
+Shape-only layer: changes message shape, never stage order, blocking
+semantics, contract fields, ID governance, evidence-tier semantics, or
+paginate-never-drop. All stack elements live inside the existing four
+parts, so the four-part invariant holds (each label once, in order,
+Summary last, checkpoint question final line).
+
+Disclosure stack order (present in this order where each element applies):
+`Stage X/Y` receipt line → checkpoint callout (blocking messages only,
+pointer only) → `**TL;DR:**` (inside Overview after receipt, R-TL-1..6)
+→ headline table (inside Overview) → mini-TOC (inside Overview) →
+Non-technical → Technical (Finding Cards, evidence footer, Appendix overflow
+group) → Summary / `### Next steps` + checkpoint question as final
+line. Omit a stack element when its rule does not apply; never add a
+new top-level part for one.
+
+Checkpoint callout (blocking messages only): first line group after the
+receipt line inside Overview, shape `> ⚠️ Checkpoint — <one-line
+pointer to the question in Summary, no verdict, no new facts>`. It is a
+pointer only; the binding checkpoint question stays the final line of
+Summary via the `question` tool.
+
+Headline table (inside Overview, after TL;DR, when the message has 2 or
+more findings, options, or criteria): sanctioned shape only — header
+`| Finding | Severity | Status |`, at most 5 rows, plain titles (no
+links/images), table cells escape `|` as `\|`. Equal-content bullet
+fallback: when the client cannot render tables, re-issue the same rows
+as `- **<title>:** SEV `<x>`, STATUS `<y>` bullets with equal content —
+emit only one variant, not both, subject to secret hygiene.
+
+Mini-TOC (inside Overview, after the headline table, on messages with 3
+or more findings or 2 or more catalogs): at most 5 bullets of plain
+part/finding pointers (no secrets, no IDs beyond titles); omitted
+otherwise, never mechanical.
+
+Visual signal kit (closed sets only): badges `[SEV: Critical|Major|Minor|Nit]`
+and `[STATUS: open|fixed|accepted|not-verifiable]` in prose outside
+fences; tables per Tier 1 (headline, comparison, criterion mapping);
+callouts `> ⚠️ Checkpoint — …` (blocking pointer) and `> ✅ …` /
+`> ❓ …` (status/question pointers, one line, pointer only). Emoji stays
+the Tier 2 closed set of 6 (📋 💡 🔧 ✅ ⚠️ ❓), at most 1 per part of the
+rendered message, never load-bearing, never in part labels, badges, IDs,
+paths, verbatim fences, inline-code verbatim spans, or Mermaid bodies;
+fenced illustrative examples keep a single emoji per illustrated part (the
+After stack example below omits the blocking checkpoint callout for this
+reason); Tier 3 forbiddens still hold.
+
+Finding Card (every finding, inside Technical, in this field order):
+header `**Finding <N> — <Title> (`<name>`)** [SEV: <x>] [STATUS: <y>]`
+→ `- **Finding — plain-language:** …` → `- **Finding — technical:** …`
+→ `- **Evidence:** <criterion ID / path:line / verdict>` →
+`- **Quoted finding (verbatim):**` fenced `text` block byte-for-byte →
+`> <sensitive annotation outside the fence when applicable>` →
+`- **Fix/Next:** <owner + action>`. Dual explanation preserved: both
+plain and technical glosses stay; the fence carries the verbatim text
+only. Badges never carry secret material; names never derive from
+secret fragments. Anchor cites `[Tn]`/`[Cn]` appear only in prose
+outside fences and Mermaid; labels and citations stay outside fences.
+
+Before/after (short form — card + stack applied, Summary still last):
+
+````markdown
+Before — loose finding, no stack:
+[Technical part] 🔧 Finding 1 retries burst in src/auth.ts:12 ...
+[Summary part] ❓ approve?
+
+After — stack + card (checkpoint callout omitted to keep one emoji per illustrated part):
+[Overview part] 📋 `Stage 5/6 — Review loop | Status: in-progress` Loop found one Major issue.
+**TL;DR:**
+- Verdict: one Major finding open.
+- Action: approve fix or accept risk.
+- Pointer: card in Technical.
+| Finding | Severity | Status |
+| --- | --- | --- |
+| Retry bursts | Major | open |
+[Non-technical part] 💡 Logins can pile up and fail together; a fix is ready.
+[Technical part] 🔧 Details for review.
+**Finding 1 — Retry bursts (`retry-backoff`)** [SEV: Major] [STATUS: open]
+- **Finding — plain-language:** logins pile up and fail together when busy.
+- **Finding — technical:** `retryLogin` retries without backoff in `src/auth.ts:12`.
+- **Evidence:** `GH-01`, `src/auth.ts:12`, `verdict: fail`.
+- **Quoted finding (verbatim):**
+```text
+<verbatim text byte-for-byte>
+```
+- **Fix/Next:** `coder` — add backoff, then re-verify.
+[Summary part] ❓ Open questions: `None`. Accept the fix, or accept the risk?
+````
+
+Style-guard checklist (short form — run before sending):
+`parts-once-in-order` / `summary-last-question-last` / `receipt-first-TL;DR-after`
+/ `TL;DR-5-bullets-60-words-no-new-facts` / `callout-pointer-only`
+/ `headline-≤5-rows-escaped-pipes-or-bullet-fallback`
+/ `card-order-header-badges-plain-technical-evidence-fence-fix`
+/ `fences-byte-for-byte-labels-outside` / `anchors-outside-fences-mermaid`
+/ `no-secrets-redacted-form` / `emoji-≤6-≤1-per-part-rendered-non-load-bearing`
+/ `Tier3-forbiddens` / `caps-paginate-never-drop`.
+
+Caps/pagination for new elements (no truncation path exists): TL;DR
+budget is hard (≤5 bullets AND ≤60 words — tighten prose, never
+paginate the TL;DR); headline table at most 5 rows then `…continued
+(N/M)`; mini-TOC at most 5 bullets then folds into pagination;
+Finding Cards paginate whole per finding across messages preserving the
+four-part shape with `…continued (N/M)` in Technical (never split a card,
+field, or failure line across pages, except the oversized single-fence
+escape hatch below; never drop a card, field, or failure line); the
+Appendix overflow group (label `**Appendix — overflow detail**` with no
+trailing colon — a trailing group inside Technical, before Summary, not a
+part and not counted toward the four-part invariant) carries overflow
+detail and paginates the same way. Oversized single-fence escape hatch: a
+single verbatim fence larger than one sendable message is chunked into
+numbered `Chunk i/N` fences inside the Appendix overflow group, byte-for-byte
+concatenable in order, with the card keeping its field order, a one-line
+pointer to the chunks, and its `Evidence`/`Fix/Next` fields intact — chunk,
+never truncate or drop. Pagination namespaces are independent per element
+kind — headline-table pages, Finding Card pages, catalog pages, and `Chunk
+i/N` fences each number their own sequence, so a headline `…continued (1/2)`
+never shares a counter with a catalog or card `…continued (1/2)`.
+Headline-table continuation rows land in the continued message's Overview
+headline table under the same header shape, with the `…continued (N/M)`
+marker carried in the Technical part. No element is ever truncated or dropped to meet a cap.
 
 ### Templates (skeletons — keep part order, dual explanations, verbatim in fence with annotation outside)
 
@@ -388,13 +509,14 @@ Template B — Final report (e.g. Stage 6 sign-off):
 [Summary part] ✅ outcome, residual Minor/Nit acceptance, open questions (at most three, or `None`), and VCS outcome (`vcs: not-taken` unless opt-in Stage 7 completed).
 ```
 
-Template C — Per-finding block (lives inside the message-level Technical part; repeats per finding; no per-finding TL;DR here — findings stay inside Technical; message-level Overview TL;DR per R-TL-5 still applies where required):
+Template C — Finding Card (lives inside the message-level Technical part; repeats per finding; field order is normative; no per-finding TL;DR here — findings stay inside Technical; message-level Overview TL;DR per R-TL-5 still applies where required):
 
 ````markdown
-**Finding 1 — Short plain title (`slug-or-rule-id`):**
+**Finding 1 — Short plain title (`slug-or-rule-id`)** [SEV: Major] [STATUS: open]
 
 - **Finding — plain-language:** what the problem is, no jargon or code.
 - **Finding — technical:** file, line, severity, root cause.
+- **Evidence:** `GH-01`, `src/auth.ts:12`, `verdict: fail`.
 - **Quoted finding (verbatim):**
 
 ```text
@@ -402,6 +524,7 @@ Template C — Per-finding block (lives inside the message-level Technical part;
 ```
 
 > Put any sensitive-content annotation outside the fence, never inside.
+- **Fix/Next:** `coder` — fix per the verbatim text, then re-verify.
 ````
 
 ### Good / bad example pair

@@ -16,7 +16,7 @@ const w = (phrase) => new RegExp(phrase.split(" ").map(escaped).join("\\s+"));
 const wi = (phrase) => new RegExp(w(phrase).source, "i");
 const atLineStart = (phrase) => new RegExp("^" + w(phrase).source, "m");
 const countWords = (group) => group.replace("**TL;DR:**", "").trim().split(/\s+/).filter(Boolean).length;
-const countLines = (group) => group.split("\n").length;
+const countBullets = (group) => group.split("\n").filter((line) => /^\s*-\s+/.test(line)).length;
 const stripFences = (text) => {
   const lines = text.split("\n");
   const kept = [];
@@ -207,7 +207,8 @@ test("README documents the user-facing communication format", async () => {
 
 test("orchestrator format section mandates the per-finding header and its three fields", async () => {
   const section = cachedSection;
-  assert.match(section, w("**Finding <N> — <Title> (`<name>`):**"));
+  assert.match(section, w("**Finding <N> — <Title> (`<name>`)** [SEV: <x>] [STATUS: <y>]"));
+  assert.ok(!w("(`<name>`):**").test(cachedProse), "stale trailing-colon header form must not remain in the section prose");
   assert.match(section, w("sequential integer starting at 1"));
   assert.match(section, w("unique within the message"));
   assert.match(section, w("short human-readable phrase"));
@@ -217,7 +218,7 @@ test("orchestrator format section mandates the per-finding header and its three 
 
 test("README mirrors the per-finding header without drift", async () => {
   const readme = cachedReadmeSection;
-  assert.match(readme, w("**Finding <N> — <Title> (`<name>`):**"));
+  assert.match(readme, w("**Finding <N> — <Title> (`<name>`)** [SEV:"));
   assert.match(readme, w("sequential number"));
   assert.match(readme, w("short title"));
   assert.match(readme, w("stable name"));
@@ -270,17 +271,22 @@ test("H-01..H-08 checklist exists outside fences with spacing and merge guards",
   assert.match(prose, w("maximum of one emoji per part and maximum of one Mermaid per message"));
 });
 
-test("R-TL-2 counting rule is defined once with word and line boundaries", async () => {
+test("R-TL-2 counting rule is defined once with word and bullet boundaries", async () => {
   const section = cachedSection;
   const prose = cachedProse;
-  assert.match(prose, w("at most 60 words and at most 3 hard"));
+  assert.match(prose, w("at most 5 bullets AND at most 60 words"));
   assert.match(prose, w("whitespace-delimited tokens excluding the"));
-  assert.match(prose, w("newline-delimited lines of the group"));
+  assert.match(prose, w("count bullets as"));
+  assert.match(prose, w("`-`-led lines of the group"));
+  assert.ok(!w("at most 3 hard").test(prose), "stale R-TL-2 line budget must not remain");
+  assert.ok(!w("newline-delimited lines of the group").test(prose), "stale R-TL-2 line-counting definition must not remain");
   // Helper self-checks: pin the local counting semantics above, not doc content.
   assert.equal(countWords("**TL;DR:** verdict action pointer"), 3);
   assert.equal(countWords("**TL;DR:**  verdict   action\npointer"), 3);
-  assert.equal(countLines("a\nb\nc"), 3);
-  assert.equal(countLines("a\nb\nc\nd"), 4);
+  assert.equal(countBullets("**TL;DR:**\n- verdict\n- action\n- pointer"), 3);
+  assert.equal(countBullets("**TL;DR:**\n- verdict\n- action\n- pointer\n- extra"), 4);
+  assert.equal(countBullets("**TL;DR:**\n  - indented verdict"), 1);
+  assert.equal(countBullets("**TL;DR:**\nverdict action pointer"), 0);
 });
 
 test("README mirrors the TL;DR and hierarchy rules with parity", async () => {
@@ -290,8 +296,9 @@ test("README mirrors the TL;DR and hierarchy rules with parity", async () => {
   assert.match(readme, w("H-01..H-08"));
   assert.match(readme, w("Summary last and verbatim fences byte-for-byte"));
   assert.match(readme, w("non-load-bearing"));
-  assert.match(readme, w("≤60 words"));
-  assert.match(readme, w("≤3 hard lines"));
+  assert.match(readme, w("at most 5 bullets AND at most 60 words"));
+  assert.ok(!w("3 hard lines").test(readme), "stale README TL;DR line budget must not remain");
+  assert.ok(!w("at most 3 hard").test(readme), "stale README TL;DR line budget must not remain");
 });
 
 test("uncovered branches R-TL-4, R-TL-5, H-07, H-08, and collapsible fallback exist outside fences", async () => {
