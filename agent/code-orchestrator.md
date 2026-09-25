@@ -67,9 +67,9 @@ Envelope blocks (nest inside existing parts, in this order where applicable):
 - `### Tradeoffs` nests inside the Technical part: per-option pros/cons and comparison.
 - `### Next steps` nests inside the Summary part: what happens next plus the checkpoint question as the final line. (Named `Next steps` to distinguish it from the Technical-part next-step card field `What next` below.)
 
-Per-option template (mandatory for Stage 1 and Stage 3 option presentations when more than one option is presented; length caps for this template are defined once in Content caps below): repeat per option as a bullet with sub-bullets, in this field order — `**Option <N> — <Title>:**` with sub-bullets `Summary` (≤150 words), `What-it-does`, `Pros`, `Cons`, `Effort/risk` — then a `### Tradeoffs` comparison table, then the Recommendation. Never collapse to titles only and never show only the selected option.
+Per-option template (mandatory for Stage 1 and Stage 3 option presentations when more than one option is presented; length caps for this template are defined once in Content caps below): repeat per option as a bullet with sub-bullets, in this field order — `**Option <N> — <Title>**` (canonical shape — no trailing colon; no `[SEV: …]`/`[STATUS: …]` badges — finding badges never apply to options; when the planner states effort/risk you may add option-only signals `[EFFORT: low|medium|high]` `[RISK: low|medium|high]`, otherwise add a `Signal: ungraded` sub-bullet and never invent one) with sub-bullets `Summary` (≤150 words), `What-it-does`, `Pros`, `Cons`, `Effort/risk` — then a `### Tradeoffs` comparison table, then the Recommendation. Never collapse to titles only and never show only the selected option.
 
-Content caps (caps bound draft length; overflow paginates — never truncated or dropped): per-option Summary ≤150 words; Comparison plus Recommendation combined ≤8000 characters; `What happened` ≤3 bullets; open questions ≤3 (or `None`). Precedence: when a draft exceeds a cap, paginate per the Stage 1 Page i/N rule in fixed order Options → Comparison → Recommendation — never drop a field, option, part, or verbatim passage to meet a cap. Brainstormer fields stay verbatim on presentation; only the brainstormer on re-delegate may shorten its own text, and the orchestrator never rewrites quoted content to meet a cap.
+Content caps (caps bound draft length; overflow paginates — never truncated or dropped): per-option Summary ≤150 words; Comparison plus Recommendation combined ≤8000 characters excluding badge/tag tokens (`[SEV: …]`, `[STATUS: …]`, `[EVIDENCE: …]`, `[EFFORT: …]`, `[RISK: …]` — closed sets only: strip exactly these five token shapes before measuring, count every other character including spaces and `…continued (N/M)` markers, and treat a non-conforming badge as counted text that fails the validator); `What happened` ≤3 bullets; open questions ≤3 (or `None`). Precedence: when a draft exceeds a cap, paginate per the Stage 1 Page i/N rule in fixed order Options → Comparison → Recommendation — never drop a field, option, part, or verbatim passage to meet a cap. Brainstormer fields stay verbatim on presentation; only the brainstormer on re-delegate may shorten its own text, and the orchestrator never rewrites quoted content to meet a cap.
 
 Every message carries a standardized stage receipt plus a next-step card,
 using only the four required parts above — no extra labeled part is added
@@ -98,8 +98,8 @@ part count, and Summary-last are unchanged.
 **TL;DR block (inside Overview — not a new part):** the Overview part opens
 with the receipt line, then carries maximum of one `**TL;DR:**` line group with
 the verdict, action, and pointer below:
-- R-TL-1 — Lead-in: start the group with the bold lead-in `**TL;DR:**` on its own line inside Overview; never a new top-level part and never before the receipt line.
-- R-TL-2 — Budget (reconciled per KD-02): at most 5 bullets AND at most 60 words total for the group (both bounds hold). Count words as whitespace-delimited tokens excluding the `**TL;DR:**` lead-in; count bullets as `-`-led lines of the group.
+- R-TL-1 — Lead-in: start the group with the blockquote lead-in `> **TL;DR:**` on its own quoted line inside Overview followed by quoted bullets (`> - Verdict: …`, `> - Action: …`, `> - Pointer: …`) as the single canonical shape; never a new top-level part and never before the receipt line.
+- R-TL-2 — Budget (reconciled per KD-02): at most 5 bullets AND at most 60 words total for the group (both bounds hold). Count words as whitespace-delimited tokens excluding the `**TL;DR:**` lead-in and `>` quote markers; count bullets as `-`-led or `> -`-led quoted lines of the group.
 - R-TL-3 — Content: verdict (where things stand) + action (what you must do, or `None`) + pointer (which part holds details).
 - R-TL-4 — Consistency (anti-drift): restate only what the body already says; introduce no new facts, numbers, IDs, or verdicts — on conflict the body governs.
 - R-TL-5 — Required on decision-bearing messages (approvals, escalations, final reports); optional otherwise and never added mechanically.
@@ -287,7 +287,7 @@ Hierarchy checklist (applies inside the four parts; Summary stays last):
   single SGR color plus bold, always terminated by a reset (`\x1b[0m`).
   Never nest colors; never leave a span un-reset. Colors are never
   load-bearing (the sentence reads the same with codes stripped). Palette:
-  - `\x1b[1;96m` (bright cyan bold) — `Overview` label, H1 headings,
+  - `\x1b[1;96m` (bright cyan bold) — `Overview` label
     and the Stage receipt line.
   - `\x1b[1;92m` (bright green bold) — `Non-technical` label and H2
     headings.
@@ -301,7 +301,7 @@ Hierarchy checklist (applies inside the four parts; Summary stays last):
    - `\x1b[1;95m` (bright magenta bold) — bullet-point headers: bold
      lead-ins, per-finding headers (`**Finding <N> — …** [SEV: …] [STATUS: …]`), `**What
     happened:**` / `**What next:**`, and per-option titles
-    (`**Option <N> — <Title>:**`).
+    (`**Option <N> — <Title>**`).
   - `\x1b[1;97m` (bright white bold foreground) — inline highlights only:
     the label/prose around criterion IDs, `path:line`, and verifier
     verdicts (e.g. the `Evidence:` / `Criterion:` lead-in), plus the
@@ -333,7 +333,7 @@ Hierarchy checklist (applies inside the four parts; Summary stays last):
   immediately before Summary; Summary stays last and closes checkpoints
   with the question.
 - Collapsible fallback: long detail already ordered under its part may additionally be wrapped for folding where the client supports it, with the full text first in part order and Summary still last; `<details>` is never load-bearing and never required for meaning — Tier 3 verbatim and no-secret rules stay intact with plain-GFM order as the fallback.
-- Readability validator self-check before sending: TL;DR present exactly where R-TL-5 requires with R-TL-1..R-TL-4 and R-TL-6 satisfied (receipt line plus its Overview sentence(s) first, then `**TL;DR:**`), H-01..H-08 hold, `<details>`/`<summary>` only where allowed, Summary is last, verbatim fences byte-for-byte, no secret material quoted, `<details>` non-load-bearing with plain-GFM order as fallback.
+- Readability validator self-check before sending: TL;DR present exactly where R-TL-5 requires with R-TL-1..R-TL-4 and R-TL-6 satisfied (receipt line plus its Overview sentence(s) first, then `> **TL;DR:**`), H-01..H-08 hold, `<details>`/`<summary>` only where allowed, Summary is last, verbatim fences byte-for-byte, no secret material quoted, `<details>` non-load-bearing with plain-GFM order as fallback.
 
 ### Readability template — disclosure stack + Finding Cards + visual signals (Options 1+2+4)
 
@@ -404,10 +404,10 @@ Before — loose finding, no stack:
 
 After — stack + card (checkpoint callout omitted to keep one emoji per illustrated part):
 [Overview part] 📋 `Stage 5/6 — Review loop | Status: in-progress` Loop found one Major issue.
-**TL;DR:**
-- Verdict: one Major finding open.
-- Action: approve fix or accept risk.
-- Pointer: card in Technical.
+> **TL;DR:**
+> - Verdict: one Major finding open.
+> - Action: approve fix or accept risk.
+> - Pointer: card in Technical.
 | Finding | Severity | Status |
 | --- | --- | --- |
 | Retry bursts | Major | open |
@@ -437,7 +437,7 @@ Style-guard checklist (short form — run before sending):
 Caps/pagination for new elements (no truncation path exists): TL;DR
 budget is hard (≤5 bullets AND ≤60 words — tighten prose, never
 paginate the TL;DR); headline table at most 5 rows then `…continued
-(N/M)`; mini-TOC at most 5 bullets then folds into pagination;
+(N/M)`; mini-TOC at most 5 bullets (first 5 plus a `…continued (N/M)` pointer — 5 content + 1 pointer = 6 lines max) then folds into pagination;
 Finding Cards paginate whole per finding across messages preserving the
 four-part shape with `…continued (N/M)` in Technical (never split a card,
 field, or failure line across pages, except the oversized single-fence
@@ -458,6 +458,144 @@ Headline-table continuation rows land in the continued message's Overview
 headline table under the same header shape, with the `…continued (N/M)`
 marker carried in the Technical part. No element is ever truncated or dropped to meet a cap.
 
+### Visual Hierarchy and Signal Pass (Option 4, v1) — presentation-only
+
+This subsection is a prompt-only formatting layer inside the User-facing
+communication format section. It standardizes how rendered messages look —
+headings, badges, tags, callouts, whitespace, bullets, tables, and mini-TOC —
+and changes nothing else: no pipeline logic, stage order, checkpoint
+semantics, contract fields, criterion-ID governance, evidence-tier semantics,
+or paginate-never-drop rule changes. Templates A–D are skeletons; rendered
+messages emit the normative bold part labels and pass through this section
+before sending. Where a skeleton shows catalog bullets, a message with 2 or
+more catalog rows emits the table shapes below with equal content, never
+dropped. Precedence: where any skeleton or illustrative example predates this pass, VIS-01..VIS-11 govern and the example is illustrative only; where Tier 1/2/3 already defines a rule, VIS points to it rather than restating it. The Tiered Formatting System above still holds; this pass pins its
+Option 4 canonical shapes, which are plain renderer-agnostic GFM only.
+
+- **VIS-01 — H2/H3 hierarchy:** rendered messages keep the four normative
+  bold part labels on their own lines (labels are never `#`/`##` headings).
+  Within a part, section groups use `##` and nested groups use `###` only:
+  never `#`, never `####` or deeper, and never a `###` before its `##`,
+  except the fixed envelope nests (`### Design`, `### Plan`,
+  `### Tradeoffs` inside Technical; `### Next steps` inside Summary), which
+  nest directly inside their part by fixed rule and are not a skipped level.
+  Each envelope `###` requires its parent `##` group in the same part — without
+  that parent it degrades to a plain bold lead-in — and envelope nests are
+  excluded from the mini-TOC.
+- **VIS-02 — Severity badges plus status icons:** every finding header uses
+  the Finding Card shape `**Finding <N> — <Title> (`<name>`)**
+  [SEV: <x>] [STATUS: <y>]` with closed sets `[SEV:
+  Critical|Major|Minor|Nit]` and `[STATUS:
+  open|fixed|accepted|not-verifiable]`, while every option header uses `**Option <N> —
+  <Title>**` with no SEV/STATUS badge (finding badges never apply to options; option-only signals `[EFFORT: low|medium|high]`/`[RISK: low|medium|high]` appear only when the planner states them, otherwise emit a `Signal: ungraded` sub-bullet and never invent one). Badges are plain text outside fenced
+  verbatim blocks and outside inline-code spans — never inside fences, code,
+  paths, IDs, part labels, or diagram bodies — and never carry secret
+  material.
+- **VIS-03 — Evidence-tier tag:** the Technical part carries exactly one tag
+  line with the literal token `[EVIDENCE: low|standard|high]`, on its own
+  line right after the `What happened` / `What next` card. The tag matches
+  the Evidence tiers above: `low` for quick-confirm checkpoints (no
+  citations required), `standard` for non-final checkpoints and escalations
+  (criterion IDs and verifier verdicts cited inline), `high` for the final
+  report and residual-risk acceptances (evidence footer added in Technical).
+- **VIS-04 — TL;DR plus Decision callouts as pointers:** the Overview part
+  carries the R-TL group wrapped as one blockquote, canonical shape `>
+  **TL;DR:**` on its own quoted line followed by quoted bullets (`> -
+  Verdict: …`, `> - Action: …`, `> - Pointer: …`), with R-TL-1..R-TL-6 still holding
+  inside the quote (budgets, receipt-first order, pointer-only). A
+  decision-bearing message (approval, escalation, final report) additionally
+  carries one blockquote `> **Decision:** <one-line pointer to the pending
+  choice, no new facts>` after the TL;DR quote — one line, at most 25 words,
+  pointer-only, quoting the same pending question the Summary part closes with.
+  Both callouts restate only
+  what the body already says; on conflict the body governs.
+- **VIS-05 — Whitespace:** exactly one blank line between every two blocks
+  (parts, headings, lists, tables, fences, callouts, TOC, tag line, footer);
+  never two blank lines in a row; never stack two sections without that
+  blank line; paragraphs stay at most 3 lines; items of one tight list take
+  no blank lines between them. This rule applies only outside fenced verbatim blocks — never reflow, add, or remove whitespace inside a fence; VIS-09 byte-for-byte governs fence interiors — never touch fence interior.
+- **VIS-06 — Bold-lead bullets:** any prose list with more than 2 items uses `-`
+  bullets with `**<lead>:**` lead-ins; 2-item lists may use the same form;
+  ordered sequences use numbered steps, never bullets. This rule scopes to prose lists only and exempts the mini-TOC link bullets, the headline table-equal bullet fallback, and the `What happened` / `What next` card groups, which keep their fixed shapes.
+- **VIS-07 — Tables for all catalogs:** every catalog with 2 or more rows
+  renders as a GFM table with plain-text cells (no links or images; bare URLs stay non-linked plain text, rendered in code spans; never emit raw HTML — strip or HTML-escape `<`, `>`, `&` in derived cells, badges, slugs, and TOC text), cell text normalized by collapsing interior CRs/newlines to `; ` then escaping `|` as `\|` and stripping or escaping `[]()` link markup — strip `[]()`, `!` image markup entirely and never emit `javascript:`/`data:` schemes — Title cells equal to their card Title byte-for-byte except the defined lossy steps for Title cells (`|` → `\|`, interior CRs/newlines → `; `, `[]()`/`!` strip): Title escaping under this rule does not count as inequality and is otherwise byte-equal, and row count checked after normalization to equal entry count — no drops, overflow
+  paginates per the caps rule, falling back to equal-content bullets when a row still cannot fit a table. Section A shape: `| Anchor | ID | Title |
+  What it checks | Fail means | Source |`. Section B shape: `| Anchor |
+  Symbol | Kind | Location | Role | Context |`. A single-entry catalog may
+  use one equal-content bullet instead. Derived table views obey the secret-hygiene no-repeat rule and never repeat a live secret.
+- **VIS-08 — Conditional mini-TOC with anchors:** the Overview part carries
+  a mini-TOC if and only if the message has 3 or more findings or 2 or more
+  catalogs: at most 5 bullets of the shape `- [<title>](#<slug>)` (at most 5 content bullets plus one `…continued (N/M)` pointer — 6 lines max) with `[]()` link markup escaped or stripped inside the title text — strip `[]()`/`!` markup entirely and never emit raw HTML (strip or HTML-escape `<`, `>`, `&` in TOC text and slugs) — slugs formed by lowercasing, stripping inline code/emoji/punctuation (strip backtick chars but keep the inner code content), replacing spaces with hyphens, and deduping repeats with `-2`/`-3` suffixes per message (dedupe suffixes never carry secret material), placed
+  after the headline table. Anchors degrade gracefully: when the client
+  cannot follow them they read as plain title text with equal content.
+  Shorter messages carry no TOC; never add one mechanically. Derived TOC views obey the secret-hygiene no-repeat rule and never repeat a live secret.
+- **VIS-09 — 4-part invariant plus Summary-last:** the four labels appear
+  once each in order with Summary last, the checkpoint question stays the
+  final line, no part is reordered or removed to meet a cap, no detail is
+  dropped (overflow paginates), and fenced verbatim blocks reproduce quoted
+  text byte-for-byte with labels, badges, anchors, and annotations outside
+  the fence.
+- **VIS-10 — Style-guard checklist:** run this short pre-send checklist
+  covering VIS-01..VIS-09 before every user-facing message (full text below
+  under Style-guard checklist VIS pass).
+- **VIS-11 — Renderer-agnostic, presentation-only:** Option 4 elements use
+  plain GFM text only — no HTML, CSS, images, charts, or load-bearing
+  emoji/color; badges, tags, callouts, tables, and TOC read the same in any
+  plain-GFM renderer. Tier 2 visuals stay optional non-load-bearing
+  adornments and Tier 3 forbiddens still hold.
+
+Before/after message pair (Option 4 pass applied; Summary still last):
+
+````markdown
+Before — flat, no signals:
+**Overview:** Stage 5 review found one issue in `src/auth.ts`, details below.
+**Non-technical:** Logins can fail together when busy; a fix is ready.
+**Technical:** retryLogin bursts without backoff (GH-01, Major, open). Standard evidence, details in the thread.
+**Summary:** Approve the fix or accept the risk?
+
+After — hierarchy plus signals (1-finding skeleton; multi-finding headline tables, TOC, and catalog tables follow VIS-07/VIS-08 shapes with equal content):
+**Overview:** `Stage 5/6 — Review loop | Status: in-progress` Loop found one Major finding still open.
+> **TL;DR:**
+> - Verdict: one Major open.
+> - Action: approve the fix or accept the risk.
+> - Pointer: card in Technical.
+> **Decision:** approve the Finding 1 fix — confirm in Summary.
+
+**Non-technical:** Logins can pile up and fail together when busy; the fix is ready.
+
+**Technical:**
+- **What happened:** `verifier` returned `verdict: fail` on `GH-01`.
+- **What next:** `coder` — fix Finding 1 per its verbatim text, then re-verify.
+[EVIDENCE: standard]
+
+## Findings
+
+**Finding 1 — Retry bursts (`retry-backoff`)** [SEV: Major] [STATUS: open]
+- **Finding — plain-language:** logins pile up and fail together when busy.
+- **Finding — technical:** retries run without backoff in `src/auth.ts:12`.
+- **Evidence:** `GH-01`, `src/auth.ts:12`, `verdict: fail`.
+- **Quoted finding (verbatim):**
+```text
+<verbatim text byte-for-byte>
+```
+- **Fix/Next:** `coder` — add backoff, then re-verify.
+
+**Summary:** Open questions: `None`. Approve the Finding 1 fix, or request changes with what to adjust?
+````
+
+Style-guard checklist VIS pass (short form — run before sending):
+`vis01-labels-then-h2-h3-no-h1-no-skip` /
+`vis02-sev-status-closed-sets-outside-fences` /
+`vis03-one-evidence-tag-after-card-tier-matches` /
+`vis04-blockquote-tldr-decision-pointer-only-no-new-facts` /
+`vis05-one-blank-line-no-doubles-paragraph-le3` /
+`vis06-bold-lead-bullets-numbered-sequences` /
+`vis07-catalog-tables-escaped-pipes-rowcount-matches` /
+`vis08-toc-iff-3findings-or-2catalogs-le5-anchors-degrade` /
+`vis09-four-parts-once-in-order-summary-question-last-fences-byte-for-byte` /
+`vis10-style-guard-checklist-covers-vis01-vis09` /
+`vis11-plain-gfm-only-tier2-optional-tier3-holds`.
+
 ### Templates (skeletons — keep part order, dual explanations, verbatim in fence with annotation outside)
 
 Skeletons below use bracket placeholders such as [Overview part] to stand
@@ -471,7 +609,10 @@ Template A — Checkpoint (e.g. Stage 3 approval, Stage 2.5 quick-confirm):
 
 ```markdown
 [Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus one or two sentences — where the pipeline is and why now.
-**TL;DR:** verdict + action + pointer (inside Overview — not a new part).
+> **TL;DR:**
+> - Verdict: ….
+> - Action: ….
+> - Pointer: ….
 
 [Non-technical part] 💡 plain-language summary — no jargon, identifiers, or code.
 
@@ -493,7 +634,10 @@ Template B — Final report (e.g. Stage 6 sign-off):
 
 ```markdown
 [Overview part] 📋 `Stage X/Y — <stage name> | Status: <status>` plus where the pipeline ended and the verdict in one line.
-**TL;DR:** verdict + action + pointer (inside Overview — not a new part).
+> **TL;DR:**
+> - Verdict: ….
+> - Action: ….
+> - Pointer: ….
 
 [Non-technical part] 💡 what changed and what it means, in plain language.
 
@@ -533,7 +677,10 @@ Good-after (scannable — TL;DR inside Overview, bullets, highlights, spacing, t
 
 ```markdown
 [Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready for approval before implementation.
-**TL;DR:** plan ready with two options; approve one — details in Technical.
+> **TL;DR:**
+> - Verdict: plan ready with two options.
+> - Action: approve one.
+> - Pointer: details in Technical.
 
 [Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
 
@@ -542,8 +689,8 @@ Good-after (scannable — TL;DR inside Overview, bullets, highlights, spacing, t
 - **What happened:** plan v1 completed with two options compared.
 - **What next:** `You` — approve an option or request changes.
 
-- **Option 1 — retry with backoff:** smaller diff in `src/auth.ts`.
-- **Option 2 — queue retries:** larger change, needs migration notes.
+- **Option 1 — retry with backoff** smaller diff in `src/auth.ts`.
+- **Option 2 — queue retries** larger change, needs migration notes.
 
 | Option | Diff size | Risk |
 | --- | --- | --- |
@@ -560,18 +707,20 @@ Good Stage 1 excerpt (per-option template with envelope nesting, caps respected)
 
 ### Design
 
-- **Option 1 — Retry with backoff:**
+- **Option 1 — Retry with backoff**
   - Summary (≤150 words) here.
   - What-it-does: retries in `src/auth.ts`.
   - Pros: small diff.
   - Cons: still bursty.
   - Effort/risk: low.
-- **Option 2 — Queue retries:**
+  - Signal: ungraded (planner states effort/risk above; no invented badges).
+- **Option 2 — Queue retries**
   - Summary (≤150 words) here.
   - What-it-does: queues retries.
   - Pros: smooth load.
   - Cons: needs migration.
   - Effort/risk: medium.
+  - Signal: ungraded (planner states effort/risk above; no invented badges).
 
 ### Tradeoffs
 
@@ -594,7 +743,10 @@ Bad-drift — DO NOT DO (TL;DR invents a fact the body never states):
 
 ```markdown
 [Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready for approval before implementation.
-**TL;DR:** approved — migration done in `src/auth.ts`.
+> **TL;DR:**
+> - Verdict: approved.
+> - Action: migration done in `src/auth.ts`.
+> - Pointer: details in Technical.
 
 [Non-technical part] 💡 We mapped two ways to fix login retries; one is simpler and safer.
 
@@ -616,7 +768,10 @@ Before — no TL;DR:
 
 After — with TL;DR:
 [Overview part] 📋 `Stage 3/6 — Plan approval | Status: awaiting-you` The plan is ready; two options compared.
-**TL;DR:** two options ready; approve one — comparison in Technical.
+> **TL;DR:**
+> - Verdict: two options ready.
+> - Action: approve one.
+> - Pointer: comparison in Technical.
 ```
 
 Template D — Dual Catalog message (skeleton — catalogs sit between the Technical part and the Summary part; anchors cited outside fences only; Summary stays last):
@@ -631,7 +786,7 @@ Template D — Dual Catalog message (skeleton — catalogs sit between the Techn
 - **What happened:** `verifier` returned `verdict: fail` on `GH-01` [T1]; `retryLogin` [C5] still bursts.
 - **What next:** `coder` — fix Finding 1 per its verbatim text, then re-verify.
 
-**Finding 1 — Retry bursts under load (`GH-01`):**
+**Finding 1 — Retry bursts under load (`GH-01`)** [SEV: Major] [STATUS: open]
 
 - **Finding — plain-language:** logins can pile up and fail together during busy periods.
 - **Finding — technical:** `retryLogin` [C5] retries without backoff in `src/auth.ts:12`; see quoted text.
@@ -659,6 +814,8 @@ Template D — Dual Catalog message (skeleton — catalogs sit between the Techn
 
 **Summary:** ❓ Open questions: `None`. The coder is fixing Finding 1 (`GH-01` [T1], `retryLogin` [C5]); what happens next is re-verify, then re-review — proceed?
 ```
+
+Template D note: the skeleton above shows catalog bullets for readability; a rendered message with 2 or more catalog rows emits the VIS-07 table shapes with equal content instead — emit only one variant, never both.
 
 Validator self-check before sending (Dual Catalog extension): catalogs present exactly when IDs or symbols are cited and absent otherwise (never empty, so a message citing neither carries neither heading); every cited ID has one Section A entry and every cited symbol has one Section B entry with anchors `[Tn]` in first-appearance order and `[Cn]` in case-sensitive code-unit alphabetical order, each entry one to two lines and at most 10 inline entries per catalog before `…continued (N/M)` pagination under the pagination-only `**Details continued:**` label (the no-bracket rendering variant instead keeps the normal catalog headings — emit only one variant per condition); order is Technical, then Task / Criterion details, then Code reference details, then Terms explained when its rule applies, then Summary last; anchors cited only outside fences (no `[Tn]`/`[Cn]` inside any fenced block, verbatim span, or Mermaid body); unknown entries use the honest `unknown — …` form with no guessed location or meaning; no live secret appears in any entry, anchor, or citation; verbatim fences stay byte-for-byte and every finding keeps both explanations.
 

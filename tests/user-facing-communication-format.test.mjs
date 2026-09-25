@@ -15,8 +15,10 @@ const w = (phrase) => new RegExp(phrase.split(" ").map(escaped).join("\\s+"));
 // (folds the code-review Minor-1 finding into v4).
 const wi = (phrase) => new RegExp(w(phrase).source, "i");
 const atLineStart = (phrase) => new RegExp("^" + w(phrase).source, "m");
-const countWords = (group) => group.replace("**TL;DR:**", "").trim().split(/\s+/).filter(Boolean).length;
-const countBullets = (group) => group.split("\n").filter((line) => /^\s*-\s+/.test(line)).length;
+const countWords = (group) => group.replace("**TL;DR:**", "").replace(/^>\s?/gm, "").trim().split(/\s+/).filter(Boolean).length;
+const countBullets = (group) => group.split("\n").filter((line) => /^\s*(>\s*)?-\s+/.test(line)).length;
+const countComparisonChars = (text) =>
+  text.replace(/\[(SEV|STATUS|EVIDENCE|EFFORT|RISK): [^\]]*\]/g, "").length;
 const stripFences = (text) => {
   const lines = text.split("\n");
   const kept = [];
@@ -277,16 +279,22 @@ test("R-TL-2 counting rule is defined once with word and bullet boundaries", asy
   assert.match(prose, w("at most 5 bullets AND at most 60 words"));
   assert.match(prose, w("whitespace-delimited tokens excluding the"));
   assert.match(prose, w("count bullets as"));
-  assert.match(prose, w("`-`-led lines of the group"));
+  assert.match(prose, w("`> -`-led quoted lines of the group"));
   assert.ok(!w("at most 3 hard").test(prose), "stale R-TL-2 line budget must not remain");
   assert.ok(!w("newline-delimited lines of the group").test(prose), "stale R-TL-2 line-counting definition must not remain");
   // Helper self-checks: pin the local counting semantics above, not doc content.
   assert.equal(countWords("**TL;DR:** verdict action pointer"), 3);
   assert.equal(countWords("**TL;DR:**  verdict   action\npointer"), 3);
+  assert.equal(countWords("> **TL;DR:**\n> - Verdict: ready\n> - Action: approve"), 6);
   assert.equal(countBullets("**TL;DR:**\n- verdict\n- action\n- pointer"), 3);
   assert.equal(countBullets("**TL;DR:**\n- verdict\n- action\n- pointer\n- extra"), 4);
   assert.equal(countBullets("**TL;DR:**\n  - indented verdict"), 1);
+  assert.equal(countBullets("> **TL;DR:**\n> - Verdict: ready\n> - Action: approve"), 2);
   assert.equal(countBullets("**TL;DR:**\nverdict action pointer"), 0);
+  // Badge/tag exclusion procedure: strip the five closed-set tokens before measuring.
+  assert.equal(countComparisonChars("[SEV: Major] fixed"), " fixed".length);
+  assert.equal(countComparisonChars("[BOGUS: x] fixed"), "[BOGUS: x] fixed".length);
+  assert.equal(countComparisonChars("a [EVIDENCE: standard] b"), "a  b".length);
 });
 
 test("README mirrors the TL;DR and hierarchy rules with parity", async () => {
@@ -322,4 +330,130 @@ test("stripFences supports backtick and tilde fences with leading whitespace and
   const sample = "keep\n  ```text\nsecret\n  ```\nkeep2\n   ~~~text\nsecret2\n   ~~~\nkeep3";
   assert.equal(stripFences(sample), "keep\nkeep2\nkeep3");
   assert.throws(() => stripFences("keep\n```text\nunclosed"), /unclosed fence/);
+});
+
+test("VIS-01..VIS-11 rules exist outside fences and fenced examples stay fenced", async () => {
+  const section = cachedSection;
+  const prose = cachedProse;
+  for (const id of ["VIS-01", "VIS-02", "VIS-03", "VIS-04", "VIS-05", "VIS-06", "VIS-07", "VIS-08", "VIS-09", "VIS-10", "VIS-11"]) {
+    assert.ok(prose.includes(id), `${id} must appear outside fences`);
+  }
+  assert.match(prose, w("plain renderer-agnostic GFM only"));
+  assert.match(prose, w("never touch fence interior"));
+  assert.match(prose, w("VIS-09 byte-for-byte governs"));
+});
+
+test("option headers carry no finding badges with ungraded fallback", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("finding badges never apply to options"));
+  assert.match(prose, w("Signal: ungraded"));
+  assert.match(prose, w("never invent one"));
+  assert.match(prose, w("[EFFORT: low|medium|high]"));
+  assert.match(prose, w("[RISK: low|medium|high]"));
+  assert.ok(!w("**Option <N> — <Title>** [SEV:").test(prose), "options must not carry SEV badges in prose");
+});
+
+test("TL;DR canonical shape is blockquote-wrapping-bullets with > - counting", async () => {
+  const prose = cachedProse;
+  const section = cachedSection;
+  assert.match(prose, w("followed by quoted bullets"));
+  assert.match(prose, w("`> -`"));
+  assert.match(prose, w("single canonical shape"));
+  assert.match(prose, w("never a new top-level part and never before the receipt line"));
+  assert.match(prose, w("excluding the `**TL;DR:**` lead-in and `>` quote markers"));
+  const fenced = section;
+  assert.ok(fenced.includes("> **TL;DR:**"), "fenced examples must show the blockquote TL;DR shape");
+  assert.ok(fenced.includes("> - Verdict:"), "fenced examples must show quoted TL;DR bullets");
+  assert.ok(!w("**TL;DR:** verdict + action + pointer (inside Overview").test(prose), "stale plain TL;DR shape must not remain in prose");
+});
+
+test("VIS-05 applies outside fences only and examples keep blank lines", async () => {
+  const prose = cachedProse;
+  const section = cachedSection;
+  assert.match(prose, w("applies only outside fenced verbatim blocks"));
+  assert.match(prose, w("never reflow, add, or remove whitespace inside a fence"));
+  const fenceBlocks = section.match(/```markdown[\s\S]*?```/g) ?? [];
+  assert.ok(fenceBlocks.length > 0, "expected fenced examples");
+  for (const block of fenceBlocks.slice(0, 3)) {
+    assert.ok(block.includes("\n\n"), "fenced example must keep blank lines between blocks");
+  }
+});
+
+test("VIS-06 scopes to prose lists with fixed-shape exemptions", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("scopes to prose lists only"));
+  assert.match(prose, w("exempts the mini-TOC link bullets"));
+  assert.match(prose, w("headline table-equal bullet fallback"));
+  assert.match(prose, w("`What happened` / `What next` card groups"));
+});
+
+test("VIS-07 normalizes cells, pins Title equality, and falls back to bullets", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("collapsing interior CRs/newlines to"));
+  assert.match(prose, w("stripping or escaping `[]()` link markup"));
+  assert.match(prose, w("Title cells equal to their card Title byte-for-byte"));
+  assert.match(prose, w("row count checked after normalization"));
+  assert.match(prose, w("falling back to equal-content bullets when a row still cannot fit a table"));
+  assert.match(prose, w("bare URLs stay non-linked plain text"));
+  assert.match(prose, w("Derived table views obey the secret-hygiene no-repeat rule"));
+});
+
+test("VIS-08 defines iff boundaries, slugify, dedupe, and 5-cap pagination precedence", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("if and only if the message has 3 or more findings or 2 or more catalogs"));
+  assert.match(prose, w("lowercasing, stripping inline code/emoji/punctuation"));
+  assert.match(prose, w("replacing spaces with hyphens"));
+  assert.match(prose, w("deduping repeats with `-2`/`-3` suffixes"));
+  assert.match(prose, w("at most 5 bullets"));
+  assert.match(prose, w("first 5 plus a `…continued (N/M)` pointer"));
+  assert.match(prose, w("never drop a card, field, or failure line"));
+  assert.match(prose, w("Derived TOC views obey the secret-hygiene no-repeat rule"));
+});
+
+test("VIS-03 branches, VIS precedence, badge exemption, and vis10/vis11 checklist", async () => {
+  const prose = cachedProse;
+  const section = cachedSection;
+  assert.match(prose, w("[EVIDENCE: low|standard|high]"));
+  assert.match(prose, w("`low` for quick-confirm checkpoints"));
+  assert.match(prose, w("`standard` for non-final checkpoints and escalations"));
+  assert.match(prose, w("`high` for the final report and residual-risk acceptances"));
+  assert.match(prose, w("A single-entry catalog may"));
+  assert.match(prose, w("VIS-01..VIS-11 govern and the example is illustrative only"));
+  assert.match(prose, w("excluding badge/tag tokens"));
+  for (const slug of ["vis10-", "vis11-"]) {
+    assert.ok(section.includes(slug), `${slug} checklist slug must exist (VIS-10/VIS-11 intentional coverage)`);
+  }
+});
+
+test("option headers use the canonical no-trailing-colon shape", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("canonical shape — no trailing colon"));
+  assert.ok(!w("**Option <N> — <Title>:**").test(prose), "stale trailing-colon option shape must not remain in prose");
+});
+
+test("VIS-01 envelope parent and TOC exclusion pins hold", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("requires its parent `##` group"));
+  assert.match(prose, w("degrades to a plain bold lead-in"));
+  assert.match(prose, w("excluded from the mini-TOC"));
+});
+
+test("VIS-04 Decision callout is capped, single-line, and quotes the Summary question", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("one line, at most 25 words"));
+  assert.match(prose, w("quoting the same pending question"));
+  assert.match(prose, w("on conflict the body governs"));
+});
+
+test("VIS-07/VIS-08 derived views escape markup, pin schemes, and guard secrets", async () => {
+  const prose = cachedProse;
+  assert.match(prose, w("never emit raw HTML"));
+  assert.match(prose, w("rendered in code spans"));
+  assert.match(prose, w("never emit `javascript:`/`data:` schemes"));
+  assert.match(prose, w("strip backtick chars but keep the inner code content"));
+  assert.match(prose, w("dedupe suffixes never carry secret material"));
+  assert.match(prose, w("Title escaping under this rule does not count as inequality"));
+  assert.match(prose, w("5 content + 1 pointer = 6 lines max"));
+  assert.match(prose, w("closed sets only"));
+  assert.match(prose, w("non-conforming badge"));
 });
