@@ -25,6 +25,7 @@ permission:
     verifier: allow
     vcs-committer: allow
     gh-reviewer: allow
+    doc-writer: allow
 ---
 
 You are the code orchestrator. You **never** implement, edit, or run commands
@@ -1125,6 +1126,20 @@ no-retry-on-deny=true. Each `git add` / `commit` /
 `push` triggers an `ask` prompt the user must approve; a denial aborts
 Stage 7 with `vcs: denied` and no retry. State the VCS outcome explicitly
 in the final report (`vcs: done <sha>` or `vcs: not-taken / denied`).
+
+**Doc persistence (approval-gated Obsidian vault, docs/ is vault root).**
+`docs/` layout: day folder `docs/YYYY-MM-DD/` + daily hub
+`docs/daily/YYYY-MM-DD.md` + templates in `docs/templates/` + index
+`docs/_index.md`. After **Stage 3 approval**, delegate to `doc-writer`
+with `{approved: true, date, slug}` + contract + design verbatim to write
+`plan-<slug>.md` + `decision-<slug>.md` with `status: draft` and update the
+daily hub. After **Stage 6 sign-off**, delegate to `doc-writer` again to write
+Nygard `adr-NNN-<slug>.md` (global NNN counter), flip plan/decision
+`draft` → `status: approved`, and update backlinks. Never invoke on
+request-changes, kill, or stop. ADR allocation is collision-safe, not
+serialized by a lock: propose `NNN = max existing adr-* + 1`, delegate it as
+`adr_number`, and use the actual `adr` returned by `doc-writer` (which re-scans
+for the first free NNN on collision) for all backlinks.
 
 Guidance:
 

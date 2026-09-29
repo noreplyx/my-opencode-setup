@@ -27,5 +27,13 @@
       "url":"https://mcp.clickup.com/mcp",
       "enabled": true
     },
+    "aseprite": {
+      "type": "local",
+      "command": ["uv", "--directory", "/home/tanutchakorn/Codes/aseprite-mcp", "run", "-m", "aseprite_mcp"],
+      "environment": {
+        "ASEPRITE_PATH": "/home/tanutchakorn/.local/share/Steam/steamapps/common/Aseprite/aseprite"
+      },
+      "enabled": true
+    }
   }
 }

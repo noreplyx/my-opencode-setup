@@ -110,5 +110,32 @@ AC-01 seven fields echoed. AC-02 entry/exit all stages. AC-03 validator per
 gate. AC-04 max rounds stated. AC-05 triage routing. AC-06 K1–K5.
 AC-07 fast-track denylist. AC-08 reversible. AC-09 stable IDs.
 AC-10 risk/auto_approve consistent. AC-11 docs-only behavior holds: the
-revision makes no runtime/code changes, verified by method `git diff --stat`
-showing only `docs/ai-agent-pipeline.md` changed (docs-only).
+revision makes no runtime/code changes, verified by `git status --short` +
+`git diff --stat -- docs/ agent/doc-writer.md agent/code-orchestrator.md`
+showing only allowlisted paths changed/untracked: `docs/**`,
+`agent/doc-writer.md`, `agent/code-orchestrator.md` (prompt-only hook).
+`opencode.jsonc` + `plugins/` are excluded from this DoD (separate
+changeset). No `src/` / `tools/` / runtime changes.
+
+## 12. Doc persistence (Obsidian vault, approval-gated)
+
+`docs/` is an Obsidian vault (checked-in `.obsidian/` + `templates/` +
+`_index.md`). Date separation: day folder `docs/YYYY-MM-DD/` holding
+`plan-<slug>.md`, `decision-<slug>.md`, `adr-NNN-<slug>.md`; daily hub
+`docs/daily/YYYY-MM-DD.md` with Dataview index (Dataview plugin is a
+manual user install; every Dataview block ships with plain-link fallback).
+Full Nygard ADR form (Status/Context/Decision/Consequences/Alternatives/
+Links) with global `NNN` counter. `doc-writer` subagent (instruction-scoped
+to `docs/`, refusal outside it — permission `edit: allow` is global in this
+schema, not path-enforced) runs only after Stage 3 approval (draft plan +
+decision) and Stage 6 sign-off (ADR + flip plan/decision to approved); never on
+request-changes/kill/stop. All notes carry YAML frontmatter
+(`type,date,status,tags,related,slug`) and date-prefixed wikilinks
+(`[[YYYY-MM-DD/plan-<slug>]]`, `[[daily/YYYY-MM-DD]]`); secrets redacted
+`[REDACTED]`.
+
+DoD: DOC-01 vault opens with templates recognized; DOC-02 approved run
+creates `YYYY-MM-DD/` with 3 frontmattered files; DOC-03 wikilinks resolve;
+DOC-04 ADR follows Nygard headings; DOC-05 no write on unapproved runs;
+DOC-06 daily hub lists day's notes with non-Dataview fallback; DOC-07
+existing docs untouched except links.
