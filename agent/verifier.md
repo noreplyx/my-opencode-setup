@@ -53,11 +53,22 @@ permission:
     "dotnet vstest*": allow
     "npx --no-install eslint*": allow
     "npx --no-install biome*": allow
+    "npx --no-install prettier --check*": allow
     "pnpm exec eslint*": allow
     "pnpm exec biome*": allow
+    "pnpm exec prettier --check*": allow
+    "yarn eslint*": allow
+    "yarn biome*": allow
+    "yarn prettier --check*": allow
+    "bunx --no-install eslint*": allow
+    "bunx --no-install biome*": allow
+    "bunx --no-install prettier --check*": allow
     "./node_modules/.bin/eslint*": allow
     "./node_modules/.bin/biome check*": allow
     "./node_modules/.bin/biome lint*": allow
+    "./node_modules/.bin/biome format*": allow
+    "./node_modules/.bin/biome ci*": allow
+    "./node_modules/.bin/prettier --check*": allow
     "node --check*": allow
     "bash -n*": allow
     "git status*": allow
@@ -113,6 +124,31 @@ permission:
     "dotnet run*": deny
     "dotnet add*": deny
     "dotnet restore --force*": deny
+    # Explicit mutating-flag denies for the broad biome/eslint/prettier allows above — runner-scoped forms are longer (more specific) than their allows, so most-specific-wins keeps check-only safe even if generic tail semantics change.
+    "./node_modules/.bin/biome* --write*": deny
+    "./node_modules/.bin/biome* --fix*": deny
+    "./node_modules/.bin/eslint* --fix*": deny
+    "./node_modules/.bin/prettier* --write*": deny
+    "npx --no-install biome* --write*": deny
+    "npx --no-install biome* --fix*": deny
+    "npx --no-install eslint* --fix*": deny
+    "npx --no-install prettier* --write*": deny
+    "pnpm exec biome* --write*": deny
+    "pnpm exec biome* --fix*": deny
+    "pnpm exec eslint* --fix*": deny
+    "pnpm exec prettier* --write*": deny
+    "yarn biome* --write*": deny
+    "yarn biome* --fix*": deny
+    "yarn eslint* --fix*": deny
+    "yarn prettier* --write*": deny
+    "bunx --no-install biome* --write*": deny
+    "bunx --no-install biome* --fix*": deny
+    "bunx --no-install eslint* --fix*": deny
+    "bunx --no-install prettier* --write*": deny
+    "*biome* --write*": deny
+    "*biome* --fix*": deny
+    "*eslint* --fix*": deny
+    "*prettier* --write*": deny
     "* --fix*": deny
     "* --write*": deny
   clickup: deny
@@ -138,8 +174,11 @@ families (`npm`/`pnpm`/`bun` `build`|`test`|`lint`|`typecheck`|`check`|`validate
 (bare `yarn check` is excluded — it can rewrite `yarn.lock`), the local
 `tsc --noEmit` form, `cargo test`|`cargo clippy`, `pytest`, `go test`,
  `make test`|`make lint`|`make check`, `dotnet test`|`dotnet build`|`dotnet format --verify-no-changes`|`dotnet vstest` (the `vstest` test-runner subcommand only — do not use `dotnet vstest` for build or other subcommands),
-direct `./node_modules/.bin/eslint` and `./node_modules/.bin/biome check|lint` (preferred — fully local, hermetic),
-`npx --no-install` `eslint`|`biome` (fetch-off: never downloads missing packages — fails instead of hanging on network) and `pnpm exec` `eslint`|`biome` (local workspace resolution only) forms), bounded Node and shell
+direct `./node_modules/.bin/eslint` and `./node_modules/.bin/biome check|lint|format|ci` plus
+`./node_modules/.bin/prettier --check` (preferred — fully local, hermetic),
+`npx --no-install` `eslint`|`biome` and `prettier --check` (fetch-off: never downloads missing packages — fails instead of hanging on network),
+`pnpm exec` `eslint`|`biome` and `prettier --check` (local workspace resolution only),
+`yarn eslint|biome` and `yarn prettier --check`, and `bunx --no-install` `eslint`|`biome` and `prettier --check` forms), bounded Node and shell
 syntax checks, read-only Git inspection, the reviewed SearXNG Compose
 configuration/build/up/inspection/exec/restart/cleanup lifecycle, the generic
 `-p opencode-verify-*` project-scoped Compose lifecycle, and the pinned
@@ -201,10 +240,22 @@ Follow these rules:
 - **Detect tooling.** Look for commands in `package.json` scripts, `AGENTS.md`,
   `README`, `Makefile`, `justfile`, `pyproject.toml`, `Cargo.toml`, or similar
   project config. Determine the idiomatic test/lint/typecheck commands for the
-  project.
-- **Run each applicable command.** Run the test, lint, and typecheck commands
+  project. For JS/TS lint/format, detect the target's own setup — do not assume
+  this config repo's tooling: `biome.json`/`biome.jsonc`, `eslint.config.js|mjs|cjs|ts`
+  or `.eslintrc*`, `.prettierrc*`/`prettier.config.*`/`package.json` `prettier` key,
+  and `package.json` scripts (`lint`, `format:check`, `check`). Prefer `biome check .`
+  (lint+format+organize-imports in one read-only pass); `biome lint .` (no `--write`/`--fix`),
+  `biome format .` (bare invocation without `--write` does not mutate — never pass `--write`),
+  and `biome ci .` are read-only equivalents. Use only
+  `prettier --check .`, never `--write`. Use plain `eslint .`, never `--fix`.
+  A lint/format `fail` is a `fail` verdict, same as a test failure.
+  Conflicting formatters fail verification: when both `biome.json`/`biome.jsonc`
+  with the formatter enabled and a `prettier` config are present in the target,
+  report `fail` with both file paths as evidence (exception: `biome.json`
+  `formatter.enabled: false` means Biome lint-only, so no conflict).
+- **Run each applicable command.** Run the test, lint, format-check, and typecheck commands
   that exist. Do not skip one just because another passed. Prefer the local
-  forms first (`./node_modules/.bin/*`, `pnpm exec`); use the `npx
+  forms first (`./node_modules/.bin/*`, `pnpm exec`, `yarn`, `bunx --no-install`); use the `npx
   --no-install` form only as a fallback when the local binary is absent, and
    record the tool version from the command's own output when it prints one;
    do not run a separate `--version` probe outside the allowlist. Run every

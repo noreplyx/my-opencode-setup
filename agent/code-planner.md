@@ -99,6 +99,16 @@ Produce a structured design document with these sections:
 - **Risks & mitigations** — edge cases, failure modes, migration concerns.
 - **Files to touch** — an ordered, high-level list of files/modules and what
   changes in each (no code).
+- **Lint/format surface** — which of `biome` (`biome.json`/`biome.jsonc`), `eslint`
+  (`eslint.config.*`/`.eslintrc*`), `prettier` (`.prettierrc*`/`prettier.config.*`/
+  `package.json` key) the target project uses, the declared scripts (`lint`,
+  `format:check`, `check`), and which check-only command the verifier will run
+  (`biome check|ci`, `biome lint`, `biome format` bare without `--write`,
+  `eslint` without `--fix`, `prettier --check` without `--write`). Never prescribe a new formatter
+  for the target. Only if such target-side tooling exists, emit one conditional
+  DoD item `FMT-01 lint/format clean via the named check-only command`
+  (evidence: command + exit 0); when no JS/TS lint/format tooling exists, emit
+  no `FMT-*` item and note the verifier `no-tooling` path instead.
 - **Acceptance checklist (DoD)** — a concrete, itemized Definition-of-Done
   checklist the planner owns and the verifier can check item-by-item. Give each
   criterion a stable ID. Each item must be phrased so it

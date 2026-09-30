@@ -991,7 +991,32 @@ test("coder permissions stay verify-only with allow-before-deny ordering", async
   for (const key of ["npm install*", "pnpm add*", "bun add*", "dotnet add*", "dotnet run*", "dotnet restore*", "dotnet format*", "npx *", "bunx *", "pnpm dlx*"]) {
     assert.ok(keys.indexOf(key) > lastAllowIndex, `coder: deny-tail key must come after every allow: ${key}`);
   }
-  assert.ok(!keys.some((k) => rules[k] === "allow" && /^(npm exec|npx |bunx |dotnet run|dotnet watch|dotnet exec)/.test(k)), "coder: no open exec allow");
+  assert.ok(!keys.some((k) => rules[k] === "allow" && /^(npm exec|dotnet run|dotnet watch|dotnet exec)/.test(k)), "coder: no open exec allow");
+  // Check-only lint/format exec allows are the deliberate exception to the
+  // no-exec rule: npx/bunx are fetch-off (--no-install) scoped, pnpm exec is
+  // workspace-local, and every entry is lint/format check-only (prettier is
+  // --check scoped; --fix/--write stay denied by the explicit + generic tail).
+  // Anything broader than these pinned forms is still forbidden, and no allow
+  // key may itself carry a mutating flag.
+  const CHECK_ONLY_EXEC_RE = /^(npx --no-install (eslint|biome|prettier --check)|bunx --no-install (eslint|biome|prettier --check)|pnpm exec (eslint|biome|prettier --check)|yarn (eslint|biome|prettier --check)|\.\/node_modules\/\.bin\/(eslint|biome (check|lint|format|ci)|prettier --check))/;
+  for (const k of keys) {
+    if (rules[k] !== "allow") continue;
+    if (/^(npx |bunx |pnpm exec|yarn (eslint|biome|prettier))/.test(k)) {
+      assert.match(k, CHECK_ONLY_EXEC_RE, `coder: exec allow broader than check-only lint/format: ${k}`);
+      assert.ok(!k.includes("--fix"), `coder: exec allow must not carry --fix: ${k}`);
+      assert.ok(!k.includes("--write") || k.includes("--check"), `coder: exec allow must not carry --write: ${k}`);
+    }
+  }
+  // Explicit mutating-flag denies must exist and sit after every allow.
+  // Runner-scoped denies are longer (more specific) than the broad allows so
+  // most-specific-wins resolves mutating invocations to deny.
+  for (const deny of ["./node_modules/.bin/biome* --write*", "./node_modules/.bin/eslint* --fix*", "npx --no-install biome* --write*", "npx --no-install eslint* --fix*", "pnpm exec biome* --write*", "yarn biome* --write*", "yarn eslint* --fix*", "bunx --no-install biome* --write*", "*biome* --write*", "*biome* --fix*", "*eslint* --fix*", "*prettier* --write*", "* --fix*", "* --write*"]) {
+    assert.equal(rules[deny], "deny", `coder: missing deny ${deny}`);
+    assert.ok(keys.indexOf(deny) > lastAllowIndex, `coder: ${deny} must come after every allow`);
+  }
+  // Yarn parity with verifier.
+  assert.equal(rules["yarn build*"], "allow", "coder: missing yarn build parity");
+  assert.equal(rules["yarn lint*"], "allow", "coder: missing yarn lint parity");
   assert.equal(rules["dotnet restore*"], "deny", "coder: unrestricted dotnet restore must be denied (frozen --locked-mode only)");
   assert.equal(rules["dotnet format --verify-no-changes*"], "allow", "coder: dotnet format verify-only");
   assert.equal(rules["dotnet format*"], "deny", "coder: unrestricted dotnet format must be denied (verify-only --verify-no-changes only)");

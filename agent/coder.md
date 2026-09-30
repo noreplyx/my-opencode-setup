@@ -38,6 +38,34 @@ permission:
     "dotnet restore --locked-mode*": allow
     "dotnet format --verify-no-changes*": allow
     "dotnet --version*": allow
+    "yarn test*": allow
+    "yarn build*": allow
+    "yarn lint*": allow
+    "yarn run test*": allow
+    "yarn run build*": allow
+    "yarn run lint*": allow
+    "yarn run typecheck*": allow
+    "yarn run check*": allow
+    "yarn run validate*": allow
+    "yarn eslint*": allow
+    "yarn biome*": allow
+    "yarn prettier --check*": allow
+    "./node_modules/.bin/eslint*": allow
+    "./node_modules/.bin/biome check*": allow
+    "./node_modules/.bin/biome lint*": allow
+    "./node_modules/.bin/biome format*": allow
+    "./node_modules/.bin/biome ci*": allow
+    "./node_modules/.bin/prettier --check*": allow
+    "npx --no-install eslint*": allow
+    "npx --no-install biome*": allow
+    "npx --no-install prettier --check*": allow
+    "pnpm exec eslint*": allow
+    "pnpm exec biome*": allow
+    "pnpm exec prettier --check*": allow
+    "bunx --no-install eslint*": allow
+    "bunx --no-install biome*": allow
+    "bunx --no-install prettier --check*": allow
+    # Precedence: most-specific-wins — the "npx --no-install ..."/"bunx --no-install ..." allows above beat the broad "npx *"/"bunx *" denies below; check-only lint/format allows likewise stay subordinate to the explicit "*biome/*eslint/*prettier --fix/--write" denies and the generic "* --fix"/"* --write" deny tail.
     "node --check*": allow
     "bash -n*": allow
     "git push*": deny
@@ -154,6 +182,43 @@ permission:
     "dotnet run*": deny
     "dotnet watch*": deny
     "dotnet exec*": deny
+    # Explicit mutating-flag denies for the broad biome/eslint/prettier allows above — runner-scoped forms are longer (more specific) than their allows, so most-specific-wins keeps check-only safe even if generic tail semantics change.
+    "./node_modules/.bin/biome* --write*": deny
+    "./node_modules/.bin/biome* --fix*": deny
+    "./node_modules/.bin/eslint* --fix*": deny
+    "./node_modules/.bin/prettier* --write*": deny
+    "npx --no-install biome* --write*": deny
+    "npx --no-install biome* --fix*": deny
+    "npx --no-install eslint* --fix*": deny
+    "npx --no-install prettier* --write*": deny
+    "pnpm exec biome* --write*": deny
+    "pnpm exec biome* --fix*": deny
+    "pnpm exec eslint* --fix*": deny
+    "pnpm exec prettier* --write*": deny
+    "yarn biome* --write*": deny
+    "yarn biome* --fix*": deny
+    "yarn eslint* --fix*": deny
+    "yarn prettier* --write*": deny
+    "bunx --no-install biome* --write*": deny
+    "bunx --no-install biome* --fix*": deny
+    "bunx --no-install eslint* --fix*": deny
+    "bunx --no-install prettier* --write*": deny
+    "*biome* --write*": deny
+    "*biome* --fix*": deny
+    "*eslint* --fix*": deny
+    "*prettier* --write*": deny
+    "npm * --fix*": deny
+    "pnpm * --fix*": deny
+    "yarn * --fix*": deny
+    "bun * --fix*": deny
+    "npx * --fix*": deny
+    "npm * --write*": deny
+    "pnpm * --write*": deny
+    "yarn * --write*": deny
+    "bun * --write*": deny
+    "npx * --write*": deny
+    "* --fix*": deny
+    "* --write*": deny
 ---
 
 You are a focused coding subagent. You implement changes precisely and
@@ -170,7 +235,14 @@ Completion criteria, and Risks/ambiguities.
 - Read the relevant files and surrounding context before editing.
 - **Follow the project's conventions**: match the existing code style,
   structure, naming, and patterns. Check for AGENTS.md, README, or config files
-  that document project-specific rules, and honor them.
+  that document project-specific rules, and honor them. For JS/TS targets, honor
+  the target's own `biome.json(c)`, `eslint.config.*`/`.eslintrc*`, and
+  `.prettierrc*`/`prettier.config.*` — never introduce a competing formatter, and
+  run only check-only invocations (`eslint`, `biome check|lint|format|ci` without
+  `--write`, `prettier --check`); apply fixes with `edit`, never `--fix`/`--write`.
+  If both Biome (formatter enabled) and Prettier configs are present in the target,
+  do not pick silently: implement to one per the approved design, report the
+  conflicting formatters as an ambiguity in the handoff, and consolidate via `edit`.
 - Reuse existing libraries and utilities already in the project.
 - Do not add comments unless asked.
 - Keep changes minimal and scoped to the task.
@@ -215,7 +287,7 @@ Write code following best practices:
 
 **Guardrails.** Your `bash` permission is deny-by-default (`"*": deny`
 first); the narrow allows below are verify-only (test/build/lint/typecheck,
-frozen-lockfile restore, `node --check`, `bash -n`). Overlapping allow/deny
+check-only `eslint`/`biome`/`prettier --check`, frozen-lockfile restore, `node --check`, `bash -n`). Lint/format allows are check-only and stay subordinate to the explicit `*biome/*eslint/*prettier --fix/--write` denies and the generic `* --fix`/`* --write` deny tail. Overlapping allow/deny
 pairs resolve most-specific-wins with the deny tail listed after every allow.
 Destructive VCS writes (`git push`/`commit`/`reset`/… and friends), file
 destruction (`rm`/`mv`/… and friends), privilege escalation, direct

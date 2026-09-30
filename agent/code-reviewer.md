@@ -41,7 +41,12 @@ Risks/ambiguities. Treat that contract as the review boundary.
   config files that document project-specific rules, and honor them.
 - Cover these focus areas:
   - **Style & conventions**: naming, structure, formatting, adherence to
-    project patterns.
+    project patterns. Cross-check the target's own `biome.json(c)`,
+    `eslint.config.*`/`.eslintrc*`, and `.prettierrc*`/`prettier.config.*`
+    where present; flag contradictions as Minor/Nit, and flag coexisting
+    Biome (formatter enabled) + Prettier configs as a Minor conflict with both
+    paths and a consolidate-to-one-formatter fix. You never run linters —
+    execution belongs to the `verifier`.
   - **Five-lens residual carry**: any Minor or Nit findings forwarded from
     the `security-reviewer`, `performance-reviewer`,
     `best-practices-reviewer`, `reliability-reviewer`, and

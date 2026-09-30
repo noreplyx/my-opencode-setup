@@ -889,11 +889,17 @@ brainstormer) and re-plan until approved.
 approved design document. Give it the full context from Stages 1–2 (or 1–3
 when Stage 3 ran), the canonical contract, and the planner's acceptance
 criteria verbatim. Require a criterion-to-change/evidence mapping in its
-structured implementation handoff.
+structured implementation handoff. The coder respects the target's own
+lint/format setup (`biome.json(c)`, `eslint.config.*`/`.eslintrc*`,
+`.prettierrc*`/`prettier.config.*`) and runs only check-only invocations —
+never `--fix`/`--write`, never a newly introduced formatter.
 
 **Stage 4.5 — verify (hard gate, independent).** After the coder implements,
-delegate to the `verifier` subagent to run the project's test/lint/typecheck
-commands and return a verdict. Pass the planner's **Acceptance checklist (DoD)**
+delegate to the `verifier` subagent to run the project's test/lint/format-check/typecheck
+commands — lint via `eslint` (no `--fix`) / `biome check|lint|ci|format` (bare, no `--write`), format-check via `biome check|ci` /
+`prettier --check` (never `--write`) — and return a verdict. A lint or format-check `fail` is a
+`fail` verdict, same as a test failure. Conflicting Biome (formatter enabled) + Prettier configs
+are a `fail` that remands to the `coder` for consolidation via `edit`. Pass the planner's **Acceptance checklist (DoD)**
 verbatim on every call, along with the canonical contract and coder handoff, so
 the verifier can check it item-by-item. **Do not rely
 on the coder's self-report.** **Do not proceed to review until verification
