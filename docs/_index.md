@@ -37,3 +37,9 @@ TABLE status, date FROM #plan SORT date DESC
 
 - Browse `daily/` for day hubs, or `YYYY-MM-DD/` folders directly.
 - Tags `#plan` `#decision` `#adr` work in core search/graph without plugins.
+
+## New monthly layout (additive, legacy above untouched)
+
+- Vault home: `[[Home]]` — L1 plain links to the current month hub + canvas.
+- Current month: `[[2026-09/2026-09-hub|September 2026 hub]]`, `[[2026-09/canvas/2026-09-Overview.canvas|overview canvas]]`.
+- Templates: `Templates/plan-template.md`, `Templates/decision-template.md`, `Templates/adr-template-nygard.md`, `Templates/monthly-overview-template.md`.

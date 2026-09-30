@@ -293,7 +293,12 @@ Readability mirror (non-normative):
    dependency-hygiene follow-ups pending user-approved remediation
    (`npm`/`bun` lockfile refresh regenerating `package-lock.json` + `bun.lock`;
    no `overrides` escalation — see the `npm test` guard asserting
-   `package.json` carries no `overrides`).
+    `package.json` carries no `overrides`).
+    Deferral reason: the upgrade itself is a lockfile refresh (`toml@^4.2.0`,
+    `js-yaml>=5.2.2` in `bun.lock`) requiring network package installs, which
+    the implementation pipeline denies by policy and which would touch
+    lockfiles outside this docs-only change; the findings stay open as
+    explicitly justified dependency-hygiene follow-ups, not silent accepts.
 - The SearXNG service is intentionally published only on `127.0.0.1:8080`, and
   its host configuration mount is read-only. Keep populated `mcp/searxng/.env`
   files mode `0600`; security validation rejects weaker modes.

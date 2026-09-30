@@ -143,7 +143,8 @@ test("orchestrator task allowlist exactly covers the supported delegation paths"
   assert.equal(task["*"], "deny", "agent/code-orchestrator.md: task must be deny-by-default");
   assert.deepEqual(
     Object.keys(task).filter((key) => task[key] === "allow").sort(),
-    [...SUPPORTED_DELEGATION_PATHS].sort(),
+    // doc-writer is docs-flow only and intentionally extra vs SUPPORTED_DELEGATION_PATHS (see doc-writer-delegation.test.mjs:125).
+    [...SUPPORTED_DELEGATION_PATHS, "doc-writer"].sort(),
     "every supported delegation path must be allowed and nothing else",
   );
 });

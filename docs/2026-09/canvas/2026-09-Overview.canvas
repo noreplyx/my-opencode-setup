@@ -1,0 +1,18 @@
+{
+	"edges":[
+		{"id":"e1","fromNode":"hub","fromSide":"bottom","toNode":"plan","toSide":"top"},
+		{"id":"e2","fromNode":"hub","fromSide":"bottom","toNode":"decision","toSide":"top"},
+		{"id":"e3","fromNode":"hub","fromSide":"bottom","toNode":"adr","toSide":"top"},
+		{"id":"e4","fromNode":"plan","fromSide":"right","toNode":"svg","toSide":"left"},
+		{"id":"e5","fromNode":"hub","fromSide":"bottom","toNode":"adr3","toSide":"top"}
+	],
+	"nodes":[
+		{"file":"2026-09/2026-09-hub.md","id":"hub","type":"file","x":320,"y":0,"width":280,"height":120},
+		{"file":"2026-09/2026-09-29-monthly-vault-plan.md","id":"plan","type":"file","x":0,"y":280,"width":280,"height":160},
+		{"file":"2026-09/2026-09-29-monthly-vault-decision.md","id":"decision","type":"file","x":320,"y":280,"width":280,"height":160},
+		{"file":"2026-09/2026-09-29-monthly-vault-adr-002.md","id":"adr","type":"file","x":640,"y":280,"width":280,"height":160},
+		{"file":"2026-09/2026-09-30-monthly-vault-adr-003.md","id":"adr3","type":"file","x":640,"y":480,"width":280,"height":160},
+		{"file":"2026-09/assets/monthly-pipeline.svg","id":"svg","type":"file","x":640,"y":40,"width":280,"height":96},
+		{"id":"label","text":"September 2026 — monthly bucket overview. Text fallback: hub links plan, decision, ADR-002, ADR-003; plan embeds the SVG sidecar.","type":"text","x":0,"y":40,"width":280,"height":80}
+	]
+}
