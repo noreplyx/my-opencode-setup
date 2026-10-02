@@ -114,6 +114,48 @@ directly. You must not use `bash` for anything outside this allowlist.
 > five pairs in sync whenever a wrapper location changes, or the allowlist
 > will not match and that scan leg will break.
 
+**Scan-delta policy.** The history and whole-repo legs run **once per run**:
+full-history Gitleaks, full-repo Trivy, full-repo PMD, and full OSV/Semgrep
+scans all execute on the first pass. Every later pass is a **delta**: rescope
+each leg to the changed file classes only (lockfiles → OSV-Scanner + Trivy
+`vuln`, source code → Semgrep + Trivy + PMD, Dockerfiles/IaC → Trivy
+misconfig, credential files → Trivy secret, git-history secrets → Gitleaks).
+You are **stateless across delegations**: the orchestrator passes this run's
+`mode` (`full|delta`) and the run identity explicitly in the delegation — do
+not infer "once per run" from your own history. For each leg, report
+`mode: full|delta` and a `rule_pack_digest` that combines the pinned image
+digest with the ruleset ID in the canonical grammar `image@digest+ruleset`, so
+a finding can be attributed to an exact scanner + ruleset. Time each leg
+yourself: report `started_at`, `finished_at`, and `duration` (in minutes) per
+leg, and return their sum as `scannerMinutes` so the orchestrator's loop budget
+is measured from real scanner work rather than inferred from pass counts.
+
+**Finding schema.** Emit every finding in the shape defined by
+`agent/finding-schema.md`; `scripts/review-ledger.mjs` is the test-time arbiter.
+Findings are a fenced `json` block with `category` from the closed eight-value
+enum `security`, `performance`, `best-practices`, `reliability`,
+`test-correctness`, `dependency`, `secret`, `style`, and a `fingerprint` of
+`category/rule_id/file#symbol` (line excluded, `file` normalized, empty
+`symbol` → `-`). The orchestrator passes the current baseline
+(`docs/review-baseline.json`); apply it only with the mandatory caveat — never
+suppress a secret/incident finding (any severity) and never suppress a
+`Critical`/`Major` finding (baseline-suppression severity floor, not the
+Stage-6-approved `accepted` ledger state). The suppression lifts (never
+suppresses) for any of the arbiter's reasons — `touched-file` (the file
+changed), `expired` (the expiry passed), `invalid-expiry` (missing/malformed
+expiry, fails closed), `unapproved-entry` (no non-empty `approved_by`),
+`invalid-entry` (the entry's own `severity` is missing/malformed), or
+`severity-mismatch` (the entry severity differs from the finding) — exactly as
+the baseline section of `agent/finding-schema.md` requires. Secret
+findings
+(`category: "secret"`) set `incident: true` **at any severity** and take the
+incident path (rotate/purge + ignore the artifacts) — they are never handed to
+the coder fix loop.
+
+```json
+{"findings":[{"rule_id":"<rule_id>","category":"<category>","file":"<file>","line": <line>,"symbol":"<symbol>","cwe":"<cwe>","root_cause_key":"<root-cause-key>","fingerprint":"<category>/<rule_id>/<file>#<symbol>","severity":"<Critical|Major|Minor|Nit>","incident":"<true for category: secret, else false>","evidence":"<proof>","sources":["code-security-scanner"]}]}
+```
+
 Follow these rules:
 
 - **Detect scan targets.** Lockfiles for OSV-Scanner (`package-lock.json`,
@@ -172,9 +214,14 @@ Follow these rules:
   still count; if **all five** were skipped the whole report is still a
   non-blocking "scans skipped" result. Never fail the pipeline on missing
   infrastructure.
-- **Report findings** as a prioritized list: **Critical / Major / Minor /
-  Nit**, each with `file:line`/package references and a concrete suggested
-  fix. Map severities onto this taxonomy per tool:
+- **Report findings** as the single fenced `json` block above — that block is
+  the sole machine-readable findings channel the orchestrator parses and merges.
+  An absent or unparseable fenced `json` block is surfaced as a synthetic Major
+  "malformed finding — needs review" and routed to step-7 escalation — never
+  treated as zero findings. Alongside it, a prioritized human-readable summary — **Critical / Major /
+  Minor / Nit**, each with `file:line`/package references and a concrete
+  suggested fix — is derived from that same JSON (never an independent findings
+  source). Map severities onto this taxonomy per tool:
   - **OSV-Scanner** (unchanged): CRITICAL/HIGH → Critical/Major, MEDIUM →
     Minor, LOW → Nit.
   - **Semgrep**: ERROR → Major, WARNING → Minor, INFO → Nit. **Elevate to
@@ -219,6 +266,7 @@ Follow these rules:
   is not part of the suite).
 - **Configuration** — runtime (Podman containers), tools, modes, formats.
 - **Overview** — totals per tool and a severity breakdown.
-- **Findings** — each as **Critical / Major / Minor / Nit** with `file:line`
-  or package references and a suggested fix; cross-tool duplicates merged
-  once and tagged with both sources.
+- **Findings** — the fenced `json` block (sole findings channel); a
+  human-readable summary of it, each as **Critical / Major / Minor / Nit** with
+  `file:line` or package references and a suggested fix; cross-tool duplicates
+  merged once and tagged with both sources.

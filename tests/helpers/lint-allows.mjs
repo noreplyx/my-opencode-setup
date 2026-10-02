@@ -74,12 +74,28 @@ export const MUST_DENY_PAYLOADS = [
 ];
 
 // Returns true if a glob-pattern `pat` (with `*` wildcards) matches `cmd`.
-// Minimal matcher mirroring opencode's prefix-glob semantics for tests.
-export function globMatches(pat, cmd) {
-  const rx = new RegExp(
+// This helper MODELS the engine's prefix-glob semantics for tests; it is not
+// the engine. The load-bearing property asserted with it is "no allow pattern
+// matches a `-w` form" (P1) — a true return here must never be read as proof
+// that an invocation is safe beyond what that assertion checks. Minimal
+// matcher mirroring opencode's prefix-glob semantics for tests. The
+// command is split on the bare `--` argument separator and each part is tested
+// against the full-string anchored pattern, so a grant cannot be smuggled past
+// the separator (the `--stdin`/`--write` long flags are untouched; only the
+// standalone separator token splits). Testing the whole command as well keeps
+// the matcher faithful for patterns that legitimately span the separator.
+function anchoredRegex(pat) {
+  return new RegExp(
     "^" + pat.split("*").map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$",
   );
-  return rx.test(cmd);
+}
+
+export function globMatches(pat, cmd) {
+  const rx = anchoredRegex(pat);
+  const text = String(cmd);
+  if (rx.test(text)) return true;
+  const parts = text.split(/(?:^|\s)--(?=\s|$)/).map((part) => part.trim()).filter(Boolean);
+  return parts.length > 1 && parts.some((part) => rx.test(part));
 }
 
 // Specificity heuristic: longer non-wildcard prefix wins; ties broken by

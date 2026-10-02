@@ -30,6 +30,48 @@ Existing task inputs remain valid: when a caller supplies unstructured input,
 the orchestrator preserves it under **Inputs** and derives the remaining
 fields before delegating.
 
+## Finding schema, ledger, and baseline
+
+Review-stage findings carry the eight required fields defined by
+`agent/finding-schema.md` (`rule_id`, `category`, `file`, `line`, `symbol`,
+`cwe`, `root_cause_key`, `fingerprint`); `scripts/review-ledger.mjs` is the
+test-time arbiter. `category` is the closed eight-value enum, and the merge key
+is `fingerprint` = `category/rule_id/file#symbol` (line excluded, `file`
+normalized, empty `symbol` → `-`). Severity is normalized (no evidence →
+`Nit`) before duplicates collapse at maximum severity, except secret/incident
+findings, which are never downgraded. `normalizeFindings` returns
+`{ valid, invalid }`; a schema-invalid finding is never silently dropped — it
+is surfaced as a synthetic Major "malformed finding — needs review" and routed
+to escalation. The per-run ledger
+tracks `open`/`fixed`/`regressed`/`recurring`/`accepted` states; the only
+durable artifact is `docs/review-baseline.json`, shaped
+`{ "version": 1, "entries": {} }`. The ledger is baseline-only: it is not
+persisted, and its `accepted` entries are supplied by the orchestrator from the
+durable baseline, not authored per run. Each baseline entry requires an
+**approver** (the Stage 6 sign-off) and a mandatory **expiry**; an exact
+fingerprint match suppresses the finding. The baseline suppression lifts — never
+suppresses — for any of these reasons, named verbatim by `baselineMatch`:
+`touched-file` (the file changed), `expired` (the expiry passed),
+`invalid-expiry` (missing/malformed expiry, fails closed), `unapproved-entry`
+(no non-empty `approved_by`), `invalid-entry` (the entry's own `severity` is
+missing/malformed), or `severity-mismatch` (the entry severity differs from the
+finding). The severity floor is a
+baseline-suppression rule only: a `Critical`/`Major` finding is never suppressed
+by a baseline entry, and neither is a secret/incident finding, and a
+missing/malformed expiry fails closed rather than suppressing forever. The floor
+does not affect the Stage-6-approved `accepted` ledger state: an `accepted` entry
+is preserved by the ledger and excluded from open counts; it is not baseline
+suppression and is not touched by the floor. `pruneBaseline(baseline.entries, now)` drops
+only genuinely expired entries, retains invalid-expiry/non-object entries for
+repair, and returns the full `{version, entries, warnings}` document so the
+durable wrapper survives write-back. A secret finding (`category: secret`,
+`incident: true`, any severity — Critical in practice) follows the incident path
+(rotate/purge + ignore artifacts) and is never routed to the coder loop. A
+`not-verifiable` item is classified by
+cause and mapped to one route: `no-tooling` → add-tooling to the `coder`,
+`external` → user sign-off, `manual` → user sign-off, `ambiguous` → redefine with the
+`code-planner`.
+
 ## Deferred roadmap and non-goals
 
 This contract governs prompt-level handoffs and recorded validation only. The

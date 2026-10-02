@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { validateSecurityConfiguration, checkScanWrapper, listScanWrappers, LOOPBACK_PUBLISH, collidesWithSearxngConfigMount, volumeMountIsReadOnly, volumeMountTarget, extractServerBlock, extractWrapperPin, SETTINGS_PORT_RE, SETTINGS_BIND_RE, SETTINGS_8888_RE, SECRET_INTERPOLATION_RE, SCAN_TOOL_KEYS, LIVE_E2E_LEGS, STANDALONE_WRAPPER_KEYS } from "../scripts/validate-security-config.mjs";
 import { validateMssqlTlsConnectionString } from "../tools/mssql-tls.mjs";
+import { globMatches, winningRule } from "./helpers/lint-allows.mjs";
 
 const require = createRequire(import.meta.url);
 const yaml = require("js-yaml");
@@ -890,6 +891,61 @@ test("checkScanWrapper is fail-closed on synthetic wrappers and passes every rea
     assert.deepEqual(checkScanWrapper(rel, await readFile(path.join(root, rel), "utf8")), [], `${rel}: must pass`);
   }
   assert.deepEqual(await listScanWrappers(mkdtempSync(path.join(tmpdir(), "no-skills-here-"))), []);
+});
+
+// H3: `git hash-object --stdin*` allowed the write-capable `-w` form because
+// the allow literal prefix outscored the `*-w*` deny. The allow is now pinned
+// to the exact read-only invocation and a strict-superset `git hash-object*`
+// deny wins for every invocation, proven with the repo's own precedence helper.
+test("verifier git hash-object allow is read-only and the broad deny wins under precedence", async () => {
+  const verifier = await readFile(path.join(root, "agent/verifier.md"), "utf8");
+  const { rules } = parseBashRules(verifier, "verifier");
+  const keys = Object.keys(rules);
+  assert.equal(rules["git hash-object*"], "deny", "verifier: broad git hash-object deny must exist");
+  for (const allow of ["git hash-object --stdin", "git hash-object --stdin --no-filters"]) {
+    assert.equal(rules[allow], "allow", `verifier: read-only hash-object allow missing ${allow}`);
+  }
+  const lastAllowIndex = Math.max(...keys.map((key, i) => (rules[key] === "allow" ? i : -1)));
+  assert.ok(
+    keys.indexOf("git hash-object*") > lastAllowIndex,
+    "verifier: the broad hash-object deny must come after every allow (deny tail)",
+  );
+  const resolve = (cmd) => winningRule(cmd, keys, rules);
+  assert.equal(resolve("git hash-object --stdin").verdict, "allow", "the exact read-only form must resolve to allow");
+  assert.equal(resolve("git hash-object --stdin --no-filters").verdict, "allow", "the no-filters read-only form must resolve to allow");
+  for (const cmd of ["git hash-object --stdin -w", "git hash-object -w", "git hash-object --stdin -w --no-filters"]) {
+    const win = resolve(cmd);
+    assert.ok(win, `no rule matches ${cmd}`);
+    assert.equal(win.verdict, "deny", `write-capable hash-object must resolve to deny: ${cmd} (won by ${win.key})`);
+  }
+  // The deny pattern also matches the pinned read-only allows, but that
+  // superset is not what makes the write forms safe: safety rests on no ALLOW
+  // pattern matching any `-w` form, with the deny tail ordered last as the
+  // tie-break for the read-only allows it also matches.
+  for (const allow of ["git hash-object --stdin", "git hash-object --stdin --no-filters"]) {
+    assert.ok(globMatches("git hash-object*", allow), `deny pattern must also match allow ${allow}`);
+  }
+  // P1: the property that actually makes the write forms safe is stronger than
+  // the deny-tail ordering — no ALLOW pattern may match any `-w` invocation.
+  // Assert it directly (and with the `--` argument separator) so the helper and
+  // the surface cannot drift into a false green.
+  const hashObjectAllows = keys.filter((key) => rules[key] === "allow" && key.startsWith("git hash-object"));
+  assert.ok(hashObjectAllows.length >= 2, "verifier: expected the read-only hash-object allows to exist");
+  for (const cmd of ["git hash-object --stdin -w", "git hash-object -w", "git hash-object --stdin -w --no-filters"]) {
+    for (const allow of hashObjectAllows) {
+      assert.ok(
+        !globMatches(allow, cmd),
+        `no allow pattern may match the write-capable form: ${allow} matched ${cmd}`,
+      );
+    }
+  }
+  // The `--` separator is modeled: a separator cannot turn a write into a match,
+  // and the read-only invocation still resolves to allow.
+  assert.ok(!globMatches("git hash-object --stdin", "git hash-object -- --stdin -w"), "the -- separator must not grant a write form");
+  // Q6: exercise the positive side of the separator branch — a pattern pinning
+  // the read-only prefix still matches when a later `--` segment follows.
+  assert.equal(globMatches("git hash-object --stdin", "git hash-object --stdin -- foo"), true, "the -- separator branch must match the read-only prefix");
+  assert.equal(resolve("git hash-object --stdin").verdict, "allow", "the read-only form still resolves to allow with separator modeling");
 });
 
 test("MSSQL TLS validation rejects explicit Encrypt=false", () => {

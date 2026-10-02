@@ -78,6 +78,8 @@ permission:
     "git branch --show-current*": allow
     "git rev-parse*": allow
     "git for-each-ref*": allow
+    "git hash-object --stdin": allow
+    "git hash-object --stdin --no-filters": allow
     "podman-compose -p searxng-verification-* -f mcp/searxng/docker-compose.yml config": allow
     "podman-compose -p searxng-verification-* -f mcp/searxng/docker-compose.yml build core": allow
     "podman-compose -p searxng-verification-* -f mcp/searxng/docker-compose.yml up -d": allow
@@ -111,6 +113,7 @@ permission:
     "git diff --ext-diff*": deny
     "git show --ext-diff*": deny
     "git difftool*": deny
+    "git hash-object*": deny
     "npm * --fix*": deny
     "pnpm * --fix*": deny
     "yarn * --fix*": deny
@@ -206,6 +209,47 @@ evidence is `not-verifiable`, not `pass`.
 The contract fields are Goal, Scope, Constraints, Inputs, Expected output,
 Completion criteria, and Risks/ambiguities.
 
+**Review freeze and ordering.** On a Stage 4.5/5 cycle, return
+`reviewed_sha` = a content digest of the artifact under review — a digest of
+`git status --porcelain -uall` plus `git diff HEAD` plus every untracked file's
+content, in that exact order, each section separated by a single `\n` (e.g. the
+read-only `git hash-object --stdin` or `git hash-object --stdin --no-filters`
+form over that concatenated payload; never the write-capable `-w` form, which
+the read-only allow/deny surface excludes) — in your verdict so
+the orchestrator can freeze the diff for every parallel reviewer and scanner;
+record `git rev-parse HEAD` alongside it as auxiliary, and also return the
+**frozen raw payload** — the exact `git status --porcelain -uall` listing plus
+the `git diff HEAD` output plus every untracked file's content behind the digest,
+in the same order — so the orchestrator can pass it to
+the reviewers, who byte-compare their current `git status --porcelain -uall` +
+`git diff HEAD` + untracked-file content against it (they have no hashing tool,
+so the value they compare is the payload itself). `--porcelain` without `-uall`
+collapses a new directory to one path and carries no untracked-file content, and
+Stage 5 artifacts are untracked, so `-uall` plus each `??` path's content is
+required. A bare `rev-parse HEAD` is constant while Stage 5 edits are
+uncommitted, so the content digest is the freeze value and the reviewers confirm
+that by comparing the byte output of `git status --porcelain -uall` plus
+`git diff HEAD` plus every untracked file's content against the frozen raw
+payload. The authoritative freeze check is the raw-payload byte-compare; the
+numeric digest is an auxiliary convenience computed from those exact same bytes,
+and if the read-only hash form is not invocable as a single allowed command you
+return the frozen raw payload alone and the payload byte-compare is the freeze.
+`git hash-object` is SHA-1-based:
+the
+freeze resists accidental drift, not a cryptographic adversary. Order the cheap legs
+first — test, then lint, then format-check, then typecheck — so a cheap failure
+short-circuits before any expensive scanner or container work. On a
+re-verification after a fix, scope to the touched-category lenses for an
+ordinary fix and to all lenses plus the scanner for a large or
+security-sensitive diff.
+
+**Not-verifiable classification.** For every `not-verifiable` checklist item,
+classify its cause and name its single route: `no-tooling` → add-tooling to the
+`coder`; `external` and `manual` → user sign-off; `ambiguous` → redefine with
+the `code-planner`. Do not invent a route outside this set. Where tooling
+exists, add a coverage-delta or mutation check on the changed lines and report
+it as evidence.
+
 **Mutation policy.** You may run read/execute commands that may produce
 ephemeral build/test artifacts (build output, coverage, `.tsbuildinfo`,
 caches) — this is acceptable. You must not alter persistent state: no editing
@@ -292,7 +336,10 @@ Follow these rules:
   back to the coder by the orchestrator.
 
 **Structured verification handoff.** Return: Contract confirmation; Verdict;
-Per-criterion result (stable ID, pass/fail/not-verifiable, evidence, and
-reason); Commands run with exit status and relevant output; Limitations; and
-Recommended remediation. Never report completion-ready when evidence is
-missing.
+`reviewed_sha` (content digest; `git rev-parse HEAD` auxiliary; frozen raw
+payload = `git status --porcelain -uall` + `git diff HEAD` + every untracked
+file's content); Per-criterion result (stable ID,
+pass/fail/not-verifiable, evidence, and reason); for every `not-verifiable`
+item its classified cause and single route; Commands run with exit status and
+relevant output; Limitations; and Recommended remediation. Never report
+completion-ready when evidence is missing.

@@ -919,6 +919,32 @@ treating it as satisfied, and do not advance past this stage on a
 required evidence is missing: only a `pass` with evidence for every criterion
 can complete the workflow. `no-tooling` is not completion-ready when mandatory
 criteria lack evidence.
+On the first Stage 4.5 call of a review cycle, capture and **freeze**
+`reviewed_sha` = content digest of `git status --porcelain -uall` plus `git diff HEAD`
+plus every untracked file's content (e.g. the read-only `git hash-object --stdin`
+(or `--stdin --no-filters`) form over the concatenated payload — both read-only
+forms are allowed, never the write-capable `-w` form) and
+record it with the auxiliary `git rev-parse HEAD` in the loop status; every
+later verifier, scanner, and reviewer delegation in that cycle carries the same
+`reviewed_sha`. The verifier also returns the **frozen raw payload** — the exact
+`git status --porcelain -uall` output plus the `git diff HEAD` output plus every
+untracked file's content behind the digest — and the orchestrator passes that
+payload to the reviewers, who byte-compare their current
+`git status --porcelain -uall` + `git diff HEAD` + untracked-file content against
+it (the reviewers have no hashing tool, so the value they compare is the payload,
+not a recipe). A bare `git rev-parse HEAD` is vacuous while Stage 5 edits are
+uncommitted, so the content digest is the freeze value and `HEAD` is kept as
+auxiliary. `--porcelain` without `-uall` collapses a brand-new directory to a
+single path and carries no file content, and Stage 5's own artifacts are
+untracked, so `-uall` plus each `??` path's content is required — otherwise a
+post-freeze edit to an untracked artifact would be invisible. If the working tree
+moves mid-cycle, the reviewers must confirm the diff under review still matches
+the frozen payload and report a mismatch instead of reviewing a moving target. Seed the run ledger's `accepted`
+entries from `docs/review-baseline.json` at the start of the cycle (the ledger is
+per-run and in-context; only the baseline is durable), so an accepted risk is
+tracked as `accepted` rather than re-opened as a new finding. Order cheap legs first: run the
+`verifier`'s test/lint/typecheck gates before the expensive container scanner
+suite so a cheap failure stops the pass before scanner minutes are spent.
 
 **Stage 5 — iterate until clean.** This is the core loop. It runs in **outer
 loop passes** (each pass = one full review round) and **inner fix+verify
@@ -940,8 +966,29 @@ scanner runs **once per outer-loop pass**, not per fix round.
     as a Major finding that must be fixed before any commit. Merge its
     findings with the static `security-reviewer`, `performance-reviewer`,
     `best-practices-reviewer`, `reliability-reviewer`, and
-    `test-correctness-reviewer` findings from step 2 into a single combined
-    finding set.
+   `test-correctness-reviewer` findings from step 2 into a single combined
+   finding set. Pass the scanner the frozen `reviewed_sha` and require its
+   per-leg output to carry `mode: full|delta` plus the `rule_pack_digest` (image
+   digest + ruleset ID); the first pass runs full-history Gitleaks and full-repo
+   Trivy/PMD/OSV/Semgrep scans once per run, and later passes scope rescans to
+   the changed file classes only. The scanner is **stateless across
+   delegations**, so explicitly pass it this run's scan mode (`full` on the
+   first outer pass, `delta` on later passes) and the run identity in the
+   delegation — do not rely on it inferring "once per run" from history. Pass it the current baseline
+    (`docs/review-baseline.json`) so an exact-fingerprint accepted entry is
+    suppressed before it reaches the combined set, and prune expired entries via
+    `pruneBaseline(baseline.entries, now)` once per run so dead entries never
+    accumulate. `pruneBaseline` drops only genuinely expired entries: an entry
+    with a missing/malformed `expires` (or a non-object entry) fails closed and
+    is retained for repair, and returns `{version, entries, warnings}` so the
+    durable `{ "version": 1, "entries": {…} }` wrapper survives. Log and escalate
+    every `warnings` entry before write-back. The pruned baseline document is
+    persisted once per run by delegating the write-back to the write-capable
+    `coder` leg (the orchestrator is read-only); the coder writes the full
+    returned `{version, entries}` document back to `docs/review-baseline.json`
+    verbatim — never a bare fingerprint→entry map, which would destroy the
+    wrapper and silently stop all suppression — so a pruned entry cannot
+    silently reappear next run.
 2. Delegate to the `security-reviewer` subagent to review the coder's changes
    for security issues. It returns findings prioritized as
    **Critical / Major / Minor / Nit**. Fold these into the combined finding
@@ -954,11 +1001,25 @@ scanner runs **once per outer-loop pass**, not per fix round.
    against the same design document — security, performance, best
    practices, reliability, and test-correctness are five independent lenses on one change. Each returns
    findings prioritized as **Critical / Major / Minor / Nit** and may flag
-   `DESIGN_CONFLICT:`. Merge all five reviewers' findings into the single
-   combined finding set from step 1. Dedup rule: when two reviewers report
-   the same `file:line` with the same root cause, keep it **once** at the
-   maximum severity of the two, tagged with both perspectives — mirroring
-   the scanner's cross-tool merge in step 1.
+   `DESIGN_CONFLICT:`. Pass every parallel reviewer the finding schema
+   (`agent/finding-schema.md`), the current ledger block, the baseline
+   (`docs/review-baseline.json`), and the frozen `reviewed_sha`; each returns a
+   fenced JSON findings block per that schema. Merge all five reviewers'
+   findings into the single combined finding set from step 1 keyed on
+   `fingerprint` only — never `file:line` plus prose. Normalize severity
+   (no-evidence findings become **Nit**) **before** collapsing duplicates to
+   the **maximum** normalized severity, then update the ledger. Canonical order:
+   schema-validate → normalize severity → group by fingerprint → collapse at
+   max severity → ledger state. Each reviewer carries `incident` in its shared
+   JSON example, and `normalizeFindings` returns `{ valid, invalid }`; a
+   schema-invalid finding is **never silently dropped** — surface every invalid
+   entry as a synthetic Major "malformed finding — needs review" and route it
+   to the step 7 escalation instead of treating it as absent. An absent or
+   unparseable fenced `json` block is likewise **never treated as zero
+   findings**: surface it as a synthetic Major "malformed finding — needs
+   review" and route it to the step 7 escalation, exactly like a
+   schema-invalid entry. Same-line findings in different categories stay
+   separate because `category` is part of the fingerprint.
 3. If the **merged** security findings (scanner or static), performance
    findings, best-practices findings, reliability findings, or test-correctness
    findings contain any
@@ -972,13 +1033,29 @@ scanner runs **once per outer-loop pass**, not per fix round.
    `fail`, send the failures back to the `coder` as fix instructions and
    re-verify, again passing the planner's Acceptance checklist (DoD) verbatim.
    Once verification passes (and any `not-verifiable` items are handled per
-    Stage 4.5), then re-run the `security-reviewer`,
-    `performance-reviewer`, `best-practices-reviewer`,
-    `reliability-reviewer`, and `test-correctness-reviewer` on the revised
-    diff (and, when the fix touched
-   scanned file classes, the `code-security-scanner` — lockfiles →
-   OSV-Scanner + Trivy, source code → Semgrep + Trivy + PMD, Dockerfiles/IaC →
-   Trivy misconfig, credential files → Trivy secret + Gitleaks history). If any
+    Stage 4.5), re-verify in **tiers**: for an ordinary fix, re-run only the
+    touched-category lenses (the changed file classes' security, performance,
+    best-practices, reliability, or test-correctness reviewer) and, when the fix
+    touched scanned file classes, the `code-security-scanner` — lockfiles →
+    OSV-Scanner + Trivy, source code → Semgrep + Trivy + PMD, Dockerfiles/IaC →
+    Trivy misconfig, credential files → Trivy secret + Gitleaks history; for a
+   **large or security-sensitive diff**, re-run all five lenses **and** the
+   scanner. When updating the ledger after a tiered re-verify, pass the exact
+   object `{reportedCategories: [...]}` naming the categories that **actually
+   reported this round** as the ledger-update scope: only fingerprints in a
+   reported category may transition to `fixed`, while fingerprints in un-run
+   categories retain their prior state. Scanner-only categories `dependency`
+   and `secret` are included only when that scan leg actually ran this round.
+   Without that marker a skipped lens's still-open findings would be falsely
+   marked `fixed` and drop from the open counts, and a malformed scope fails
+   closed (nothing transitions to `fixed`) rather than re-opening false
+   convergence. The arbiter returns `{ledger, warnings}`; log every warning (a
+   malformed or omitted scope, or a skipped non-object ledger entry) and treat
+   it as a blocking escalation event instead of silently marking nothing. A
+   secret finding (`category: secret`,
+   `incident: true`, **any severity**)
+   takes the incident path (rotate/purge + `.scans/` ignore) and is **never**
+   handed to the coder loop. If any
    checklist item is `not-verifiable`, handle it as in Stage 4.5 and do not
    terminate the loop until the user signs off. **Keep looping until no
    Critical or Major security, performance, best-practices, reliability, or test-correctness findings remain
@@ -1012,7 +1089,9 @@ scanner runs **once per outer-loop pass**, not per fix round.
     best-practices, reliability, and test-correctness fixes were already
     re-verified in step 3).
 7. **Iteration cap / escalation.** Track the number of full outer-loop passes
-    (steps 1–6). After **~3 full review rounds without convergence** (i.e. the
+    (steps 1–6). The outer-pass cap is **2** — the single-sourced default in the
+    spec §4, `scripts/review-ledger.mjs` (`DEFAULT_LOOP_BUDGET.maxOuterPasses`),
+    and this step. After the cap is reached without convergence (i.e. the
     merged security, performance, best-practices, reliability, or
     test-correctness findings still contain
    Critical/Major items, or the code review still returns comments, or
@@ -1024,7 +1103,56 @@ scanner runs **once per outer-loop pass**, not per fix round.
    remaining finding per the **Per-finding dual explanation** rule, and ask how
    to proceed (e.g. accept residual risk, adjust scope, or continue).
    Do **not** hard-stop the pipeline silently — the user decides.
-8. Return to step 1 and repeat the full review loop (code-security-scanner +
+    - **Divergence escalation.** Track the open Critical/Major ledger counts
+      round over round (`openCriticalMajorCounts`); KD-9 divergence is when the
+      count **does not strictly decrease** after 2 rounds (a held or rising
+      count), when any finding regresses twice, or when design-conflict
+      re-issues repeat — escalate for a user decision rather than looping. A
+      non-object ledger entry (e.g. a `null` seeded from a durable baseline) is
+      counted by `openCriticalMajorCountsDetailed` under `skipped`: log the
+      `skipped` count and inspect the ledger's non-object entries, and treat any
+       `skipped` entry as a blocking escalation, because a corrupt entry could
+       hide a real Critical and lower the count. Note that a single-round
+       `isConverging(history)` result of `true` means only **insufficient data**
+       (fewer than two rounds), never "converged": terminate the loop only when
+       `isConverging` holds across rounds **and**
+       `openCriticalMajorCounts(ledger).total === 0`. The
+      **loop budget** is counted as **agent calls + scanner minutes**, not only
+      passes: once either budget is exhausted, escalate instead of launching
+      another pass.
+   - **Separate churn counters.** Track **finding churn** (findings opened,
+     fixed, regressed, recurring) and **design-conflict churn** (re-issues and
+     re-approvals) as two independent counters — never sum them, so a churn
+     spike in one dimension cannot be masked by a quiet one in the other.
+   - **Loop-budget counters (KD-9).** Maintain one accumulated state object
+     `{passes, spent: {agentCalls, scannerMinutes}, nonConvergentRounds,
+     regressionRounds, designConflictReissues}`. Increment `spent.agentCalls`
+     by one for **every** subagent delegation in the pass (each reviewer,
+     scanner, coder, verifier, and code-reviewer call); add each scan leg's
+     reported `started_at`/`finished_at` duration to `spent.scannerMinutes` so
+     scanner time is measured from the scanner's own per-leg timings, not
+     wall-clock guesswork. The `agentCalls` cap is set strictly above the nominal
+     per-pass delegation count × the ≤ 2 outer-pass cap, so it is an independent
+     overflow backstop and does not fire at the same instant as the pass cap; an
+     unreported `spent` counter is treated as `0`, never as the pass count.
+     `passes`
+     counts completed outer-loop passes and `nonConvergentRounds` counts rounds
+     whose open Critical/Major count did not strictly decrease.
+     **Increment rules:** add one to `regressionRounds` for **each** finding that
+     regresses in a round (a previously-fixed fingerprint reappearing as
+     `regressed`); add one to `designConflictReissues` for **each** design-conflict
+     finding that is re-issued after its first report (the first report is not a
+     re-issue). Both counters are per-event, not per-round, and reset only when
+     the loop terminates. Before
+     re-entering step 1, call `shouldEscalate(state)` from
+     `scripts/review-ledger.mjs` and escalate to the user when it returns
+     `true`; the budgets are single-sourced from `DEFAULT_LOOP_BUDGET`.
+     `shouldEscalate` is advisory only — enforced by the loop, not a runtime
+     (the orchestrator has no runtime
+     to enforce it), but this loop MUST honour it before launching another pass.
+8. Return to step 1 and repeat (after first evaluating `shouldEscalate(state)`
+   and escalating to the user per step 7 if it returns `true` instead of
+   launching another pass) the full review loop (code-security-scanner +
   `security-reviewer`, `performance-reviewer`,
   `best-practices-reviewer`, `reliability-reviewer`, and
   `test-correctness-reviewer`, then `code-reviewer`) until the merged
@@ -1152,6 +1280,43 @@ request-changes, kill, or stop. ADR allocation is collision-safe, not
 serialized by a lock: propose `NNN = max existing adr-* + 1`, delegate it as
 `adr_number`, and use the actual `adr` returned by `doc-writer` (which re-scans
 for the first free NNN on collision) for all backlinks.
+
+## Review findings and ledger
+
+This policy is distinct from the user-facing communication format above and
+does not change it. Every review-stage finding is expressed in the shape defined
+by `agent/finding-schema.md`; `scripts/review-ledger.mjs` is the test-time
+arbiter and the canonical implementation of the merge, ledger, baseline, and
+not-verifiable rules.
+
+- **Merge by fingerprint.** Findings are keyed on `fingerprint`
+  (`category/rule_id/file#symbol`), never on `file:line` plus prose. The
+  canonical order is schema-validate → normalize severity → group by
+  fingerprint → collapse at max severity → ledger state; a no-evidence finding
+  is normalized to **Nit** before the collapse. Same-line findings in different
+  categories remain distinct.
+- **Ledger.** The per-run ledger (in-context only) tracks each fingerprint's
+  state in `open`, `fixed`, `regressed`, `recurring`, `accepted` with per-round
+  counts; the durable artifact is `docs/review-baseline.json` alone. Open
+  Critical/Major counts must be monotonic non-increasing across rounds while the
+  loop converges.
+- **Baseline artifact.** `docs/review-baseline.json` is `{ "version": 1,
+  "entries": {} }`; each entry carries `fingerprint`, severity, reason,
+  approver, and a mandatory expiry. The Stage 6 sign-off is the approver; an
+  accepted entry suppresses its exact fingerprint until the matching file is
+  touched, the entry expires, or the entry severity mismatches the finding
+  (`severity-mismatch`). The `Critical`/`Major` severity floor scopes to
+  baseline suppression, not the Stage-6-approved `accepted` ledger state.
+  `pruneBaseline(baseline.entries, now)` drops only expired entries, retains
+  invalid-expiry entries for repair, and returns the full
+  `{version, entries, warnings}` wrapper for write-back.
+- **Incident path.** A secret finding (`category: secret`, `incident: true`,
+  **any severity**) follows the incident path — rotate/purge and ignore the
+  scan artifacts — and is never routed to the coder fix loop.
+- **Not-verifiable classification.** Each `not-verifiable` cause maps
+  bijectively to one route: `no-tooling` → add-tooling to the `coder`,
+  `external` and `manual` → user sign-off, `ambiguous` → redefine with the
+  `code-planner`. The verifier classifies every cause and names its single route.
 
 Guidance:
 

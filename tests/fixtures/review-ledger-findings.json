@@ -1,0 +1,328 @@
+{
+  "duplicateAcrossAgents": [
+    {
+      "rule_id": "SEC-1",
+      "category": "security",
+      "file": "./src/a.ts",
+      "line": 10,
+      "symbol": "findUser",
+      "cwe": "CWE-89",
+      "root_cause_key": "sql-string-concat",
+      "fingerprint": "security/SEC-1/src/a.ts#findUser",
+      "severity": "Major",
+      "evidence": "grep -n 'SELECT .* +' src/a.ts",
+      "agent": "security-reviewer"
+    },
+    {
+      "rule_id": "SEC-1",
+      "category": "security",
+      "file": "src/a.ts",
+      "line": 12,
+      "symbol": "findUser",
+      "cwe": "CWE-89",
+      "root_cause_key": "sql-string-concat",
+      "fingerprint": "security/SEC-1/src/a.ts#findUser",
+      "severity": "Major",
+      "evidence": "code citation src/a.ts:12",
+      "agent": "code-security-scanner"
+    }
+  ],
+  "sameLineDifferentCategories": [
+    {
+      "rule_id": "SEC-2",
+      "category": "security",
+      "file": "src/b.ts",
+      "line": 5,
+      "symbol": "run",
+      "cwe": "CWE-78",
+      "root_cause_key": "unsafe-call",
+      "fingerprint": "security/SEC-2/src/b.ts#run",
+      "severity": "Major",
+      "evidence": "code citation src/b.ts:5"
+    },
+    {
+      "rule_id": "PERF-2",
+      "category": "performance",
+      "file": "src/b.ts",
+      "line": 5,
+      "symbol": "run",
+      "cwe": "",
+      "root_cause_key": "repeated-parse",
+      "fingerprint": "performance/PERF-2/src/b.ts#run",
+      "severity": "Major",
+      "evidence": "benchmark: 12ms per request"
+    }
+  ],
+  "severityCollapse": [
+    {
+      "rule_id": "REL-1",
+      "category": "reliability",
+      "file": "src/c.ts",
+      "line": 7,
+      "symbol": "save",
+      "cwe": "",
+      "root_cause_key": "unhandled-write-error",
+      "fingerprint": "reliability/REL-1/src/c.ts#save",
+      "severity": "Major",
+      "evidence": "grep -n 'writeFile' src/c.ts",
+      "agent": "reliability-reviewer"
+    },
+    {
+      "rule_id": "REL-1",
+      "category": "reliability",
+      "file": "src/c.ts",
+      "line": 7,
+      "symbol": "save",
+      "cwe": "",
+      "root_cause_key": "unhandled-write-error",
+      "fingerprint": "reliability/REL-1/src/c.ts#save",
+      "severity": "Critical",
+      "evidence": "failing test: save() throws on read-only fs",
+      "agent": "code-security-scanner"
+    }
+  ],
+  "noEvidence": {
+    "rule_id": "BP-1",
+    "category": "best-practices",
+    "file": "src/d.ts",
+    "line": 3,
+    "symbol": "",
+    "cwe": "",
+    "root_cause_key": "non-idiomatic-api",
+    "fingerprint": "best-practices/BP-1/src/d.ts#-",
+    "severity": "Major",
+    "evidence": "",
+    "agent": "best-practices-reviewer"
+  },
+  "secret": {
+    "rule_id": "GITLEAKS-1",
+    "category": "secret",
+    "file": "src/e.ts",
+    "line": 1,
+    "symbol": "",
+    "cwe": "CWE-798",
+    "root_cause_key": "hardcoded-token",
+    "fingerprint": "secret/GITLEAKS-1/src/e.ts#-",
+    "severity": "Critical",
+    "incident": true,
+    "evidence": "gitleaks detect --source . --report-format json",
+    "agent": "code-security-scanner"
+  },
+  "rounds": {
+    "round1": [
+      {
+        "rule_id": "SEC-1",
+        "category": "security",
+        "file": "src/a.ts",
+        "line": 10,
+        "symbol": "findUser",
+        "cwe": "CWE-89",
+        "root_cause_key": "sql-string-concat",
+        "fingerprint": "security/SEC-1/src/a.ts#findUser",
+        "severity": "Major",
+        "evidence": "grep -n 'SELECT .* +' src/a.ts",
+        "agent": "security-reviewer"
+      }
+    ],
+    "round2": [
+      {
+        "rule_id": "SEC-1",
+        "category": "security",
+        "file": "src/a.ts",
+        "line": 18,
+        "symbol": "findUser",
+        "cwe": "CWE-89",
+        "root_cause_key": "sql-string-concat",
+        "fingerprint": "security/SEC-1/src/a.ts#findUser",
+        "severity": "Major",
+        "evidence": "grep -n 'SELECT .* +' src/a.ts",
+        "agent": "security-reviewer"
+      },
+      {
+        "rule_id": "STYLE-1",
+        "category": "style",
+        "file": "src/f.ts",
+        "line": 2,
+        "symbol": "",
+        "cwe": "",
+        "root_cause_key": "naming-convention",
+        "fingerprint": "style/STYLE-1/src/f.ts#-",
+        "severity": "Minor",
+        "evidence": "code citation src/f.ts:2",
+        "agent": "code-reviewer"
+      }
+    ],
+    "round3": [
+      {
+        "rule_id": "STYLE-1",
+        "category": "style",
+        "file": "src/f.ts",
+        "line": 2,
+        "symbol": "",
+        "cwe": "",
+        "root_cause_key": "naming-convention",
+        "fingerprint": "style/STYLE-1/src/f.ts#-",
+        "severity": "Minor",
+        "evidence": "code citation src/f.ts:2",
+        "agent": "code-reviewer"
+      }
+    ],
+    "round4": [
+      {
+        "rule_id": "SEC-1",
+        "category": "security",
+        "file": "src/a.ts",
+        "line": 22,
+        "symbol": "findUser",
+        "cwe": "CWE-89",
+        "root_cause_key": "sql-string-concat",
+        "fingerprint": "security/SEC-1/src/a.ts#findUser",
+        "severity": "Major",
+        "evidence": "grep -n 'SELECT .* +' src/a.ts",
+        "agent": "security-reviewer"
+      }
+    ]
+  },
+  "critical": {
+    "round1": [
+      {
+        "rule_id": "SEC-7",
+        "category": "security",
+        "file": "src/m.ts",
+        "line": 4,
+        "symbol": "verify",
+        "cwe": "CWE-89",
+        "root_cause_key": "sql-string-concat",
+        "fingerprint": "security/SEC-7/src/m.ts#verify",
+        "severity": "Critical",
+        "evidence": "failing test: verify() concatenates untrusted input",
+        "agent": "security-reviewer"
+      }
+    ],
+    "round2": [
+      {
+        "rule_id": "SEC-7",
+        "category": "security",
+        "file": "src/m.ts",
+        "line": 9,
+        "symbol": "verify",
+        "cwe": "CWE-89",
+        "root_cause_key": "sql-string-concat",
+        "fingerprint": "security/SEC-7/src/m.ts#verify",
+        "severity": "Critical",
+        "evidence": "failing test: verify() concatenates untrusted input",
+        "agent": "security-reviewer"
+      }
+    ]
+  },
+  "accepted": {
+    "ledger": {
+      "version": 1,
+      "round": 1,
+      "entries": {
+        "reliability/REL-9/src/h.ts#save": {
+          "fingerprint": "reliability/REL-9/src/h.ts#save",
+          "category": "reliability",
+          "rule_id": "REL-9",
+          "file": "src/h.ts",
+          "symbol": "save",
+          "severity": "Major",
+          "state": "accepted",
+          "first_seen_round": 1,
+          "last_seen_round": 1
+        }
+      }
+    },
+    "round": []
+  },
+  "baseline": {
+    "hit": {
+      "finding": {
+        "rule_id": "OSV-1",
+        "category": "dependency",
+        "file": "src/g.ts",
+        "line": 4,
+        "symbol": "",
+        "cwe": "CWE-1104",
+        "root_cause_key": "outdated-dependency",
+        "fingerprint": "dependency/OSV-1/src/g.ts#-",
+        "severity": "Minor",
+        "evidence": "osv-scanner scan source -r",
+        "agent": "code-security-scanner"
+      },
+      "baseline": {
+        "version": 1,
+        "entries": {
+          "dependency/OSV-1/src/g.ts#-": {
+            "fingerprint": "dependency/OSV-1/src/g.ts#-",
+            "severity": "Minor",
+            "reason": "accepted risk",
+            "approved_by": "user",
+            "expires": "2999-01-01T00:00:00.000Z",
+            "touched": false
+          }
+        }
+      },
+      "now": "2026-01-01T00:00:00.000Z"
+    },
+    "touched": {
+      "finding": {
+        "rule_id": "OSV-1",
+        "category": "dependency",
+        "file": "src/g.ts",
+        "line": 4,
+        "symbol": "",
+        "cwe": "CWE-1104",
+        "root_cause_key": "outdated-dependency",
+        "fingerprint": "dependency/OSV-1/src/g.ts#-",
+        "severity": "Minor",
+        "evidence": "osv-scanner scan source -r",
+        "agent": "code-security-scanner"
+      },
+      "baseline": {
+        "version": 1,
+        "entries": {
+          "dependency/OSV-1/src/g.ts#-": {
+            "fingerprint": "dependency/OSV-1/src/g.ts#-",
+            "severity": "Minor",
+            "reason": "accepted risk",
+            "approved_by": "user",
+            "expires": "2999-01-01T00:00:00.000Z",
+            "touched": true
+          }
+        }
+      },
+      "now": "2026-01-01T00:00:00.000Z"
+    },
+    "expired": {
+      "finding": {
+        "rule_id": "OSV-1",
+        "category": "dependency",
+        "file": "src/g.ts",
+        "line": 4,
+        "symbol": "",
+        "cwe": "CWE-1104",
+        "root_cause_key": "outdated-dependency",
+        "fingerprint": "dependency/OSV-1/src/g.ts#-",
+        "severity": "Minor",
+        "evidence": "osv-scanner scan source -r",
+        "agent": "code-security-scanner"
+      },
+      "baseline": {
+        "version": 1,
+        "entries": {
+          "dependency/OSV-1/src/g.ts#-": {
+            "fingerprint": "dependency/OSV-1/src/g.ts#-",
+            "severity": "Minor",
+            "reason": "accepted risk",
+            "approved_by": "user",
+            "expires": "2020-01-01T00:00:00.000Z",
+            "touched": false
+          }
+        }
+      },
+      "now": "2026-01-01T00:00:00.000Z"
+    }
+  },
+  "notVerifiableCauses": ["no-tooling", "external", "manual", "ambiguous"]
+}
