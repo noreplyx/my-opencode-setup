@@ -282,7 +282,15 @@ Write code following best practices:
   avoid injection vulnerabilities, handle secrets safely, and never commit or
   log credentials or API keys.
 - Prefer clear, readable code over cleverness; favor small, focused functions.
-- Use meaningful names and keep functions/classes cohesive and loosely coupled.
+- **Naming**: use clear, human-readable names for variables, functions,
+  classes, and database tables — names a non-technical reader can understand.
+  Prefer the plain-language term over an abbreviation, acronym, or internal
+  jargon, and spell domain terms out rather than shortening them. When a
+  domain term is genuinely the clearest and most precise name (for example
+  `refund` or `invoice`), keep it and let context make it self-explanatory;
+  never trade precision for vagueness, and avoid misleading or overly generic
+  names such as `data`, `info`, or `temp` when a specific name exists. Keep
+  functions/classes cohesive and loosely coupled.
 - Prefer composition over inheritance where appropriate.
 
 **Guardrails.** Your `bash` permission is deny-by-default (`"*": deny`

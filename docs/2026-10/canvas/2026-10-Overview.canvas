@@ -1,0 +1,10 @@
+{
+	"edges":[
+		{"id":"e1","fromNode":"hub","fromSide":"bottom","toNode":"adr","toSide":"top"}
+	],
+	"nodes":[
+		{"file":"2026-10/2026-10-hub.md","id":"hub","type":"file","x":320,"y":0,"width":280,"height":120},
+		{"file":"2026-10/2026-10-02-coder-human-readable-naming-adr-004.md","id":"adr","type":"file","x":320,"y":280,"width":280,"height":200},
+		{"id":"label","text":"October 2026 — monthly bucket overview. Text fallback: the hub links ADR-004 (coder human-readable naming); the ADR carries an inline Mermaid diagram.","type":"text","x":0,"y":40,"width":280,"height":100}
+	]
+}
