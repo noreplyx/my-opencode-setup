@@ -3,7 +3,6 @@ import { Parser } from "node-sql-parser"
 import type { Client } from "pg"
 import type { Connection } from "mysql2/promise"
 import type { ConnectionPool } from "mssql"
-import { validateMssqlTlsConnectionString } from "./mssql-tls"
 
 /**
  * Module-level cache for dynamically imported database driver modules.
@@ -41,7 +40,7 @@ function schedulePoolCleanup() {
   }, 60 * 1000)
   // Don't prevent process exit in Node/Bun environments
   if (poolCleanupInterval && typeof poolCleanupInterval === "object" && "unref" in poolCleanupInterval) {
-    ;(poolCleanupInterval as any).unref()
+    ; (poolCleanupInterval as any).unref()
   }
 }
 
@@ -711,8 +710,6 @@ class MSSQLDriver implements DatabaseDriver {
         throw new Error("SQL Server driver (mssql) is not installed. Run: bun add mssql")
       }
     }
-    // CP-05: Enforce TLS and reject explicit insecure settings.
-    validateMssqlTlsConnectionString(connectionString)
     this.mssql = mssql
     this.pool = (await mssql.connect({
       connectionString,
@@ -744,7 +741,7 @@ class MSSQLDriver implements DatabaseDriver {
       const rows = result.recordset as Record<string, unknown>[]
       return rows.map((r) => Object.values(r)[0]).join("\n")
     } finally {
-      await this.pool!.request().query("SET SHOWPLAN_TEXT OFF").catch(() => {})
+      await this.pool!.request().query("SET SHOWPLAN_TEXT OFF").catch(() => { })
     }
   }
 
