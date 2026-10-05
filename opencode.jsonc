@@ -1,7 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": true,
-  "subagent_depth": 2,
+  "subagent_depth": 3,
   "lsp": true,
   "server": {
     "port": 4096
@@ -10,7 +10,13 @@
     "@franlol/opencode-md-table-formatter@0.0.6"
   ],
   "permission": {
-    "clickup": "deny"
+    "clickup": "deny",
+    // Keep the pre-approved surface inside the project. The workspace root is
+    // already implicit, so no broad home/tree external_directory grants are
+    // declared here: paths outside the project keep asking.
+    "external_directory": {
+      "*": "ask"
+    }
   },
   "mcp": {
     "searxng": {

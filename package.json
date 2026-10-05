@@ -30,10 +30,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test tests/**/*.test.mjs",
-    "validate:delegation": "node scripts/validate-delegation-contract.mjs",
-    "validate:security": "node scripts/validate-security-config.mjs",
-    "validate:security:live": "node scripts/validate-security-config.mjs --live",
-    "validate:security:live:e2e": "node scripts/validate-security-config.mjs --live-e2e"
+    "validate:delegation": "node scripts/validate-delegation-contract.mjs"
   },
   "repository": {
     "type": "git",
