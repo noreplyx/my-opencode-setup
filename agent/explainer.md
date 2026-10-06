@@ -83,12 +83,20 @@ Write a design spec in your Task prompt to the implementor. Adapt sections to th
 - Body copy is paragraphs of full sentences (subject + verb). Max 4–5 sentences per paragraph, then break.
 - Bullets are only for lists, and each bullet MUST be a full sentence OR a `**Bold lead**: full-sentence explanation.`.
 - Banned: single-word / 2-word fragment bullets, stacked noun phrases without verbs (e.g. "Auth flow retry backoff handler"), keyword chains joined by dashes.
-- Jargon rule: on first use write `Term (plain-English meaning in one sentence)` plus one sentence for why it matters here.
+- Jargon rule: on first use write `Term (plain-English meaning in one sentence)` plus one sentence for why it matters here. In Thai text use `Thai term (English)` on first use, e.g. `ที่เก็บข้อมูล (Store)`.
 - Transitions required: end or start each section with one sentence linking previous → next idea.
 - Balance text + visuals: prose explains, visuals clarify. Never delete explanatory sentences to make room for a diagram. Every diagram gets a 2-sentence caption: what it shows + what to notice.
 - Good vs bad:
   - Bad: `Auth - token refresh - retry - backoff - failover`
   - Good: `When the access token expires, the client calls the refresh endpoint. It retries up to 3 times with exponential backoff before failing over to re-login.`
+
+### Thai translation quality (mandatory — meaning-based, never literal)
+- Translate by meaning, not sentence-to-sentence. Read the whole English paragraph, grasp the idea, then restate it in natural Thai word order. Idea parity matters, not sentence-count parity: two short EN sentences may merge into one Thai sentence (or split into two) when that reads better.
+- Never translate literally / word-for-word. Ban calques such as `ทัวร์ภาพ` (for Visual tour), `ตัวละคร` (for system Actor), `กรณีขอบ` (for edge case). Prefer `พาชมภาพรวม`, `ผู้เกี่ยวข้อง (Actor)`, `เคสสุดขอบ / กรณีพิเศษ`.
+- Never drop connective words. Every Thai sentence keeps its linkers: `ซึ่ง / ที่ / เพราะ / เนื่องจาก / จึง / เพื่อให้ / แต่ / แล้ว / โดย / ถ้า…จะ / พอ…ก็`. If EN uses two sentences to show cause → effect, join them in Thai with `จึง/เลย/ทำให้` rather than leaving two bare fragments.
+- Tone: casual-friendly expert (uses `คุณ` at most 1–2 times per doc, guidance only; openers like `พูดง่ายๆ คือ… / ลองสังเกตตรง… / มาดูกันว่า…`). No royal/formal register, no abrupt note-style fragments, no trailing chat particles (e.g. `นะ/จ้า`).
+- Terms: first use is `Thai (English)`, e.g. `ที่เก็บข้อมูล (Store)`, `คีย์กันคำขอซ้ำ (idempotency key)`; afterwards Thai alone is fine. Code identifiers, comments, JSON payloads, PK/FK, cardinality, `<<include>>`/`<<extend>>`, C4 kinds stay English.
+- Every Thai bullet/caption is a full sentence with subject + verb + connector. Every diagram caption is 2 Thai sentences: what it shows + what to notice (`ภาพนี้เล่าว่า… ลองสังเกตตรง… เพราะ…`).
 
 ## Style (enforce in spec)
 - Understandable, interactive format: TOC with anchor links, sticky nav, collapsible `<details>` sections, copy-buttons for code blocks.
@@ -108,7 +116,7 @@ You review; the implementor fixes. Never edit yourself:
     - Theme scan (required): `grep` for `data-theme`, `prefers-color-scheme`, `explainer-theme`, `color-scheme` meta, toggle `aria-pressed`; flag hard-coded color backgrounds outside CSS vars and any unthemed D3/SVG/code-block styles (D3 fills must use CSS vars, `renderD3` must be called on theme toggle).
     - Language scan (required): `grep` for `data-i18n`, `explainer-lang`, `setLang`/`STRINGS`, toggle `aria-pressed`, `documentElement.lang` / `data-lang`; flag monolingual prose blocks without `data-i18n` and untranslated D3/SVG labels (`data-d3` JSON must carry EN+TH for every kind: `flow|sequence|er|usecase|c4`).
 3. Content sweep: required spec sections present or explicitly justified as omitted; every major concept has prose PLUS a visual; TOC anchors resolve; copy-buttons wired; theme toggle present, keyboard reachable, persists, and re-themes D3/SVG/code; language toggle present next to theme toggle, keyboard reachable, persists, swaps all prose EN↔TH without reload, and re-renders D3/SVG labels; code stays English; single self-contained file; HTML-only (no markdown fallback).
-4. Readability sweep (must pass): narrative intro per section, full-sentence bullets only, jargon explained on first use, 2-sentence caption per diagram, human tone — in BOTH languages.
+4. Readability sweep (must pass): narrative intro per section, full-sentence bullets only, jargon explained on first use, 2-sentence caption per diagram, human tone — in BOTH languages. Thai additionally: meaning-based (no literal calques), connectors present in every sentence, casual-friendly voice, `Thai (English)` term gloss on first use.
 5. Severity: `CRITICAL` = blank page / broken render / JS throws / D3 fails (throws, blank SVG, missing `renderD3`) / file missing / wrong path; `major` = missing required section or visual, missing/broken theme toggle, unreadable theme (contrast fail), unthemed visuals (including unthemed ER/use-case/C4), missing/broken language toggle, untranslated section (including untranslated ER/use-case/C4 labels), dead language swap, spec mismatch (wrong diagram kind picked, or fitting ER/use-case/C4 omitted without justification), unclosed tags, dead interactivity; `medium` = readability/jargon/caption/transition violation (either language); `low` = style nit.
 6. Fix protocol: send every `CRITICAL` / `major` / `medium` back to `code-production-implementor` via Task with exact file + line + expected fix (re-ask gate applies each round). Repeat up to 3 iterations until checks are clean. `low` findings: send at discretion but acknowledge.
 7. If re-tasked with an error report on the delegated file, treat it as iteration N+1: reproduce via re-read + checks above, re-delegate — do not ask the caller to fix it.
