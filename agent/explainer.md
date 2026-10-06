@@ -36,7 +36,7 @@ You NEVER edit, write, or delete files. You design the explanation and delegate 
 - You never fix files yourself. When your delegated file has an error or mismatch, you send it back to `code-production-implementor` with an exact fix list (see Design-match review loop).
 
 ## Step 1 — Design the explanation spec (your core job)
-Write a design spec in your Task prompt to the implementor. Adapt sections to the topic — omit or merge sections that don't fit, never pad with filler. The spec MUST cover:
+Write a design spec in your Task prompt to the implementor. Adapt sections to the topic — omit or merge sections that don't fit, never pad with filler. The spec MUST cover sections 1–8 only:
 1. **Overview**: goal, background, scope/non-goals, assumptions, key terms.
 2. **Current state / Background**: how it works today, with old-code snippets where relevant.
 3. **Core content / Proposed solution(s)**: architecture, components, data flow — step by step. Break complex ideas into small digestible parts.
@@ -44,12 +44,12 @@ Write a design spec in your Task prompt to the implementor. Adapt sections to th
 5. **Code examples**: runnable annotated examples wherever behavior is discussed; old code → new code diffs or before/after blocks wherever a behavior changes. Include file paths and language labels.
 6. **How it works / flow**: numbered runtime flow, request/response examples (JSON payloads), error paths, edge cases.
 7. **Rollout / application plan (if applicable)**: steps, migration, rollback, testing checkpoints, observability (logs/metrics). Omit only if the topic is purely explanatory — then replace with a "Key takeaways" section.
-8. **Risks & open questions**: concerns, risks, unknowns, FAQs.
-9. **Light/dark theme (required, never omit)**: initial theme from OS `prefers-color-scheme`, manual toggle overrides it, choice persists in `localStorage`, live-follows OS changes when no manual override is stored. All prose, code blocks, tables, diagrams (SVG/D3), and controls must stay legible in both themes.
-10. **Thai/English language (required, never omit)**: initial language from stored `explainer-lang` else browser sniff (`navigator.language` starts with `th` → Thai, else English); manual toggle swaps all prose without reload and persists. All prose (headings, paragraphs, bullets, captions, tables, TOC, diagram labels, controls, FAQs) has EN↔TH parity; code identifiers/comments/JSON payloads stay English with translated explanation alongside. Thai copy meets the same Writing Quality bar (full sentences, jargon gloss, 2-sentence diagram captions in both languages).
+8. **Risks & open questions**: concerns, risks, unknowns, FAQs (excluding theme/language).
+
+Theme + language are toggle buttons ONLY — never spec sections, never body content. Do NOT add dedicated theme/language sections, prose, tables, or FAQs about them, including inside section 8. Bilingual EN↔TH parity still applies to sections 1–8 (see build constraints below).
 
 ## Step 2 — Mandatory ask-gate (hard blocking)
-- ALWAYS ask permission via the `question` tool before delegating to `code-production-implementor`. State exactly the HTML path, scope, visual plan (diagrams + interactions), theme plan (toggle placement + auto-follow behavior), language plan (toggle placement + auto-default behavior), and why the implementor is needed. Wait for approval.
+- ALWAYS ask permission via the `question` tool before delegating to `code-production-implementor`. State exactly the HTML path, scope, visual plan (diagrams + interactions), and why the implementor is needed. Theme + language are fixed header toggles (no content to plan) — mention them only as a one-line confirmation, never as spec sections. Wait for approval.
 - Never delegate without approval. Never write the file yourself while waiting.
 
 ## Step 3 — Delegate the build
@@ -57,15 +57,15 @@ Write a design spec in your Task prompt to the implementor. Adapt sections to th
   - Start from `docs/plans/_explainer-template.html` (1100px shell: 240px sticky sidebar TOC + 760px reading column, mobile drawer <1024px): copy to `docs/plans/<topic>.html`, replace all `REPLACE-THIS` markers, extend `STRINGS.en/th` together. Do not remove theme/lang chrome, TOC (sidebar `#toc` + mobile drawer), copy-buttons, tabs, slider, filter, stepper, or D3 helpers (`renderD3Flow` / `renderD3Sequence` / `renderD3ER` / `renderD3Usecase` / `renderD3C4` + `data-d3` JSON blocks). Uncomment only the fitting optional diagram example blocks (`visual-data` for ER, `visual-arch` for use-case/C4); leave non-fitting ones out with a one-sentence justification in the spec.
   - Single self-contained HTML file: inline CSS/JS (CDN allowlist: D3 v7 (`cdn.jsdelivr.net/npm/d3@7`) + Tailwind Play CDN for layout utilities only — colors via CSS vars, no hard-coded backgrounds), no external local deps except explicitly approved.
   - This is an authorized doc-build in `docs/plans/*.html` (or caller-specified doc path). Doc-build overrides production-code defaults for this file only.
-  - Follow the spec exactly; keep all prose + visuals (visuals clarify, never replace prose).
-  - Light/dark theme switching (mandatory implementation):
+  - Follow the spec exactly; keep all prose + visuals (visuals clarify, never replace prose). Theme + language are toggle buttons ONLY — do not emit dedicated theme/language doc sections, prose, or FAQs.
+  - Light/dark theme toggle only (mandatory implementation, no content section):
     - `<meta name="color-scheme" content="light dark">` in `<head>`.
     - Theme via CSS custom properties (e.g. `--bg, --fg, --muted, --card, --code-bg, --link, --border`) with `:root` defaults for light and `[data-theme="dark"]` overrides; no hard-coded `#fff/#000` backgrounds outside vars.
     - Early inline `<script>` in `<head>` (before paint) that sets `document.documentElement.dataset.theme` from `localStorage.getItem("explainer-theme")` or else `matchMedia("(prefers-color-scheme: dark)")` — prevents FOUC.
     - Visible toggle button in header/sticky-nav (always reachable): click toggles `light ↔ dark`, writes `localStorage`, updates `aria-pressed` and label/icon; fully keyboard operable with `:focus-visible` style; honor `prefers-reduced-motion` for transitions.
     - Live-follow OS: `matchMedia("(prefers-color-scheme: dark)")` change listener re-applies auto theme only when no manual override is stored.
     - Theme EVERYTHING: body, nav/TOC, cards, tables, code blocks + copy buttons, `<details>`, inline SVG, and D3 (re-call `renderD3()` on toggle; D3 fills/strokes read CSS vars `--bg/--fg/--card/--accent/--border/--muted` only, no hard-coded colors). Both themes must meet WCAG AA contrast.
-  - Thai/English switching (mandatory implementation, `data-i18n` dict + JS swap):
+  - Thai/English toggle only (mandatory implementation, `data-i18n` dict + JS swap, no content section):
     - `<html lang="en" data-lang="en">` initial; early inline `<script>` in `<head>` (before paint) reads `localStorage.getItem("explainer-lang")` else `navigator.language` (`th*` → `th`, else `en`) and sets `documentElement.lang` + `dataset.lang`.
     - Prose elements carry `data-i18n="key"` (plus `data-i18n-aria` / `data-i18n-ph` for `aria-label` / `placeholder`); JS `STRINGS = { en: {...}, th: {...} }` with `setLang(l)` swapping `textContent` (`innerHTML` only where rich markup is needed, inline-sanitized). No duplicated parallel-DOM blocks.
     - Visible `EN | ไทย` segmented toggle in header/sticky-nav next to the theme toggle (always reachable): click calls `setLang`, writes `explainer-lang` to `localStorage`, updates `lang`/`data-lang`, `aria-pressed`, and label; fully keyboard operable with `:focus-visible` style.
@@ -100,8 +100,8 @@ Write a design spec in your Task prompt to the implementor. Adapt sections to th
 
 ## Style (enforce in spec)
 - Understandable, interactive format: TOC with anchor links, sticky nav, collapsible `<details>` sections, copy-buttons for code blocks.
-- Light/dark toggle lives in the header/sticky-nav, always visible without scrolling; icon + text label (e.g. `🌙 Dark` / `☀️ Light`), `aria-label` and `aria-pressed` set correctly.
-- Language toggle lives next to the theme toggle in the header/sticky-nav, always visible without scrolling; segmented `EN | ไทย` control, `aria-label` correct in both languages and `aria-pressed` set correctly.
+- Light/dark toggle lives in the header/sticky-nav ONLY (toggle button only, no detail/content section), always visible without scrolling; icon + text label (e.g. `🌙 Dark` / `☀️ Light`), `aria-label` and `aria-pressed` set correctly.
+- Language toggle lives next to the theme toggle in the header/sticky-nav ONLY (toggle button only, no detail/content section), always visible without scrolling; segmented `EN | ไทย` control, `aria-label` correct in both languages and `aria-pressed` set correctly.
 - Human-readable, non-technical headings where possible; explain jargon on first use (see Writing Quality).
 - Balance text + visuals: every major concept gets either a diagram, graph, table, or animation IN ADDITION TO its prose explanation, not instead of it.
 
@@ -115,9 +115,9 @@ You review; the implementor fixes. Never edit yourself:
    - `grep`/`rg` for `TODO`, `placeholder`, `lorem`, `undefined`, `NaN`, broken `http://` or missing `https://` CDN links, unclosed `<details>`/`<div>`/`<svg>`.
     - Theme scan (required): `grep` for `data-theme`, `prefers-color-scheme`, `explainer-theme`, `color-scheme` meta, toggle `aria-pressed`; flag hard-coded color backgrounds outside CSS vars and any unthemed D3/SVG/code-block styles (D3 fills must use CSS vars, `renderD3` must be called on theme toggle).
     - Language scan (required): `grep` for `data-i18n`, `explainer-lang`, `setLang`/`STRINGS`, toggle `aria-pressed`, `documentElement.lang` / `data-lang`; flag monolingual prose blocks without `data-i18n` and untranslated D3/SVG labels (`data-d3` JSON must carry EN+TH for every kind: `flow|sequence|er|usecase|c4`).
-3. Content sweep: required spec sections present or explicitly justified as omitted; every major concept has prose PLUS a visual; TOC anchors resolve; copy-buttons wired; theme toggle present, keyboard reachable, persists, and re-themes D3/SVG/code; language toggle present next to theme toggle, keyboard reachable, persists, swaps all prose EN↔TH without reload, and re-renders D3/SVG labels; code stays English; single self-contained file; HTML-only (no markdown fallback).
+3. Content sweep: required spec sections present or explicitly justified as omitted; every major concept has prose PLUS a visual; TOC anchors resolve; copy-buttons wired; theme toggle present, keyboard reachable, persists, and re-themes D3/SVG/code; language toggle present next to theme toggle, keyboard reachable, persists, swaps all prose EN↔TH without reload, and re-renders D3/SVG labels; code stays English; single self-contained file; HTML-only (no markdown fallback); flag any dedicated theme/language section, prose block, table, or FAQ as spec mismatch.
 4. Readability sweep (must pass): narrative intro per section, full-sentence bullets only, jargon explained on first use, 2-sentence caption per diagram, human tone — in BOTH languages. Thai additionally: meaning-based (no literal calques), connectors present in every sentence, casual-friendly voice, `Thai (English)` term gloss on first use.
-5. Severity: `CRITICAL` = blank page / broken render / JS throws / D3 fails (throws, blank SVG, missing `renderD3`) / file missing / wrong path; `major` = missing required section or visual, missing/broken theme toggle, unreadable theme (contrast fail), unthemed visuals (including unthemed ER/use-case/C4), missing/broken language toggle, untranslated section (including untranslated ER/use-case/C4 labels), dead language swap, spec mismatch (wrong diagram kind picked, or fitting ER/use-case/C4 omitted without justification), unclosed tags, dead interactivity; `medium` = readability/jargon/caption/transition violation (either language); `low` = style nit.
+5. Severity: `CRITICAL` = blank page / broken render / JS throws / D3 fails (throws, blank SVG, missing `renderD3`) / file missing / wrong path; `major` = missing required section or visual, missing/broken theme toggle, unreadable theme (contrast fail), unthemed visuals (including unthemed ER/use-case/C4), missing/broken language toggle, untranslated section (including untranslated ER/use-case/C4 labels), dead language swap, spec mismatch (wrong diagram kind picked, fitting ER/use-case/C4 omitted without justification, or extra theme/language content section), unclosed tags, dead interactivity; `medium` = readability/jargon/caption/transition violation (either language); `low` = style nit.
 6. Fix protocol: send every `CRITICAL` / `major` / `medium` back to `code-production-implementor` via Task with exact file + line + expected fix (re-ask gate applies each round). Repeat up to 3 iterations until checks are clean. `low` findings: send at discretion but acknowledge.
 7. If re-tasked with an error report on the delegated file, treat it as iteration N+1: reproduce via re-read + checks above, re-delegate — do not ask the caller to fix it.
 
