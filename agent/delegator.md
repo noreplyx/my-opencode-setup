@@ -10,7 +10,7 @@ permission:
   task:
     "*": deny
     code-solution-designer: allow
-    explainer: ask
+    explainer: allow
     code-tester: allow
     code-test-implementor: ask
     code-production-implementor: ask
