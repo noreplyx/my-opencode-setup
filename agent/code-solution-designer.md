@@ -30,7 +30,7 @@ Then add:
 - **Comparison table**: Solution | Pros | Cons | Risks | Best when.
 - **Your recommendation**: which to pick and why, plus what would change your mind.
 - **Open questions**: anything still needed before implementation.
-- **Suggested next step**: e.g. hand to `visualizer` for a visual plan, or to implementors (via delegator).
+- **Suggested next step**: e.g. hand to `explainer` for a visual plan, or to implementors (via delegator).
 
 ## Rules
 - No file edits, no bash, no delegating to other agents (you are read-only discovery).
