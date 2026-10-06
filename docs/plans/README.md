@@ -17,14 +17,16 @@ python3 -m http.server
 5. Code identifiers stay English; translate only the surrounding prose.
 
 ## Built-ins (do not remove)
-- Theme: `explainer-theme` + `prefers-color-scheme` live-follow, `[data-theme]` CSS vars, toggle in header. Mermaid re-renders on toggle.
-- Lang: `explainer-lang` + `navigator.language` sniff, `data-i18n` + `setLang()`, `EN|ไทย` toggle next to theme toggle.
-- TOC anchors + scrollspy + progress, copy buttons, `<details>` FAQs, tabs, before/after slider (`#ba-range`), live filter (`#filter`), stepper SVG (`#stepsvg`).
-- CDN allowlist: `cdn.tailwindcss.com` (layout utilities only, colors via vars) + `mermaid@10`. No local deps.
+- Theme: `explainer-theme` + `prefers-color-scheme` live-follow, `[data-theme]` CSS vars, toggle in header. D3 (`renderD3()`) re-renders on toggle; fills/strokes from CSS vars only.
+- Lang: `explainer-lang` + `navigator.language` sniff, `data-i18n` + `setLang()`, `EN|ไทย` toggle next to theme toggle. D3 labels come from `data-d3` JSON blocks (`en`/`th`) and re-render on `setLang()`.
+- TOC anchors + scrollspy + progress, copy buttons, `<details>` FAQs, tabs, before/after slider (`#ba-range`), live filter (`#filter`), stepper SVG (`#stepsvg`), D3 flow (`#d3-flow` via `renderD3Flow`) + sequence (`#d3-seq` via `renderD3Sequence`).
+- CDN allowlist: `cdn.tailwindcss.com` (layout utilities only, colors via vars) + `d3@7` (`cdn.jsdelivr.net/npm/d3@7`). No local deps. No Mermaid.
 
 ## Checks before delegating back
 ```bash
 tidy -errors -q docs/plans/<topic>.html
 python3 -c "import html.parser" # parse smoke
 rg -n "REPLACE-THIS" docs/plans/<topic>.html  # must be empty when done
+rg -in "mermaid" docs/plans/<topic>.html agent/explainer.md docs/plans/_explainer-template.html  # must be empty (D3-only)
+rg -n "d3.min.js|renderD3|data-d3" docs/plans/<topic>.html  # must be non-empty
 ```

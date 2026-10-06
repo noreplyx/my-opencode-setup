@@ -19,7 +19,7 @@
 /* Tailwind: layout utilities only. Colors come from CSS vars below so theme toggle stays authoritative. */
 try{tailwind.config={darkMode:["selector",'[data-theme="dark"]'],corePlugins:{preflight:true}}}catch(e){}
 </script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
 :root{
   --bg:#ffffff; --fg:#1a202c; --muted:#4a5568; --card:#f7fafc; --code-bg:#f1f5f9;
@@ -72,7 +72,12 @@ figcaption{color:var(--muted);font-size:.9rem;margin-top:8px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .tabs button{border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-.mermaid{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto}
+.d3-canvas{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto;width:100%}
+.d3-canvas .node{fill:var(--card);stroke:var(--accent)}
+.d3-canvas .link{stroke:var(--muted);fill:none}
+.d3-canvas .lifeline{stroke:var(--border)}
+.d3-canvas text{fill:var(--fg)}
+.d3-fallback{color:var(--muted);font-size:.9rem}
 svg.themed text{fill:var(--fg)}svg.themed rect.frame{fill:var(--bg);stroke:var(--border)}svg.themed rect.node{fill:var(--card);stroke:var(--accent)}
 .slider-wrap input[type="range"]{width:100%}
 .ba{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:10px}
@@ -189,25 +194,8 @@ function loadOrder(orderId) {
   <p data-i18n="visual.p1">Narrate what the reader is about to see in 2–3 sentences. Every diagram below also carries a two-sentence caption: what it shows plus what to notice.</p>
 
   <h3 data-i18n="visual.d1h">Diagram: request path</h3>
-  <div class="mermaid" id="mm1" data-mermaid-en="graph TD
-    A[Client] --&gt; B[API]
-    B --&gt; C[Service]
-    C --&gt; D[Store]
-    D --&gt; C
-    C --&gt; B
-    B --&gt; A" data-mermaid-th="graph TD
-    A[ไคลเอนต์] --&gt; B[เอพีไอ]
-    B --&gt; C[เซอร์วิส]
-    C --&gt; D[ที่เก็บข้อมูล]
-    D --&gt; C
-    C --&gt; B
-    B --&gt; A">graph TD
-    A[Client] --&gt; B[API]
-    B --&gt; C[Service]
-    C --&gt; D[Store]
-    D --&gt; C
-    C --&gt; B
-    B --&gt; A</div>
+  <svg class="d3-canvas" id="d3-flow" data-d3="flow" viewBox="0 0 640 160" width="100%" height="160" role="img" aria-label="Request path diagram"></svg>
+  <script type="application/json" id="d3-flow-data">{"nodes":[{"id":"client","en":"Client","th":"ไคลเอนต์"},{"id":"api","en":"API","th":"เอพีไอ"},{"id":"service","en":"Service","th":"เซอร์วิส"},{"id":"store","en":"Store","th":"ที่เก็บข้อมูล"}],"links":[["client","api"],["api","service"],["service","store"],["store","service"],["service","api"],["api","client"]]}</script>
   <figcaption data-i18n="visual.d1cap">This diagram shows the round trip from client to store and back. Notice that every arrow returns, so failures can be traced to one hop.</figcaption>
 
   <h3 data-i18n="visual.d2h">Animation: step through the states</h3>
@@ -238,25 +226,8 @@ function loadOrder(orderId) {
     <button role="tab" aria-selected="false" data-tab="t-table" type="button" data-i18n="visual.tab3">Filter table</button>
   </div>
   <div id="t-flow">
-    <div class="mermaid" id="mm2" data-mermaid-en="sequenceDiagram
-      Client-&gt;&gt;API: POST /orders
-      API-&gt;&gt;Service: validate()
-      Service-&gt;&gt;Store: save()
-      Store--&gt;&gt;Service: ok
-      Service--&gt;&gt;API: 201 Created
-      API--&gt;&gt;Client: receipt" data-mermaid-th="sequenceDiagram
-      Client-&gt;&gt;API: POST /orders
-      API-&gt;&gt;Service: ตรวจสอบ()
-      Service-&gt;&gt;Store: บันทึก()
-      Store--&gt;&gt;Service: สำเร็จ
-      Service--&gt;&gt;API: 201 สร้างแล้ว
-      API--&gt;&gt;Client: ใบเสร็จ">sequenceDiagram
-      Client-&gt;&gt;API: POST /orders
-      API-&gt;&gt;Service: validate()
-      Service-&gt;&gt;Store: save()
-      Store--&gt;&gt;Service: ok
-      Service--&gt;&gt;API: 201 Created
-      API--&gt;&gt;Client: receipt</div>
+    <svg class="d3-canvas" id="d3-seq" data-d3="sequence" viewBox="0 0 640 300" width="100%" height="300" role="img" aria-label="Sequence diagram"></svg>
+    <script type="application/json" id="d3-seq-data">{"actors":[{"id":"client","en":"Client","th":"Client"},{"id":"api","en":"API","th":"API"},{"id":"service","en":"Service","th":"Service"},{"id":"store","en":"Store","th":"Store"}],"messages":[{"from":"client","to":"api","en":"POST /orders","th":"POST /orders"},{"from":"api","to":"service","en":"validate()","th":"ตรวจสอบ()"},{"from":"service","to":"store","en":"save()","th":"บันทึก()"},{"from":"store","to":"service","en":"ok","th":"สำเร็จ"},{"from":"service","to":"api","en":"201 Created","th":"201 สร้างแล้ว"},{"from":"api","to":"client","en":"receipt","th":"ใบเสร็จ"}]}</script>
     <figcaption data-i18n="visual.tab1cap">This sequence shows time flowing down across four actors. Notice the validate step, which rejects bad input before any write.</figcaption>
   </div>
   <div id="t-compare" hidden>
@@ -403,7 +374,7 @@ th: {
 /* ============ Theme (explainer-theme + OS live-follow) ============ */
 var themeBtn=document.getElementById("btn-theme"),themeLabel=document.getElementById("theme-label");
 function currentTheme(){return document.documentElement.dataset.theme==="dark"?"dark":"light";}
-function applyTheme(t,store){document.documentElement.dataset.theme=t;var dark=(t==="dark");themeBtn.setAttribute("aria-pressed",String(dark));var lang=currentLang();themeLabel.textContent=dark?STRINGS[lang]["header.themeLight"]:STRINGS[lang]["header.themeDark"];themeBtn.setAttribute("aria-label",dark?STRINGS[lang]["header.themeToggleLight"]:STRINGS[lang]["header.themeToggle"]);try{if(store)localStorage.setItem("explainer-theme",t);}catch(e){}renderMermaid();}
+function applyTheme(t,store){document.documentElement.dataset.theme=t;var dark=(t==="dark");themeBtn.setAttribute("aria-pressed",String(dark));var lang=currentLang();themeLabel.textContent=dark?STRINGS[lang]["header.themeLight"]:STRINGS[lang]["header.themeDark"];themeBtn.setAttribute("aria-label",dark?STRINGS[lang]["header.themeToggleLight"]:STRINGS[lang]["header.themeToggle"]);try{if(store)localStorage.setItem("explainer-theme",t);}catch(e){}renderD3();}
 themeBtn.addEventListener("click",function(){applyTheme(currentTheme()==="dark"?"light":"dark",true);});
 try{var mq=window.matchMedia("(prefers-color-scheme: dark)");if(mq&&mq.addEventListener){mq.addEventListener("change",function(e){try{if(!localStorage.getItem("explainer-theme"))applyTheme(e.matches?"dark":"light",false);}catch(x){}});}}catch(e){}
 
@@ -415,13 +386,18 @@ document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttrib
 document.querySelectorAll("[data-i18n-aria]").forEach(function(el){var k=el.getAttribute("data-i18n-aria");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k))el.setAttribute("aria-label",STRINGS[l][k]);});
 btnEn.setAttribute("aria-pressed",String(l==="en"));btnTh.setAttribute("aria-pressed",String(l==="th"));
 themeLabel.textContent=currentTheme()==="dark"?STRINGS[l]["header.themeLight"]:STRINGS[l]["header.themeDark"];
-renderMermaid();renderSteps();}
+renderD3();renderSteps();}
 btnEn.addEventListener("click",function(){try{localStorage.setItem("explainer-lang","en");}catch(e){}setLang("en");});
 btnTh.addEventListener("click",function(){try{localStorage.setItem("explainer-lang","th");}catch(e){}setLang("th");});
 
-/* ============ Mermaid (themed + localized, re-render on toggle) ============ */
-var mmRendered=false;
-function renderMermaid(){try{if(!window.mermaid)return;var dark=currentTheme()==="dark";var lang=currentLang();mermaid.initialize({startOnLoad:false,theme:dark?"dark":"default",securityLevel:"loose"});document.querySelectorAll(".mermaid").forEach(function(el){var src=el.getAttribute(lang==="th"?"data-mermaid-th":"data-mermaid-en")||el.textContent;el.removeAttribute("data-processed");el.textContent=src;});mermaid.run({nodes:document.querySelectorAll(".mermaid")});mmRendered=true;}catch(e){}}
+/* ============ D3 (themed + localized, re-render on toggle) ============ */
+var d3Rendered=false;
+function d3Label(o,lang){if(!o)return "";return lang==="th"?(o.th||o.en||""):(o.en||o.th||"");}
+function d3ReadData(svg){try{var el=document.getElementById(svg.id+"-data");if(!el)return null;return JSON.parse(el.textContent);}catch(e){return null;}}
+function d3EnsureArrow(svg,id){var defs=svg.select("defs");if(defs.empty())defs=svg.append("defs");if(!defs.select("#"+id).empty())return;var m=defs.append("marker").attr("id",id).attr("viewBox","0 0 10 10").attr("refX",9).attr("refY",5).attr("markerWidth",8).attr("markerHeight",8).attr("orient","auto-start-reverse");m.append("path").attr("d","M0,0L10,5L0,10z").attr("style","fill:var(--muted)");}
+function renderD3Flow(svgEl,data,lang){var svg=d3.select(svgEl);svg.selectAll("*").remove();if(!data||!data.nodes||!data.nodes.length){svg.append("text").attr("x",16).attr("y",30).attr("class","d3-fallback").text("No diagram data");return;}d3EnsureArrow(svg,"d3-arrow");var W=640,H=160,nw=120,nh=48,gap=(W-nw*data.nodes.length)/ (data.nodes.length+1);var pos={};data.nodes.forEach(function(nd,i){var x=gap+i*(nw+gap),y=(H-nh)/2;pos[nd.id]= {x:x,y:y};var g=svg.append("g");g.append("rect").attr("x",x).attr("y",y).attr("width",nw).attr("height",nh).attr("rx",8).attr("class","node");g.append("title").text(d3Label(nd,lang));g.append("text").attr("x",x+nw/2).attr("y",y+nh/2+5).attr("text-anchor","middle").attr("font-size","14").text(d3Label(nd,lang));});(data.links||[]).forEach(function(lk,idx){var a=Array.isArray(lk)?lk[0]:lk.from,b=Array.isArray(lk)?lk[1]:lk.to;if(!pos[a]||!pos[b])return;var A=pos[a],B=pos[b];var sameRow=Math.abs(A.y-B.y)<1;var x1=sameRow?(A.x<B.x?A.x+nw:A.x):A.x+nw/2;var y1=sameRow?A.y+nh/2:(A.y<B.y?A.y+nh:A.y);var x2=sameRow?(A.x<B.x?B.x:B.x+nw):B.x+nw/2;var y2=sameRow?B.y+nh/2:(A.y<B.y?B.y:B.y+nh);if(A.id===undefined){}var fwd=(x2>=x1&&sameRow)||(!sameRow);var mx=(x1+x2)/2;if(!sameRow){svg.append("path").attr("d","M"+x1+","+y1+" C"+x1+","+mx+" "+x2+","+mx+" "+x2+","+(y2+(A.y<B.y?-6:6))).attr("class","link").attr("marker-end","url(#d3-arrow)");}else{var back=x2<x1;var yy=back?y1+nh/2+22*(1+(idx%2)):y1;svg.append("line").attr("x1",back?x1-4:x1).attr("y1",yy).attr("x2",back?x2+4:x2).attr("y2",yy).attr("class","link").attr("marker-end","url(#d3-arrow)");}});}
+function renderD3Sequence(svgEl,data,lang){var svg=d3.select(svgEl);svg.selectAll("*").remove();if(!data||!data.actors||!data.messages){svg.append("text").attr("x",16).attr("y",30).attr("class","d3-fallback").text("No diagram data");return;}d3EnsureArrow(svg,"d3-arrow");var W=640,top=14,bw=110,bh=36,rowH=34,H=top+bh+18+data.messages.length*rowH+24;svgEl.setAttribute("viewBox","0 0 "+W+" "+H);svgEl.setAttribute("height",H);var gap=(W-bw*data.actors.length)/(data.actors.length+1);var cx={};data.actors.forEach(function(a,i){var x=gap+i*(bw+gap);cx[a.id]=x+bw/2;var g=svg.append("g");g.append("rect").attr("x",x).attr("y",top).attr("width",bw).attr("height",bh).attr("rx",8).attr("class","node");g.append("title").text(d3Label(a,lang));g.append("text").attr("x",x+bw/2).attr("y",top+bh/2+5).attr("text-anchor","middle").attr("font-size","13").text(d3Label(a,lang));svg.append("line").attr("x1",x+bw/2).attr("y1",top+bh).attr("x2",x+bw/2).attr("y2",H-8).attr("class","lifeline").attr("stroke-dasharray","4 4");});data.messages.forEach(function(m,i){var y=top+bh+18+(i+1)*rowH;var x1=cx[m.from],x2=cx[m.to];if(x1===undefined||x2===undefined)return;var rev=x2<x1;svg.append("line").attr("x1",rev?x1-4:x1+4).attr("y1",y).attr("x2",rev?x2+4:x2-4).attr("y2",y).attr("class","link").attr("marker-end","url(#d3-arrow)");var mx=(x1+x2)/2;svg.append("text").attr("x",mx).attr("y",y-6).attr("text-anchor","middle").attr("font-size","12").text(d3Label(m,lang)).append("title").text((m.from||"")+" -> "+(m.to||""));});}
+function renderD3(){try{if(!window.d3)return;var lang=currentLang();document.querySelectorAll("[data-d3]").forEach(function(el){var kind=el.getAttribute("data-d3");var data=d3ReadData(el);if(kind==="flow")renderD3Flow(el,data,lang);else if(kind==="sequence")renderD3Sequence(el,data,lang);});d3Rendered=true;}catch(e){}}
 
 /* ============ Copy buttons ============ */
 document.querySelectorAll("[data-copy]").forEach(function(btn){btn.addEventListener("click",function(){var id=btn.getAttribute("data-copy");var code=document.getElementById(id);if(!code)return;var t=code.textContent;function done(){var l=currentLang();btn.textContent=STRINGS[l]["ui.copied"];setTimeout(function(){btn.textContent=STRINGS[l]["ui.copy"];},1500);}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done);}else{var ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}document.body.removeChild(ta);done();}});});
@@ -451,7 +427,7 @@ document.getElementById("step-prev").addEventListener("click",function(){stepIdx
 document.getElementById("step-next").addEventListener("click",function(){stepIdx=stepIdx>=3?1:stepIdx+1;renderSteps();});
 
 /* ============ Init (apply stored theme/lang without flash) ============ */
-(function init(){var l=currentLang();setLang(l);applyTheme(currentTheme(),false);renderSteps();renderMermaid();})();
+(function init(){var l=currentLang();setLang(l);applyTheme(currentTheme(),false);renderSteps();renderD3();})();
 </script>
 </body>
 </html>
