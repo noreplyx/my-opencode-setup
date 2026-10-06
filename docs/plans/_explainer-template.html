@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" data-i18n="meta.desc" content="Deep interactive explanation with diagrams, code and step-through visuals.">
+<title data-i18n="meta.title">Explainer — REPLACE-THIS-TOPIC</title>
+<!-- Early theme: prevents FOUC. Reads explainer-theme, else OS prefers-color-scheme. -->
+<script>
+(function(){try{var s=localStorage.getItem("explainer-theme");var d=document.documentElement;if(s==="light"||s==="dark"){d.dataset.theme=s;}else{var m=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)");d.dataset.theme=(m&&m.matches)?"dark":"light";}}catch(e){document.documentElement.dataset.theme="light";}})();
+</script>
+<!-- Early lang: reads explainer-lang, else navigator.language th* -> th. -->
+<script>
+(function(){try{var s=localStorage.getItem("explainer-lang");var l=s;if(l!=="en"&&l!=="th"){var n=(navigator.language||"en").toLowerCase();l=(n.indexOf("th")===0)?"th":"en";}document.documentElement.dataset.lang=l;document.documentElement.lang=l;}catch(e){document.documentElement.dataset.lang="en";}})();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Tailwind: layout utilities only. Colors come from CSS vars below so theme toggle stays authoritative. */
+try{tailwind.config={darkMode:["selector",'[data-theme="dark"]'],corePlugins:{preflight:true}}}catch(e){}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff; --fg:#1a202c; --muted:#4a5568; --card:#f7fafc; --code-bg:#f1f5f9;
+  --link:#1d4ed8; --border:#e2e8f0; --accent:#2563eb; --accent-fg:#ffffff;
+  --callout:#eff6ff; --ok:#047857; --warn:#b45309; --shadow:0 1px 3px rgba(0,0,0,.08);
+  --radius:12px; --maxw:800px;
+}
+[data-theme="dark"]{
+  --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8; --card:#1e293b; --code-bg:#0b1220;
+  --link:#93c5fd; --border:#334155; --accent:#60a5fa; --accent-fg:#0f172a;
+  --callout:#172554; --ok:#6ee7b7; --warn:#fcd34d; --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,"Segoe UI",Tahoma,sans-serif;line-height:1.7;margin:0}
+a{color:var(--link)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+.site-header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border)}
+.site-header .row{display:flex;align-items:center;gap:12px;max-width:1100px;margin:0 auto;padding:10px 20px}
+.brand{font-weight:700;text-decoration:none;color:var(--fg)}
+.controls{margin-left:auto;display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--fg);padding:6px 12px;cursor:pointer;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.btn{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600}
+.btn:focus-visible,.seg button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tocbar{position:sticky;top:57px;z-index:40;background:var(--bg);border-bottom:1px solid var(--border)}
+.tocbar .row{max-width:1100px;margin:0 auto;padding:8px 20px;display:flex;gap:8px;align-items:center;overflow-x:auto;white-space:nowrap}
+.tocbar a{text-decoration:none;color:var(--muted);font-size:.92rem;padding:4px 8px;border-radius:8px}
+.tocbar a.active,.tocbar a:hover{color:var(--fg);background:var(--card)}
+#progress{height:3px;background:var(--accent);width:0%}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin:16px 0}
+section.doc{padding:28px 0;border-bottom:1px solid var(--border)}
+section.doc h2{font-size:1.5rem;margin:0 0 8px}
+.eyebrow{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;margin:0}
+.lead{font-size:1.05rem}
+.muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin:12px 0;background:var(--bg)}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--card)}
+pre{background:var(--code-bg);color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;position:relative}
+.codehead{display:flex;align-items:center;gap:8px;margin:14px 0 6px}
+.codehead .lang{font-size:.75rem;font-weight:700;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--muted)}
+.codehead .path{font-size:.8rem;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+.copybtn{margin-left:auto;font-size:.8rem}
+details{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:10px 0}
+summary{cursor:pointer;font-weight:700}
+figcaption{color:var(--muted);font-size:.9rem;margin-top:8px}
+.caption-note{color:var(--muted);font-size:.9rem}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tabs button{border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.mermaid{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto}
+svg.themed text{fill:var(--fg)}svg.themed rect.frame{fill:var(--bg);stroke:var(--border)}svg.themed rect.node{fill:var(--card);stroke:var(--accent)}
+.slider-wrap input[type="range"]{width:100%}
+.ba{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:10px}
+.ba img,.ba .ba-pane{display:block;width:100%}
+.ba .after{position:absolute;inset:0;overflow:hidden;border-right:3px solid var(--accent)}
+.kbd{font-family:ui-monospace,monospace;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:0 6px;background:var(--bg)}
+.filter-input{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--fg)}
+.skip{position:absolute;left:-9999px}.skip:focus{left:8px;top:8px;background:var(--accent);color:var(--accent-fg);padding:8px 12px;border-radius:8px;z-index:99}
+@media (max-width:768px){.tocbar .row{font-size:.85rem}.site-header .row{flex-wrap:wrap}}
+@media print{.site-header,.tocbar,.controls,.copybtn,.tabs{display:none}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i18n="a11y.skip">Skip to content</a>
+
+<header class="site-header">
+  <div class="row">
+    <a class="brand" href="#top" data-i18n="header.brand">Explainer</a>
+    <span class="muted" data-i18n="header.topic">REPLACE-THIS-TOPIC — one-line promise of what the reader will learn</span>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="btn-en" aria-pressed="true">EN</button>
+        <button type="button" id="btn-th" aria-pressed="false">ไทย</button>
+      </div>
+      <button type="button" class="btn" id="btn-theme" aria-pressed="false" data-i18n-aria="header.themeToggle" aria-label="Switch to dark theme"><span id="theme-label" data-i18n="header.themeDark">Dark</span></button>
+    </div>
+  </div>
+  <div id="progress" aria-hidden="true"></div>
+</header>
+
+<nav class="tocbar" aria-label="Table of contents">
+  <div class="row" id="toc">
+    <a href="#overview" data-i18n="toc.overview">Overview</a>
+    <a href="#current" data-i18n="toc.current">Background</a>
+    <a href="#core" data-i18n="toc.core">Core ideas</a>
+    <a href="#visual" data-i18n="toc.visual">Visual tour</a>
+    <a href="#code" data-i18n="toc.code">Code</a>
+    <a href="#flow" data-i18n="toc.flow">How it works</a>
+    <a href="#rollout" data-i18n="toc.rollout">Apply it</a>
+    <a href="#risks" data-i18n="toc.risks">Risks + FAQs</a>
+  </div>
+</nav>
+
+<main id="main" class="wrap" aria-labelledby="page-title">
+<div id="top"></div>
+
+<!-- HERO -->
+<div class="card" style="margin-top:20px">
+  <p class="eyebrow" data-i18n="hero.eyebrow">Interactive explanation · 12 min read</p>
+  <h1 id="page-title" data-i18n="hero.title">REPLACE-THIS-TOPIC in plain language</h1>
+  <p class="lead" data-i18n="hero.lead">Write 2–3 sentences here that state the goal, who this helps, and the single takeaway. Keep full sentences; this sets up every section below.</p>
+  <p class="muted" data-i18n="hero.meta">Audience: smart newcomer · Tone: calm walkthrough · Code stays English, prose is bilingual.</p>
+</div>
+
+<!-- 1 OVERVIEW -->
+<section class="doc" id="overview" aria-labelledby="h-overview">
+  <p class="eyebrow" data-i18n="overview.eyebrow">1 · Start here</p>
+  <h2 id="h-overview" data-i18n="overview.h">Overview: what problem does this solve?</h2>
+  <p data-i18n="overview.p1">Open with 2–3 sentences of narrative. Define the Goal (the outcome the reader wants) in plain language, then state why it matters right now. This paragraph must come before any list or table.</p>
+  <div class="card">
+    <h3 data-i18n="overview.termsH">Key terms, explained once</h3>
+    <p data-i18n="overview.termsP">Each jargon term appears as Term (plain-English meaning in one sentence) plus one sentence for why it matters here.</p>
+    <dl>
+      <dt><strong>Term A</strong> <span data-i18n="overview.t1">(plain-English meaning in one sentence.)</span></dt>
+      <dd data-i18n="overview.d1">Second sentence: why Term A matters for this topic.</dd>
+      <dt><strong>Term B</strong> <span data-i18n="overview.t2">(plain-English meaning in one sentence.)</span></dt>
+      <dd data-i18n="overview.d2">Second sentence: why Term B matters for this topic.</dd>
+    </dl>
+  </div>
+  <table>
+    <caption data-i18n="overview.tableCap">Scope: what this doc covers and what it skips.</caption>
+    <thead><tr><th data-i18n="overview.c1">In scope</th><th data-i18n="overview.c2">Non-goals</th><th data-i18n="overview.c3">Assumption</th></tr></thead>
+    <tbody><tr><td data-i18n="overview.r1c1">State one covered outcome as a full sentence.</td><td data-i18n="overview.r1c2">State one skipped outcome as a full sentence.</td><td data-i18n="overview.r1c3">State one assumption as a full sentence.</td></tr></tbody>
+  </table>
+  <p class="caption-note" data-i18n="overview.next">Now that the goal is clear, we look at how things work today before proposing anything new.</p>
+</section>
+
+<!-- 2 CURRENT STATE -->
+<section class="doc" id="current" aria-labelledby="h-current">
+  <p class="eyebrow" data-i18n="current.eyebrow">2 · Background</p>
+  <h2 id="h-current" data-i18n="current.h">Background: how it works today</h2>
+  <p data-i18n="current.p1">Write 2–3 sentences that narrate the current behavior end to end. Mention who calls what and where it hurts, in full sentences.</p>
+  <div class="codehead"><span class="lang">old code</span><span class="path">src/REPLACE-THIS-path.ts</span><button class="btn copybtn" type="button" data-copy="code-old" data-i18n="ui.copy">Copy</button></div>
+  <pre><code id="code-old">// REPLACE-THIS old behavior. Keep identifiers English.
+function loadOrder(orderId) {
+  return fetch("/api/orders/" + orderId).then(function(r){ return r.json(); });
+}</code></pre>
+  <p data-i18n="current.p2">Follow the snippet with 2–3 sentences that explain the limitation in plain language. This bridges to the proposed ideas next.</p>
+</section>
+
+<!-- 3 CORE CONTENT -->
+<section class="doc" id="core" aria-labelledby="h-core">
+  <p class="eyebrow" data-i18n="core.eyebrow">3 · Core ideas</p>
+  <h2 id="h-core" data-i18n="core.h">Core ideas, one small piece at a time</h2>
+  <p data-i18n="core.p1">Introduce the solution in 2–3 sentences. Promise the three small pieces below so the reader can hold the shape in mind.</p>
+  <details open>
+    <summary data-i18n="core.s1">Part 1 — name it in plain words</summary>
+    <p data-i18n="core.s1p">Explain Part 1 in full sentences across one short paragraph. Pair it with the diagram in the Visual tour section.</p>
+  </details>
+  <details>
+    <summary data-i18n="core.s2">Part 2 — name it in plain words</summary>
+    <p data-i18n="core.s2p">Explain Part 2 in full sentences across one short paragraph. Call out one trade-off as a complete sentence.</p>
+  </details>
+  <details>
+    <summary data-i18n="core.s3">Part 3 — name it in plain words</summary>
+    <p data-i18n="core.s3p">Explain Part 3 in full sentences across one short paragraph. End with a sentence that leads into the visual tour.</p>
+  </details>
+</section>
+
+<!-- 4 VISUALIZATION -->
+<section class="doc" id="visual" aria-labelledby="h-visual">
+  <p class="eyebrow" data-i18n="visual.eyebrow">4 · Visual tour (required)</p>
+  <h2 id="h-visual" data-i18n="visual.h">See the flow before reading the code</h2>
+  <p data-i18n="visual.p1">Narrate what the reader is about to see in 2–3 sentences. Every diagram below also carries a two-sentence caption: what it shows plus what to notice.</p>
+
+  <h3 data-i18n="visual.d1h">Diagram: request path</h3>
+  <div class="mermaid" id="mm1" data-mermaid-en="graph TD
+    A[Client] --&gt; B[API]
+    B --&gt; C[Service]
+    C --&gt; D[Store]
+    D --&gt; C
+    C --&gt; B
+    B --&gt; A" data-mermaid-th="graph TD
+    A[ไคลเอนต์] --&gt; B[เอพีไอ]
+    B --&gt; C[เซอร์วิส]
+    C --&gt; D[ที่เก็บข้อมูล]
+    D --&gt; C
+    C --&gt; B
+    B --&gt; A">graph TD
+    A[Client] --&gt; B[API]
+    B --&gt; C[Service]
+    C --&gt; D[Store]
+    D --&gt; C
+    C --&gt; B
+    B --&gt; A</div>
+  <figcaption data-i18n="visual.d1cap">This diagram shows the round trip from client to store and back. Notice that every arrow returns, so failures can be traced to one hop.</figcaption>
+
+  <h3 data-i18n="visual.d2h">Animation: step through the states</h3>
+  <p data-i18n="visual.d2p">Use the stepper to walk the happy path slowly. Each step highlights one box in the inline SVG.</p>
+  <div class="card">
+    <svg class="themed" id="stepsvg" viewBox="0 0 520 120" width="100%" height="120" role="img" aria-label="Three-step flow">
+      <rect class="frame" x="0" y="0" width="520" height="120" rx="10"></rect>
+      <rect class="node" id="n1" x="20" y="30" width="140" height="60" rx="8"></rect>
+      <rect class="node" id="n2" x="190" y="30" width="140" height="60" rx="8"></rect>
+      <rect class="node" id="n3" x="360" y="30" width="140" height="60" rx="8"></rect>
+      <text x="90" y="65" text-anchor="middle" font-size="14" data-step-label="1">1 · Send</text>
+      <text x="260" y="65" text-anchor="middle" font-size="14" data-step-label="2">2 · Check</text>
+      <text x="430" y="65" text-anchor="middle" font-size="14" data-step-label="3">3 · Save</text>
+    </svg>
+    <p><strong data-i18n="visual.stepLabel">Step</strong>: <span id="step-text" data-i18n="visual.step1">The client sends one request with an idempotency key.</span>
+    <span class="muted"><span id="step-n">1</span> / 3</span></p>
+    <p>
+      <button class="btn" id="step-prev" type="button" data-i18n="ui.prev">Back</button>
+      <button class="btn" id="step-next" type="button" data-i18n="ui.next">Next</button>
+    </p>
+  </div>
+  <figcaption data-i18n="visual.d2cap">This animation shows three states in order without skipping. Notice the middle check, which is where retries are safe.</figcaption>
+
+  <h3 data-i18n="visual.d3h">Interactive: tabs + before/after slider + filter</h3>
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" aria-selected="true" data-tab="t-flow" type="button" data-i18n="visual.tab1">Sequence</button>
+    <button role="tab" aria-selected="false" data-tab="t-compare" type="button" data-i18n="visual.tab2">Before / After</button>
+    <button role="tab" aria-selected="false" data-tab="t-table" type="button" data-i18n="visual.tab3">Filter table</button>
+  </div>
+  <div id="t-flow">
+    <div class="mermaid" id="mm2" data-mermaid-en="sequenceDiagram
+      Client-&gt;&gt;API: POST /orders
+      API-&gt;&gt;Service: validate()
+      Service-&gt;&gt;Store: save()
+      Store--&gt;&gt;Service: ok
+      Service--&gt;&gt;API: 201 Created
+      API--&gt;&gt;Client: receipt" data-mermaid-th="sequenceDiagram
+      Client-&gt;&gt;API: POST /orders
+      API-&gt;&gt;Service: ตรวจสอบ()
+      Service-&gt;&gt;Store: บันทึก()
+      Store--&gt;&gt;Service: สำเร็จ
+      Service--&gt;&gt;API: 201 สร้างแล้ว
+      API--&gt;&gt;Client: ใบเสร็จ">sequenceDiagram
+      Client-&gt;&gt;API: POST /orders
+      API-&gt;&gt;Service: validate()
+      Service-&gt;&gt;Store: save()
+      Store--&gt;&gt;Service: ok
+      Service--&gt;&gt;API: 201 Created
+      API--&gt;&gt;Client: receipt</div>
+    <figcaption data-i18n="visual.tab1cap">This sequence shows time flowing down across four actors. Notice the validate step, which rejects bad input before any write.</figcaption>
+  </div>
+  <div id="t-compare" hidden>
+    <label for="ba-range" data-i18n="visual.sliderLabel">Drag to compare old output (left) versus new output (right).</label>
+    <input type="range" id="ba-range" min="0" max="100" value="50" aria-describedby="ba-cap">
+    <div class="ba" aria-hidden="true">
+      <div class="ba-pane" style="background:var(--code-bg);padding:16px"><code>OLD: 3 calls · 900ms · retry storms</code></div>
+      <div class="after" id="ba-after" style="width:50%;background:var(--callout);padding:16px"><code>NEW: 1 call · 220ms · safe retry</code></div>
+    </div>
+    <figcaption id="ba-cap" data-i18n="visual.tab2cap">This slider compares the old path with the new path side by side. Notice the latency drop, which comes from one fewer round trip.</figcaption>
+  </div>
+  <div id="t-table" hidden>
+    <label for="filter" data-i18n="visual.filterLabel">Type to filter the edge cases live.</label>
+    <input class="filter-input" id="filter" type="search" aria-label="Filter edge cases">
+    <table id="edge-table"><thead><tr><th data-i18n="visual.fc1">Case</th><th data-i18n="visual.fc2">Behavior</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="visual.fr1c1">Duplicate request arrives twice.</td><td data-i18n="visual.fr1c2">The second copy returns the first receipt without rewriting.</td></tr>
+      <tr><td data-i18n="visual.fr2c1">Store is slow for two seconds.</td><td data-i18n="visual.fr2c2">The service waits once, then returns a polite busy signal.</td></tr>
+      <tr><td data-i18n="visual.fr3c1">Payload fails validation.</td><td data-i18n="visual.fr3c2">The API rejects early with a field-level message.</td></tr>
+    </tbody></table>
+    <figcaption data-i18n="visual.tab3cap">This table lists three edge cases with live filtering. Notice each row is a full sentence, so screen readers hear complete thoughts.</figcaption>
+  </div>
+</section>
+
+<!-- 5 CODE -->
+<section class="doc" id="code" aria-labelledby="h-code">
+  <p class="eyebrow" data-i18n="code.eyebrow">5 · Code</p>
+  <h2 id="h-code" data-i18n="code.h">Code you can copy and run</h2>
+  <p data-i18n="code.p1">Read the story first: the old snippet fetched blindly, while the new snippet validates and retries safely. Identifiers stay English; the prose around them is bilingual.</p>
+  <div class="codehead"><span class="lang">new code · TypeScript</span><span class="path">src/REPLACE-THIS-path.ts</span><button class="btn copybtn" type="button" data-copy="code-new" data-i18n="ui.copy">Copy</button></div>
+  <pre><code id="code-new">// REPLACE-THIS new behavior. Keep identifiers English.
+async function loadOrderSafe(orderId, client) {
+  const res = await client.get("/api/orders/" + orderId, { timeoutMs: 2000 });
+  if (!res.ok) throw new Error("order-load-failed:" + res.status);
+  return res.json();
+}</code></pre>
+  <details>
+    <summary data-i18n="code.diff">Before / after diff</summary>
+    <p data-i18n="code.diffP">The old version ignored failures, while the new version surfaces one clear error after a bounded wait. That single change makes retries predictable.</p>
+    <pre><code>- return fetch(url).then(function(r){ return r.json(); });
++ const res = await client.get(url, { timeoutMs: 2000 });
++ if (!res.ok) throw new Error("order-load-failed:" + res.status);</code></pre>
+  </details>
+</section>
+
+<!-- 6 FLOW -->
+<section class="doc" id="flow" aria-labelledby="h-flow">
+  <p class="eyebrow" data-i18n="flow.eyebrow">6 · Runtime</p>
+  <h2 id="h-flow" data-i18n="flow.h">How it works at runtime</h2>
+  <p data-i18n="flow.p1">Follow these five numbered steps in order. Each step names the actor first, then the action, so the handoff stays visible.</p>
+  <ol>
+    <li data-i18n="flow.s1">The client sends POST /orders with an idempotency key in the header.</li>
+    <li data-i18n="flow.s2">The API validates the shape and returns 400 with field errors when invalid.</li>
+    <li data-i18n="flow.s3">The service checks the key, then writes once to the store.</li>
+    <li data-i18n="flow.s4">The store confirms, and the service builds a receipt.</li>
+    <li data-i18n="flow.s5">The API returns 201 with the receipt, and duplicates replay it safely.</li>
+  </ol>
+  <div class="codehead"><span class="lang">JSON · response</span><button class="btn copybtn" type="button" data-copy="code-json" data-i18n="ui.copy">Copy</button></div>
+  <pre><code id="code-json">{"orderId":"ord_123","status":"created","retrySafe":true}</code></pre>
+  <p class="caption-note" data-i18n="flow.next">With the path clear, the next section turns this into an adoption checklist.</p>
+</section>
+
+<!-- 7 ROLLOUT / TAKEAWAYS -->
+<section class="doc" id="rollout" aria-labelledby="h-rollout">
+  <p class="eyebrow" data-i18n="rollout.eyebrow">7 · Apply it</p>
+  <h2 id="h-rollout" data-i18n="rollout.h">Apply it safely, or take the lessons</h2>
+  <p data-i18n="rollout.p1">Use this checklist when the topic ships as a change; keep it as Key takeaways when the topic is purely explanatory. Either way, keep full sentences.</p>
+  <ol>
+    <li data-i18n="rollout.s1">Ship behind a flag to 5% of traffic and watch error rate for one hour.</li>
+    <li data-i18n="rollout.s2">Migrate stored records with a backfill job that is safe to rerun.</li>
+    <li data-i18n="rollout.s3">Roll back by flipping the flag off, which restores the old path instantly.</li>
+    <li data-i18n="rollout.s4">Observe with logs for decisions, metrics for latency, and alerts for 5xx spikes.</li>
+  </ol>
+</section>
+
+<!-- 8 RISKS -->
+<section class="doc" id="risks" aria-labelledby="h-risks">
+  <p class="eyebrow" data-i18n="risks.eyebrow">8 · Risks + FAQs</p>
+  <h2 id="h-risks" data-i18n="risks.h">Risks, unknowns, and honest answers</h2>
+  <p data-i18n="risks.p1">Name the worries plainly before the reader finds them. Each risk below states the concern, the impact, and the mitigation as complete thoughts.</p>
+  <table>
+    <caption data-i18n="risks.cap">Top risks and mitigations.</caption>
+    <thead><tr><th data-i18n="risks.c1">Risk</th><th data-i18n="risks.c2">Why it matters</th><th data-i18n="risks.c3">Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="risks.r1c1">Clock skew breaks ordering.</td><td data-i18n="risks.r1c2">Events may appear out of order to readers.</td><td data-i18n="risks.r1c3">We sort by sequence number, not wall time.</td></tr>
+      <tr><td data-i18n="risks.r2c1">Store slowdown cascades.</td><td data-i18n="risks.r2c2">Queues grow and latency spikes quickly.</td><td data-i18n="risks.r2c3">We bound waits and shed load with 503 plus Retry-After.</td></tr>
+    </tbody>
+  </table>
+  <details>
+    <summary data-i18n="risks.q1">Can we adopt this incrementally without a rewrite?</summary>
+    <p data-i18n="risks.a1">Yes, you can wrap one endpoint first because the new client falls back to the old path. That lets you measure before widening the rollout.</p>
+  </details>
+  <details>
+    <summary data-i18n="risks.q2">What should we log to debug this in production?</summary>
+    <p data-i18n="risks.a2">Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.</p>
+  </details>
+</section>
+
+<footer class="card">
+  <p><strong data-i18n="footer.h">What to remember</strong></p>
+  <p data-i18n="footer.p">This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.</p>
+  <p class="muted">Preview: <code>python3 -m http.server</code> → open <code>docs/plans/REPLACE-THIS-TOPIC.html</code></p>
+</footer>
+</main>
+
+<script>
+/* ============ STRINGS (EN/TH parity — extend per topic, keep keys stable) ============ */
+var STRINGS = {
+en: {
+"meta.title":"Explainer — REPLACE-THIS-TOPIC","meta.desc":"Deep interactive explanation with diagrams, code and step-through visuals.",
+"a11y.skip":"Skip to content","header.brand":"Explainer","header.topic":"REPLACE-THIS-TOPIC — one-line promise of what the reader will learn",
+"header.themeDark":"Dark","header.themeLight":"Light","header.themeToggle":"Switch to dark theme","header.themeToggleLight":"Switch to light theme",
+"toc.overview":"Overview","toc.current":"Background","toc.core":"Core ideas","toc.visual":"Visual tour","toc.code":"Code","toc.flow":"How it works","toc.rollout":"Apply it","toc.risks":"Risks + FAQs",
+"hero.eyebrow":"Interactive explanation · 12 min read","hero.title":"REPLACE-THIS-TOPIC in plain language","hero.lead":"Write 2–3 sentences here that state the goal, who this helps, and the single takeaway. Keep full sentences; this sets up every section below.","hero.meta":"Audience: smart newcomer · Tone: calm walkthrough · Code stays English, prose is bilingual.",
+"overview.eyebrow":"1 · Start here","overview.h":"Overview: what problem does this solve?","overview.p1":"Open with 2–3 sentences of narrative. Define the Goal (the outcome the reader wants) in plain language, then state why it matters right now. This paragraph must come before any list or table.","overview.termsH":"Key terms, explained once","overview.termsP":"Each jargon term appears as Term (plain-English meaning in one sentence) plus one sentence for why it matters here.","overview.t1":"(plain-English meaning in one sentence.)","overview.d1":"Second sentence: why Term A matters for this topic.","overview.t2":"(plain-English meaning in one sentence.)","overview.d2":"Second sentence: why Term B matters for this topic.","overview.tableCap":"Scope: what this doc covers and what it skips.","overview.c1":"In scope","overview.c2":"Non-goals","overview.c3":"Assumption","overview.r1c1":"State one covered outcome as a full sentence.","overview.r1c2":"State one skipped outcome as a full sentence.","overview.r1c3":"State one assumption as a full sentence.","overview.next":"Now that the goal is clear, we look at how things work today before proposing anything new.",
+"current.eyebrow":"2 · Background","current.h":"Background: how it works today","current.p1":"Write 2–3 sentences that narrate the current behavior end to end. Mention who calls what and where it hurts, in full sentences.","current.p2":"Follow the snippet with 2–3 sentences that explain the limitation in plain language. This bridges to the proposed ideas next.",
+"core.eyebrow":"3 · Core ideas","core.h":"Core ideas, one small piece at a time","core.p1":"Introduce the solution in 2–3 sentences. Promise the three small pieces below so the reader can hold the shape in mind.","core.s1":"Part 1 — name it in plain words","core.s1p":"Explain Part 1 in full sentences across one short paragraph. Pair it with the diagram in the Visual tour section.","core.s2":"Part 2 — name it in plain words","core.s2p":"Explain Part 2 in full sentences across one short paragraph. Call out one trade-off as a complete sentence.","core.s3":"Part 3 — name it in plain words","core.s3p":"Explain Part 3 in full sentences across one short paragraph. End with a sentence that leads into the visual tour.",
+"visual.eyebrow":"4 · Visual tour (required)","visual.h":"See the flow before reading the code","visual.p1":"Narrate what the reader is about to see in 2–3 sentences. Every diagram below also carries a two-sentence caption: what it shows plus what to notice.","visual.d1h":"Diagram: request path","visual.d1cap":"This diagram shows the round trip from client to store and back. Notice that every arrow returns, so failures can be traced to one hop.","visual.d2h":"Animation: step through the states","visual.d2p":"Use the stepper to walk the happy path slowly. Each step highlights one box in the inline SVG.","visual.stepLabel":"Step","visual.step1":"The client sends one request with an idempotency key.","visual.step2":"The service validates and guards against duplicates.","visual.step3":"The store saves once and the receipt returns.","visual.d2cap":"This animation shows three states in order without skipping. Notice the middle check, which is where retries are safe.","visual.d3h":"Interactive: tabs + before/after slider + filter","visual.tab1":"Sequence","visual.tab2":"Before / After","visual.tab3":"Filter table","visual.sliderLabel":"Drag to compare old output (left) versus new output (right).","visual.filterLabel":"Type to filter the edge cases live.","visual.fc1":"Case","visual.fc2":"Behavior","visual.fr1c1":"Duplicate request arrives twice.","visual.fr1c2":"The second copy returns the first receipt without rewriting.","visual.fr2c1":"Store is slow for two seconds.","visual.fr2c2":"The service waits once, then returns a polite busy signal.","visual.fr3c1":"Payload fails validation.","visual.fr3c2":"The API rejects early with a field-level message.","visual.tab1cap":"This sequence shows time flowing down across four actors. Notice the validate step, which rejects bad input before any write.","visual.tab2cap":"This slider compares the old path with the new path side by side. Notice the latency drop, which comes from one fewer round trip.","visual.tab3cap":"This table lists three edge cases with live filtering. Notice each row is a full sentence, so screen readers hear complete thoughts.",
+"code.eyebrow":"5 · Code","code.h":"Code you can copy and run","code.p1":"Read the story first: the old snippet fetched blindly, while the new snippet validates and retries safely. Identifiers stay English; the prose around them is bilingual.","code.diff":"Before / after diff","code.diffP":"The old version ignored failures, while the new version surfaces one clear error after a bounded wait. That single change makes retries predictable.",
+"flow.eyebrow":"6 · Runtime","flow.h":"How it works at runtime","flow.p1":"Follow these five numbered steps in order. Each step names the actor first, then the action, so the handoff stays visible.","flow.s1":"The client sends POST /orders with an idempotency key in the header.","flow.s2":"The API validates the shape and returns 400 with field errors when invalid.","flow.s3":"The service checks the key, then writes once to the store.","flow.s4":"The store confirms, and the service builds a receipt.","flow.s5":"The API returns 201 with the receipt, and duplicates replay it safely.","flow.next":"With the path clear, the next section turns this into an adoption checklist.",
+"rollout.eyebrow":"7 · Apply it","rollout.h":"Apply it safely, or take the lessons","rollout.p1":"Use this checklist when the topic ships as a change; keep it as Key takeaways when the topic is purely explanatory. Either way, keep full sentences.","rollout.s1":"Ship behind a flag to 5% of traffic and watch error rate for one hour.","rollout.s2":"Migrate stored records with a backfill job that is safe to rerun.","rollout.s3":"Roll back by flipping the flag off, which restores the old path instantly.","rollout.s4":"Observe with logs for decisions, metrics for latency, and alerts for 5xx spikes.",
+"risks.eyebrow":"8 · Risks + FAQs","risks.h":"Risks, unknowns, and honest answers","risks.p1":"Name the worries plainly before the reader finds them. Each risk below states the concern, the impact, and the mitigation as complete thoughts.","risks.cap":"Top risks and mitigations.","risks.c1":"Risk","risks.c2":"Why it matters","risks.c3":"Mitigation","risks.r1c1":"Clock skew breaks ordering.","risks.r1c2":"Events may appear out of order to readers.","risks.r1c3":"We sort by sequence number, not wall time.","risks.r2c1":"Store slowdown cascades.","risks.r2c2":"Queues grow and latency spikes quickly.","risks.r2c3":"We bound waits and shed load with 503 plus Retry-After.","risks.q1":"Can we adopt this incrementally without a rewrite?","risks.a1":"Yes, you can wrap one endpoint first because the new client falls back to the old path. That lets you measure before widening the rollout.","risks.q2":"What should we log to debug this in production?","risks.a2":"Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.",
+"footer.h":"What to remember","footer.p":"This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.",
+"ui.copy":"Copy","ui.copied":"Copied","ui.prev":"Back","ui.next":"Next"
+},
+th: {
+"meta.title":"คำอธิบาย — REPLACE-THIS-TOPIC","meta.desc":"คำอธิบายเชิงโต้ตอบพร้อมแผนภาพ โค้ด และภาพทีละขั้นตอน",
+"a11y.skip":"ข้ามไปยังเนื้อหา","header.brand":"ตัวอธิบาย","header.topic":"REPLACE-THIS-TOPIC — ประโยคเดียวที่บอกว่าผู้อ่านจะได้เรียนรู้อะไร",
+"header.themeDark":"มืด","header.themeLight":"สว่าง","header.themeToggle":"สลับไปธีมมืด","header.themeToggleLight":"สลับไปธีมสว่าง",
+"toc.overview":"ภาพรวม","toc.current":"ความเป็นมา","toc.core":"แนวคิดหลัก","toc.visual":"ทัวร์ภาพ","toc.code":"โค้ด","toc.flow":"การทำงาน","toc.rollout":"นำไปใช้","toc.risks":"ความเสี่ยง + คำถาม",
+"hero.eyebrow":"คำอธิบายเชิงโต้ตอบ · อ่าน 12 นาที","hero.title":"REPLACE-THIS-TOPIC ด้วยภาษาที่เข้าใจง่าย","hero.lead":"เขียน 2–3 ประโยคที่บอกเป้าหมาย ช่วยใคร และประเด็นสำคัญหนึ่งข้อ ใช้ประโยคสมบูรณ์เพื่อปูพื้นทุกส่วนด้านล่าง","hero.meta":"ผู้อ่าน: ผู้มาใหม่ที่ฉลาด · โทน: พาเดินแบบสงบ · โค้ดเป็นภาษาอังกฤษ เนื้อเรื่องมีสองภาษา",
+"overview.eyebrow":"1 · เริ่มตรงนี้","overview.h":"ภาพรวม: แก้ปัญหาอะไร?","overview.p1":"เปิดด้วยเรื่องเล่า 2–3 ประโยค นิยาม Goal (ผลลัพธ์ที่ผู้อ่านต้องการ) ด้วยภาษาง่าย แล้วบอกว่าทำไมสำคัญตอนนี้ ย่อหน้านี้ต้องมาก่อนรายการหรือตาราง","overview.termsH":"คำศัพท์สำคัญ อธิบายครั้งเดียว","overview.termsP":"ศัพท์แต่ละคำเขียนเป็น คำศัพท์ (ความหมายภาษาง่ายหนึ่งประโยค) บวกอีกหนึ่งประโยคว่าทำไมสำคัญที่นี่","overview.t1":"(ความหมายภาษาง่ายหนึ่งประโยค)","overview.d1":"ประโยคที่สอง: ทำไมคำ A สำคัญกับเรื่องนี้","overview.t2":"(ความหมายภาษาง่ายหนึ่งประโยค)","overview.d2":"ประโยคที่สอง: ทำไมคำ B สำคัญกับเรื่องนี้","overview.tableCap":"ขอบเขต: เอกสารนี้ครอบคลุมอะไรและข้ามอะไร","overview.c1":"ในขอบเขต","overview.c2":"ไม่ทำ","overview.c3":"ข้อสมมุติ","overview.r1c1":"ระบุผลลัพธ์ที่ครอบคลุมหนึ่งข้อเป็นประโยคสมบูรณ์","overview.r1c2":"ระบุผลลัพธ์ที่ข้ามหนึ่งข้อเป็นประโยคสมบูรณ์","overview.r1c3":"ระบุข้อสมมุติหนึ่งข้อเป็นประโยคสมบูรณ์","overview.next":"เมื่อเป้าหมายชัดแล้ว เราจะดูว่าปัจจุบันทำงานอย่างไรก่อนเสนอสิ่งใหม่",
+"current.eyebrow":"2 · ความเป็นมา","current.h":"ความเป็นมา: ปัจจุบันทำงานอย่างไร","current.p1":"เขียน 2–3 ประโยคเล่าพฤติกรรมปัจจุบันตั้งแต่ต้นจนจบ บอกว่าใครเรียกอะไรและเจ็บตรงไหนด้วยประโยคสมบูรณ์","current.p2":"หลังโค้ดให้เขียน 2–3 ประโยคอธิบายข้อจำกัดด้วยภาษาง่าย เพื่อเชื่อมไปยังแนวคิดใหม่",
+"core.eyebrow":"3 · แนวคิดหลัก","core.h":"แนวคิดหลัก ทีละชิ้นเล็ก ๆ","core.p1":"แนะนำวิธีแก้ใน 2–3 ประโยค สัญญาสามชิ้นย่อยด้านล่างเพื่อให้ผู้อ่านจำภาพได้","core.s1":"ส่วนที่ 1 — ตั้งชื่อด้วยภาษาง่าย","core.s1p":"อธิบายส่วนที่ 1 ด้วยประโยคสมบูรณ์ในย่อหน้าสั้น จับคู่กับแผนภาพในส่วนทัวร์ภาพ","core.s2":"ส่วนที่ 2 — ตั้งชื่อด้วยภาษาง่าย","core.s2p":"อธิบายส่วนที่ 2 ด้วยประโยคสมบูรณ์ในย่อหน้าสั้น ระบุข้อแลกหนึ่งข้อเป็นประโยคสมบูรณ์","core.s3":"ส่วนที่ 3 — ตั้งชื่อด้วยภาษาง่าย","core.s3p":"อธิบายส่วนที่ 3 ด้วยประโยคสมบูรณ์ในย่อหน้าสั้น จบด้วยประโยคที่พาเข้าสู่ทัวร์ภาพ",
+"visual.eyebrow":"4 · ทัวร์ภาพ (จำเป็น)","visual.h":"ดูภาพรวมก่อนอ่านโค้ด","visual.p1":"เล่า 2–3 ประโยคว่าผู้อ่านกำลังจะเห็นอะไร แผนภาพทุกอันมีคำบรรยายสองประโยค: แสดงอะไร + ให้สังเกตอะไร","visual.d1h":"แผนภาพ: เส้นทางคำขอ","visual.d1cap":"แผนภาพนี้แสดงเส้นทางไปกลับจากไคลเอนต์ถึงที่เก็บข้อมูล สังเกตลูกศรทุกเส้นมีขากลับ จึงไล่ความล้มเหลวได้ทีละช่วง","visual.d2h":"แอนิเมชัน: เดินทีละสถานะ","visual.d2p":"ใช้ปุ่มเดินหน้าถอยหลังเพื่อดูเส้นทางปกติอย่างช้า ๆ แต่ละขั้นจะไฮไลต์กล่องใน SVG","visual.stepLabel":"ขั้น","visual.step1":"ไคลเอนต์ส่งคำขอหนึ่งครั้งพร้อมคีย์กันซ้ำ","visual.step2":"เซอร์วิสตรวจสอบและกันการเขียนซ้ำ","visual.step3":"ที่เก็บข้อมูลบันทึกครั้งเดียวแล้วคืนใบเสร็จ","visual.d2cap":"แอนิเมชันนี้แสดงสามสถานะตามลำดับโดยไม่ข้าม สังเกตขั้นตรวจกลางซึ่งเป็นจุดที่ลองใหม่ได้อย่างปลอดภัย","visual.d3h":"เชิงโต้ตอบ: แท็บ + ตัวเลื่อนก่อน/หลัง + ตัวกรอง","visual.tab1":"ลำดับ","visual.tab2":"ก่อน / หลัง","visual.tab3":"ตารางกรอง","visual.sliderLabel":"ลากเพื่อเทียบผลลัพธ์เก่า (ซ้าย) กับใหม่ (ขวา)","visual.filterLabel":"พิมพ์เพื่อกรองกรณีขอบแบบสด","visual.fc1":"กรณี","visual.fc2":"พฤติกรรม","visual.fr1c1":"คำขอซ้ำมาถึงสองครั้ง","visual.fr1c2":"สำเนาที่สองคืนใบเสร็จแรกโดยไม่เขียนทับ","visual.fr2c1":"ที่เก็บข้อมูลช้าสองวินาที","visual.fr2c2":"เซอร์วิสรอหนึ่งครั้งแล้วตอบว่ายุ่งอย่างสุภาพ","visual.fr3c1":"ข้อมูลไม่ผ่านการตรวจ","visual.fr3c2":"เอพีไอปฏิเสธแต่เนิ่น ๆ พร้อมข้อความรายฟิลด์","visual.tab1cap":"ลำดับนี้แสดงเวลาไหลลงผ่านสี่ตัวละคร สังเกตขั้นตรวจซึ่งปฏิเสธข้อมูลเสียก่อนเขียนใด ๆ","visual.tab2cap":"ตัวเลื่อนนี้เทียบเส้นทางเก่ากับใหม่เคียงกัน สังเกตความหน่วงที่ลดเพราะตัดการไปกลับหนึ่งรอบ","visual.tab3cap":"ตารางนี้แสดงสามกรณีขอบพร้อมกรองสด สังเกตทุกแถวเป็นประโยคสมบูรณ์ โปรแกรมอ่านจอจึงฟังรู้เรื่อง",
+"code.eyebrow":"5 · โค้ด","code.h":"โค้ดที่คัดลอกไปรันได้","code.p1":"อ่านเรื่องก่อน: โค้ดเก่าดึงข้อมูลโดยไม่ตรวจ ส่วนโค้ดใหม่ตรวจและลองใหม่อย่างปลอดภัย ตัวระบุคงภาษาอังกฤษ เนื้อเรื่องรอบข้างมีสองภาษา","code.diff":"ดิฟก่อน / หลัง","code.diffP":"เวอร์ชันเก่าเพิกเฉยความล้มเหลว ส่วนเวอร์ชันใหม่แจ้งข้อผิดพลาดชัดหนึ่งข้อหลังรอแบบจำกัด การเปลี่ยนข้อนี้ทำให้การลองใหม่คาดเดาได้",
+"flow.eyebrow":"6 · รันไทม์","flow.h":"เบื้องหลังตอนรันทำงานอย่างไร","flow.p1":"ทำตามห้าขั้นตามลำดับ แต่ละขั้นบอกตัวละครก่อนแล้วค่อยการกระทำ จึงเห็นจุดส่งงานชัด","flow.s1":"ไคลเอนต์ส่ง POST /orders พร้อมคีย์กันซ้ำในเฮดเดอร์","flow.s2":"เอพีไอตรวจรูปแบบและคืน 400 พร้อมข้อผิดพลาดรายฟิลด์เมื่อไม่ถูกต้อง","flow.s3":"เซอร์วิสตรวจคีย์แล้วเขียนลงที่เก็บข้อมูลครั้งเดียว","flow.s4":"ที่เก็บข้อมูลยืนยัน แล้วเซอร์วิสสร้างใบเสร็จ","flow.s5":"เอพีไอคืน 201 พร้อมใบเสร็จ และคำขอซ้ำจะได้ใบเดิมอย่างปลอดภัย","flow.next":"เมื่อเห็นเส้นทางชัดแล้ว ส่วนถัดไปจะเปลี่ยนเป็นเช็กลิสต์นำไปใช้",
+"rollout.eyebrow":"7 · นำไปใช้","rollout.h":"นำไปใช้อย่างปลอดภัย หรือรับบทเรียน","rollout.p1":"ใช้เช็กลิสต์นี้เมื่อเรื่องนี้เป็นการเปลี่ยนแปลงที่ต้องส่งมอบ ถ้าเป็นเรื่องอธิบายล้วนให้ใช้เป็น Key takeaways แทน ไม่ว่าแบบใดให้คงประโยคสมบูรณ์","rollout.s1":"ส่งหลังธงฟีเจอร์ให้ทราฟฟิก 5% แล้วดูอัตราผิดพลาดหนึ่งชั่วโมง","rollout.s2":"ย้ายข้อมูลเก่าด้วยงาน backfill ที่รันซ้ำได้อย่างปลอดภัย","rollout.s3":"ย้อนกลับโดยปิดธง ซึ่งคืนเส้นทางเก่าทันที","rollout.s4":"สังเกตด้วยล็อกสำหรับการตัดสินใจ เมตริกสำหรับความหน่วง และแอลเลิร์ตสำหรับ 5xx พุ่ง",
+"risks.eyebrow":"8 · ความเสี่ยง + คำถาม","risks.h":"ความเสี่ยง สิ่งที่ไม่รู้ และคำตอบตรง ๆ","risks.p1":"บอกความกังวลตรง ๆ ก่อนผู้อ่านจะเจอเอง ความเสี่ยงแต่ละข้อบอกความกังวล ผลกระทบ และวิธีบรรเทาเป็นความคิดสมบูรณ์","risks.cap":"ความเสี่ยงหลักและวิธีบรรเทา","risks.c1":"ความเสี่ยง","risks.c2":"ทำไมสำคัญ","risks.c3":"วิธีบรรเทา","risks.r1c1":"เวลาคลาดทำให้ลำดับเพี้ยน","risks.r1c2":"เหตุการณ์อาจแสดงผิดลำดับต่อผู้อ่าน","risks.r1c3":"เราเรียงด้วยเลขลำดับ ไม่ใช่เวลานาฬิกา","risks.r2c1":"ที่เก็บข้อมูลช้าลามทั้งระบบ","risks.r2c2":"คิวโตและความหน่วงพุ่งเร็ว","risks.r2c3":"เราจำกัดเวลารอและลดโหลดด้วย 503 บวก Retry-After","risks.q1":"รับทีละน้อยโดยไม่รื้อใหม่ได้ไหม?","risks.a1":"ได้ เริ่มครอบหนึ่งเอนด์พอยต์ก่อนเพราะไคลเอนต์ใหม่ถอยกลับเส้นทางเก่าได้ จึงวัดผลก่อนขยายได้","risks.q2":"ควรล็อกอะไรเพื่อดีบักในโปรดักชัน?","risks.a2":"ล็อกคีย์กันซ้ำ สาขาการตัดสินใจ และเวลาที่เก็บข้อมูลทุกครั้งเขียน สามฟิลด์นี้อธิบายเหตุขัดข้องเกือบทั้งหมด",
+"footer.h":"สิ่งที่ควรจำ","footer.p":"หน้านี้จับคู่เรื่องสั้นกับหนึ่งแผนภาพและหนึ่งแอนิเมชัน แทนที่เครื่องหมาย REPLACE-THIS ทุกจุด คงท็อกเกิลไว้ และคงคำบรรยายสองประโยค",
+"ui.copy":"คัดลอก","ui.copied":"คัดลอกแล้ว","ui.prev":"ย้อน","ui.next":"ถัดไป"
+}};
+
+/* ============ Theme (explainer-theme + OS live-follow) ============ */
+var themeBtn=document.getElementById("btn-theme"),themeLabel=document.getElementById("theme-label");
+function currentTheme(){return document.documentElement.dataset.theme==="dark"?"dark":"light";}
+function applyTheme(t,store){document.documentElement.dataset.theme=t;var dark=(t==="dark");themeBtn.setAttribute("aria-pressed",String(dark));var lang=currentLang();themeLabel.textContent=dark?STRINGS[lang]["header.themeLight"]:STRINGS[lang]["header.themeDark"];themeBtn.setAttribute("aria-label",dark?STRINGS[lang]["header.themeToggleLight"]:STRINGS[lang]["header.themeToggle"]);try{if(store)localStorage.setItem("explainer-theme",t);}catch(e){}renderMermaid();}
+themeBtn.addEventListener("click",function(){applyTheme(currentTheme()==="dark"?"light":"dark",true);});
+try{var mq=window.matchMedia("(prefers-color-scheme: dark)");if(mq&&mq.addEventListener){mq.addEventListener("change",function(e){try{if(!localStorage.getItem("explainer-theme"))applyTheme(e.matches?"dark":"light",false);}catch(x){}});}}catch(e){}
+
+/* ============ Lang (explainer-lang + navigator sniff, no reload) ============ */
+var btnEn=document.getElementById("btn-en"),btnTh=document.getElementById("btn-th");
+function currentLang(){return document.documentElement.dataset.lang==="th"?"th":"en";}
+function setLang(l){if(l!=="en"&&l!=="th")l="en";document.documentElement.dataset.lang=l;document.documentElement.lang=l;
+document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k)){if(el.tagName==="META"){el.setAttribute("content",STRINGS[l][k]);}else if(el.tagName==="TITLE"){el.textContent=STRINGS[l][k];document.title=STRINGS[l][k];}else{el.textContent=STRINGS[l][k];}}});
+document.querySelectorAll("[data-i18n-aria]").forEach(function(el){var k=el.getAttribute("data-i18n-aria");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k))el.setAttribute("aria-label",STRINGS[l][k]);});
+btnEn.setAttribute("aria-pressed",String(l==="en"));btnTh.setAttribute("aria-pressed",String(l==="th"));
+themeLabel.textContent=currentTheme()==="dark"?STRINGS[l]["header.themeLight"]:STRINGS[l]["header.themeDark"];
+renderMermaid();renderSteps();}
+btnEn.addEventListener("click",function(){try{localStorage.setItem("explainer-lang","en");}catch(e){}setLang("en");});
+btnTh.addEventListener("click",function(){try{localStorage.setItem("explainer-lang","th");}catch(e){}setLang("th");});
+
+/* ============ Mermaid (themed + localized, re-render on toggle) ============ */
+var mmRendered=false;
+function renderMermaid(){try{if(!window.mermaid)return;var dark=currentTheme()==="dark";var lang=currentLang();mermaid.initialize({startOnLoad:false,theme:dark?"dark":"default",securityLevel:"loose"});document.querySelectorAll(".mermaid").forEach(function(el){var src=el.getAttribute(lang==="th"?"data-mermaid-th":"data-mermaid-en")||el.textContent;el.removeAttribute("data-processed");el.textContent=src;});mermaid.run({nodes:document.querySelectorAll(".mermaid")});mmRendered=true;}catch(e){}}
+
+/* ============ Copy buttons ============ */
+document.querySelectorAll("[data-copy]").forEach(function(btn){btn.addEventListener("click",function(){var id=btn.getAttribute("data-copy");var code=document.getElementById(id);if(!code)return;var t=code.textContent;function done(){var l=currentLang();btn.textContent=STRINGS[l]["ui.copied"];setTimeout(function(){btn.textContent=STRINGS[l]["ui.copy"];},1500);}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,done);}else{var ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");}catch(e){}document.body.removeChild(ta);done();}});});
+
+/* ============ TOC scrollspy + progress ============ */
+var tocLinks=Array.prototype.slice.call(document.querySelectorAll("#toc a"));
+var secs=tocLinks.map(function(a){return document.querySelector(a.getAttribute("href"));}).filter(Boolean);
+function onScroll(){var y=window.scrollY||0;var h=document.documentElement.scrollHeight-window.innerHeight;var p=h>0?(y/h*100):0;document.getElementById("progress").style.width=p+"%";var cur=secs.length?secs[0].id:"";secs.forEach(function(s){if(s.getBoundingClientRect().top<=120)cur=s.id;});tocLinks.forEach(function(a){a.classList.toggle("active",a.getAttribute("href")==="#"+cur);});}
+window.addEventListener("scroll",onScroll,{passive:true});onScroll();
+
+/* ============ Tabs ============ */
+document.querySelectorAll('[role="tab"]').forEach(function(tab){tab.addEventListener("click",function(){document.querySelectorAll('[role="tab"]').forEach(function(t){t.setAttribute("aria-selected","false");});tab.setAttribute("aria-selected","true");["t-flow","t-compare","t-table"].forEach(function(id){document.getElementById(id).hidden=(id!==tab.getAttribute("data-tab"));});});});
+
+/* ============ Before/after slider ============ */
+var baRange=document.getElementById("ba-range"),baAfter=document.getElementById("ba-after");
+if(baRange&&baAfter){baRange.addEventListener("input",function(){baAfter.style.width=baRange.value+"%";});}
+
+/* ============ Live filter ============ */
+var filter=document.getElementById("filter");
+if(filter){filter.addEventListener("input",function(){var q=filter.value.toLowerCase();document.querySelectorAll("#edge-table tbody tr").forEach(function(tr){tr.style.display=tr.textContent.toLowerCase().indexOf(q)>=0?"":"none";});});}
+
+/* ============ Stepper + SVG highlight ============ */
+var stepIdx=1;
+function stepTexts(){var l=currentLang();return [STRINGS[l]["visual.step1"],STRINGS[l]["visual.step2"],STRINGS[l]["visual.step3"]];}
+function renderSteps(){var arr=stepTexts();document.getElementById("step-text").textContent=arr[stepIdx-1];document.getElementById("step-n").textContent=String(stepIdx);["n1","n2","n3"].forEach(function(id,i){var r=document.getElementById(id);if(r)r.style.strokeWidth=(i===(stepIdx-1))?"4":"1";});var labels=document.querySelectorAll("#stepsvg [data-step-label]");var l=currentLang();var names=l==="th"?["1 · ส่ง","2 · ตรวจ","3 · บันทึก"]:["1 · Send","2 · Check","3 · Save"];labels.forEach(function(t,i){t.textContent=names[i];});}
+document.getElementById("step-prev").addEventListener("click",function(){stepIdx=stepIdx<=1?3:stepIdx-1;renderSteps();});
+document.getElementById("step-next").addEventListener("click",function(){stepIdx=stepIdx>=3?1:stepIdx+1;renderSteps();});
+
+/* ============ Init (apply stored theme/lang without flash) ============ */
+(function init(){var l=currentLang();setLang(l);applyTheme(currentTheme(),false);renderSteps();renderMermaid();})();
+</script>
+</body>
+</html>

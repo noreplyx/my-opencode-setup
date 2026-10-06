@@ -54,7 +54,8 @@ Write a design spec in your Task prompt to the implementor. Adapt sections to th
 
 ## Step 3 — Delegate the build
 - Via the Task tool, task `code-production-implementor` with the full design spec + exact output path + these build constraints:
-  - Single self-contained HTML file: inline CSS/JS (CDN allowed for Mermaid), no external local deps except explicitly approved.
+  - Start from `docs/plans/_explainer-template.html` (top nav + single centered column, max 800px): copy to `docs/plans/<topic>.html`, replace all `REPLACE-THIS` markers, extend `STRINGS.en/th` together. Do not remove theme/lang chrome, TOC, copy-buttons, tabs, slider, filter, stepper.
+  - Single self-contained HTML file: inline CSS/JS (CDN allowlist: Mermaid + Tailwind Play CDN for layout utilities only — colors via CSS vars, no hard-coded backgrounds), no external local deps except explicitly approved.
   - This is an authorized doc-build in `docs/plans/*.html` (or caller-specified doc path). Doc-build overrides production-code defaults for this file only.
   - Follow the spec exactly; keep all prose + visuals (visuals clarify, never replace prose).
   - Light/dark theme switching (mandatory implementation):
