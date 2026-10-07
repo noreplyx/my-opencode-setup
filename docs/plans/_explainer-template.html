@@ -113,6 +113,9 @@ input[type="range"]{width:100%;margin:12px 0}
 .ba .after{position:absolute;inset:0;overflow:hidden;border-right:3px solid var(--accent)}
 .kbd{font-family:ui-monospace,monospace;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:0 6px;background:var(--bg)}
 .filter-input{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--fg)}
+.shot{display:block;width:100%;max-width:100%;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.screen-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.screen-grid .card{flex:1 1 200px}
 .skip{position:absolute;left:-9999px}.skip:focus{left:8px;top:8px;background:var(--accent);color:var(--accent-fg);padding:8px 12px;border-radius:8px;z-index:99}
 @media (max-width:1023px){.shell{flex-direction:column}.sidebar{display:none}.toc-mobile{display:block}.site-header .row{flex-wrap:wrap}.card{padding:16px}}
 @media (max-width:768px){.site-header .row{flex-wrap:wrap}}
@@ -149,6 +152,9 @@ input[type="range"]{width:100%;margin:12px 0}
     <a href="#flow" data-i18n="toc.flow">How it works</a>
     <a href="#rollout" data-i18n="toc.rollout">Apply it</a>
     <a href="#risks" data-i18n="toc.risks">Risks + FAQs</a>
+    <a href="#tryit" data-i18n="toc.tryit">Self-check</a>
+    <a href="#troubleshoot" data-i18n="toc.troubleshoot">Troubleshooting</a>
+    <a href="#glossary" data-i18n="toc.glossary">Glossary</a>
   </nav>
 </aside>
 
@@ -164,7 +170,10 @@ input[type="range"]{width:100%;margin:12px 0}
     <a href="#code" data-i18n="toc.code">Code</a> ·
     <a href="#flow" data-i18n="toc.flow">How it works</a> ·
     <a href="#rollout" data-i18n="toc.rollout">Apply it</a> ·
-    <a href="#risks" data-i18n="toc.risks">Risks + FAQs</a>
+    <a href="#risks" data-i18n="toc.risks">Risks + FAQs</a> ·
+    <a href="#tryit" data-i18n="toc.tryit">Self-check</a> ·
+    <a href="#troubleshoot" data-i18n="toc.troubleshoot">Troubleshooting</a> ·
+    <a href="#glossary" data-i18n="toc.glossary">Glossary</a>
   </nav>
 </details>
 
@@ -336,6 +345,40 @@ function loadOrder(orderId) {
 </section>
 -->
 
+<!-- OPTIONAL: UI SCREENS (uncomment when topic has 2+ screens, a user journey, or interactive states) — screen gallery + required breakpoint cards + image before/after + state table. Screenshots live in docs/plans/assets/<topic>-<screen>.png (relative paths, max 6 shots, each under 500KB). Every <img> needs alt + data-i18n-alt. Breakpoint cards are required for every UI topic.
+<section class="doc" id="visual-ui" aria-labelledby="h-visual-ui">
+  <p class="eyebrow" data-i18n="visual.uiEyebrow">4e · Screens (optional)</p>
+  <h2 id="h-visual-ui" data-i18n="visual.uiH">What the user sees, step by step</h2>
+  <p data-i18n="visual.uiP">Walk the journey in order: each tab is one screen, each screenshot carries alt text, and the breakpoint cards show how the layout adapts. Pixel text in images stays English; the prose around it is bilingual.</p>
+  <div class="tabs" role="tablist" aria-label="Screens">
+    <button role="tab" aria-selected="true" data-tab="t-screen1" type="button" data-i18n="visual.uiTab1">Screen 1</button>
+    <button role="tab" aria-selected="false" data-tab="t-screen2" type="button" data-i18n="visual.uiTab2">Screen 2</button>
+  </div>
+  <div id="t-screen1">
+    <img class="shot" src="assets/REPLACE-THIS-TOPIC-screen1.png" alt="Screen 1 screenshot" data-i18n-alt="visual.uiShot1Alt">
+    <figcaption data-i18n="visual.uiShot1Cap">This screenshot shows Screen 1 in its default state. Notice the primary action, which is where the journey continues.</figcaption>
+  </div>
+  <div id="t-screen2" hidden>
+    <img class="shot" src="assets/REPLACE-THIS-TOPIC-screen2.png" alt="Screen 2 screenshot" data-i18n-alt="visual.uiShot2Alt">
+    <figcaption data-i18n="visual.uiShot2Cap">This screenshot shows Screen 2 after the main action. Notice the confirmation state, which tells the user the journey succeeded.</figcaption>
+  </div>
+  <h3 data-i18n="visual.uiBpH">Breakpoints: how the layout adapts (required for UI)</h3>
+  <div class="screen-grid">
+    <div class="card"><h3 data-i18n="visual.uiBpWide">Wide ≥1024px</h3><p data-i18n="visual.uiBpWideP">The layout shows all columns side by side in one full sentence.</p></div>
+    <div class="card"><h3 data-i18n="visual.uiBpMed">Medium 768px</h3><p data-i18n="visual.uiBpMedP">The layout stacks one column below the other in one full sentence.</p></div>
+    <div class="card"><h3 data-i18n="visual.uiBpNarrow">Narrow &lt;768px</h3><p data-i18n="visual.uiBpNarrowP">The layout shows one column with the primary action pinned in one full sentence.</p></div>
+  </div>
+  <h3 data-i18n="visual.uiStateH">States: what each screen shows when things change</h3>
+  <table><caption data-i18n="visual.uiStateCap">Screen states and what to notice.</caption>
+    <thead><tr><th data-i18n="visual.uiStateC1">State</th><th data-i18n="visual.uiStateC2">When shown</th><th data-i18n="visual.uiStateC3">What to notice</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="visual.uiStateR1C1">Default state loads correctly.</td><td data-i18n="visual.uiStateR1C2">The screen opens with data ready to display.</td><td data-i18n="visual.uiStateR1C3">Check the Cart screen at Wide for the full layout.</td></tr>
+      <tr><td data-i18n="visual.uiStateR2C1">Empty state guides the next step.</td><td data-i18n="visual.uiStateR2C2">The list has no items yet to show.</td><td data-i18n="visual.uiStateR2C3">Check the Cart screen at Narrow for the pinned action.</td></tr>
+    </tbody></table>
+  <figcaption data-i18n="visual.uiCap">This UI tour pairs screenshots with breakpoint cards and a state table. Notice the Narrow card, which is where layout bugs hide most often.</figcaption>
+</section>
+-->
+
 <!-- 5 CODE -->
 <section class="doc" id="code" aria-labelledby="h-code">
   <p class="eyebrow" data-i18n="code.eyebrow">5 · Code</p>
@@ -408,6 +451,71 @@ async function loadOrderSafe(orderId, client) {
     <summary data-i18n="risks.q2">What should we log to debug this in production?</summary>
     <p data-i18n="risks.a2">Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.</p>
   </details>
+  <p class="caption-note" data-i18n="risks.next">With the worries named, test yourself hands-on before looking up fixes in the next sections.</p>
+</section>
+
+<!-- 9 TRY-IT / SELF-CHECK (optional: include when core has 3+ steps or code behavior changes) -->
+<section class="doc" id="tryit" aria-labelledby="h-tryit">
+  <p class="eyebrow" data-i18n="tryit.eyebrow">9 · Self-check</p>
+  <h2 id="h-tryit" data-i18n="tryit.h">Check yourself, then try it</h2>
+  <p data-i18n="tryit.p1">Answer the question below to lock in a core idea, then run the one hands-on lab. Each answer explains itself, so a wrong pick still teaches.</p>
+  <div class="card" data-quiz="quiz-q1" data-answer="b">
+    <h3 data-i18n="tryit.q1h">Question 1 — what makes retries safe here?</h3>
+    <p data-i18n="tryit.q1p">Pick the one sentence that best explains the safe-retry mechanism.</p>
+    <p>
+      <label><input type="radio" name="quiz-q1" value="a"> <span data-i18n="tryit.q1a">The client retries blindly until the store answers.</span></label><br>
+      <label><input type="radio" name="quiz-q1" value="b"> <span data-i18n="tryit.q1b">The idempotency key lets the service replay the first receipt instead of writing twice.</span></label><br>
+      <label><input type="radio" name="quiz-q1" value="c"> <span data-i18n="tryit.q1c">The API skips validation to answer faster.</span></label>
+    </p>
+    <p>
+      <button class="btn" type="button" id="quiz-check" data-i18n="tryit.check">Check answers</button>
+      <span class="muted" id="quiz-result" role="status" aria-live="polite" data-i18n="tryit.pending">Not checked yet.</span>
+    </p>
+  </div>
+  <div class="codehead"><span class="lang">hands-on · bash</span><button class="btn copybtn" type="button" data-copy="code-tryit" data-i18n="ui.copy">Copy</button></div>
+  <pre><code id="code-tryit"># REPLACE-THIS one lab: reproduce the happy path in under a minute.
+curl -X POST /api/orders -H "Idempotency-Key: demo-1" -d '{}'
+# expected: 201 Created with {"orderId":"ord_123","status":"created","retrySafe":true}</code></pre>
+  <p class="caption-note" data-i18n="tryit.next">Once you can answer and run the above, the next section helps when the run fails.</p>
+</section>
+
+<!-- 10 TROUBLESHOOTING (optional: include when section 6 lists 2+ error paths) -->
+<section class="doc" id="troubleshoot" aria-labelledby="h-troubleshoot">
+  <p class="eyebrow" data-i18n="troubleshoot.eyebrow">10 · Troubleshooting</p>
+  <h2 id="h-troubleshoot" data-i18n="troubleshoot.h">When it breaks, look here first</h2>
+  <p data-i18n="troubleshoot.p1">Match your symptom in the table, then apply the fix in order. Each fix names the file or command first so you know where to act.</p>
+  <table>
+    <caption data-i18n="troubleshoot.cap">Common symptoms, causes, and fixes.</caption>
+    <thead><tr><th data-i18n="troubleshoot.c1">Symptom</th><th data-i18n="troubleshoot.c2">Likely cause</th><th data-i18n="troubleshoot.c3">Fix</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="troubleshoot.r1c1">Duplicate orders appear twice.</td><td data-i18n="troubleshoot.r1c2">The idempotency key is missing or regenerated per retry.</td><td data-i18n="troubleshoot.r1c3">Send one stable key per order in the request header.</td></tr>
+      <tr><td data-i18n="troubleshoot.r2c1">Requests fail with 400 field errors.</td><td data-i18n="troubleshoot.r2c2">The payload shape changed without updating validation.</td><td data-i18n="troubleshoot.r2c3">Open the API validator and align the schema with the client.</td></tr>
+    </tbody>
+  </table>
+  <details>
+    <summary data-i18n="troubleshoot.pit1">Pitfall: retry storms hide the real error.</summary>
+    <p data-i18n="troubleshoot.pit1p">The client retries too fast and floods the logs, so the first failure scrolls away. Back off exponentially and log the idempotency key once per attempt.</p>
+  </details>
+  <p class="caption-note" data-i18n="troubleshoot.next">With fixes handy, keep the vocabulary and links in the last section for later.</p>
+</section>
+
+<!-- 11 GLOSSARY (optional: include by default unless the topic has fewer than 3 jargon terms) -->
+<section class="doc" id="glossary" aria-labelledby="h-glossary">
+  <p class="eyebrow" data-i18n="glossary.eyebrow">11 · Glossary</p>
+  <h2 id="h-glossary" data-i18n="glossary.h">Terms and where to read next</h2>
+  <p data-i18n="glossary.p1">Keep this section open while you re-read the doc. Each term below appeared earlier, collected here for quick lookup.</p>
+  <table>
+    <caption data-i18n="glossary.cap">Key terms in Thai (English).</caption>
+    <thead><tr><th data-i18n="glossary.c1">Term</th><th data-i18n="glossary.c2">Meaning</th></tr></thead>
+    <tbody>
+      <tr><td data-i18n="glossary.r1c1">idempotency key</td><td data-i18n="glossary.r1c2">A stable header value that lets the service recognize a retry as the same request.</td></tr>
+      <tr><td data-i18n="glossary.r2c1">Store</td><td data-i18n="glossary.r2c2">The system of record that saves each order exactly once.</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li data-i18n="glossary.link1">API validation guide — read this to write precise 400 error messages.</li>
+    <li data-i18n="glossary.link2">Retry and backoff pattern — read this to bound waits without storms.</li>
+  </ul>
 </section>
 
 <footer class="card">
@@ -429,16 +537,19 @@ en: {
 "meta.title":"Explainer — REPLACE-THIS-TOPIC","meta.desc":"Deep interactive explanation with diagrams, code and step-through visuals.",
 "a11y.skip":"Skip to content","header.brand":"Explainer","header.topic":"REPLACE-THIS-TOPIC — one-line promise of what the reader will learn",
 "header.themeDark":"Dark","header.themeLight":"Light","header.themeToggle":"Switch to dark theme","header.themeToggleLight":"Switch to light theme",
-"toc.overview":"Overview","toc.current":"Background","toc.core":"Core ideas","toc.visual":"Visual tour","toc.code":"Code","toc.flow":"How it works","toc.rollout":"Apply it","toc.risks":"Risks + FAQs","toc.label":"Contents",
+"toc.overview":"Overview","toc.current":"Background","toc.core":"Core ideas","toc.visual":"Visual tour","toc.code":"Code","toc.flow":"How it works","toc.rollout":"Apply it","toc.risks":"Risks + FAQs","toc.tryit":"Self-check","toc.troubleshoot":"Troubleshooting","toc.glossary":"Glossary","toc.label":"Contents",
 "hero.eyebrow":"Interactive explanation · 12 min read","hero.title":"REPLACE-THIS-TOPIC in plain language","hero.lead":"Write 2–3 sentences here that state the goal, who this helps, and the single takeaway. Keep full sentences; this sets up every section below.","hero.meta":"Audience: smart newcomer · Tone: calm walkthrough · Code stays English, prose is bilingual.",
 "overview.eyebrow":"1 · Start here","overview.h":"Overview: what problem does this solve?","overview.p1":"Open with 2–3 sentences of narrative. Define the Goal (the outcome the reader wants) in plain language, then state why it matters right now. This paragraph must come before any list or table.","overview.termsH":"Key terms, explained once","overview.termsP":"Each jargon term appears as Term (plain-English meaning in one sentence) plus one sentence for why it matters here.","overview.t1":"(plain-English meaning in one sentence.)","overview.d1":"Second sentence: why Term A matters for this topic.","overview.t2":"(plain-English meaning in one sentence.)","overview.d2":"Second sentence: why Term B matters for this topic.","overview.tableCap":"Scope: what this doc covers and what it skips.","overview.c1":"In scope","overview.c2":"Non-goals","overview.c3":"Assumption","overview.r1c1":"State one covered outcome as a full sentence.","overview.r1c2":"State one skipped outcome as a full sentence.","overview.r1c3":"State one assumption as a full sentence.","overview.next":"Now that the goal is clear, we look at how things work today before proposing anything new.",
 "current.eyebrow":"2 · Background","current.h":"Background: how it works today","current.p1":"Write 2–3 sentences that narrate the current behavior end to end. Mention who calls what and where it hurts, in full sentences.","current.p2":"Follow the snippet with 2–3 sentences that explain the limitation in plain language. This bridges to the proposed ideas next.",
 "core.eyebrow":"3 · Core ideas","core.h":"Core ideas, one small piece at a time","core.p1":"Introduce the solution in 2–3 sentences. Promise the three small pieces below so the reader can hold the shape in mind.","core.s1":"Part 1 — name it in plain words","core.s1p":"Explain Part 1 in full sentences across one short paragraph. Pair it with the diagram in the Visual tour section.","core.s2":"Part 2 — name it in plain words","core.s2p":"Explain Part 2 in full sentences across one short paragraph. Call out one trade-off as a complete sentence.","core.s3":"Part 3 — name it in plain words","core.s3p":"Explain Part 3 in full sentences across one short paragraph. End with a sentence that leads into the visual tour.",
-"visual.eyebrow":"4 · Visual tour (required)","visual.h":"See the flow before reading the code","visual.p1":"Narrate what the reader is about to see in 2–3 sentences. Every diagram below also carries a two-sentence caption: what it shows plus what to notice.","visual.d1h":"Diagram: request path","visual.d1cap":"This diagram shows the round trip from client to store and back. Notice that every arrow returns, so failures can be traced to one hop.","visual.d2h":"Animation: step through the states","visual.d2p":"Use the stepper to walk the happy path slowly. Each step highlights one box in the inline SVG.","visual.stepLabel":"Step","visual.step1":"The client sends one request with an idempotency key.","visual.step2":"The service validates and guards against duplicates.","visual.step3":"The store saves once and the receipt returns.","visual.d2cap":"This animation shows three states in order without skipping. Notice the middle check, which is where retries are safe.","visual.d3h":"Interactive: tabs + before/after slider + filter","visual.tab1":"Sequence","visual.tab2":"Before / After","visual.tab3":"Filter table","visual.sliderLabel":"Drag to compare old output (left) versus new output (right).","visual.filterLabel":"Type to filter the edge cases live.","visual.fc1":"Case","visual.fc2":"Behavior","visual.fr1c1":"Duplicate request arrives twice.","visual.fr1c2":"The second copy returns the first receipt without rewriting.","visual.fr2c1":"Store is slow for two seconds.","visual.fr2c2":"The service waits once, then returns a polite busy signal.","visual.fr3c1":"Payload fails validation.","visual.fr3c2":"The API rejects early with a field-level message.","visual.tab1cap":"This sequence shows time flowing down across four actors. Notice the validate step, which rejects bad input before any write.","visual.tab2cap":"This slider compares the old path with the new path side by side. Notice the latency drop, which comes from one fewer round trip.","visual.tab3cap":"This table lists three edge cases with live filtering. Notice each row is a full sentence, so screen readers hear complete thoughts.","visual.erEyebrow":"4b · Data model (optional)","visual.erH":"What gets stored and how it links","visual.erP":"Read this before the runtime flow: it names the stored things first, so the arrows later have something to point at. PK/FK and cardinality stay English; names translate.","visual.erCap":"This ER diagram shows two entities and one relationship. Notice the 1 to 0..* cardinality, which is why duplicate requests replay a receipt instead of writing twice.","visual.ucEyebrow":"4c · Actors (optional)","visual.ucH":"Who does what with the system","visual.ucP":"Meet the actors first: each oval is one goal the system promises, not one screen. Dashed arrows marked include or extend stay English because they are UML keywords.","visual.ucCap":"This use-case diagram shows two actors and three goals inside one system boundary. Notice the include arrow, which means a refund always reuses the track flow.","visual.c4Eyebrow":"4d · Architecture (optional)","visual.c4H":"Where the parts run","visual.c4P":"Zoom from people to code: C1 shows who uses the system, C2 shows the runnable containers, C3 shows the components inside one container. Switch levels with the tabs; types stay English, names translate.","visual.c4c1":"C1 Context","visual.c4c2":"C2 Container","visual.c4c3":"C3 Component","visual.c4Cap":"This C4 view shows one zoom level at a time across people, containers, and components. Notice how C2 maps to the sequence actors, so the runtime flow has a home.",
+"visual.eyebrow":"4 · Visual tour (required)","visual.h":"See the flow before reading the code","visual.p1":"Narrate what the reader is about to see in 2–3 sentences. Every diagram below also carries a two-sentence caption: what it shows plus what to notice.","visual.d1h":"Diagram: request path","visual.d1cap":"This diagram shows the round trip from client to store and back. Notice that every arrow returns, so failures can be traced to one hop.","visual.d2h":"Animation: step through the states","visual.d2p":"Use the stepper to walk the happy path slowly. Each step highlights one box in the inline SVG.","visual.stepLabel":"Step","visual.step1":"The client sends one request with an idempotency key.","visual.step2":"The service validates and guards against duplicates.","visual.step3":"The store saves once and the receipt returns.","visual.d2cap":"This animation shows three states in order without skipping. Notice the middle check, which is where retries are safe.","visual.d3h":"Interactive: tabs + before/after slider + filter","visual.tab1":"Sequence","visual.tab2":"Before / After","visual.tab3":"Filter table","visual.sliderLabel":"Drag to compare old output (left) versus new output (right).","visual.filterLabel":"Type to filter the edge cases live.","visual.fc1":"Case","visual.fc2":"Behavior","visual.fr1c1":"Duplicate request arrives twice.","visual.fr1c2":"The second copy returns the first receipt without rewriting.","visual.fr2c1":"Store is slow for two seconds.","visual.fr2c2":"The service waits once, then returns a polite busy signal.","visual.fr3c1":"Payload fails validation.","visual.fr3c2":"The API rejects early with a field-level message.","visual.tab1cap":"This sequence shows time flowing down across four actors. Notice the validate step, which rejects bad input before any write.","visual.tab2cap":"This slider compares the old path with the new path side by side. Notice the latency drop, which comes from one fewer round trip.","visual.tab3cap":"This table lists three edge cases with live filtering. Notice each row is a full sentence, so screen readers hear complete thoughts.","visual.erEyebrow":"4b · Data model (optional)","visual.erH":"What gets stored and how it links","visual.erP":"Read this before the runtime flow: it names the stored things first, so the arrows later have something to point at. PK/FK and cardinality stay English; names translate.","visual.erCap":"This ER diagram shows two entities and one relationship. Notice the 1 to 0..* cardinality, which is why duplicate requests replay a receipt instead of writing twice.","visual.ucEyebrow":"4c · Actors (optional)","visual.ucH":"Who does what with the system","visual.ucP":"Meet the actors first: each oval is one goal the system promises, not one screen. Dashed arrows marked include or extend stay English because they are UML keywords.","visual.ucCap":"This use-case diagram shows two actors and three goals inside one system boundary. Notice the include arrow, which means a refund always reuses the track flow.","visual.c4Eyebrow":"4d · Architecture (optional)","visual.c4H":"Where the parts run","visual.c4P":"Zoom from people to code: C1 shows who uses the system, C2 shows the runnable containers, C3 shows the components inside one container. Switch levels with the tabs; types stay English, names translate.","visual.c4c1":"C1 Context","visual.c4c2":"C2 Container","visual.c4c3":"C3 Component","visual.c4Cap":"This C4 view shows one zoom level at a time across people, containers, and components. Notice how C2 maps to the sequence actors, so the runtime flow has a home.","visual.uiEyebrow":"4e · Screens (optional)","visual.uiH":"What the user sees, step by step","visual.uiP":"Walk the journey in order: each tab is one screen, each screenshot carries alt text, and the breakpoint cards show how the layout adapts. Pixel text in images stays English; the prose around it is bilingual.","visual.uiTab1":"Screen 1","visual.uiTab2":"Screen 2","visual.uiShot1Alt":"Screen 1 screenshot","visual.uiShot1Cap":"This screenshot shows Screen 1 in its default state. Notice the primary action, which is where the journey continues.","visual.uiShot2Alt":"Screen 2 screenshot","visual.uiShot2Cap":"This screenshot shows Screen 2 after the main action. Notice the confirmation state, which tells the user the journey succeeded.","visual.uiBpH":"Breakpoints: how the layout adapts (required for UI)","visual.uiBpWide":"Wide ≥1024px","visual.uiBpWideP":"The layout shows all columns side by side in one full sentence.","visual.uiBpMed":"Medium 768px","visual.uiBpMedP":"The layout stacks one column below the other in one full sentence.","visual.uiBpNarrow":"Narrow <768px","visual.uiBpNarrowP":"The layout shows one column with the primary action pinned in one full sentence.","visual.uiStateH":"States: what each screen shows when things change","visual.uiStateCap":"Screen states and what to notice.","visual.uiStateC1":"State","visual.uiStateC2":"When shown","visual.uiStateC3":"What to notice","visual.uiStateR1C1":"Default state loads correctly.","visual.uiStateR1C2":"The screen opens with data ready to display.","visual.uiStateR1C3":"Check the Cart screen at Wide for the full layout.","visual.uiStateR2C1":"Empty state guides the next step.","visual.uiStateR2C2":"The list has no items yet to show.","visual.uiStateR2C3":"Check the Cart screen at Narrow for the pinned action.","visual.uiCap":"This UI tour pairs screenshots with breakpoint cards and a state table. Notice the Narrow card, which is where layout bugs hide most often.",
 "code.eyebrow":"5 · Code","code.h":"Code you can copy and run","code.p1":"Read the story first: the old snippet fetched blindly, while the new snippet validates and retries safely. Identifiers stay English; the prose around them is bilingual.","code.diff":"Before / after diff","code.diffP":"The old version ignored failures, while the new version surfaces one clear error after a bounded wait. That single change makes retries predictable.",
 "flow.eyebrow":"6 · Runtime","flow.h":"How it works at runtime","flow.p1":"Follow these five numbered steps in order. Each step names the actor first, then the action, so the handoff stays visible.","flow.s1":"The client sends POST /orders with an idempotency key in the header.","flow.s2":"The API validates the shape and returns 400 with field errors when invalid.","flow.s3":"The service checks the key, then writes once to the store.","flow.s4":"The store confirms, and the service builds a receipt.","flow.s5":"The API returns 201 with the receipt, and duplicates replay it safely.","flow.next":"With the path clear, the next section turns this into an adoption checklist.",
 "rollout.eyebrow":"7 · Apply it","rollout.h":"Apply it safely, or take the lessons","rollout.p1":"Use this checklist when the topic ships as a change; keep it as Key takeaways when the topic is purely explanatory. Either way, keep full sentences.","rollout.s1":"Ship behind a flag to 5% of traffic and watch error rate for one hour.","rollout.s2":"Migrate stored records with a backfill job that is safe to rerun.","rollout.s3":"Roll back by flipping the flag off, which restores the old path instantly.","rollout.s4":"Observe with logs for decisions, metrics for latency, and alerts for 5xx spikes.",
-"risks.eyebrow":"8 · Risks + FAQs","risks.h":"Risks, unknowns, and honest answers","risks.p1":"Name the worries plainly before the reader finds them. Each risk below states the concern, the impact, and the mitigation as complete thoughts.","risks.cap":"Top risks and mitigations.","risks.c1":"Risk","risks.c2":"Why it matters","risks.c3":"Mitigation","risks.r1c1":"Clock skew breaks ordering.","risks.r1c2":"Events may appear out of order to readers.","risks.r1c3":"We sort by sequence number, not wall time.","risks.r2c1":"Store slowdown cascades.","risks.r2c2":"Queues grow and latency spikes quickly.","risks.r2c3":"We bound waits and shed load with 503 plus Retry-After.","risks.q1":"Can we adopt this incrementally without a rewrite?","risks.a1":"Yes, you can wrap one endpoint first because the new client falls back to the old path. That lets you measure before widening the rollout.","risks.q2":"What should we log to debug this in production?","risks.a2":"Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.",
+"risks.eyebrow":"8 · Risks + FAQs","risks.h":"Risks, unknowns, and honest answers","risks.p1":"Name the worries plainly before the reader finds them. Each risk below states the concern, the impact, and the mitigation as complete thoughts.","risks.cap":"Top risks and mitigations.","risks.c1":"Risk","risks.c2":"Why it matters","risks.c3":"Mitigation","risks.r1c1":"Clock skew breaks ordering.","risks.r1c2":"Events may appear out of order to readers.","risks.r1c3":"We sort by sequence number, not wall time.","risks.r2c1":"Store slowdown cascades.","risks.r2c2":"Queues grow and latency spikes quickly.","risks.r2c3":"We bound waits and shed load with 503 plus Retry-After.","risks.q1":"Can we adopt this incrementally without a rewrite?","risks.a1":"Yes, you can wrap one endpoint first because the new client falls back to the old path. That lets you measure before widening the rollout.","risks.q2":"What should we log to debug this in production?","risks.a2":"Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.","risks.next":"With the worries named, test yourself hands-on before looking up fixes in the next sections.",
+"tryit.eyebrow":"9 · Self-check","tryit.h":"Check yourself, then try it","tryit.p1":"Answer the question below to lock in a core idea, then run the one hands-on lab. Each answer explains itself, so a wrong pick still teaches.","tryit.q1h":"Question 1 — what makes retries safe here?","tryit.q1p":"Pick the one sentence that best explains the safe-retry mechanism.","tryit.q1a":"The client retries blindly until the store answers.","tryit.q1b":"The idempotency key lets the service replay the first receipt instead of writing twice.","tryit.q1c":"The API skips validation to answer faster.","tryit.check":"Check answers","tryit.pending":"Not checked yet.","tryit.correct":"Correct — the key makes retries replayable without double writes.","tryit.wrong":"Not quite — pick the answer about the idempotency key replaying the receipt.","tryit.next":"Once you can answer and run the above, the next section helps when the run fails.",
+"troubleshoot.eyebrow":"10 · Troubleshooting","troubleshoot.h":"When it breaks, look here first","troubleshoot.p1":"Match your symptom in the table, then apply the fix in order. Each fix names the file or command first so you know where to act.","troubleshoot.cap":"Common symptoms, causes, and fixes.","troubleshoot.c1":"Symptom","troubleshoot.c2":"Likely cause","troubleshoot.c3":"Fix","troubleshoot.r1c1":"Duplicate orders appear twice.","troubleshoot.r1c2":"The idempotency key is missing or regenerated per retry.","troubleshoot.r1c3":"Send one stable key per order in the request header.","troubleshoot.r2c1":"Requests fail with 400 field errors.","troubleshoot.r2c2":"The payload shape changed without updating validation.","troubleshoot.r2c3":"Open the API validator and align the schema with the client.","troubleshoot.pit1":"Pitfall: retry storms hide the real error.","troubleshoot.pit1p":"The client retries too fast and floods the logs, so the first failure scrolls away. Back off exponentially and log the idempotency key once per attempt.","troubleshoot.next":"With fixes handy, keep the vocabulary and links in the last section for later.",
+"glossary.eyebrow":"11 · Glossary","glossary.h":"Terms and where to read next","glossary.p1":"Keep this section open while you re-read the doc. Each term below appeared earlier, collected here for quick lookup.","glossary.cap":"Key terms in Thai (English).","glossary.c1":"Term","glossary.c2":"Meaning","glossary.r1c1":"idempotency key","glossary.r1c2":"A stable header value that lets the service recognize a retry as the same request.","glossary.r2c1":"Store","glossary.r2c2":"The system of record that saves each order exactly once.","glossary.link1":"API validation guide — read this to write precise 400 error messages.","glossary.link2":"Retry and backoff pattern — read this to bound waits without storms.",
 "footer.h":"What to remember","footer.p":"This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.","footer.buildH":"Build info","footer.buildP":"Validation and build log live here so they never compete with the reading flow.",
 "ui.copy":"Copy","ui.copied":"Copied","ui.prev":"Back","ui.next":"Next"
 },
@@ -460,6 +571,9 @@ th: {
 "toc.flow":"เบื้องหลังการทำงาน",
 "toc.rollout":"เอาไปใช้จริง",
 "toc.risks":"ความเสี่ยง + คำถามที่พบบ่อย",
+"toc.tryit":"ทบทวนตัวเอง",
+"toc.troubleshoot":"แก้ปัญหา",
+"toc.glossary":"อภิธานศัพท์",
 "toc.label":"สารบัญ",
 "hero.eyebrow":"คำอธิบายแบบโต้ตอบได้ · อ่านประมาณ 12 นาที",
 "hero.title":"เล่าเรื่อง REPLACE-THIS-TOPIC ให้เข้าใจง่ายๆ",
@@ -539,6 +653,34 @@ th: {
 "visual.c4c2":"C2 คอนเทนเนอร์",
 "visual.c4c3":"C3 คอมโพเนนต์",
 "visual.c4Cap":"ภาพ C4 นี้เล่าทีละระดับซูมทั้งคน คอนเทนเนอร์ และคอมโพเนนต์ ลองสังเกตว่า C2 ตรงกับผู้เกี่ยวข้องในภาพลำดับเหตุการณ์พอดี จึงเห็นเลยว่าแต่ละขั้นตอนตอนรันไปอยู่ที่บ้านไหน",
+"visual.uiEyebrow":"4จ · หน้าจอ (เสริม)",
+"visual.uiH":"มาดูสิ่งที่ผู้ใช้เห็นทีละขั้น",
+"visual.uiP":"มาชวนเดินตามเส้นทางทีละขั้น โดยแท็บแต่ละแท็บคือหนึ่งหน้าจอ ภาพทุกภาพมีข้อความ alt และบัตรเบรกพอยต์จะเล่าว่าเลย์เอาต์ปรับตัวอย่างไร ส่วนตัวหนังสือในภาพคงเป็นภาษาอังกฤษ แต่คำอธิบายรอบข้างมีทั้งไทยและอังกฤษ",
+"visual.uiTab1":"หน้าจอที่ 1",
+"visual.uiTab2":"หน้าจอที่ 2",
+"visual.uiShot1Alt":"ภาพหน้าจอที่ 1",
+"visual.uiShot1Cap":"ภาพนี้เล่าว่าหน้าจอที่ 1 ในสถานะปกติเป็นอย่างไร ลองสังเกตปุ่มหลักให้ดี เพราะนั่นคือทางไปต่อของเส้นทาง",
+"visual.uiShot2Alt":"ภาพหน้าจอที่ 2",
+"visual.uiShot2Cap":"ภาพนี้เล่าว่าหน้าจอที่ 2 หลังกดปุ่มหลักเป็นอย่างไร ลองสังเกตสถานะยืนยันให้ดี เพราะมันบอกผู้ใช้ว่าเส้นทางสำเร็จแล้ว",
+"visual.uiBpH":"เบรกพอยต์: เลย์เอาต์ปรับตัวอย่างไร (บังคับสำหรับหัวข้อ UI)",
+"visual.uiBpWide":"จอกว้าง ≥1024px",
+"visual.uiBpWideP":"เลย์เอาต์นี้แสดงทุกคอลัมน์ข้างกันในหนึ่งประโยคสมบูรณ์",
+"visual.uiBpMed":"จอกลาง 768px",
+"visual.uiBpMedP":"เลย์เอาต์นี้ซ้อนหนึ่งคอลัมน์ไว้ใต้อีกคอลัมน์ในหนึ่งประโยคสมบูรณ์",
+"visual.uiBpNarrow":"จอแคบ <768px",
+"visual.uiBpNarrowP":"เลย์เอาต์นี้แสดงคอลัมน์เดียวโดยปักปุ่มหลักไว้ในหนึ่งประโยคสมบูรณ์",
+"visual.uiStateH":"สถานะ: แต่ละหน้าจอแสดงอะไรเมื่อสถานการณ์เปลี่ยน",
+"visual.uiStateCap":"สถานะหน้าจอกับสิ่งที่ควรสังเกต",
+"visual.uiStateC1":"สถานะ",
+"visual.uiStateC2":"แสดงเมื่อใด",
+"visual.uiStateC3":"สิ่งที่ควรสังเกต",
+"visual.uiStateR1C1":"สถานะปกติโหลดถูกต้อง",
+"visual.uiStateR1C2":"เพราะหน้าจอเปิดมาพร้อมข้อมูลที่พร้อมแสดงผล",
+"visual.uiStateR1C3":"ให้ดูหน้าจอตะกร้าที่จอกว้างเพื่อดูเลย์เอาต์เต็ม",
+"visual.uiStateR2C1":"สถานะว่างช่วยบอกขั้นตอนถัดไป",
+"visual.uiStateR2C2":"เพราะรายการยังไม่มีของให้แสดง",
+"visual.uiStateR2C3":"ให้ดูหน้าจอตะกร้าที่จอแคบเพื่อดูปุ่มที่ปักไว้",
+"visual.uiCap":"ทัวร์ UI นี้จับคู่ภาพหน้าจอกับบัตรเบรกพอยต์และตารางสถานะ ลองสังเกตบัตรจอแคบให้ดี เพราะบักเลย์เอาต์มักซ่อนอยู่ตรงนั้น",
 "code.eyebrow":"5 · โค้ด",
 "code.h":"โค้ดที่คัดลอกไปรันได้เลย",
 "code.p1":"มาเล่าเรื่องก่อนอ่านโค้ดกัน เพราะโค้ดเก่าจะดึงข้อมูลแบบไม่ตรวจอะไรเลย ส่วนโค้ดใหม่จะตรวจและลองใหม่อย่างปลอดภัย โดยชื่อต่างๆ ในโค้ดคงเป็นภาษาอังกฤษ ส่วนคำอธิบายรอบข้างมีทั้งไทยและอังกฤษ",
@@ -577,6 +719,48 @@ th: {
 "risks.a1":"ได้เลย คุณเริ่มครอบแค่เอนด์พอยต์เดียวก่อนก็ได้ เพราะไคลเอนต์ใหม่จะถอยกลับไปใช้เส้นทางเดิมได้ จึงวัดผลก่อนแล้วค่อยขยายได้สบายๆ",
 "risks.q2":"ควรล็อกอะไรไว้เพื่อดีบักในโปรดักชัน?",
 "risks.a2":"อยากให้ล็อกคีย์กันคำขอซ้ำ สาขาการตัดสินใจ และเวลาที่ใช้เขียนที่เก็บข้อมูลทุกครั้ง เพราะสามฟิลด์นี้ช่วยอธิบายเหตุขัดข้องได้เกือบทั้งหมดเลย",
+"risks.next":"พอคุยเรื่องน่ากังวลจบแล้ว มาลองทบทวนตัวเองแบบลงมือทำกันก่อน แล้วค่อยเปิดดูวิธีแก้ในส่วนถัดไป",
+"tryit.eyebrow":"9 · ทบทวนตัวเอง",
+"tryit.h":"ลองเช็กตัวเอง แล้วลงมือทำดู",
+"tryit.p1":"มาลองตอบคำถาม 1 ข้อเพื่อย้ำแนวคิดหลัก แล้วต่อด้วยแล็บสั้นๆ ที่รันได้จริง เพราะแม้ตอบผิดก็ยังได้เรียนรู้จากเฉลยอยู่ดี",
+"tryit.q1h":"คำถามที่ 1 — อะไรทำให้กดลองใหม่ได้อย่างปลอดภัย?",
+"tryit.q1p":"ลองเลือกประโยคที่อธิบายกลไกกันคำขอซ้ำได้ตรงที่สุด",
+"tryit.q1a":"ไคลเอนต์ (Client) กดลองใหม่ไปเรื่อยๆ จนกว่าที่เก็บข้อมูลจะตอบกลับมา",
+"tryit.q1b":"คีย์กันคำขอซ้ำ (idempotency key) ทำให้เซอร์วิสคืนใบเสร็จใบเดิมแทนที่จะเขียนซ้ำ",
+"tryit.q1c":"เอพีไอ (API) ข้ามขั้นตรวจสอบเพื่อให้ตอบเร็วขึ้น",
+"tryit.check":"ตรวจคำตอบ",
+"tryit.pending":"ยังไม่ได้ตรวจ",
+"tryit.correct":"ถูกต้องเลย เพราะคีย์นี้ทำให้กดลองใหม่แล้วได้ใบเดิมโดยไม่เขียนซ้ำ",
+"tryit.wrong":"ยังไม่ตรง ลองเลือกข้อที่พูดถึงคีย์กันคำขอซ้ำกับการคืนใบเสร็จเดิมดู",
+"tryit.next":"พอตอบได้และรันแล็บผ่านแล้ว ถ้ารันแล้วพังก็เปิดส่วนถัดไปช่วยแก้ได้เลย",
+"troubleshoot.eyebrow":"10 · แก้ปัญหา",
+"troubleshoot.h":"ถ้าพังให้เปิดหน้านี้ก่อนเลย",
+"troubleshoot.p1":"ลองจับคู่อาการในตาราง แล้วทำตามวิธีแก้ตามลำดับ โดยวิธีแก้จะบอกก่อนเสมอว่าให้ไปทำที่ไฟล์หรือคำสั่งไหน",
+"troubleshoot.cap":"อาการ สาเหตุ และวิธีแก้ที่เจอบ่อย",
+"troubleshoot.c1":"อาการ",
+"troubleshoot.c2":"สาเหตุที่น่าจะใช่",
+"troubleshoot.c3":"วิธีแก้",
+"troubleshoot.r1c1":"มีคำสั่งซื้อซ้ำโผล่มาสองครั้ง",
+"troubleshoot.r1c2":"เพราะลืมส่งคีย์กันคำขอซ้ำ หรือสร้างคีย์ใหม่ทุกครั้งที่ลองใหม่",
+"troubleshoot.r1c3":"ให้ส่งคีย์เดิมหนึ่งค่าต่อหนึ่งคำสั่งซื้อไว้ในเฮดเดอร์ของคำขอ",
+"troubleshoot.r2c1":"คำขอพังด้วย 400 พร้อมบอกว่าฟิลด์ผิด",
+"troubleshoot.r2c2":"เพราะรูปแบบข้อมูลเปลี่ยนไป แต่ยังไม่ได้แก้ตัวตรวจ",
+"troubleshoot.r2c3":"ให้เปิดตัวตรวจของเอพีไอ แล้วปรับสคีมาให้ตรงกับไคลเอนต์",
+"troubleshoot.pit1":"กับดัก: กดลองใหม่ถี่ไปจนบังข้อผิดพลาดจริง",
+"troubleshoot.pit1p":"เพราะไคลเอนต์กดซ้ำเร็วเกินไปจนล็อกท่วม และความล้มเหลวครั้งแรกถูกดันหายไป จึงต้องถอยแบบทวีคูณและล็อกคีย์กันคำขอซ้ำแค่ครั้งเดียวต่อการลอง",
+"troubleshoot.next":"พอมีวิธีแก้ติดมือแล้ว เก็บคำศัพท์กับลิงก์ในส่วนสุดท้ายไว้อ่านต่อได้เลย",
+"glossary.eyebrow":"11 · อภิธานศัพท์",
+"glossary.h":"คำศัพท์กับทางไปอ่านต่อ",
+"glossary.p1":"เปิดส่วนนี้ค้างไว้ขณะอ่านทวนได้เลย เพราะเราเก็บศัพท์ที่เคยเจอมาแล้วมารวมไว้ให้ค้นไวๆ ตรงนี้",
+"glossary.cap":"ศัพท์สำคัญแบบ ไทย (English)",
+"glossary.c1":"คำศัพท์",
+"glossary.c2":"ความหมาย",
+"glossary.r1c1":"คีย์กันคำขอซ้ำ (idempotency key)",
+"glossary.r1c2":"ค่าคงที่ในเฮดเดอร์ที่ทำให้เซอร์วิสรู้ว่าคำขอลองใหม่คือคำขอเดิม",
+"glossary.r2c1":"ที่เก็บข้อมูล (Store)",
+"glossary.r2c2":"ระบบหลักที่บันทึกคำสั่งซื้อแต่ละใบแค่ครั้งเดียว",
+"glossary.link1":"คู่มือตรวจข้อมูลของเอพีไอ — อ่านเพื่อเขียนข้อความ 400 ให้ตรงจุด",
+"glossary.link2":"แพทเทิร์นลองใหม่กับ backoff — อ่านเพื่อจำกัดเวลารอโดยไม่ถล่มระบบ",
 "footer.h":"สิ่งที่อยากให้จำกลับไป",
 "footer.p":"หน้านี้จับคู่เรื่องเล่าสั้นๆ กับแผนภาพหนึ่งอันและแอนิเมชันหนึ่งอัน อย่าลืมแทนที่เครื่องหมาย REPLACE-THIS ทุกจุด คงปุ่มสลับไว้ และคงคำบรรยายไว้สองประโยคเสมอ",
 "footer.buildH":"ข้อมูลการสร้าง",
@@ -600,6 +784,7 @@ function currentLang(){return document.documentElement.dataset.lang==="th"?"th":
 function setLang(l){if(l!=="en"&&l!=="th")l="en";document.documentElement.dataset.lang=l;document.documentElement.lang=l;
 document.querySelectorAll("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k)){if(el.tagName==="META"){el.setAttribute("content",STRINGS[l][k]);}else if(el.tagName==="TITLE"){el.textContent=STRINGS[l][k];document.title=STRINGS[l][k];}else{el.textContent=STRINGS[l][k];}}});
 document.querySelectorAll("[data-i18n-aria]").forEach(function(el){var k=el.getAttribute("data-i18n-aria");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k))el.setAttribute("aria-label",STRINGS[l][k]);});
+document.querySelectorAll("[data-i18n-alt]").forEach(function(el){var k=el.getAttribute("data-i18n-alt");if(Object.prototype.hasOwnProperty.call(STRINGS[l],k))el.setAttribute("alt",STRINGS[l][k]);});
 btnEn.setAttribute("aria-pressed",String(l==="en"));btnTh.setAttribute("aria-pressed",String(l==="th"));
 themeLabel.textContent=currentTheme()==="dark"?STRINGS[l]["header.themeLight"]:STRINGS[l]["header.themeDark"];
 renderD3();renderSteps();}
@@ -629,8 +814,8 @@ var secs=tocLinks.map(function(a){return document.querySelector(a.getAttribute("
 function onScroll(){var y=window.scrollY||0;var h=document.documentElement.scrollHeight-window.innerHeight;var p=h>0?(y/h*100):0;document.getElementById("progress").style.width=p+"%";var cur=secs.length?secs[0].id:"";secs.forEach(function(s){if(s.getBoundingClientRect().top<=120)cur=s.id;});tocLinks.forEach(function(a){a.classList.toggle("active",a.getAttribute("href")==="#"+cur);});}
 window.addEventListener("scroll",onScroll,{passive:true});onScroll();
 
-/* ============ Tabs (views + optional C4 level switcher) ============ */
-document.querySelectorAll('[role="tab"]').forEach(function(tab){tab.addEventListener("click",function(){var c4=tab.getAttribute("data-c4");if(c4){var grp=tab.parentElement.querySelectorAll('[role="tab"]');grp.forEach(function(t){t.setAttribute("aria-selected","false");});tab.setAttribute("aria-selected","true");var svg=document.getElementById("d3-c4");if(svg){svg.setAttribute("data-c4-level",c4);renderD3();}return;}var dt=tab.getAttribute("data-tab");if(!dt)return;document.querySelectorAll('[data-tab]').forEach(function(t){if(t.getAttribute("role")==="tab")t.setAttribute("aria-selected","false");});tab.setAttribute("aria-selected","true");["t-flow","t-compare","t-table"].forEach(function(id){var p=document.getElementById(id);if(p)p.hidden=(id!==dt);});});});
+/* ============ Tabs (views + screens + optional C4 level switcher) ============ */
+document.querySelectorAll('[role="tab"]').forEach(function(tab){tab.addEventListener("click",function(){var c4=tab.getAttribute("data-c4");if(c4){var grp=tab.parentElement.querySelectorAll('[role="tab"]');grp.forEach(function(t){t.setAttribute("aria-selected","false");});tab.setAttribute("aria-selected","true");var svg=document.getElementById("d3-c4");if(svg){svg.setAttribute("data-c4-level",c4);renderD3();}return;}var dt=tab.getAttribute("data-tab");if(!dt)return;var group=tab.parentElement.querySelectorAll('[role="tab"]');var ids=[];group.forEach(function(t){var id=t.getAttribute("data-tab");if(id)ids.push(id);});group.forEach(function(t){t.setAttribute("aria-selected",String(t===tab));});ids.forEach(function(id){var p=document.getElementById(id);if(p)p.hidden=(id!==dt);});});});
 
 /* ============ Before/after slider ============ */
 var baRange=document.getElementById("ba-range"),baAfter=document.getElementById("ba-after");
@@ -646,6 +831,12 @@ function stepTexts(){var l=currentLang();return [STRINGS[l]["visual.step1"],STRI
 function renderSteps(){var arr=stepTexts();document.getElementById("step-text").textContent=arr[stepIdx-1];document.getElementById("step-n").textContent=String(stepIdx);["n1","n2","n3"].forEach(function(id,i){var r=document.getElementById(id);if(r)r.style.strokeWidth=(i===(stepIdx-1))?"4":"1";});var labels=document.querySelectorAll("#stepsvg [data-step-label]");var l=currentLang();var names=l==="th"?["1 · ส่งคำขอ","2 · ตรวจกันซ้ำ","3 · บันทึก"]:["1 · Send","2 · Check","3 · Save"];labels.forEach(function(t,i){t.textContent=names[i];});}
 document.getElementById("step-prev").addEventListener("click",function(){stepIdx=stepIdx<=1?3:stepIdx-1;renderSteps();});
 document.getElementById("step-next").addEventListener("click",function(){stepIdx=stepIdx>=3?1:stepIdx+1;renderSteps();});
+
+/* ============ Quiz (self-check, no-throw, data-driven) ============ */
+/* Duplicate the [data-quiz] card per question: data-quiz="quiz-qN" (matches radio name), data-answer="b" (correct value). checkQuiz loops all groups. */
+function checkQuiz(){try{var l=currentLang();var groups=document.querySelectorAll("[data-quiz]");var out=document.getElementById("quiz-result");if(!out)return;if(!groups.length)return;var correct=0,answered=0;groups.forEach(function(g){var name=g.getAttribute("data-quiz");var want=g.getAttribute("data-answer");var sel=document.querySelector('input[name="'+name+'"]:checked');if(sel){answered++;if(sel.value===want)correct++;}});if(!answered){out.textContent=STRINGS[l]["tryit.pending"];return;}out.textContent=(correct===groups.length)?STRINGS[l]["tryit.correct"]:STRINGS[l]["tryit.wrong"];}catch(e){}}
+var quizBtn=document.getElementById("quiz-check");
+if(quizBtn){quizBtn.addEventListener("click",checkQuiz);}
 
 /* ============ Init (apply stored theme/lang without flash) ============ */
 (function init(){var l=currentLang();setLang(l);applyTheme(currentTheme(),false);renderSteps();renderD3();})();
