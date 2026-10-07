@@ -13,9 +13,19 @@
     "clickup": "deny",
     // Keep the pre-approved surface inside the project. The workspace root is
     // already implicit, so no broad home/tree external_directory grants are
-    // declared here: paths outside the project keep asking.
+    // declared here: paths outside the project keep asking — except the
+    // global explainer/handoff templates, which are read-only fallback sources.
+    // NOTE: object order matters (last match wins): broad "*" first, narrow allows last.
     "external_directory": {
-      "*": "ask"
+      "*": "ask",
+      "/home/tanutchakorn/.config/opencode/docs/plans/**": "allow",
+      "~/.config/opencode/docs/plans/**": "allow"
+    }
+  },
+  "references": {
+    "global-plans": {
+      "path": "/home/tanutchakorn/.config/opencode/docs/plans",
+      "description": "Global explainer + handoff templates fallback when project has no docs/plans templates"
     }
   },
   "mcp": {
