@@ -26,6 +26,7 @@ try{tailwind.config={darkMode:["selector",'[data-theme="dark"]'],corePlugins:{pr
   --link:#1d4ed8; --border:#e2e8f0; --accent:#2563eb; --accent-fg:#ffffff;
   --callout:#eff6ff; --ok:#047857; --warn:#b45309; --shadow:0 1px 3px rgba(0,0,0,.08);
   --radius:12px; --maxw:1100px; --reading:760px; --side:240px;
+  --space-1:8px; --space-2:16px; --space-3:24px;
 }
 [data-theme="dark"]{
   --bg:#0f172a; --fg:#e2e8f0; --muted:#94a3b8; --card:#1e293b; --code-bg:#0b1220;
@@ -35,7 +36,14 @@ try{tailwind.config={darkMode:["selector",'[data-theme="dark"]'],corePlugins:{pr
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
 body{background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,"Segoe UI",Tahoma,sans-serif;line-height:1.7;margin:0}
+[data-lang="th"] body{line-height:1.8}
 a{color:var(--link)}
+h1{font-size:28px;line-height:1.3;margin:0 0 var(--space-2)}
+h2{font-size:1.5rem;line-height:1.35;margin:0 0 12px}
+h3{font-size:17px;line-height:1.4;margin:var(--space-3) 0 var(--space-1)}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:8px}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px} /* legacy: pre-sidebar docs used main.wrap; new docs use .shell>.reading */
 .shell{display:flex;gap:32px;max-width:var(--maxw);margin:0 auto;padding:0 20px;align-items:start}
 .reading{flex:1;min-width:0;max-width:var(--reading);margin:0 auto}
@@ -55,25 +63,26 @@ a{color:var(--link)}
 .btn{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer;font-weight:600}
 .btn:focus-visible,.seg button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 #progress{height:3px;background:var(--accent);width:0%}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin:0 0 var(--space-3)}
 section.doc{padding:28px 0;border-bottom:1px solid var(--border)}
 section.doc h2{font-size:1.5rem;margin:0 0 8px}
 .eyebrow{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;margin:0}
 .lead{font-size:1.05rem}
 .muted{color:var(--muted)}
-table{width:100%;border-collapse:collapse;margin:12px 0;background:var(--bg)}
+table{width:100%;border-collapse:collapse;margin:12px 0 16px;background:var(--bg)}
 th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
 th{background:var(--card)}
-pre{background:var(--code-bg);color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;position:relative}
+tbody tr:nth-child(even){background:var(--card)}
+pre{background:var(--code-bg);color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;position:relative;margin:8px 0 16px;max-height:420px}
 .codehead{display:flex;align-items:center;gap:8px;margin:14px 0 6px}
 .codehead .lang{font-size:.75rem;font-weight:700;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:2px 8px;color:var(--muted)}
 .codehead .path{font-size:.8rem;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
 .copybtn{margin-left:auto;font-size:.8rem}
 details{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:10px 0}
 summary{cursor:pointer;font-weight:700}
-figcaption{color:var(--muted);font-size:.9rem;margin-top:8px}
-.caption-note{color:var(--muted);font-size:.9rem}
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+figcaption{color:var(--muted);font-size:.9rem;margin:6px 0 16px}
+.caption-note{color:var(--muted);font-size:.9rem;margin:6px 0 16px;border-left:3px solid var(--accent);padding-left:12px;font-style:italic}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .tabs button{border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .d3-canvas{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;overflow:auto;width:100%}
@@ -97,14 +106,15 @@ figcaption{color:var(--muted);font-size:.9rem;margin-top:8px}
 .d3-canvas .card-label{fill:var(--muted)}
 .d3-fallback{color:var(--muted);font-size:.9rem}
 svg.themed text{fill:var(--fg)}svg.themed rect.frame{fill:var(--bg);stroke:var(--border)}svg.themed rect.node{fill:var(--card);stroke:var(--accent)}
-.slider-wrap input[type="range"]{width:100%}
-.ba{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:10px}
+.slider-wrap input[type="range"]{width:100%;margin:12px 0}
+input[type="range"]{width:100%;margin:12px 0}
+.ba{position:relative;overflow:hidden;border:1px solid var(--border);border-radius:10px;margin:0 0 16px}
 .ba img,.ba .ba-pane{display:block;width:100%}
 .ba .after{position:absolute;inset:0;overflow:hidden;border-right:3px solid var(--accent)}
 .kbd{font-family:ui-monospace,monospace;border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:0 6px;background:var(--bg)}
 .filter-input{width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--fg)}
 .skip{position:absolute;left:-9999px}.skip:focus{left:8px;top:8px;background:var(--accent);color:var(--accent-fg);padding:8px 12px;border-radius:8px;z-index:99}
-@media (max-width:1023px){.shell{flex-direction:column}.sidebar{display:none}.toc-mobile{display:block}.site-header .row{flex-wrap:wrap}}
+@media (max-width:1023px){.shell{flex-direction:column}.sidebar{display:none}.toc-mobile{display:block}.site-header .row{flex-wrap:wrap}.card{padding:16px}}
 @media (max-width:768px){.site-header .row{flex-wrap:wrap}}
 @media print{.site-header,.sidebar,.toc-mobile,.controls,.copybtn,.tabs{display:none}body{background:#fff;color:#000}.shell{display:block}.reading{max-width:100%}}
 </style>
@@ -404,6 +414,10 @@ async function loadOrderSafe(orderId, client) {
   <p><strong data-i18n="footer.h">What to remember</strong></p>
   <p data-i18n="footer.p">This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.</p>
   <p class="muted">Preview: <code>python3 -m http.server</code> → open <code>docs/plans/REPLACE-THIS-TOPIC.html</code></p>
+  <details>
+    <summary data-i18n="footer.buildH">Build info</summary>
+    <p class="muted" data-i18n="footer.buildP">Validation and build log live here so they never compete with the reading flow.</p>
+  </details>
 </footer>
 </main>
 </div>
@@ -425,7 +439,7 @@ en: {
 "flow.eyebrow":"6 · Runtime","flow.h":"How it works at runtime","flow.p1":"Follow these five numbered steps in order. Each step names the actor first, then the action, so the handoff stays visible.","flow.s1":"The client sends POST /orders with an idempotency key in the header.","flow.s2":"The API validates the shape and returns 400 with field errors when invalid.","flow.s3":"The service checks the key, then writes once to the store.","flow.s4":"The store confirms, and the service builds a receipt.","flow.s5":"The API returns 201 with the receipt, and duplicates replay it safely.","flow.next":"With the path clear, the next section turns this into an adoption checklist.",
 "rollout.eyebrow":"7 · Apply it","rollout.h":"Apply it safely, or take the lessons","rollout.p1":"Use this checklist when the topic ships as a change; keep it as Key takeaways when the topic is purely explanatory. Either way, keep full sentences.","rollout.s1":"Ship behind a flag to 5% of traffic and watch error rate for one hour.","rollout.s2":"Migrate stored records with a backfill job that is safe to rerun.","rollout.s3":"Roll back by flipping the flag off, which restores the old path instantly.","rollout.s4":"Observe with logs for decisions, metrics for latency, and alerts for 5xx spikes.",
 "risks.eyebrow":"8 · Risks + FAQs","risks.h":"Risks, unknowns, and honest answers","risks.p1":"Name the worries plainly before the reader finds them. Each risk below states the concern, the impact, and the mitigation as complete thoughts.","risks.cap":"Top risks and mitigations.","risks.c1":"Risk","risks.c2":"Why it matters","risks.c3":"Mitigation","risks.r1c1":"Clock skew breaks ordering.","risks.r1c2":"Events may appear out of order to readers.","risks.r1c3":"We sort by sequence number, not wall time.","risks.r2c1":"Store slowdown cascades.","risks.r2c2":"Queues grow and latency spikes quickly.","risks.r2c3":"We bound waits and shed load with 503 plus Retry-After.","risks.q1":"Can we adopt this incrementally without a rewrite?","risks.a1":"Yes, you can wrap one endpoint first because the new client falls back to the old path. That lets you measure before widening the rollout.","risks.q2":"What should we log to debug this in production?","risks.a2":"Log the idempotency key, the decision branch, and the store duration on every write. Those three fields explain nearly every incident.",
-"footer.h":"What to remember","footer.p":"This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.",
+"footer.h":"What to remember","footer.p":"This page paired short prose with one diagram and one animation. Replace every REPLACE-THIS marker, keep the toggles, and keep captions at two sentences.","footer.buildH":"Build info","footer.buildP":"Validation and build log live here so they never compete with the reading flow.",
 "ui.copy":"Copy","ui.copied":"Copied","ui.prev":"Back","ui.next":"Next"
 },
 th: {
@@ -565,6 +579,8 @@ th: {
 "risks.a2":"อยากให้ล็อกคีย์กันคำขอซ้ำ สาขาการตัดสินใจ และเวลาที่ใช้เขียนที่เก็บข้อมูลทุกครั้ง เพราะสามฟิลด์นี้ช่วยอธิบายเหตุขัดข้องได้เกือบทั้งหมดเลย",
 "footer.h":"สิ่งที่อยากให้จำกลับไป",
 "footer.p":"หน้านี้จับคู่เรื่องเล่าสั้นๆ กับแผนภาพหนึ่งอันและแอนิเมชันหนึ่งอัน อย่าลืมแทนที่เครื่องหมาย REPLACE-THIS ทุกจุด คงปุ่มสลับไว้ และคงคำบรรยายไว้สองประโยคเสมอ",
+"footer.buildH":"ข้อมูลการสร้าง",
+"footer.buildP":"ผลตรวจกับบันทึกการสร้างอยู่ตรงนี้ เพื่อไม่ให้แย่งความสนใจจากเนื้อหาหลัก",
 "ui.copy":"คัดลอก",
 "ui.copied":"คัดลอกแล้ว",
 "ui.prev":"ย้อนกลับ",
