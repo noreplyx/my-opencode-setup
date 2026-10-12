@@ -28,7 +28,7 @@ python3 -m http.server
 tidy -errors -q docs/plans/<topic>.html
 python3 -c "import html.parser" # parse smoke
 rg -n "REPLACE-THIS" docs/plans/<topic>.html  # must be empty when done
-rg -in "mermaid" docs/plans/<topic>.html agent/explainer.md docs/plans/_explainer-template.html  # must be empty (D3-only)
+rg -in "mermaid" docs/plans/<topic>.html docs/plans/_explainer-template.html  # must be empty (D3-only)
 rg -n "d3.min.js|renderD3|data-d3" docs/plans/<topic>.html  # must be non-empty
 rg -n "renderD3ER|renderD3Usecase|renderD3C4" docs/plans/_explainer-template.html  # must be non-empty (helpers present)
 ```
